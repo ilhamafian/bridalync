@@ -83,12 +83,8 @@ export default function ClientPage({
           onAnimationEnd={handleDateTimeExitEnd}
         >
           <h1 className="mb-8 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Welcome! I’m {freelancer?.name},<br />
-            your hijabsylist.
+            Can you tell me when will the date be?
           </h1>
-          <p className="mb-4 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Choose a date below to get started.
-          </p>
           <div className="flex flex-col items-end gap-4">
             <CalendarBookedDates
               date={selectedDate}
