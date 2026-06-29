@@ -12,7 +12,7 @@ import {
 } from "@/components/CalendarBookedDates";
 import { SessionLocationPicker } from "@/components/SessionLocationPicker";
 import { Button } from "@/components/ui/button";
-import type { BookingPackageId, LocationId } from "@/lib/booking/constants";
+import type { BookingPackageId } from "@/lib/booking/constants";
 import {
   getEventTypeLabel,
   getNextEventToSchedule,
@@ -22,7 +22,7 @@ import {
   toDateKey,
 } from "@/lib/booking/utils";
 import type { BookingFreelancer } from "@/lib/schemas/freelancer";
-import type { BookingSession } from "@/lib/schemas/booking";
+import type { BookingSession, SessionLocation } from "@/lib/schemas/booking";
 import { cn } from "@/lib/utils";
 
 type BookingStep = "intro" | "events" | "datetime" | "location";
@@ -57,7 +57,7 @@ export default function ClientPage({
   const [selectedSlot, setSelectedSlot] = useState<TimeSlotId | null>(null);
 
   const [sameLocationForAll, setSameLocationForAll] = useState(true);
-  const [sharedLocationId, setSharedLocationId] = useState<LocationId | null>(
+  const [sharedLocation, setSharedLocation] = useState<SessionLocation | null>(
     null
   );
 
@@ -79,7 +79,7 @@ export default function ClientPage({
     selectedPackageId &&
       isPackageScheduleComplete(selectedPackageId, sessions)
   );
-  const canContinueLocation = sessions.every((session) => session.locationId);
+  const canContinueLocation = sessions.every((session) => session.location);
 
   const requiredSessionCount = selectedPackageId
     ? getRequiredSessionCount(selectedPackageId)
@@ -155,7 +155,7 @@ export default function ClientPage({
         eventType: currentEventType,
         date: toDateKey(selectedDate),
         slotId: selectedSlot,
-        locationId: null,
+        location: null,
       },
     ]);
     setSelectedSlot(null);
@@ -170,7 +170,7 @@ export default function ClientPage({
   function handleDateTimeNext() {
     if (!canContinueDateTime || isDateTimeExiting) return;
     setSameLocationForAll(true);
-    setSharedLocationId(null);
+    setSharedLocation(null);
     setIsDateTimeExiting(true);
   }
 
@@ -182,36 +182,35 @@ export default function ClientPage({
 
   function handleSameLocationForAllChange(checked: boolean) {
     setSameLocationForAll(checked);
-    if (checked && sharedLocationId) {
+    if (checked && sharedLocation) {
       setSessions((current) =>
         current.map((session) => ({
           ...session,
-          locationId: sharedLocationId,
+          location: sharedLocation,
         }))
       );
     }
   }
 
-  function handleSharedLocationChange(locationId: string) {
-    const nextLocationId = locationId as LocationId;
-    setSharedLocationId(nextLocationId);
+  function handleSharedLocationChange(location: SessionLocation) {
+    setSharedLocation(location);
     if (sameLocationForAll) {
       setSessions((current) =>
         current.map((session) => ({
           ...session,
-          locationId: nextLocationId,
+          location,
         }))
       );
     }
   }
 
-  function handleSessionLocationChange(sessionId: string, locationId: string) {
-    const nextLocationId = locationId as LocationId;
+  function handleSessionLocationChange(
+    sessionId: string,
+    location: SessionLocation
+  ) {
     setSessions((current) =>
       current.map((session) =>
-        session.id === sessionId
-          ? { ...session, locationId: nextLocationId }
-          : session
+        session.id === sessionId ? { ...session, location } : session
       )
     );
   }
@@ -356,7 +355,7 @@ export default function ClientPage({
             Where should we meet?
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Choose a location for each session, or use the same one for all.
+            Search for your venue, then place the pin on the exact spot.
           </p>
 
           <div className="flex w-full flex-col items-end gap-4">
@@ -364,7 +363,7 @@ export default function ClientPage({
               sessions={sessions}
               sameLocationForAll={sameLocationForAll}
               onSameLocationForAllChange={handleSameLocationForAllChange}
-              sharedLocationId={sharedLocationId}
+              sharedLocation={sharedLocation}
               onSharedLocationChange={handleSharedLocationChange}
               onSessionLocationChange={handleSessionLocationChange}
             />

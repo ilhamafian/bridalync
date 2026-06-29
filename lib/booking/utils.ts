@@ -1,14 +1,12 @@
 import {
   BOOKING_PACKAGES,
   EVENT_TYPES,
-  LOCATION_OPTIONS,
   TIME_SLOTS,
   type BookingPackageId,
   type EventTypeId,
-  type LocationId,
   type TimeSlotId,
 } from "@/lib/booking/constants";
-import type { BookingSession } from "@/lib/schemas/booking";
+import type { BookingSession, SessionLocation } from "@/lib/schemas/booking";
 
 export function getPackageById(packageId: BookingPackageId) {
   return BOOKING_PACKAGES.find((pkg) => pkg.id === packageId);
@@ -61,11 +59,12 @@ export function getTimeSlotLabel(slotId: TimeSlotId) {
   return TIME_SLOTS.find((slot) => slot.id === slotId)?.label ?? slotId;
 }
 
-export function getLocationLabel(locationId: LocationId) {
-  return (
-    LOCATION_OPTIONS.find((location) => location.id === locationId)?.label ??
-    locationId
-  );
+export function formatLocationSummary(location: SessionLocation) {
+  return location.label;
+}
+
+export function formatLocationAddress(location: SessionLocation) {
+  return location.address;
 }
 
 export function formatSessionDate(dateKey: string) {

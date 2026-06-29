@@ -39,12 +39,3 @@ export const BOOKING_PACKAGES = [
 ] as const;
 
 export type BookingPackageId = (typeof BOOKING_PACKAGES)[number]["id"];
-
-export const LOCATION_OPTIONS = [
-  { id: "bride-home", label: "Bride's home" },
-  { id: "hotel-venue", label: "Hotel / venue" },
-  { id: "mosque", label: "Mosque" },
-  { id: "other", label: "Other" },
-] as const;
-
-export type LocationId = (typeof LOCATION_OPTIONS)[number]["id"];

@@ -3,7 +3,7 @@
 import { XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { formatSessionSummary, getLocationLabel } from "@/lib/booking/utils"
+import { formatLocationAddress, formatSessionSummary } from "@/lib/booking/utils"
 import type { BookingSession } from "@/lib/schemas/booking"
 
 type BookingSessionListProps = {
@@ -36,9 +36,9 @@ export function BookingSessionList({
             <p className="font-medium text-foreground">
               {formatSessionSummary(session)}
             </p>
-            {showLocation && session.locationId && (
+            {showLocation && session.location && (
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {getLocationLabel(session.locationId)}
+                {formatLocationAddress(session.location)}
               </p>
             )}
           </div>
