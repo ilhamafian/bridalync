@@ -1,36 +1,69 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bridalync
 
-## Getting Started
+A web app for glam team freelancers—makeup artists, hijab stylists, hair stylists, and similar wedding-day professionals—to manage clients and schedule appointments in one place.
 
-First, run the development server:
+## What it does
+
+Bridalync is built for independent freelancers who juggle multiple bridal clients, trial sessions, and event-day bookings. Instead of scattered notes, DMs, and spreadsheets, the goal is a single workspace to:
+
+- **Manage clients** — contact details, wedding date, venue, service type, notes, and package/pricing
+- **Let clients self-book** — a Calendly-style flow where clients pick available slots themselves
+- **Stay on top of the day** — calendar, reminders, payments, availability rules, and earnings reports
+
+## Who it's for
+
+- Makeup artists (MUA)
+- Hijab stylists
+- Hair stylists
+- Other wedding glam freelancers who work client-by-client on flexible schedules
+
+## Product direction
+
+| Area | Plan |
+| --- | --- |
+| **Accounts** | One freelancer per account |
+| **Auth** | Email + password |
+| **Booking** | Client self-booking from a public link |
+| **Client portal** | `app/[client]` — client-facing portal to view appointments, confirm, and share details |
+| **Availability** | Blocked days, travel/buffer time between jobs, max clients per day, separate trial vs wedding-day slots |
+| **Audience** | Malaysia — English / Malay |
+| **Database** | MongoDB (Atlas) |
+
+### Planned features
+
+- Calendar and appointment scheduling
+- Client self-booking with availability rules
+- Reminders (WhatsApp, SMS, or email)
+- Deposits, payments, and invoicing
+- Reports and earnings overview
+
+## Current status
+
+Early development. The app currently includes a calendar date picker as the first building block toward scheduling. Client portal, authentication, MongoDB persistence, and self-booking are planned next.
+
+## Tech stack
+
+- [Next.js](https://nextjs.org) (App Router)
+- [React](https://react.dev)
+- [TypeScript](https://www.typescriptlang.org)
+- [Tailwind CSS](https://tailwindcss.com)
+- [MongoDB](https://www.mongodb.com) (Atlas) — planned
+
+## Getting started
+
+Install dependencies and run the development server:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Other scripts:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run build   # production build
+npm run start   # start production server
+npm run lint    # run ESLint
+```

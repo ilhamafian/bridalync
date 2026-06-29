@@ -1,4 +1,4 @@
-import CalendarInput from "./components/CalendarInput";
+import CalendarInput from "../components/CalendarInput";
 
 export default function Home() {
   return (
