@@ -21,7 +21,9 @@ export abstract class ModelBase<T extends Record<string, any>> {
   static async initialize() {
     if (!ModelBase.client || !ModelBase.db) {
       ModelBase.client = await clientPromise;
-      ModelBase.db = ModelBase.client.db(process.env.MONGODB_DATABASE);
+      const dbName =
+        process.env.MONGODB_DATABASE ?? process.env.DB_NAME ?? "test";
+      ModelBase.db = ModelBase.client.db(dbName);
     }
   }
 

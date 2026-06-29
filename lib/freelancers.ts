@@ -1,6 +1,8 @@
 import { freelancerModel } from "@/lib/models/Freelancer";
-import { PublicFreelancer, publicFreelancerSchema } from "@/lib/schemas/freelancer";
-import { WithId } from "mongodb";
+import {
+  BookingFreelancer,
+  bookingFreelancerSchema,
+} from "@/lib/schemas/freelancer";
 
 export async function freelancerExists(username: string): Promise<boolean> {
   const doc = await freelancerModel.findOne({ username } as any);
@@ -9,14 +11,10 @@ export async function freelancerExists(username: string): Promise<boolean> {
 
 export async function getFreelancerByUsername(
   username: string
-): Promise<PublicFreelancer | null> {
+): Promise<BookingFreelancer | null> {
   const doc = await freelancerModel.findOne({ username } as any);
   if (!doc) return null;
 
-  const result = publicFreelancerSchema.safeParse({
-    ...doc,
-    _id: (doc as WithId<any>)._id.toString(),
-  });
-
+  const result = bookingFreelancerSchema.safeParse(doc);
   return result.success ? result.data : null;
 }
