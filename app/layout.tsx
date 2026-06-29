@@ -20,6 +20,13 @@ export const metadata: Metadata = {
   description: "Simple calendar date picker",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -30,7 +37,11 @@ export default function RootLayout({
       lang="en"
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-serif", notoSerif.variable)}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body suppressHydrationWarning className="flex h-dvh items-center justify-center py-6 max-[390px]:py-0">
+        <div className="app-shell flex flex-col overflow-hidden bg-background shadow-2xl ring-1 ring-black/10 max-[390px]:rounded-none min-[391px]:rounded-[2rem] dark:ring-white/10">
+          {children}
+        </div>
+      </body>
     </html>
   );
 }

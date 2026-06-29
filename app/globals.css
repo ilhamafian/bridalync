@@ -123,9 +123,24 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-zinc-200 text-foreground dark:bg-zinc-950;
   }
   html {
     @apply font-serif;
+  }
+}
+
+@layer components {
+  .app-shell {
+    --app-width: min(100vw, 390px);
+    --v-gap: 3rem; /* matches body py-6 × 2 */
+    width: var(--app-width);
+    height: min(calc(100dvh - var(--v-gap)), calc(var(--app-width) * 844 / 390));
+  }
+
+  @media (max-width: 390px) {
+    .app-shell {
+      --v-gap: 0px;
+    }
   }
 }

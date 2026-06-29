@@ -1,17 +1,26 @@
-import CalendarInput from "./components/CalendarInput";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <div className="flex flex-1 items-center justify-center bg-zinc-50 px-6 py-16 dark:bg-zinc-950">
-      <main className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-        <h1 className="mb-2 text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Calendar
+    <div className="flex flex-1 flex-col justify-between px-6 py-10">
+      <div className="flex flex-1 flex-col justify-center">
+        <p className="mb-3 text-sm font-medium text-primary">For bridal glam freelancers</p>
+        <h1 className="mb-4 text-4xl font-semibold tracking-tight text-foreground">
+          Bridalync
         </h1>
-        <p className="mb-8 text-sm text-zinc-600 dark:text-zinc-400">
-          Pick a date using the calendar picker below.
+        <p className="max-w-xs text-base leading-relaxed text-muted-foreground">
+          Manage clients, share a booking link, and keep wedding-day appointments in one place.
         </p>
-        <CalendarInput />
-      </main>
+      </div>
+
+      <div className="space-y-3">
+        <Button className="h-11 w-full rounded-xl text-sm" size="lg">
+          Get started
+        </Button>
+        <p className="text-center text-xs text-muted-foreground">
+          Makeup artists, hijab stylists, hair stylists & more
+        </p>
+      </div>
     </div>
   );
 }
