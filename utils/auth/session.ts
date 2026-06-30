@@ -1,11 +1,11 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
-import { freelancerModel } from "@/models/Freelancer";
+import { freelancerModel } from "@/models/User";
 import {
   publicFreelancerSchema,
   type PublicFreelancer,
-} from "@/schemas/freelancer";
+} from "@/schemas/user";
 
 export const SESSION_COOKIE_NAME = "bridalync_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;

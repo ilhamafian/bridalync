@@ -1,83 +1,52 @@
-"use client"
+"use client";
 
-import { notFound } from "next/navigation"
-import { use, useEffect, useMemo, useState } from "react"
-import { CheckCircle2Icon, XCircleIcon } from "lucide-react"
+import { CheckCircle2Icon, XCircleIcon } from "lucide-react";
 
-import { BookingInvoice } from "@/components/BookingInvoice"
-import { BookingSessionList } from "@/components/BookingSessionList"
-import { Button } from "@/components/ui/button"
-import {
-  buildBookingResultMessage,
-  buildWhatsAppUrl,
-} from "@/utils/booking/messages"
-import { formatRm } from "@/utils/booking/pricing"
-import { getPackageLabel, getStyleLabel } from "@/utils/booking/utils"
-import type { PublicBooking } from "@/schemas/booking-record"
-import type { BookingFreelancer } from "@/schemas/freelancer"
+import { BookingInvoice } from "@/components/BookingInvoice";
+import { BookingSessionList } from "@/components/BookingSessionList";
+import { Button } from "@/components/ui/button";
+import type { BookingInvoiceSummary } from "@/utils/booking/pricing";
+import type { BookingSession } from "@/schemas/booking";
 
-export default function BookingResultPage({
-  params,
-}: {
-  params: Promise<{ client: string; id: string }>
-}) {
-  const { client, id } = use(params)
-  const [booking, setBooking] = useState<(PublicBooking & { _id: string }) | null>(
-    null
-  )
-  const [freelancer, setFreelancer] = useState<BookingFreelancer | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [notFound_, setNotFound] = useState(false)
+type BookingStatus = "pending" | "confirmed" | "failed";
 
-  useEffect(() => {
-    Promise.all([
-      fetch(`/api/bookings/${id}?client=${encodeURIComponent(client)}`),
-      fetch(`/api/freelancers/${client}`),
-    ])
-      .then(async ([bookingRes, freelancerRes]) => {
-        if (bookingRes.status === 404) {
-          setNotFound(true)
-          return
-        }
+const MOCK_STATUS: BookingStatus = "confirmed";
 
-        const bookingData = bookingRes.ok ? await bookingRes.json() : null
-        const freelancerData =
-          freelancerRes.status === 404 ? null : await freelancerRes.json()
+const MOCK_PACKAGE_LABEL = "Akad Nikah";
+const MOCK_STYLE_LABEL = "Neat & Clean";
+const MOCK_CONTACT_NAME = "Aisyah Rahman";
+const MOCK_CONTACT_PHONE = "+60 12-345 6789";
+const MOCK_DEPOSIT_LABEL = "RM100";
 
-        if (bookingData) setBooking(bookingData)
-        if (freelancerData) setFreelancer(freelancerData)
-      })
-      .finally(() => setLoading(false))
-  }, [client, id])
+const MOCK_INVOICE: BookingInvoiceSummary = {
+  lineItems: [
+    { label: "Akad Nikah", amountRm: 350 },
+    { label: "Gandik", amountRm: 80 },
+  ],
+  totalRm: 430,
+  depositRm: 100,
+  balanceRm: 330,
+};
 
-  const whatsAppUrl = useMemo(() => {
-    if (!booking || !freelancer?.mobile || !freelancer.country_code) {
-      return null
-    }
+const MOCK_SESSIONS: BookingSession[] = [
+  {
+    id: "session-1",
+    eventType: "akad",
+    date: "2026-08-15",
+    slotId: "10-12",
+    location: {
+      label: "Grand Ballroom",
+      address: "123 Jalan Ampang, Kuala Lumpur",
+      lat: 3.1579,
+      lng: 101.7116,
+    },
+  },
+];
 
-    const message = buildBookingResultMessage(freelancer.name, booking)
-    return buildWhatsAppUrl(
-      freelancer.country_code,
-      freelancer.mobile,
-      message
-    )
-  }, [booking, freelancer])
-
-  if (notFound_) notFound()
-
-  if (loading) {
-    return (
-      <div className="flex flex-1 items-center justify-center">
-        <p className="text-sm text-muted-foreground">Loading booking...</p>
-      </div>
-    )
-  }
-
-  if (!booking) notFound()
-
-  const isSuccess = booking.status === "confirmed"
-  const isFailure = booking.status === "failed"
-  const isPending = booking.status === "pending"
+export default function BookingResultPage() {
+  const isSuccess = MOCK_STATUS === "confirmed";
+  const isFailure = MOCK_STATUS === "failed";
+  const isPending = MOCK_STATUS === "pending";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pt-16 pb-16 dark:bg-zinc-950">
@@ -101,72 +70,55 @@ export default function BookingResultPage({
 
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {isSuccess &&
-              `Your deposit of ${formatRm(booking.invoice.depositRm)} was received. The remaining balance is due before your session.`}
+              `Your deposit of ${MOCK_DEPOSIT_LABEL} was received. The remaining balance is due before your session.`}
             {isFailure &&
               "We couldn't process your deposit. You can try booking again or contact the stylist."}
-            {isPending &&
-              "Your booking is awaiting payment confirmation."}
+            {isPending && "Your booking is awaiting payment confirmation."}
           </p>
         </div>
 
         <div className="w-full space-y-2">
           <p className="text-sm font-medium text-foreground">Booking details</p>
           <div className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
-            <p className="font-medium text-foreground">
-              {getPackageLabel(booking.packageId)}
+            <p className="font-medium text-foreground">{MOCK_PACKAGE_LABEL}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Style: {MOCK_STYLE_LABEL}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Style: {getStyleLabel(booking.style)}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {booking.contact.name} · {booking.contact.phone}
+              {MOCK_CONTACT_NAME} · {MOCK_CONTACT_PHONE}
             </p>
           </div>
         </div>
 
         <div className="w-full space-y-2">
           <p className="text-sm font-medium text-foreground">Sessions</p>
-          <BookingSessionList sessions={booking.sessions} showLocation />
+          <BookingSessionList sessions={MOCK_SESSIONS} showLocation />
         </div>
 
-        <BookingInvoice invoice={booking.invoice} />
+        <BookingInvoice invoice={MOCK_INVOICE} />
 
         <div className="flex w-full flex-col gap-2">
           {isFailure && (
             <Button
-              asChild
               size="lg"
               className="h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
             >
-              <a href={`/${client}`}>Try again</a>
+              Try again
             </Button>
           )}
-          {whatsAppUrl ? (
-            <Button
-              asChild
-              variant={isFailure ? "outline" : "default"}
-              size="lg"
-              className={
-                isFailure
-                  ? "h-11 w-full"
-                  : "h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
-              }
-            >
-              <a
-                href={whatsAppUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                WhatsApp
-              </a>
-            </Button>
-          ) : (
-            <Button size="lg" disabled className="h-11 w-full">
-              WhatsApp unavailable
-            </Button>
-          )}
+          <Button
+            variant={isFailure ? "outline" : "default"}
+            size="lg"
+            className={
+              isFailure
+                ? "h-11 w-full"
+                : "h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
+            }
+          >
+            WhatsApp
+          </Button>
         </div>
       </div>
     </div>
-  )
+  );
 }

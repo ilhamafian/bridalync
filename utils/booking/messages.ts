@@ -1,5 +1,5 @@
 import type { AddOnsSelection, BookingContact, BookingSession } from "@/schemas/booking";
-import type { PublicBooking } from "@/schemas/booking-record";
+import type { PublicBooking } from "@/schemas/bookingRecord";
 import { formatLocationAddress, formatSessionSummary, getPackageLabel, getStyleLabel } from "@/utils/booking/utils";
 import type { BookingPackageId, BookingStyleId } from "@/utils/booking/constants";
 import { formatRm, type BookingInvoiceSummary } from "@/utils/booking/pricing";

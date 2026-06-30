@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import { objectIdSchema } from "@/schemas/object-id";
+import { objectIdSchema } from "@/schemas/objectId";
 
-export const freelancerSchema = z.object({
+export const userSchema = z.object({
   _id: objectIdSchema,
   email: z.email(),
   password: z.string().min(1),
@@ -16,21 +16,21 @@ export const freelancerSchema = z.object({
   bank_account: z.string().min(1).optional(),
 });
 // What the signup API accepts (only mandatory fields)
-export const signupFreelancerSchema = freelancerSchema.pick({
+export const signupUserSchema = userSchema.pick({
   email: true,
   password: true,
 });
 // What profile update accepts (all optional except what you require)
-export const updateFreelancerSchema = freelancerSchema
+export const updateUserSchema = userSchema
   .omit({ _id: true, email: true, password: true })
   .partial();
-export type Freelancer = z.infer<typeof freelancerSchema>;
+export type User = z.infer<typeof userSchema>;
 
-export const publicFreelancerSchema = freelancerSchema.omit({ password: true });
+export const publicUserSchema = userSchema.omit({ password: true });
 
-export type PublicFreelancer = z.infer<typeof publicFreelancerSchema>;
+export type PublicUser = z.infer<typeof publicUserSchema>;
 
-export const bookingFreelancerSchema = freelancerSchema.pick({
+export const bookingUserSchema = userSchema.pick({
   username: true,
   name: true,
   role: true,
@@ -41,4 +41,4 @@ export const bookingFreelancerSchema = freelancerSchema.pick({
   country_code: z.string().min(1).optional(),
 });
 
-export type BookingFreelancer = z.infer<typeof bookingFreelancerSchema>;
+export type BookingUser = z.infer<typeof bookingUserSchema>;

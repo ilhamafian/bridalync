@@ -4,7 +4,7 @@ import { getBookingById, updateBookingStatus } from "@/utils/bookings";
 import {
   publicBookingSchema,
   updateBookingStatusSchema,
-} from "@/schemas/booking-record";
+} from "@/schemas/bookingRecord";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function GET(

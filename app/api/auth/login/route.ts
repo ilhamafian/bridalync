@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { authenticateFreelancer, AuthError } from "@/utils/auth/freelancer-auth";
+import { authenticateFreelancer, AuthError } from "@/utils/auth/user-auth";
 import { setAuthSession } from "@/utils/auth/session";
 import { loginRequestSchema } from "@/schemas/auth";
 import { createResponse, handleError } from "@/utils/apiHelper";

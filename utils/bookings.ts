@@ -5,7 +5,7 @@ import { bookingModel } from "@/models/Booking";
 import {
   bookingRecordSchema,
   type BookingRecord,
-} from "@/schemas/booking-record";
+} from "@/schemas/bookingRecord";
 
 export async function getBookingById(id: string): Promise<BookingRecord | null> {
   if (!ObjectId.isValid(id)) return null;

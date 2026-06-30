@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import {
   AuthError,
   createPartialAccount,
-} from "@/utils/auth/freelancer-auth";
+} from "@/utils/auth/user-auth";
 import { setAuthSession } from "@/utils/auth/session";
 import { signupRequestSchema } from "@/schemas/auth";
 import { createResponse, handleError } from "@/utils/apiHelper";

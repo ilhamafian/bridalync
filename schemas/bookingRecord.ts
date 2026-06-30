@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { objectIdSchema } from "@/schemas/object-id";
+import { objectIdSchema } from "@/schemas/objectId";
 import {
   bookingDraftSchema,
   bookingInvoiceSchema,
