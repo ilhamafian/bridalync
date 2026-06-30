@@ -24,6 +24,11 @@ export const bookingFreelancerSchema = freelancerSchema.pick({
   username: true,
   name: true,
   role: true,
+  mobile: true,
+  country_code: true,
+}).extend({
+  mobile: z.string().min(1).optional(),
+  country_code: z.string().min(1).optional(),
 });
 
 export type BookingFreelancer = z.infer<typeof bookingFreelancerSchema>;

@@ -1,8 +1,10 @@
 import {
   BOOKING_PACKAGES,
+  BOOKING_STYLES,
   EVENT_TYPES,
   TIME_SLOTS,
   type BookingPackageId,
+  type BookingStyleId,
   type EventTypeId,
   type TimeSlotId,
 } from "@/lib/booking/constants";
@@ -57,6 +59,14 @@ export function getEventTypeLabel(eventType: EventTypeId) {
 
 export function getTimeSlotLabel(slotId: TimeSlotId) {
   return TIME_SLOTS.find((slot) => slot.id === slotId)?.label ?? slotId;
+}
+
+export function getStyleLabel(styleId: BookingStyleId) {
+  return BOOKING_STYLES.find((style) => style.id === styleId)?.label ?? styleId;
+}
+
+export function getPackageLabel(packageId: BookingPackageId) {
+  return getPackageById(packageId)?.label ?? packageId;
 }
 
 export function formatLocationSummary(location: SessionLocation) {

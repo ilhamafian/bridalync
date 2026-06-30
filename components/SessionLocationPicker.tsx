@@ -1,6 +1,6 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker"
 import { formatSessionSummary } from "@/lib/booking/utils"
 import type { BookingSession, SessionLocation } from "@/lib/schemas/booking"
@@ -26,6 +26,9 @@ export function SessionLocationPicker({
     <MapsProvider>
       <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
       <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
+      <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
+              If you have not decided on the location yet, you can just put in the area you are in.
+            </p>
         <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
           <input
             type="checkbox"

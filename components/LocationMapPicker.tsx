@@ -131,7 +131,7 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
         <Map
           center={center}
           zoom={zoom}
-          gestureHandling="greedy"
+          gestureHandling="cooperative"
           disableDefaultUI
           className="h-56 w-full"
           onClick={handleMapClick}

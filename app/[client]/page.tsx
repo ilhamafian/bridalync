@@ -1,18 +1,28 @@
 "use client";
 
-import { notFound } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
 import { ChevronRightIcon } from "lucide-react";
 
+import { BookingAddOnPicker } from "@/components/BookingAddOnPicker";
+import { BookingContactForm } from "@/components/BookingContactForm";
+import { BookingInvoice } from "@/components/BookingInvoice";
 import { BookingPackagePicker } from "@/components/BookingPackagePicker";
 import { BookingSessionList } from "@/components/BookingSessionList";
+import { BookingStylePicker } from "@/components/BookingStylePicker";
 import {
   CalendarBookedDates,
   type TimeSlotId,
 } from "@/components/CalendarBookedDates";
 import { SessionLocationPicker } from "@/components/SessionLocationPicker";
 import { Button } from "@/components/ui/button";
-import type { BookingPackageId } from "@/lib/booking/constants";
+import type {
+  BookingAddOnId,
+  BookingPackageId,
+  BookingStyleId,
+} from "@/lib/booking/constants";
+import { buildBookingMessage, buildWhatsAppUrl } from "@/lib/booking/messages";
+import { calculateBookingInvoice, formatRm } from "@/lib/booking/pricing";
 import {
   getEventTypeLabel,
   getNextEventToSchedule,
@@ -22,10 +32,25 @@ import {
   toDateKey,
 } from "@/lib/booking/utils";
 import type { BookingFreelancer } from "@/lib/schemas/freelancer";
-import type { BookingSession, SessionLocation } from "@/lib/schemas/booking";
+import type { AddOnsSelection, BookingContact, BookingSession, SessionLocation } from "@/lib/schemas/booking";
+import { bookingContactSchema } from "@/lib/schemas/booking";
 import { cn } from "@/lib/utils";
 
-type BookingStep = "intro" | "events" | "datetime" | "location";
+type BookingStep =
+  | "intro"
+  | "events"
+  | "datetime"
+  | "location"
+  | "style"
+  | "addons"
+  | "details"
+  | "review";
+
+const EMPTY_CONTACT: BookingContact = {
+  name: "",
+  phone: "",
+  email: "",
+};
 
 const INTRO_DURATION_MS = 3000;
 const STEP_TRANSITION_MS = 300;
@@ -41,6 +66,7 @@ export default function ClientPage({
   params: Promise<{ client: string }>;
 }) {
   const { client } = use(params);
+  const router = useRouter();
 
   const [freelancer, setFreelancer] = useState<BookingFreelancer | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,6 +75,20 @@ export default function ClientPage({
   const [isIntroExiting, setIsIntroExiting] = useState(false);
   const [isEventsExiting, setIsEventsExiting] = useState(false);
   const [isDateTimeExiting, setIsDateTimeExiting] = useState(false);
+  const [isLocationExiting, setIsLocationExiting] = useState(false);
+  const [isStyleExiting, setIsStyleExiting] = useState(false);
+  const [isAddOnsExiting, setIsAddOnsExiting] = useState(false);
+  const [isDetailsExiting, setIsDetailsExiting] = useState(false);
+  const [bookingSubmitState, setBookingSubmitState] = useState<
+    | "idle"
+    | "submitting"
+    | "awaiting_payment"
+    | "completing_payment"
+    | "submitted"
+    | "error"
+  >("idle");
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
   const [selectedPackageId, setSelectedPackageId] =
     useState<BookingPackageId | null>(null);
@@ -60,6 +100,14 @@ export default function ClientPage({
   const [sharedLocation, setSharedLocation] = useState<SessionLocation | null>(
     null
   );
+  const [selectedStyleId, setSelectedStyleId] =
+    useState<BookingStyleId | null>(null);
+  const [selectedAddOnIds, setSelectedAddOnIds] = useState<BookingAddOnId[]>(
+    []
+  );
+  const [addOnsSelection, setAddOnsSelection] =
+    useState<AddOnsSelection | null>(null);
+  const [contact, setContact] = useState<BookingContact>(EMPTY_CONTACT);
 
   const currentEventType = useMemo(() => {
     if (!selectedPackageId) return null;
@@ -80,10 +128,31 @@ export default function ClientPage({
       isPackageScheduleComplete(selectedPackageId, sessions)
   );
   const canContinueLocation = sessions.every((session) => session.location);
+  const canContinueStyle = Boolean(selectedStyleId);
+  const canContinueAddOns = selectedAddOnIds.length > 0;
+  const canContinueDetails = bookingContactSchema.safeParse(contact).success;
 
   const requiredSessionCount = selectedPackageId
     ? getRequiredSessionCount(selectedPackageId)
     : 0;
+
+  const invoice = useMemo(() => {
+    if (!selectedPackageId || !addOnsSelection) return null;
+    return calculateBookingInvoice(selectedPackageId, addOnsSelection);
+  }, [selectedPackageId, addOnsSelection]);
+
+  const canSubmitBooking = Boolean(
+    selectedPackageId &&
+      selectedStyleId &&
+      addOnsSelection &&
+      canContinueDetails &&
+      invoice &&
+      (bookingSubmitState === "idle" || bookingSubmitState === "error")
+  );
+
+  const canCompletePayment = Boolean(
+    pendingBookingId && bookingSubmitState === "awaiting_payment"
+  );
 
   useEffect(() => {
     fetch(`/api/freelancers/${client}`)
@@ -215,6 +284,215 @@ export default function ClientPage({
     );
   }
 
+  function handleLocationNext() {
+    if (!canContinueLocation || isLocationExiting) return;
+    setSelectedStyleId(null);
+    setIsLocationExiting(true);
+  }
+
+  function handleLocationExitEnd(event: React.AnimationEvent<HTMLDivElement>) {
+    if (!isLocationExiting || event.currentTarget !== event.target) return;
+    setStep("style");
+    setIsLocationExiting(false);
+  }
+
+  function handleStyleNext() {
+    if (!canContinueStyle || isStyleExiting) return;
+    setSelectedAddOnIds([]);
+    setAddOnsSelection(null);
+    setIsStyleExiting(true);
+  }
+
+  function handleStyleExitEnd(event: React.AnimationEvent<HTMLDivElement>) {
+    if (!isStyleExiting || event.currentTarget !== event.target) return;
+    setStep("addons");
+    setIsStyleExiting(false);
+  }
+
+  function advanceFromAddOns(selection: AddOnsSelection) {
+    if (isAddOnsExiting) return;
+    setAddOnsSelection(selection);
+    setContact(EMPTY_CONTACT);
+    setIsAddOnsExiting(true);
+  }
+
+  function handleAddOnsSkip() {
+    advanceFromAddOns("skipped");
+  }
+
+  function handleAddOnsNext() {
+    if (!canContinueAddOns || isAddOnsExiting) return;
+
+    if (selectedAddOnIds.includes("not-sure-yet")) {
+      advanceFromAddOns("not-sure");
+      return;
+    }
+
+    advanceFromAddOns(
+      selectedAddOnIds.filter(
+        (id): id is "gandik" | "sanggul-lintang" =>
+          id === "gandik" || id === "sanggul-lintang"
+      )
+    );
+  }
+
+  function handleAddOnsExitEnd(event: React.AnimationEvent<HTMLDivElement>) {
+    if (!isAddOnsExiting || event.currentTarget !== event.target) return;
+    setStep("details");
+    setIsAddOnsExiting(false);
+  }
+
+  function handleDetailsNext() {
+    if (!canContinueDetails || isDetailsExiting) return;
+    setBookingSubmitState("idle");
+    setBookingError(null);
+    setPendingBookingId(null);
+    setIsDetailsExiting(true);
+  }
+
+  function handleDetailsExitEnd(event: React.AnimationEvent<HTMLDivElement>) {
+    if (!isDetailsExiting || event.currentTarget !== event.target) return;
+    setStep("review");
+    setIsDetailsExiting(false);
+  }
+
+  async function handleBookNow() {
+    if (
+      !canSubmitBooking ||
+      !selectedPackageId ||
+      !selectedStyleId ||
+      !addOnsSelection
+    ) {
+      return;
+    }
+
+    setBookingSubmitState("submitting");
+    setBookingError(null);
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          freelancerUsername: client,
+          packageId: selectedPackageId,
+          sessions,
+          style: selectedStyleId,
+          addOns: addOnsSelection,
+          contact,
+          intent: "booking",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Booking request failed");
+      }
+
+      const data = (await response.json()) as { id: string };
+      setPendingBookingId(data.id);
+      setBookingSubmitState("awaiting_payment");
+    } catch {
+      setBookingSubmitState("error");
+      setBookingError("Something went wrong. Please try again.");
+    }
+  }
+
+  async function handlePaymentOutcome(outcome: "confirmed" | "failed") {
+    if (!canCompletePayment || !pendingBookingId) return;
+
+    setBookingSubmitState("completing_payment");
+    setBookingError(null);
+
+    try {
+      const response = await fetch(`/api/bookings/${pendingBookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          freelancerUsername: client,
+          status: outcome,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Payment update failed");
+      }
+
+      router.push(`/${client}/bookings/${pendingBookingId}`);
+    } catch {
+      setBookingSubmitState("awaiting_payment");
+      setBookingError("Could not update your booking. Please try again.");
+    }
+  }
+
+  async function handleEnquiry() {
+    if (
+      !canSubmitBooking ||
+      !selectedPackageId ||
+      !selectedStyleId ||
+      !addOnsSelection ||
+      !invoice
+    ) {
+      return;
+    }
+
+    if (!freelancer?.mobile || !freelancer.country_code) {
+      setBookingError(
+        "Unable to contact the stylist right now. Please try again later."
+      );
+      setBookingSubmitState("error");
+      return;
+    }
+
+    setBookingSubmitState("submitting");
+    setBookingError(null);
+
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          freelancerUsername: client,
+          packageId: selectedPackageId,
+          sessions,
+          style: selectedStyleId,
+          addOns: addOnsSelection,
+          contact,
+          intent: "enquiry",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Enquiry request failed");
+      }
+
+      const message = buildBookingMessage({
+        freelancerName: freelancer.name,
+        contact,
+        packageId: selectedPackageId,
+        styleId: selectedStyleId,
+        sessions,
+        addOns: addOnsSelection,
+        invoice,
+        intent: "enquiry",
+      });
+
+      window.open(
+        buildWhatsAppUrl(
+          freelancer.country_code,
+          freelancer.mobile,
+          message
+        ),
+        "_blank",
+        "noopener,noreferrer"
+      );
+
+      setBookingSubmitState("submitted");
+    } catch {
+      setBookingSubmitState("error");
+      setBookingError("Something went wrong. Please try again.");
+    }
+  }
+
   if (notFound_) notFound();
 
   if (loading) {
@@ -226,7 +504,7 @@ export default function ClientPage({
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center bg-zinc-50 px-6 pt-16 pb-16 dark:bg-zinc-950">
+    <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pt-16 pb-16 dark:bg-zinc-950">
       {step === "intro" && (
         <div
           className={cn(
@@ -347,18 +625,22 @@ export default function ClientPage({
         <div
           className={cn(
             "flex w-full max-w-md flex-col items-center",
-            enterAnimationClass
+            enterAnimationClass,
+            isLocationExiting && exitAnimationClass
           )}
           style={{ animationDuration: `${STEP_TRANSITION_MS}ms` }}
+          onAnimationEnd={handleLocationExitEnd}
         >
           <h1 className="mb-4 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Where should we meet?
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Search for your venue, then place the pin on the exact spot.
+            Search for your styling location, then place the pin on the exact
+            spot.
           </p>
 
           <div className="flex w-full flex-col items-end gap-4">
+           
             <SessionLocationPicker
               sessions={sessions}
               sameLocationForAll={sameLocationForAll}
@@ -377,12 +659,217 @@ export default function ClientPage({
 
             <Button
               size="lg"
-              disabled={!canContinueLocation}
+              disabled={!canContinueLocation || isLocationExiting}
               className="bg-chart-4 text-white hover:bg-chart-4/90"
+              onClick={handleLocationNext}
             >
               Next
               <ChevronRightIcon />
             </Button>
+          </div>
+        </div>
+      )}
+
+      {step === "style" && (
+        <div
+          className={cn(
+            "flex w-full max-w-md flex-col items-center",
+            enterAnimationClass,
+            isStyleExiting && exitAnimationClass
+          )}
+          style={{ animationDuration: `${STEP_TRANSITION_MS}ms` }}
+          onAnimationEnd={handleStyleExitEnd}
+        >
+          <h1 className="mb-4 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            What style do you want?
+          </h1>
+          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            Pick the look you&apos;re going for.
+          </p>
+
+          <div className="flex w-full flex-col items-end gap-4">
+            <BookingStylePicker
+              selectedStyleId={selectedStyleId}
+              onStyleChange={setSelectedStyleId}
+            />
+            <Button
+              size="lg"
+              disabled={!canContinueStyle || isStyleExiting}
+              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              onClick={handleStyleNext}
+            >
+              Next
+              <ChevronRightIcon />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === "addons" && (
+        <div
+          className={cn(
+            "flex w-full max-w-md flex-col items-center",
+            enterAnimationClass,
+            isAddOnsExiting && exitAnimationClass
+          )}
+          style={{ animationDuration: `${STEP_TRANSITION_MS}ms` }}
+          onAnimationEnd={handleAddOnsExitEnd}
+        >
+          <h1 className="mb-4 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Any Add Ons?
+          </h1>
+          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            Optional extras — pick any that apply, or skip.
+          </p>
+
+          <div className="flex w-full flex-col items-end gap-4">
+            <BookingAddOnPicker
+              selectedAddOnIds={selectedAddOnIds}
+              onSelectionChange={setSelectedAddOnIds}
+            />
+            <div className="flex w-full justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="lg"
+                disabled={isAddOnsExiting}
+                onClick={handleAddOnsSkip}
+              >
+                Skip
+              </Button>
+              <Button
+                size="lg"
+                disabled={!canContinueAddOns || isAddOnsExiting}
+                className="bg-chart-4 text-white hover:bg-chart-4/90"
+                onClick={handleAddOnsNext}
+              >
+                Next
+                <ChevronRightIcon />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {step === "details" && (
+        <div
+          className={cn(
+            "flex w-full max-w-md flex-col items-center",
+            enterAnimationClass,
+            isDetailsExiting && exitAnimationClass
+          )}
+          style={{ animationDuration: `${STEP_TRANSITION_MS}ms` }}
+          onAnimationEnd={handleDetailsExitEnd}
+        >
+          <h1 className="mb-4 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Can I get your details?
+          </h1>
+          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            So we can confirm your booking and stay in touch.
+          </p>
+
+          <div className="flex w-full flex-col items-end gap-4">
+            <BookingContactForm value={contact} onChange={setContact} />
+            <Button
+              size="lg"
+              disabled={!canContinueDetails || isDetailsExiting}
+              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              onClick={handleDetailsNext}
+            >
+              Next
+              <ChevronRightIcon />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === "review" && invoice && selectedPackageId && selectedStyleId && (
+        <div
+          className={cn(
+            "flex w-full max-w-md flex-col items-center",
+            enterAnimationClass
+          )}
+          style={{ animationDuration: `${STEP_TRANSITION_MS}ms` }}
+        >
+          <h1 className="mb-4 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Your booking summary
+          </h1>
+          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            Review your invoice, then confirm or send an enquiry.
+          </p>
+
+          <div className="flex w-full flex-col gap-4">
+            <BookingInvoice invoice={invoice} />
+
+            {bookingSubmitState === "submitted" && (
+              <p className="text-center text-sm text-emerald-700 dark:text-emerald-400">
+                Enquiry sent. Continue in WhatsApp to chat with{" "}
+                {freelancer?.name}.
+              </p>
+            )}
+
+            {bookingSubmitState === "awaiting_payment" && (
+              <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
+                Pay the {formatRm(invoice.depositRm)} deposit, then choose the
+                payment result below.
+              </p>
+            )}
+
+            {bookingError && (
+              <p className="text-center text-sm text-destructive">
+                {bookingError}
+              </p>
+            )}
+
+            <div className="flex w-full flex-col gap-2">
+              {canCompletePayment ? (
+                <>
+                  <Button
+                    size="lg"
+                    disabled={bookingSubmitState === "completing_payment"}
+                    className="h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
+                    onClick={() => void handlePaymentOutcome("confirmed")}
+                  >
+                    {bookingSubmitState === "completing_payment"
+                      ? "Processing..."
+                      : "Success"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    disabled={bookingSubmitState === "completing_payment"}
+                    className="h-11 w-full"
+                    onClick={() => void handlePaymentOutcome("failed")}
+                  >
+                    Fail
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    size="lg"
+                    disabled={!canSubmitBooking}
+                    className="h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
+                    onClick={() => void handleBookNow()}
+                  >
+                    {bookingSubmitState === "submitting"
+                      ? "Creating booking..."
+                      : "Book now"}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    disabled={!canSubmitBooking}
+                    className="h-11 w-full"
+                    onClick={() => void handleEnquiry()}
+                  >
+                    I have an enquiry
+                  </Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
