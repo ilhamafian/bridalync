@@ -125,6 +125,12 @@
   body {
     @apply bg-zinc-200 text-foreground dark:bg-zinc-950;
   }
+
+  @media (max-width: 767px) {
+    body {
+      @apply bg-background;
+    }
+  }
   html {
     @apply font-serif;
   }
@@ -132,15 +138,27 @@
 
 @layer components {
   .app-shell {
-    --app-width: min(100vw, 390px);
-    --v-gap: 3rem; /* matches body py-6 × 2 */
-    width: var(--app-width);
-    height: min(calc(100dvh - var(--v-gap)), calc(var(--app-width) * 844 / 390));
+    --app-max-width: 390px;
+    --phone-height-ratio: calc(844 / 390);
+    --v-gap: 3rem; /* matches body md:py-6 × 2 */
+    --shell-width: min(100vw, var(--app-max-width));
+
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    flex: none;
   }
 
-  @media (max-width: 390px) {
+  @media (min-width: 768px) {
     .app-shell {
-      --v-gap: 0px;
+      --shell-width: min(100vw, var(--app-max-width));
+
+      width: var(--shell-width);
+      max-width: var(--app-max-width);
+      height: min(
+        calc(100dvh - var(--v-gap)),
+        calc(var(--shell-width) * var(--phone-height-ratio))
+      );
     }
   }
 }
