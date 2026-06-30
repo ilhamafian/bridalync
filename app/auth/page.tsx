@@ -5,8 +5,10 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { signupPasswordSchema } from "@/schemas/auth";
 
 type AuthTab = "login" | "signup";
+type SignupStep = "credentials" | "verify-email";
 
 const inputClassName = cn(
   "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground",
@@ -84,10 +86,32 @@ function getRedirectPath(tab: AuthTab, payload: AuthSuccessPayload) {
 export default function AuthPage() {
   const router = useRouter();
   const [tab, setTab] = useState<AuthTab>("login");
+  const [signupStep, setSignupStep] = useState<SignupStep>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const isVerifyStep = tab === "signup" && signupStep === "verify-email";
+
+  async function handleSendVerificationCode() {
+    const response = await fetch("/api/auth/send-verification-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const payload: unknown = await response.json();
+    if (!response.ok) {
+      setError(getErrorMessage(payload));
+      return false;
+    }
+
+    setSignupStep("verify-email");
+    setVerificationCode("");
+    return true;
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -97,11 +121,30 @@ export default function AuthPage() {
     setError(null);
 
     try {
+      if (tab === "signup" && signupStep === "credentials") {
+        const passwordResult = signupPasswordSchema.safeParse(password);
+        if (!passwordResult.success) {
+          setError(
+            passwordResult.error.issues[0]?.message ??
+              "Password does not meet requirements."
+          );
+          return;
+        }
+
+        await handleSendVerificationCode();
+        return;
+      }
+
       const endpoint = tab === "login" ? "/api/auth/login" : "/api/auth/signup";
+      const body =
+        tab === "login"
+          ? { email, password }
+          : { email, password, code: verificationCode };
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(body),
       });
 
       const payload: unknown = await response.json();
@@ -118,19 +161,41 @@ export default function AuthPage() {
     }
   }
 
+  async function handleResendCode() {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await handleSendVerificationCode();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
       <div className="flex w-full max-w-md flex-col items-center">
         <p className="mb-2 text-sm font-medium text-primary">Bridalync</p>
         <h1 className="mb-2 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          {tab === "login" ? "Welcome back" : "Create your account"}
+          {isVerifyStep
+            ? "Verify your email"
+            : tab === "login"
+              ? "Welcome back"
+              : "Create your account"}
         </h1>
         <p className="mb-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
-          {tab === "login"
-            ? "Log in to manage your bookings and clients."
-            : "Sign up to share your booking link and grow your business."}
+          {isVerifyStep
+            ? `We sent a 6-digit code to ${email}. Enter it below to finish creating your account.`
+            : tab === "login"
+              ? "Log in to manage your bookings and clients."
+              : "Sign up to share your booking link and grow your business."}
         </p>
 
+        {!isVerifyStep && (
         <div
           role="tablist"
           aria-label="Authentication mode"
@@ -150,6 +215,7 @@ export default function AuthPage() {
               )}
               onClick={() => {
                 setTab(value);
+                setSignupStep("credentials");
                 setError(null);
               }}
             >
@@ -157,7 +223,10 @@ export default function AuthPage() {
             </button>
           ))}
         </div>
+        )}
 
+        {!isVerifyStep && (
+        <>
         <div className="flex w-full flex-col gap-3">
           <Button
             type="button"
@@ -185,12 +254,45 @@ export default function AuthPage() {
           <span className="text-xs text-muted-foreground">or</span>
           <div className="h-px flex-1 bg-border" />
         </div>
+        </>
+        )}
 
         <form
           onSubmit={(event) => void handleSubmit(event)}
           className="flex w-full flex-col gap-4"
-          aria-label={tab === "login" ? "Log in form" : "Sign up form"}
+          aria-label={
+            isVerifyStep
+              ? "Verify email form"
+              : tab === "login"
+                ? "Log in form"
+                : "Sign up form"
+          }
         >
+          {isVerifyStep ? (
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-foreground">
+                Verification code
+              </span>
+              <input
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                value={verificationCode}
+                onChange={(event) =>
+                  setVerificationCode(
+                    event.target.value.replace(/\D/g, "").slice(0, 6)
+                  )
+                }
+                className={cn(inputClassName, "text-center tracking-[0.3em]")}
+                minLength={6}
+                maxLength={6}
+                pattern="\d{6}"
+                required
+              />
+            </label>
+          ) : (
+            <>
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">Email</span>
             <input
@@ -218,7 +320,15 @@ export default function AuthPage() {
               minLength={tab === "signup" ? 8 : 1}
               required
             />
+            {tab === "signup" && (
+              <span className="text-xs text-muted-foreground">
+                At least 8 characters with uppercase, lowercase, a number, and a
+                symbol.
+              </span>
+            )}
           </label>
+            </>
+          )}
 
           {error && (
             <p className="text-center text-sm text-destructive">{error}</p>
@@ -231,13 +341,42 @@ export default function AuthPage() {
             className="mt-2 h-11 w-full rounded-xl bg-chart-4 text-sm text-white hover:bg-chart-4/90"
           >
             {isSubmitting
-              ? tab === "login"
-                ? "Logging in..."
-                : "Creating account..."
-              : tab === "login"
-                ? "Log in"
-                : "Create account"}
+              ? isVerifyStep
+                ? "Verifying..."
+                : tab === "login"
+                  ? "Logging in..."
+                  : "Sending code..."
+              : isVerifyStep
+                ? "Verify and create account"
+                : tab === "login"
+                  ? "Log in"
+                  : "Continue"}
           </Button>
+
+          {isVerifyStep && (
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => void handleResendCode()}
+                className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+              >
+                Resend code
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setSignupStep("credentials");
+                  setVerificationCode("");
+                  setError(null);
+                }}
+                className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+              >
+                Back
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>

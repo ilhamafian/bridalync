@@ -6,7 +6,6 @@ import { BookingInvoice } from "@/components/BookingInvoice";
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { Button } from "@/components/ui/button";
 import type { BookingInvoiceSummary } from "@/utils/booking/pricing";
-import type { BookingSession } from "@/schemas/booking";
 
 type BookingStatus = "pending" | "confirmed" | "failed";
 
@@ -28,7 +27,7 @@ const MOCK_INVOICE: BookingInvoiceSummary = {
   balanceRm: 330,
 };
 
-const MOCK_SESSIONS: BookingSession[] = [
+const MOCK_SESSIONS: any[] = [
   {
     id: "session-1",
     eventType: "akad",

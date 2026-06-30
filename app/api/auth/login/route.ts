@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 
-import { authenticateFreelancer, AuthError } from "@/utils/auth/user-auth";
+import { authenticateUser, AuthError } from "@/utils/auth/user-auth";
 import { setAuthSession } from "@/utils/auth/session";
 import { loginRequestSchema } from "@/schemas/auth";
 import { createResponse, handleError } from "@/utils/apiHelper";
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    const freelancer = await authenticateFreelancer(parsed.data);
+    const freelancer = await authenticateUser(parsed.data);
     await setAuthSession(freelancer);
 
     return createResponse(

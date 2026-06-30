@@ -16,13 +16,7 @@ import {
 import { SessionLocationPicker } from "@/components/SessionLocationPicker";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type {
-  BookingAddOnId,
-  BookingContact,
-  BookingSession,
-  BookingStyleId,
-  SessionLocation,
-} from "@/schemas/booking";
+
 import type { BookingInvoiceSummary } from "@/utils/booking/pricing";
 
 type BookingPackageId = string;
@@ -69,7 +63,7 @@ const MOCK_INVOICE: BookingInvoiceSummary = {
 
 const MOCK_DEPOSIT_LABEL = "RM100";
 
-const EMPTY_CONTACT: BookingContact = {
+const EMPTY_CONTACT: any = {
   name: "",
   phone: "",
   email: "",
@@ -82,20 +76,20 @@ export default function ClientPage() {
 
   const [selectedPackageId, setSelectedPackageId] =
     useState<BookingPackageId | null>(MOCK_PACKAGE_ID);
-  const [sessions, setSessions] = useState<BookingSession[]>([]);
+  const [sessions, setSessions] = useState<any[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSlot, setSelectedSlot] = useState<TimeSlotId | null>(null);
 
   const [sameLocationForAll, setSameLocationForAll] = useState(true);
-  const [sharedLocation, setSharedLocation] = useState<SessionLocation | null>(
+  const [sharedLocation, setSharedLocation] = useState<any | null>(
     null
   );
   const [selectedStyleId, setSelectedStyleId] =
-    useState<BookingStyleId | null>("neat-clean");
-  const [selectedAddOnIds, setSelectedAddOnIds] = useState<BookingAddOnId[]>(
+    useState<string | null>("neat-clean");
+  const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>(
     []
   );
-  const [contact, setContact] = useState<BookingContact>(EMPTY_CONTACT);
+  const [contact, setContact] = useState<any>(EMPTY_CONTACT);
 
   function goToNextStep() {
     const index = STEP_ORDER.indexOf(step);

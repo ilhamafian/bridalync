@@ -1,7 +1,7 @@
-import { getSessionFreelancer } from "@/utils/auth/session";
+import { getSessionUser } from "@/utils/auth/session";
 
 export default async function OnboardingPage() {
-  const freelancer = await getSessionFreelancer();
+  const user = await getSessionUser();
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
@@ -15,7 +15,7 @@ export default async function OnboardingPage() {
         </p>
 
         <p className="text-center text-sm text-muted-foreground">
-          Signed in as {freelancer?.email}
+          Signed in as {user?.email}
         </p>
       </div>
     </div>

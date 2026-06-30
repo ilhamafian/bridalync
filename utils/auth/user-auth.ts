@@ -1,9 +1,9 @@
 import bcrypt from "bcryptjs";
 import { ObjectId } from "mongodb";
 
-import { userModel } from "@/models/User";
+import { UserModel } from "@/models/User";
 import { userExists } from "@/utils/users";
-import { publicUserSchema, type PublicUser } from "@/schemas/user";
+import { publicUserSchema, type PublicUser } from "@/schemas/userSchema";
 
 const PASSWORD_SALT_ROUNDS = 12;
 
@@ -47,7 +47,7 @@ async function ensureUniqueUsername(baseUsername: string) {
 }
 
 export async function userEmailExists(email: string) {
-  const doc = await userModel.findOne({
+  const doc = await new UserModel().findOne({
     email: normalizeEmail(email),
   } as never);
   return doc !== null;
@@ -68,8 +68,8 @@ export async function createPartialAccount(input: {
 
   const passwordHash = await bcrypt.hash(input.password, PASSWORD_SALT_ROUNDS);
 
-  const user = await userModel.create({
-    _id: new ObjectId(),
+  const user = await new UserModel().create({
+    _id: new ObjectId().toString(),
     email,
     password: passwordHash,
     onboarding_completed: false,
@@ -83,7 +83,7 @@ export async function authenticateUser(input: {
   password: string;
 }): Promise<PublicUser> {
   const email = normalizeEmail(input.email);
-  const user = await userModel.findOne({ email } as never);
+  const user = await new UserModel().findOne({ email } as never);
 
   if (!user) {
     throw new AuthError("INVALID_CREDENTIALS", "Invalid email or password.");

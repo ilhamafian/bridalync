@@ -2,19 +2,27 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { BOOKING_ADD_ONS, type BookingAddOnId } from "@/utils/booking/constants"
 import { cn } from "@/lib/utils"
 
+const ADD_ONS = [
+  { id: "hair-styling", label: "Hair styling" },
+  { id: "lashes", label: "Lash application" },
+  { id: "trial-run", label: "Trial run before the wedding" },
+  { id: "early-start", label: "Early morning start (before 7am)" },
+  { id: "touch-ups", label: "Touch-ups throughout the day" },
+  { id: "not-sure-yet", label: "Not sure yet" },
+] as const
+
 type BookingAddOnPickerProps = {
-  selectedAddOnIds: BookingAddOnId[]
-  onSelectionChange: (addOnIds: BookingAddOnId[]) => void
+  selectedAddOnIds: string[]
+  onSelectionChange: (addOnIds: string[]) => void
 }
 
 export function BookingAddOnPicker({
   selectedAddOnIds,
   onSelectionChange,
 }: BookingAddOnPickerProps) {
-  function toggleAddOn(addOnId: BookingAddOnId) {
+  function toggleAddOn(addOnId: string) {
     if (addOnId === "not-sure-yet") {
       onSelectionChange(
         selectedAddOnIds.includes("not-sure-yet") ? [] : ["not-sure-yet"]
@@ -35,7 +43,7 @@ export function BookingAddOnPicker({
   return (
     <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
       <CardContent className="flex flex-col gap-2 pt-(--card-spacing)">
-        {BOOKING_ADD_ONS.map((addOn) => (
+        {ADD_ONS.map((addOn) => (
           <Button
             key={addOn.id}
             type="button"

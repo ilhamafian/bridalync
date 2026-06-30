@@ -1,17 +1,18 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
 
-import { freelancerModel } from "@/models/User";
+import { UserModel } from "@/models/User";
 import {
-  publicFreelancerSchema,
-  type PublicFreelancer,
-} from "@/schemas/user";
+  publicUserSchema,
+  type PublicUser,
+} from "@/schemas/userSchema";
+import { ObjectId } from "mongodb";
 
 export const SESSION_COOKIE_NAME = "bridalync_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 type SessionPayload = {
-  sub: string;
+  userId: string;
   onboarding_completed: boolean;
   exp: number;
 };
@@ -39,12 +40,12 @@ function decodePayload(encoded: string): SessionPayload | null {
 }
 
 export function createSessionToken(input: {
-  freelancerId: string;
   onboarding_completed: boolean;
+  userId: string;
 }) {
   const payload: SessionPayload = {
-    sub: input.freelancerId,
     onboarding_completed: input.onboarding_completed,
+    userId: input.userId,
     exp: Date.now() + SESSION_MAX_AGE_SECONDS * 1000,
   };
   const encoded = encodePayload(payload);
@@ -79,11 +80,14 @@ export function verifySessionToken(token: string): SessionPayload | null {
   return payload;
 }
 
-export async function setAuthSession(freelancer: PublicFreelancer) {
+export async function setAuthSession(user: PublicUser) {
   const token = createSessionToken({
-    freelancerId: String(freelancer._id),
-    onboarding_completed: freelancer.onboarding_completed,
+    onboarding_completed: user.onboarding_completed,
+    userId: user._id ?? "",
   });
+  if (!user._id) {
+    throw new Error("User ID is required");
+  }
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE_NAME, token, {
@@ -95,7 +99,7 @@ export async function setAuthSession(freelancer: PublicFreelancer) {
   });
 }
 
-export async function getSessionFreelancer(): Promise<PublicFreelancer | null> {
+export async function getSessionUser(): Promise<PublicUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
@@ -103,10 +107,10 @@ export async function getSessionFreelancer(): Promise<PublicFreelancer | null> {
   const payload = verifySessionToken(token);
   if (!payload) return null;
 
-  const freelancer = await freelancerModel.findById(payload.sub);
-  if (!freelancer) return null;
+  const user = await new UserModel().findOne({ _id: payload.userId });
+  if (!user) return null;
 
-  const parsed = publicFreelancerSchema.safeParse(freelancer);
+  const parsed = publicUserSchema.safeParse(user);
   return parsed.success ? parsed.data : null;
 }
 

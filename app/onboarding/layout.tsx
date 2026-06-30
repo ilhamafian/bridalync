@@ -1,19 +1,19 @@
 import { redirect } from "next/navigation";
 
-import { getSessionFreelancer } from "@/utils/auth/session";
+import { getSessionUser } from "@/utils/auth/session";
 
 export default async function OnboardingLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const freelancer = await getSessionFreelancer();
+  const user = await getSessionUser();
 
-  if (!freelancer) {
+  if (!user) {
     redirect("/auth");
   }
 
-  if (freelancer.onboarding_completed) {
+  if (user.onboarding_completed) {
     redirect("/");
   }
 
