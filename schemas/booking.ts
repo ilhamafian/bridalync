@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { BOOKING_PACKAGES, EVENT_TYPES } from "@/lib/booking/constants";
+import { BOOKING_PACKAGES, EVENT_TYPES } from "@/utils/booking/constants";
 
 const eventTypeIds = EVENT_TYPES.map((event) => event.id) as [
   (typeof EVENT_TYPES)[number]["id"],

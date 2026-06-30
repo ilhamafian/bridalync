@@ -9,7 +9,7 @@ import {
   type MapMouseEvent,
 } from "@vis.gl/react-google-maps"
 
-import type { SessionLocation } from "@/lib/schemas/booking"
+import type { SessionLocation } from "@/schemas/booking"
 
 const DEFAULT_CENTER = { lat: 3.139, lng: 101.6869 }
 const DEFAULT_ZOOM = 11

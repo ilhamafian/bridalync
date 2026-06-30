@@ -2,8 +2,8 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker"
-import { formatSessionSummary } from "@/lib/booking/utils"
-import type { BookingSession, SessionLocation } from "@/lib/schemas/booking"
+import { formatSessionSummary } from "@/utils/booking/utils"
+import type { BookingSession, SessionLocation } from "@/schemas/booking"
 
 type SessionLocationPickerProps = {
   sessions: BookingSession[]

@@ -5,19 +5,19 @@ import * as React from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardFooter } from "@/components/ui/card"
-import { TIME_SLOTS, type TimeSlotId } from "@/lib/booking/constants"
+import { TIME_SLOTS, type TimeSlotId } from "@/utils/booking/constants"
 import {
   getEventTypeLabel,
   getSessionDates,
   isSlotTaken,
   parseDateKey,
   toDateKey,
-} from "@/lib/booking/utils"
-import type { BookingSession } from "@/lib/schemas/booking"
-import type { EventTypeId } from "@/lib/booking/constants"
+} from "@/utils/booking/utils"
+import type { BookingSession } from "@/schemas/booking"
+import type { EventTypeId } from "@/utils/booking/constants"
 import { cn } from "@/lib/utils"
 
-export type { TimeSlotId } from "@/lib/booking/constants"
+export type { TimeSlotId } from "@/utils/booking/constants"
 
 type CalendarBookedDatesProps = {
   currentEventType: EventTypeId | null

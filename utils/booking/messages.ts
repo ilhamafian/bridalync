@@ -1,8 +1,8 @@
-import type { AddOnsSelection, BookingContact, BookingSession } from "@/lib/schemas/booking";
-import type { PublicBooking } from "@/lib/schemas/booking-record";
-import { formatLocationAddress, formatSessionSummary, getPackageLabel, getStyleLabel } from "@/lib/booking/utils";
-import type { BookingPackageId, BookingStyleId } from "@/lib/booking/constants";
-import { formatRm, type BookingInvoiceSummary } from "@/lib/booking/pricing";
+import type { AddOnsSelection, BookingContact, BookingSession } from "@/schemas/booking";
+import type { PublicBooking } from "@/schemas/booking-record";
+import { formatLocationAddress, formatSessionSummary, getPackageLabel, getStyleLabel } from "@/utils/booking/utils";
+import type { BookingPackageId, BookingStyleId } from "@/utils/booking/constants";
+import { formatRm, type BookingInvoiceSummary } from "@/utils/booking/pricing";
 
 export function toWhatsAppNumber(countryCode: string, mobile: string) {
   const normalizedCountryCode = countryCode.replace(/\D/g, "");

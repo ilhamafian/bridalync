@@ -1,10 +1,10 @@
 import { z } from "zod";
 
-import { objectIdSchema } from "@/lib/schemas/object-id";
+import { objectIdSchema } from "@/schemas/object-id";
 import {
   bookingDraftSchema,
   bookingInvoiceSchema,
-} from "@/lib/schemas/booking";
+} from "@/schemas/booking";
 
 export { bookingInvoiceSchema };
 

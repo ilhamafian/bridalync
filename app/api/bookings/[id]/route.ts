@@ -1,10 +1,10 @@
 import { NextRequest } from "next/server";
 
-import { getBookingById, updateBookingStatus } from "@/lib/bookings";
+import { getBookingById, updateBookingStatus } from "@/utils/bookings";
 import {
   publicBookingSchema,
   updateBookingStatusSchema,
-} from "@/lib/schemas/booking-record";
+} from "@/schemas/booking-record";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function GET(

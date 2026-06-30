@@ -1,7 +1,8 @@
 import { NextRequest } from "next/server";
 
-import { authenticateFreelancer, AuthError } from "@/lib/auth/freelancer-auth";
-import { loginRequestSchema } from "@/lib/schemas/auth";
+import { authenticateFreelancer, AuthError } from "@/utils/auth/freelancer-auth";
+import { setAuthSession } from "@/utils/auth/session";
+import { loginRequestSchema } from "@/schemas/auth";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function POST(req: NextRequest) {
@@ -14,8 +15,15 @@ export async function POST(req: NextRequest) {
     }
 
     const freelancer = await authenticateFreelancer(parsed.data);
+    await setAuthSession(freelancer);
 
-    return createResponse({ freelancer }, 200);
+    return createResponse(
+      {
+        freelancer,
+        redirectTo: freelancer.onboarding_completed ? "/" : "/onboarding",
+      },
+      200
+    );
   } catch (error) {
     if (error instanceof AuthError) {
       return createResponse({ error: error.message }, 401);

@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
-import type { BookingContact } from "@/lib/schemas/booking"
+import type { BookingContact } from "@/schemas/booking"
 import { cn } from "@/lib/utils"
 
 type BookingContactFormProps = {

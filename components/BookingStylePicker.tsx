@@ -4,7 +4,7 @@ import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { BOOKING_STYLES, type BookingStyleId } from "@/lib/booking/constants"
+import { BOOKING_STYLES, type BookingStyleId } from "@/utils/booking/constants"
 import { cn } from "@/lib/utils"
 
 type BookingStylePickerProps = {

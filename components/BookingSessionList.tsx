@@ -3,8 +3,8 @@
 import { XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { formatLocationAddress, formatSessionSummary } from "@/lib/booking/utils"
-import type { BookingSession } from "@/lib/schemas/booking"
+import { formatLocationAddress, formatSessionSummary } from "@/utils/booking/utils"
+import type { BookingSession } from "@/schemas/booking"
 
 type BookingSessionListProps = {
   sessions: BookingSession[]

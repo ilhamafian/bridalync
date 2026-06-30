@@ -1,9 +1,9 @@
 import { NextRequest } from "next/server";
 
-import { calculateBookingInvoice } from "@/lib/booking/pricing";
-import { createBooking } from "@/lib/models/Booking";
-import { freelancerExists } from "@/lib/freelancers";
-import { createBookingRequestSchema } from "@/lib/schemas/booking-record";
+import { calculateBookingInvoice } from "@/utils/booking/pricing";
+import { createBooking } from "@/models/Booking";
+import { freelancerExists } from "@/utils/freelancers";
+import { createBookingRequestSchema } from "@/schemas/booking-record";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function POST(req: NextRequest) {

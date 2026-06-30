@@ -1,12 +1,12 @@
 import bcrypt from "bcryptjs";
 import { ObjectId } from "mongodb";
 
-import { freelancerModel } from "@/lib/models/Freelancer";
-import { freelancerExists } from "@/lib/freelancers";
+import { freelancerModel } from "@/models/Freelancer";
+import { freelancerExists } from "@/utils/freelancers";
 import {
   publicFreelancerSchema,
   type PublicFreelancer,
-} from "@/lib/schemas/freelancer";
+} from "@/schemas/freelancer";
 
 const PASSWORD_SALT_ROUNDS = 12;
 
@@ -56,7 +56,7 @@ export async function freelancerEmailExists(email: string) {
   return doc !== null;
 }
 
-export async function createFreelancerAccount(input: {
+export async function createPartialAccount(input: {
   email: string;
   password: string;
 }): Promise<PublicFreelancer> {
@@ -69,19 +69,13 @@ export async function createFreelancerAccount(input: {
     );
   }
 
-  const username = await ensureUniqueUsername(deriveUsernameFromEmail(email));
   const passwordHash = await bcrypt.hash(input.password, PASSWORD_SALT_ROUNDS);
 
   const freelancer = await freelancerModel.create({
     _id: new ObjectId(),
-    username,
-    name: formatNameFromEmail(email),
-    role: "Freelancer",
     email,
     password: passwordHash,
-    mobile: "-",
-    country_code: "-",
-    bank_account: "-",
+    onboarding_completed: false,
   });
 
   return publicFreelancerSchema.parse(freelancer);

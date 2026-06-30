@@ -2,9 +2,10 @@ import { NextRequest } from "next/server";
 
 import {
   AuthError,
-  createFreelancerAccount,
-} from "@/lib/auth/freelancer-auth";
-import { signupRequestSchema } from "@/lib/schemas/auth";
+  createPartialAccount,
+} from "@/utils/auth/freelancer-auth";
+import { setAuthSession } from "@/utils/auth/session";
+import { signupRequestSchema } from "@/schemas/auth";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function POST(req: NextRequest) {
@@ -16,9 +17,13 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    const freelancer = await createFreelancerAccount(parsed.data);
+    const freelancer = await createPartialAccount(parsed.data);
+    await setAuthSession(freelancer);
 
-    return createResponse({ freelancer }, 201);
+    return createResponse(
+      { freelancer, redirectTo: "/onboarding" },
+      201
+    );
   } catch (error) {
     if (error instanceof AuthError) {
       const status = error.code === "EMAIL_TAKEN" ? 409 : 401;

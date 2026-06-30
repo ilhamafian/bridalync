@@ -10,11 +10,11 @@ import { Button } from "@/components/ui/button"
 import {
   buildBookingResultMessage,
   buildWhatsAppUrl,
-} from "@/lib/booking/messages"
-import { formatRm } from "@/lib/booking/pricing"
-import { getPackageLabel, getStyleLabel } from "@/lib/booking/utils"
-import type { PublicBooking } from "@/lib/schemas/booking-record"
-import type { BookingFreelancer } from "@/lib/schemas/freelancer"
+} from "@/utils/booking/messages"
+import { formatRm } from "@/utils/booking/pricing"
+import { getPackageLabel, getStyleLabel } from "@/utils/booking/utils"
+import type { PublicBooking } from "@/schemas/booking-record"
+import type { BookingFreelancer } from "@/schemas/freelancer"
 
 export default function BookingResultPage({
   params,

@@ -2,9 +2,9 @@ import {
   BOOKING_ADD_ONS,
   BOOKING_DEPOSIT_RM,
   type BookingPackageId,
-} from "@/lib/booking/constants";
-import { getPackageById } from "@/lib/booking/utils";
-import type { AddOnsSelection } from "@/lib/schemas/booking";
+} from "@/utils/booking/constants";
+import { getPackageById } from "@/utils/booking/utils";
+import type { AddOnsSelection } from "@/schemas/booking";
 
 export type InvoiceLineItem = {
   label: string;

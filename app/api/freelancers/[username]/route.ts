@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { getFreelancerByUsername } from "@/lib/freelancers";
+import { getFreelancerByUsername } from "@/utils/freelancers";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function GET(

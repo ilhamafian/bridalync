@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import {
   BOOKING_PACKAGES,
   type BookingPackageId,
-} from "@/lib/booking/constants"
+} from "@/utils/booking/constants"
 import { cn } from "@/lib/utils"
 
 type BookingPackagePickerProps = {

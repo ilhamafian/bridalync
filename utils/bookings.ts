@@ -1,11 +1,11 @@
 import { ObjectId } from "mongodb";
 import { z } from "zod";
 
-import { bookingModel } from "@/lib/models/Booking";
+import { bookingModel } from "@/models/Booking";
 import {
   bookingRecordSchema,
   type BookingRecord,
-} from "@/lib/schemas/booking-record";
+} from "@/schemas/booking-record";
 
 export async function getBookingById(id: string): Promise<BookingRecord | null> {
   if (!ObjectId.isValid(id)) return null;

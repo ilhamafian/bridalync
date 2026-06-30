@@ -1,6 +1,6 @@
 import { ZodSchema } from "zod";
-import { ModelBase } from "@/lib/models/ModelBase";
-import { freelancerSchema, Freelancer } from "@/lib/schemas/freelancer";
+import { ModelBase } from "@/models/ModelBase";
+import { freelancerSchema, Freelancer } from "@/schemas/freelancer";
 
 class FreelancerModel extends ModelBase<Freelancer> {
   protected collectionName = "freelancers";

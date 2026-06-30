@@ -54,6 +54,13 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
+type AuthSuccessPayload = {
+  redirectTo?: string;
+  freelancer?: {
+    onboarding_completed?: boolean;
+  };
+};
+
 function getErrorMessage(payload: unknown) {
   if (
     payload &&
@@ -65,6 +72,13 @@ function getErrorMessage(payload: unknown) {
   }
 
   return "Something went wrong. Please try again.";
+}
+
+function getRedirectPath(tab: AuthTab, payload: AuthSuccessPayload) {
+  if (payload.redirectTo) return payload.redirectTo;
+  if (tab === "signup") return "/onboarding";
+  if (payload.freelancer?.onboarding_completed) return "/";
+  return "/onboarding";
 }
 
 export default function AuthPage() {
@@ -96,7 +110,7 @@ export default function AuthPage() {
         return;
       }
 
-      router.push("/");
+      router.push(getRedirectPath(tab, payload as AuthSuccessPayload));
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {

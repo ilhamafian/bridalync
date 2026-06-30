@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { formatRm, type BookingInvoiceSummary } from "@/lib/booking/pricing"
+import { formatRm, type BookingInvoiceSummary } from "@/utils/booking/pricing"
 import { cn } from "@/lib/utils"
 
 type BookingInvoiceProps = {

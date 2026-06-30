@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { BOOKING_ADD_ONS, type BookingAddOnId } from "@/lib/booking/constants"
+import { BOOKING_ADD_ONS, type BookingAddOnId } from "@/utils/booking/constants"
 import { cn } from "@/lib/utils"
 
 type BookingAddOnPickerProps = {

@@ -1,8 +1,8 @@
 import { ObjectId } from "mongodb";
 import { ZodSchema } from "zod";
 
-import { ModelBase } from "@/lib/models/ModelBase";
-import { bookingRecordSchema, type BookingRecord } from "@/lib/schemas/booking-record";
+import { ModelBase } from "@/models/ModelBase";
+import { bookingRecordSchema, type BookingRecord } from "@/schemas/booking-record";
 
 class BookingModel extends ModelBase<BookingRecord> {
   protected collectionName = "bookings";

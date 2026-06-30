@@ -7,8 +7,8 @@ import {
   type BookingStyleId,
   type EventTypeId,
   type TimeSlotId,
-} from "@/lib/booking/constants";
-import type { BookingSession, SessionLocation } from "@/lib/schemas/booking";
+} from "@/utils/booking/constants";
+import type { BookingSession, SessionLocation } from "@/schemas/booking";
 
 export function getPackageById(packageId: BookingPackageId) {
   return BOOKING_PACKAGES.find((pkg) => pkg.id === packageId);

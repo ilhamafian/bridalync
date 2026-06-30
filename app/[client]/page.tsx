@@ -20,9 +20,9 @@ import type {
   BookingAddOnId,
   BookingPackageId,
   BookingStyleId,
-} from "@/lib/booking/constants";
-import { buildBookingMessage, buildWhatsAppUrl } from "@/lib/booking/messages";
-import { calculateBookingInvoice, formatRm } from "@/lib/booking/pricing";
+} from "@/utils/booking/constants";
+import { buildBookingMessage, buildWhatsAppUrl } from "@/utils/booking/messages";
+import { calculateBookingInvoice, formatRm } from "@/utils/booking/pricing";
 import {
   getEventTypeLabel,
   getNextEventToSchedule,
@@ -30,10 +30,10 @@ import {
   isPackageScheduleComplete,
   isSlotTaken,
   toDateKey,
-} from "@/lib/booking/utils";
-import type { BookingFreelancer } from "@/lib/schemas/freelancer";
-import type { AddOnsSelection, BookingContact, BookingSession, SessionLocation } from "@/lib/schemas/booking";
-import { bookingContactSchema } from "@/lib/schemas/booking";
+} from "@/utils/booking/utils";
+import type { BookingFreelancer } from "@/schemas/freelancer";
+import type { AddOnsSelection, BookingContact, BookingSession, SessionLocation } from "@/schemas/booking";
+import { bookingContactSchema } from "@/schemas/booking";
 import { cn } from "@/lib/utils";
 
 type BookingStep =

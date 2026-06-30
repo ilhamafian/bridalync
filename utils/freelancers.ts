@@ -1,8 +1,8 @@
-import { freelancerModel } from "@/lib/models/Freelancer";
+import { freelancerModel } from "@/models/Freelancer";
 import {
   BookingFreelancer,
   bookingFreelancerSchema,
-} from "@/lib/schemas/freelancer";
+} from "@/schemas/freelancer";
 
 export async function freelancerExists(username: string): Promise<boolean> {
   const doc = await freelancerModel.findOne({ username } as any);
