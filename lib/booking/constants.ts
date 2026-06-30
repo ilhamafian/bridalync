@@ -11,6 +11,8 @@ export const EVENT_TYPES = [
   { id: "nikah", label: "Nikah" },
   { id: "sanding", label: "Sanding" },
   { id: "corporate", label: "Corporate" },
+  { id: "engagement", label: "Engagement" },
+  { id: "photoshoot", label: "Photoshoot" },
 ] as const;
 
 export type EventTypeId = (typeof EVENT_TYPES)[number]["id"];
@@ -40,15 +42,29 @@ export const BOOKING_PACKAGES = [
     events: ["corporate"] as const,
     priceRm: 280,
   },
+  {
+    id: "engagement",
+    label: "Engagement (1 session)",
+    events: ["engagement"] as const,
+    priceRm: 280,
+  },
+  {
+    id: "photoshoot",
+    label: "Photoshoot (1 session)",
+    events: ["photoshoot"] as const,
+    priceRm: 280,
+  },
 ] as const;
 
 export type BookingPackageId = (typeof BOOKING_PACKAGES)[number]["id"];
 
+export const DEFAULT_STYLE_IMAGE = "/style-sample.jpg";
+
 export const BOOKING_STYLES = [
-  { id: "neat-clean", label: "Neat & Clean" },
-  { id: "drapping", label: "Drapping" },
-  { id: "baby-turkish", label: "Baby Turkish" },
-  { id: "turkish", label: "Turkish" },
+  { id: "neat-clean", label: "Neat & Clean", imageSrc: DEFAULT_STYLE_IMAGE },
+  { id: "drapping", label: "Drapping", imageSrc: DEFAULT_STYLE_IMAGE },
+  { id: "baby-turkish", label: "Baby Turkish", imageSrc: DEFAULT_STYLE_IMAGE },
+  { id: "turkish", label: "Turkish", imageSrc: DEFAULT_STYLE_IMAGE },
 ] as const;
 
 export type BookingStyleId = (typeof BOOKING_STYLES)[number]["id"];

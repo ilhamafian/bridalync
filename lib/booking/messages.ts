@@ -1,5 +1,6 @@
 import type { AddOnsSelection, BookingContact, BookingSession } from "@/lib/schemas/booking";
-import { formatSessionSummary, getPackageLabel, getStyleLabel } from "@/lib/booking/utils";
+import type { PublicBooking } from "@/lib/schemas/booking-record";
+import { formatLocationAddress, formatSessionSummary, getPackageLabel, getStyleLabel } from "@/lib/booking/utils";
 import type { BookingPackageId, BookingStyleId } from "@/lib/booking/constants";
 import { formatRm, type BookingInvoiceSummary } from "@/lib/booking/pricing";
 
@@ -73,5 +74,56 @@ export function buildBookingMessage({
     `Total: ${formatRm(invoice.totalRm)}`,
     `Deposit: ${formatRm(invoice.depositRm)}`,
     `Balance: ${formatRm(invoice.balanceRm)}`,
+  ].join("\n");
+}
+
+function formatBookingStatusIntro(
+  freelancerName: string,
+  status: PublicBooking["status"]
+) {
+  switch (status) {
+    case "confirmed":
+      return `Hi ${freelancerName}, my booking is confirmed.`;
+    case "failed":
+      return `Hi ${freelancerName}, I had trouble completing my booking payment.`;
+    case "pending":
+      return `Hi ${freelancerName}, I have a pending booking.`;
+    case "enquiry":
+      return `Hi ${freelancerName}, I have an enquiry about my booking.`;
+  }
+}
+
+export function buildBookingResultMessage(
+  freelancerName: string,
+  booking: PublicBooking & { _id: string }
+) {
+  const sessionLines = booking.sessions
+    .map((session) => {
+      const line = `• ${formatSessionSummary(session)}`;
+      if (session.location) {
+        return `${line}\n  Location: ${formatLocationAddress(session.location)}`;
+      }
+      return line;
+    })
+    .join("\n");
+
+  return [
+    formatBookingStatusIntro(freelancerName, booking.status),
+    "",
+    `Booking ref: ${booking._id}`,
+    `Name: ${booking.contact.name}`,
+    `Phone: ${booking.contact.phone}`,
+    `Email: ${booking.contact.email}`,
+    "",
+    `Package: ${getPackageLabel(booking.packageId)}`,
+    `Style: ${getStyleLabel(booking.style)}`,
+    `Add-ons: ${formatAddOnsSummary(booking.addOns)}`,
+    "",
+    "Sessions:",
+    sessionLines,
+    "",
+    `Total: ${formatRm(booking.invoice.totalRm)}`,
+    `Deposit: ${formatRm(booking.invoice.depositRm)}`,
+    `Balance: ${formatRm(booking.invoice.balanceRm)}`,
   ].join("\n");
 }

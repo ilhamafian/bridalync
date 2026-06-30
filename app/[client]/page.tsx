@@ -2,7 +2,7 @@
 
 import { notFound, useRouter } from "next/navigation";
 import { use, useEffect, useMemo, useState } from "react";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { BookingAddOnPicker } from "@/components/BookingAddOnPicker";
 import { BookingContactForm } from "@/components/BookingContactForm";
@@ -356,6 +356,72 @@ export default function ClientPage({
     setIsDetailsExiting(false);
   }
 
+  const isStepTransitioning =
+    isEventsExiting ||
+    isDateTimeExiting ||
+    isLocationExiting ||
+    isStyleExiting ||
+    isAddOnsExiting ||
+    isDetailsExiting;
+
+  function restoreAddOnSelectionFromDraft() {
+    if (!addOnsSelection || addOnsSelection === "skipped") {
+      setSelectedAddOnIds([]);
+      return;
+    }
+
+    if (addOnsSelection === "not-sure") {
+      setSelectedAddOnIds(["not-sure-yet"]);
+      return;
+    }
+
+    setSelectedAddOnIds(addOnsSelection);
+  }
+
+  function handleBack() {
+    if (
+      isStepTransitioning ||
+      bookingSubmitState === "completing_payment" ||
+      bookingSubmitState === "submitting"
+    ) {
+      return;
+    }
+
+    switch (step) {
+      case "events":
+        setIsIntroExiting(false);
+        setStep("intro");
+        break;
+      case "datetime":
+        setIsDateTimeExiting(false);
+        setStep("events");
+        break;
+      case "location":
+        setIsLocationExiting(false);
+        setStep("datetime");
+        break;
+      case "style":
+        setIsStyleExiting(false);
+        setStep("location");
+        break;
+      case "addons":
+        setIsAddOnsExiting(false);
+        setStep("style");
+        break;
+      case "details":
+        setIsDetailsExiting(false);
+        restoreAddOnSelectionFromDraft();
+        setStep("addons");
+        break;
+      case "review":
+        setBookingSubmitState("idle");
+        setPendingBookingId(null);
+        setBookingError(null);
+        setStep("details");
+        break;
+    }
+  }
+
   async function handleBookNow() {
     if (
       !canSubmitBooking ||
@@ -504,7 +570,31 @@ export default function ClientPage({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pt-16 pb-16 dark:bg-zinc-950">
+    <div
+      className={cn(
+        "relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pb-16 dark:bg-zinc-950",
+        step === "intro" ? "pt-16" : "pt-4"
+      )}
+    >
+      {step !== "intro" && (
+        <div className="sticky top-0 z-10 mb-4 w-full max-w-md self-center bg-zinc-50 pt-2 dark:bg-zinc-950">
+          <Button
+            type="button"
+            variant="ghost"
+            size="lg"
+            className="-ml-2 text-muted-foreground hover:text-foreground"
+            disabled={
+              isStepTransitioning ||
+              bookingSubmitState === "completing_payment" ||
+              bookingSubmitState === "submitting"
+            }
+            onClick={handleBack}
+          >
+            <ChevronLeftIcon />
+            Back
+          </Button>
+        </div>
+      )}
       {step === "intro" && (
         <div
           className={cn(

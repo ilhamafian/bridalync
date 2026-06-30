@@ -1,16 +1,20 @@
 "use client"
 
 import { notFound } from "next/navigation"
-import { use, useEffect, useState } from "react"
+import { use, useEffect, useMemo, useState } from "react"
 import { CheckCircle2Icon, XCircleIcon } from "lucide-react"
 
 import { BookingInvoice } from "@/components/BookingInvoice"
 import { BookingSessionList } from "@/components/BookingSessionList"
 import { Button } from "@/components/ui/button"
+import {
+  buildBookingResultMessage,
+  buildWhatsAppUrl,
+} from "@/lib/booking/messages"
 import { formatRm } from "@/lib/booking/pricing"
 import { getPackageLabel, getStyleLabel } from "@/lib/booking/utils"
 import type { PublicBooking } from "@/lib/schemas/booking-record"
-import { cn } from "@/lib/utils"
+import type { BookingFreelancer } from "@/lib/schemas/freelancer"
 
 export default function BookingResultPage({
   params,
@@ -18,24 +22,46 @@ export default function BookingResultPage({
   params: Promise<{ client: string; id: string }>
 }) {
   const { client, id } = use(params)
-  const [booking, setBooking] = useState<PublicBooking | null>(null)
+  const [booking, setBooking] = useState<(PublicBooking & { _id: string }) | null>(
+    null
+  )
+  const [freelancer, setFreelancer] = useState<BookingFreelancer | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound_, setNotFound] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/bookings/${id}?client=${encodeURIComponent(client)}`)
-      .then((res) => {
-        if (res.status === 404) {
+    Promise.all([
+      fetch(`/api/bookings/${id}?client=${encodeURIComponent(client)}`),
+      fetch(`/api/freelancers/${client}`),
+    ])
+      .then(async ([bookingRes, freelancerRes]) => {
+        if (bookingRes.status === 404) {
           setNotFound(true)
-          return null
+          return
         }
-        return res.json()
-      })
-      .then((data) => {
-        if (data) setBooking(data)
+
+        const bookingData = bookingRes.ok ? await bookingRes.json() : null
+        const freelancerData =
+          freelancerRes.status === 404 ? null : await freelancerRes.json()
+
+        if (bookingData) setBooking(bookingData)
+        if (freelancerData) setFreelancer(freelancerData)
       })
       .finally(() => setLoading(false))
   }, [client, id])
+
+  const whatsAppUrl = useMemo(() => {
+    if (!booking || !freelancer?.mobile || !freelancer.country_code) {
+      return null
+    }
+
+    const message = buildBookingResultMessage(freelancer.name, booking)
+    return buildWhatsAppUrl(
+      freelancer.country_code,
+      freelancer.mobile,
+      message
+    )
+  }, [booking, freelancer])
 
   if (notFound_) notFound()
 
@@ -64,7 +90,7 @@ export default function BookingResultPage({
             <XCircleIcon className="size-12 text-destructive" />
           )}
           {isPending && (
-            <div className="size-12 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
+            <div className="size-12 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
           )}
 
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -115,17 +141,30 @@ export default function BookingResultPage({
               <a href={`/${client}`}>Try again</a>
             </Button>
           )}
-          <Button
-            asChild
-            variant={isFailure ? "outline" : "default"}
-            size="lg"
-            className={cn(
-              "h-11 w-full",
-              !isFailure && "bg-chart-4 text-white hover:bg-chart-4/90"
-            )}
-          >
-            <a href={`/${client}`}>Back to booking</a>
-          </Button>
+          {whatsAppUrl ? (
+            <Button
+              asChild
+              variant={isFailure ? "outline" : "default"}
+              size="lg"
+              className={
+                isFailure
+                  ? "h-11 w-full"
+                  : "h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
+              }
+            >
+              <a
+                href={whatsAppUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                WhatsApp
+              </a>
+            </Button>
+          ) : (
+            <Button size="lg" disabled className="h-11 w-full">
+              WhatsApp unavailable
+            </Button>
+          )}
         </div>
       </div>
     </div>
