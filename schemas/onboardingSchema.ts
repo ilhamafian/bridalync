@@ -42,11 +42,10 @@ export function isOnboardingComplete(
 export const ONBOARDING_STEP_ORDER = [
   "role",
   "travel",
-  "package",
   "invoice",
   "bank_account",
   "username",
-  "preview_bookings",
+  "preview_profile",
 ] as const;
 
 export type OnboardingStepId = (typeof ONBOARDING_STEP_ORDER)[number];
@@ -55,12 +54,11 @@ export function getOnboardingResumeStep(
   onboarding: OnboardingProgress | undefined
 ): OnboardingStepId {
   if (!onboarding?.congfigureTravelSettings) return "role";
-  if (!onboarding.createdFirstPackage) return "package";
   if (!onboarding.configuredInvoice) return "invoice";
   if (!onboarding.configureBankAccount) return "bank_account";
   if (!onboarding.configuredUsername) return "username";
-  if (!onboarding.previewedBookings) return "preview_bookings";
-  return "preview_bookings";
+  if (!onboarding.previewedBookings) return "preview_profile";
+  return "preview_profile";
 }
 
 const travelStepSchema = z.discriminatedUnion("enabled", [
@@ -77,20 +75,6 @@ export const onboardingRoleTravelSchema = z.object({
   role: z.enum(["hijabstylist", "makeupartist"]),
   charge_by: z.enum(["offering", "style"]),
   travel: travelStepSchema,
-});
-
-export const onboardingPackageSchema = z.object({
-  step: z.literal("package"),
-  name: z.string().min(1),
-  price: z.number().min(0),
-  session_templates: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        order: z.number(),
-      })
-    )
-    .min(1),
 });
 
 export const onboardingInvoiceSchema = z.object({
@@ -116,12 +100,11 @@ export const onboardingUsernameSchema = z.object({
 });
 
 export const onboardingPreviewBookingsSchema = z.object({
-  step: z.literal("preview_bookings"),
+  step: z.literal("preview_profile"),
 });
 
 export const onboardingStepRequestSchema = z.discriminatedUnion("step", [
   onboardingRoleTravelSchema,
-  onboardingPackageSchema,
   onboardingInvoiceSchema,
   onboardingBankAccountSchema,
   onboardingUsernameSchema,

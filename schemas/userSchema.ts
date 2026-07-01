@@ -14,7 +14,6 @@ export {
   ONBOARDING_STEP_ORDER,
   onboardingBankAccountSchema,
   onboardingInvoiceSchema,
-  onboardingPackageSchema,
   onboardingPreviewBookingsSchema,
   onboardingProgressSchema,
   onboardingRequestSchema,

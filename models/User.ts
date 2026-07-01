@@ -7,7 +7,7 @@ export class UserModel extends ModelBase<User> {
   protected schema: ZodSchema<User> = userSchema;
 
   static userRoles: { value: string; label: string }[] = [
-    { value: "hijabstylist", label: "Hijab Stylist" },
     { value: "makeupartist", label: "Makeup Artist" },
+    { value: "hijabstylist", label: "Hijab Stylist" },
   ];
 }

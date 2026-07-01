@@ -7,6 +7,7 @@ import { UserModel } from "@/models/User";
 import {
   getOnboardingResumeStep,
   isOnboardingComplete,
+  onboardingProgressSchema,
   onboardingStepRequestSchema,
   publicUserSchema,
   updateUserSchema,
@@ -20,12 +21,19 @@ import { getSessionUser, setAuthSession } from "@/utils/auth/session";
 import { toIdString } from "@/schemas/objectId";
 import { settingSchema, type TravelSetting } from "@/schemas/settingSchema";
 import { userExists } from "@/utils/users";
+import { getAppUrl } from "@/utils/appUrl";
 
 const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
   placeId: "travel-disabled",
   formattedAddress: "Travel not enabled",
   displayName: "Travel not enabled",
   location: { lat: 0, lng: 0 },
+};
+
+const DEFAULT_SAMPLE_PACKAGE = {
+  name: "Sample session",
+  price: 1000,
+  session_templates: [{ name: "Sample session", order: 0 }],
 };
 
 function buildTravelSetting(
@@ -48,15 +56,36 @@ function buildTravelSetting(
 
 async function updateOnboardingProgress(
   userId: string,
-  onboarding: NonNullable<UpdateUser["onboarding"]>
+  partial: NonNullable<UpdateUser["onboarding"]>
 ) {
-  const userUpdates: UpdateUser = { onboarding };
+  const userModel = new UserModel();
+  const user = await userModel.findById(userId);
+  const current = onboardingProgressSchema.parse(user?.onboarding ?? {});
+  const merged = onboardingProgressSchema.parse({ ...current, ...partial });
 
-  await new UserModel().update(
+  await userModel.update(
     userId,
-    userUpdates as Partial<User>,
+    { onboarding: merged } as Partial<User>,
     updateUserSchema as ZodSchema<Partial<User>>
   );
+}
+
+async function ensureDefaultSamplePackage(userId: string) {
+  const packageModel = new PackageModel();
+  const existing = await packageModel.findOne({ user_id: userId } as never);
+
+  if (!existing) {
+    await packageModel.create(
+      packageSchema.parse({
+        user_id: userId,
+        ...DEFAULT_SAMPLE_PACKAGE,
+      })
+    );
+  }
+
+  await updateOnboardingProgress(userId, {
+    createdFirstPackage: true,
+  });
 }
 
 async function refreshSession(userId: string) {
@@ -81,11 +110,33 @@ export async function GET() {
       return createResponse({ error: "Unauthorized" }, 401);
     }
 
+    const userId = toIdString(user._id);
+    if (
+      userId &&
+      user.onboarding?.congfigureTravelSettings &&
+      !user.onboarding.createdFirstPackage
+    ) {
+      await ensureDefaultSamplePackage(userId);
+      const refreshedUser = await refreshSession(userId);
+      if (refreshedUser) {
+        return createResponse(
+          {
+            roles: UserModel.userRoles,
+            user: refreshedUser,
+            resumeStep: getOnboardingResumeStep(refreshedUser.onboarding),
+            appUrl: getAppUrl(),
+          },
+          200
+        );
+      }
+    }
+
     return createResponse(
       {
         roles: UserModel.userRoles,
         user,
         resumeStep: getOnboardingResumeStep(user.onboarding),
+        appUrl: getAppUrl(),
       },
       200
     );
@@ -120,15 +171,14 @@ export async function POST(req: NextRequest) {
 
         await new UserModel().update(
           userId,
-          {
-            role,
-            onboarding: {
-              initial_onboarding: true,
-              congfigureTravelSettings: true,
-            },
-          } as Partial<User>,
+          { role } as Partial<User>,
           updateUserSchema as ZodSchema<Partial<User>>
         );
+
+        await updateOnboardingProgress(userId, {
+          initial_onboarding: true,
+          congfigureTravelSettings: true,
+        });
 
         const settingsModel = new SettingModel();
         await settingsModel.insertSettings(
@@ -141,25 +191,7 @@ export async function POST(req: NextRequest) {
           })
         );
 
-        await refreshSession(userId);
-        return createResponse({ ok: true }, 200);
-      }
-
-      case "package": {
-        const { name, price, session_templates } = stepData;
-
-        await new PackageModel().create(
-          packageSchema.parse({
-            user_id: userId,
-            name,
-            price,
-            session_templates,
-          })
-        );
-
-        await updateOnboardingProgress(userId, {
-          createdFirstPackage: true,
-        });
+        await ensureDefaultSamplePackage(userId);
         await refreshSession(userId);
         return createResponse({ ok: true }, 200);
       }
@@ -218,20 +250,19 @@ export async function POST(req: NextRequest) {
 
         await new UserModel().update(
           userId,
-          {
-            username,
-            onboarding: {
-              configuredUsername: true,
-            },
-          } as Partial<User>,
+          { username } as Partial<User>,
           updateUserSchema as ZodSchema<Partial<User>>
         );
+
+        await updateOnboardingProgress(userId, {
+          configuredUsername: true,
+        });
 
         await refreshSession(userId);
         return createResponse({ ok: true }, 200);
       }
 
-      case "preview_bookings": {
+      case "preview_profile": {
         await updateOnboardingProgress(userId, {
           previewedBookings: true,
         });
