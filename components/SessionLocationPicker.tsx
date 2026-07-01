@@ -3,15 +3,16 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker"
 import { formatSessionSummary } from "@/utils/booking/utils"
-import type { BookingSession, SessionLocation } from "@/schemas/booking"
+import type { Address } from "@/schemas/addressSchema"
+import type { BookingSession } from "@/schemas/booking"
 
 type SessionLocationPickerProps = {
   sessions: BookingSession[]
   sameLocationForAll: boolean
   onSameLocationForAllChange: (value: boolean) => void
-  sharedLocation: SessionLocation | null
-  onSharedLocationChange: (location: SessionLocation) => void
-  onSessionLocationChange: (sessionId: string, location: SessionLocation) => void
+  sharedLocation: Address | null
+  onSharedLocationChange: (location: Address) => void
+  onSessionLocationChange: (sessionId: string, location: Address) => void
 }
 
 export function SessionLocationPicker({

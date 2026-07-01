@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { addressSchema } from "@/schemas/addressSchema";
+import { randomString } from "@/utils/utils";
 
 export const travelSettingSchema = z.object({
     enabled: z.boolean(),
@@ -9,23 +10,23 @@ export const travelSettingSchema = z.object({
 });
 
 export const paymentSettingSchema = z.object({
-    deposit_amount: z.number(),
-    balance_due_before: z.number(),
+    deposit_amount: z.number().default(50),
+    balance_due_before: z.number().default(3),
 });
 
 export const invoiceSettingSchema = z.object({
-    terms_and_conditions: z.string(),
+    terms_and_conditions: z.string().default("Testing terms and conditions"),
 });
 
 export const bankAccountSettingSchema = z.object({
-    bank_name: z.string(),
-    account_number: z.string(),
-    account_name: z.string(),
+    bank_name: z.string().default("Test Bank"),
+    account_number: z.string().default("1234567890"),
+    account_name: z.string().default("Test Account"),
 });
 
 export const settingSchema = z.object({
     role: z.enum(["hijabstylist", "makeupartist"]),
-    link: z.string(),
+    link: z.string().default(randomString(7)),
     travel: travelSettingSchema,
     payment: paymentSettingSchema,
     invoice: invoiceSettingSchema,

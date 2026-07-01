@@ -1,10 +1,4 @@
-import {
-  BOOKING_ADD_ONS,
-  BOOKING_DEPOSIT_RM,
-  type BookingPackageId,
-} from "@/utils/booking/constants";
-import { getPackageById } from "@/utils/booking/utils";
-import type { AddOnsSelection } from "@/schemas/booking";
+
 
 export type InvoiceLineItem = {
   label: string;
@@ -23,10 +17,10 @@ export function formatRm(amount: number) {
 }
 
 export function calculateBookingInvoice(
-  packageId: BookingPackageId,
-  addOns: AddOnsSelection
+  packageId: string,
+  addOns: string[]
 ): BookingInvoiceSummary {
-  const pkg = getPackageById(packageId);
+  const pkg = { id: packageId, label: "Package 1", priceRm: 100 };
   const lineItems: InvoiceLineItem[] = [];
 
   if (pkg) {
@@ -38,7 +32,7 @@ export function calculateBookingInvoice(
 
   if (Array.isArray(addOns)) {
     for (const addOnId of addOns) {
-      const addOn = BOOKING_ADD_ONS.find((item) => item.id === addOnId);
+      const addOn = { id: addOnId, label: "Add-on 1", priceRm: 10 };
       if (addOn && "priceRm" in addOn) {
         lineItems.push({
           label: addOn.label.replace(/\s*\(RM\d+\)\s*$/, ""),
@@ -54,7 +48,7 @@ export function calculateBookingInvoice(
   }
 
   const totalRm = lineItems.reduce((sum, item) => sum + item.amountRm, 0);
-  const depositRm = BOOKING_DEPOSIT_RM;
+  const depositRm = 50;
   const balanceRm = Math.max(totalRm - depositRm, 0);
 
   return {

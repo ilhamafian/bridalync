@@ -36,9 +36,20 @@ export abstract class ModelBase<T extends Record<string, any>> {
     return this.schema.parse(data);
   }
 
+  /** Users may store `_id` as a string or ObjectId depending on how the doc was created. */
+  protected buildIdFilter(id: string): Filter<T> {
+    if (ObjectId.isValid(id)) {
+      return {
+        $or: [{ _id: new ObjectId(id) }, { _id: id }],
+      } as Filter<T>;
+    }
+
+    return { _id: id } as Filter<T>;
+  }
+
   async findById(id: string): Promise<WithId<T> | null> {
     const collection = await this.getCollection();
-    return collection.findOne({ _id: new ObjectId(id) } as object) as Promise<WithId<T> | null>;
+    return collection.findOne(this.buildIdFilter(id)) as Promise<WithId<T> | null>;
   }
 
   async findOne(query: Filter<T>): Promise<WithId<T> | null> {
@@ -80,17 +91,16 @@ export abstract class ModelBase<T extends Record<string, any>> {
   ) {
     const schemaToUse = schemaOverride ?? this.schema;
     const validated = schemaToUse.parse(updateData);
-    if (!ObjectId.isValid(id)) throw new Error("Invalid ID");
     const collection = await this.getCollection();
     return collection.updateOne(
-      { _id: new ObjectId(id) } as object,
+      this.buildIdFilter(id),
       { $set: validated } as any
     );
   }
 
   async delete(id: string): Promise<void> {
     const collection = await this.getCollection();
-    await collection.deleteOne({ _id: new ObjectId(id) } as object);
+    await collection.deleteOne(this.buildIdFilter(id));
   }
 
   async search(

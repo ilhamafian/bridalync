@@ -1,8 +1,10 @@
 import { z } from "zod";
+import { addressSchema } from "./addressSchema";
+import { objectIdSchema } from "./objectId";
 
 
 export const userSchema = z.object({
-  _id: z.string().optional(), // MongoDB ID, optional since it might not be present when creating a new user
+  _id: objectIdSchema.optional(),
   email: z.email(),
   password: z.string().min(1),
   onboarding_completed: z.boolean().default(false),
@@ -14,6 +16,21 @@ export const userSchema = z.object({
   country_code: z.string().min(1).optional(),
   language: z.string().min(1).optional(),
 });
+
+export const onboardingRequestSchema = z.object({
+  role: z.enum(["hijabstylist", "makeupartist"]),
+  travel: z.discriminatedUnion("enabled", [
+    z.object({ enabled: z.literal(false) }),
+    z.object({
+      enabled: z.literal(true),
+      rate_per_km: z.number().min(0),
+      location: addressSchema,
+    }),
+  ]),
+});
+
+export type OnboardingRequest = z.infer<typeof onboardingRequestSchema>;
+
 // What the signup API accepts (only mandatory fields)
 export const signupUserSchema = userSchema.pick({
   email: true,

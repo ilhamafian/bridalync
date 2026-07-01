@@ -1,5 +1,4 @@
 import bcrypt from "bcryptjs";
-import { ObjectId } from "mongodb";
 
 import { UserModel } from "@/models/User";
 import { userExists } from "@/utils/users";
@@ -69,7 +68,6 @@ export async function createPartialAccount(input: {
   const passwordHash = await bcrypt.hash(input.password, PASSWORD_SALT_ROUNDS);
 
   const user = await new UserModel().create({
-    _id: new ObjectId().toString(),
     email,
     password: passwordHash,
     onboarding_completed: false,

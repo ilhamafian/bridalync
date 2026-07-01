@@ -22,3 +22,7 @@ export const formatDate = (
 
 export const sleep = (ms: number) =>
   new Promise((resolve) => setTimeout(resolve, ms));
+
+export const randomString = (length: number) => {
+  return Math.random().toString(36).substring(2, 2 + length);
+};

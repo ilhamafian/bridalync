@@ -91,6 +91,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const isVerifyStep = tab === "signup" && signupStep === "verify-email";
@@ -161,6 +162,28 @@ export default function AuthPage() {
     }
   }
 
+  async function handleLogout() {
+    if (isLoggingOut) return;
+
+    setIsLoggingOut(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) {
+        const payload: unknown = await response.json();
+        setError(getErrorMessage(payload));
+        return;
+      }
+
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  }
+
   async function handleResendCode() {
     if (isSubmitting) return;
 
@@ -178,6 +201,16 @@ export default function AuthPage() {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={isLoggingOut}
+        onClick={() => void handleLogout()}
+        className="absolute right-4 top-4 h-8 px-2 text-xs text-muted-foreground"
+      >
+        {isLoggingOut ? "Logging out…" : "Log out"}
+      </Button>
       <div className="flex w-full max-w-md flex-col items-center">
         <p className="mb-2 text-sm font-medium text-primary">Bridalync</p>
         <h1 className="mb-2 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">

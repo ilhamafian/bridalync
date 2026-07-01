@@ -6,7 +6,7 @@ import {
   publicUserSchema,
   type PublicUser,
 } from "@/schemas/userSchema";
-import { ObjectId } from "mongodb";
+import { toIdString } from "@/schemas/objectId";
 
 export const SESSION_COOKIE_NAME = "bridalync_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
@@ -81,11 +81,12 @@ export function verifySessionToken(token: string): SessionPayload | null {
 }
 
 export async function setAuthSession(user: PublicUser) {
+  const userId = toIdString(user._id);
   const token = createSessionToken({
     onboarding_completed: user.onboarding_completed,
-    userId: user._id ?? "",
+    userId,
   });
-  if (!user._id) {
+  if (!userId) {
     throw new Error("User ID is required");
   }
 
@@ -107,7 +108,7 @@ export async function getSessionUser(): Promise<PublicUser | null> {
   const payload = verifySessionToken(token);
   if (!payload) return null;
 
-  const user = await new UserModel().findOne({ _id: payload.userId });
+  const user = await new UserModel().findById(payload.userId);
   if (!user) return null;
 
   const parsed = publicUserSchema.safeParse(user);

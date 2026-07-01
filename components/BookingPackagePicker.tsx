@@ -2,15 +2,12 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import {
-  BOOKING_PACKAGES,
-  type BookingPackageId,
-} from "@/utils/booking/constants"
+
 import { cn } from "@/lib/utils"
 
 type BookingPackagePickerProps = {
-  selectedPackageId: BookingPackageId | null
-  onPackageChange: (packageId: BookingPackageId) => void
+  selectedPackageId: string | null
+  onPackageChange: (packageId: string) => void
 }
 
 export function BookingPackagePicker({
@@ -20,7 +17,7 @@ export function BookingPackagePicker({
   return (
     <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
       <CardContent className="flex flex-col gap-2 pt-(--card-spacing)">
-        {BOOKING_PACKAGES.map((pkg) => (
+        {[{ id: "1", label: "Package 1" }, { id: "2", label: "Package 2" }].map((pkg) => (
           <Button
             key={pkg.id}
             type="button"

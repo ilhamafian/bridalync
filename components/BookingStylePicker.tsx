@@ -4,12 +4,11 @@ import Image from "next/image"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { BOOKING_STYLES, type BookingStyleId } from "@/utils/booking/constants"
 import { cn } from "@/lib/utils"
 
 type BookingStylePickerProps = {
-  selectedStyleId: BookingStyleId | null
-  onStyleChange: (styleId: BookingStyleId) => void
+  selectedStyleId: string | null
+  onStyleChange: (styleId: string) => void
 }
 
 export function BookingStylePicker({
@@ -19,7 +18,7 @@ export function BookingStylePicker({
   return (
     <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
       <CardContent className="flex flex-col gap-2 pt-(--card-spacing)">
-        {BOOKING_STYLES.map((style) => (
+        {[{ id: "1", label: "Style 1", imageSrc: "https://via.placeholder.com/150" }, { id: "2", label: "Style 2", imageSrc: "https://via.placeholder.com/150" }].map((style) => (
           <Button
             key={style.id}
             type="button"

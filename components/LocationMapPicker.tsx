@@ -9,19 +9,32 @@ import {
   type MapMouseEvent,
 } from "@vis.gl/react-google-maps"
 
-import type { SessionLocation } from "@/schemas/booking"
+import type { Address } from "@/schemas/addressSchema"
 
 const DEFAULT_CENTER = { lat: 3.139, lng: 101.6869 }
 const DEFAULT_ZOOM = 11
 const SELECTED_ZOOM = 17
+const PINNED_PLACE_ID = "map-pinned"
 
 type LocationMapPickerProps = {
-  value: SessionLocation | null
-  onChange: (location: SessionLocation) => void
+  value: Address | null
+  onChange: (address: Address) => void
 }
 
 type PlaceAutocompleteInputProps = {
-  onPlaceSelect: (location: SessionLocation) => void
+  onPlaceSelect: (address: Address) => void
+}
+
+function withLocation(base: Address | null, lat: number, lng: number): Address {
+  return {
+    placeId: base?.placeId ?? PINNED_PLACE_ID,
+    formattedAddress: base?.formattedAddress ?? "Pinned on map",
+    displayName: base?.displayName ?? "Selected location",
+    location: { lat, lng },
+    ...(base?.addressComponents && {
+      addressComponents: base.addressComponents,
+    }),
+  }
 }
 
 function PlaceAutocompleteInput({ onPlaceSelect }: PlaceAutocompleteInputProps) {
@@ -42,20 +55,40 @@ function PlaceAutocompleteInput({ onPlaceSelect }: PlaceAutocompleteInputProps) 
         event as google.maps.places.PlacePredictionSelectEvent
       const place = placePrediction.toPlace()
       await place.fetchFields({
-        fields: ["displayName", "formattedAddress", "location", "id"],
+        fields: [
+          "displayName",
+          "formattedAddress",
+          "location",
+          "id",
+          "addressComponents",
+        ],
       })
 
       const location = place.location
-      const address = place.formattedAddress
+      const formattedAddress = place.formattedAddress
 
-      if (!location || !address) return
+      if (!location || !formattedAddress || !place.id) return
+
+      const addressComponents = place.addressComponents?.flatMap((component) => {
+        if (!component.longText || !component.shortText) return []
+        return [
+          {
+            longText: component.longText,
+            shortText: component.shortText,
+            types: [...component.types],
+          },
+        ]
+      })
 
       onPlaceSelect({
-        label: place.displayName ?? address,
-        address,
-        lat: location.lat(),
-        lng: location.lng(),
         placeId: place.id,
+        formattedAddress,
+        displayName: place.displayName ?? undefined,
+        location: {
+          lat: location.lat(),
+          lng: location.lng(),
+        },
+        ...(addressComponents?.length && { addressComponents }),
       })
     }
 
@@ -75,24 +108,22 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
   const [center, setCenter] = React.useState(DEFAULT_CENTER)
   const [zoom, setZoom] = React.useState(DEFAULT_ZOOM)
   const [marker, setMarker] = React.useState<google.maps.LatLngLiteral | null>(
-    value ? { lat: value.lat, lng: value.lng } : null
+    value ? value.location : null
   )
 
   React.useEffect(() => {
     if (!value) return
-    const nextMarker = { lat: value.lat, lng: value.lng }
-    setMarker(nextMarker)
-    setCenter(nextMarker)
+    setMarker(value.location)
+    setCenter(value.location)
     setZoom(SELECTED_ZOOM)
   }, [value])
 
-  const applyLocation = React.useCallback(
-    (location: SessionLocation) => {
-      const nextMarker = { lat: location.lat, lng: location.lng }
-      setMarker(nextMarker)
-      setCenter(nextMarker)
+  const applyAddress = React.useCallback(
+    (address: Address) => {
+      setMarker(address.location)
+      setCenter(address.location)
       setZoom(SELECTED_ZOOM)
-      onChange(location)
+      onChange(address)
     },
     [onChange]
   )
@@ -101,31 +132,19 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
     const latLng = event.detail.latLng
     if (!latLng) return
 
-    applyLocation({
-      label: value?.label ?? "Selected location",
-      address: value?.address ?? "Pinned on map",
-      lat: latLng.lat,
-      lng: latLng.lng,
-      placeId: value?.placeId,
-    })
+    applyAddress(withLocation(value, latLng.lat, latLng.lng))
   }
 
   function handleMarkerDragEnd(event: google.maps.MapMouseEvent) {
     const latLng = event.latLng
     if (!latLng) return
 
-    applyLocation({
-      label: value?.label ?? "Selected location",
-      address: value?.address ?? "Pinned on map",
-      lat: latLng.lat(),
-      lng: latLng.lng(),
-      placeId: value?.placeId,
-    })
+    applyAddress(withLocation(value, latLng.lat(), latLng.lng()))
   }
 
   return (
     <div className="flex flex-col gap-3">
-      <PlaceAutocompleteInput onPlaceSelect={applyLocation} />
+      <PlaceAutocompleteInput onPlaceSelect={applyAddress} />
 
       <div className="overflow-hidden rounded-lg border border-border">
         <Map
@@ -153,10 +172,14 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
 
       {value && (
         <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">
-          <p className="font-medium text-foreground">{value.label}</p>
-          <p className="text-xs text-muted-foreground">{value.address}</p>
+          <p className="font-medium text-foreground">
+            {value.displayName ?? value.formattedAddress}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {value.formattedAddress}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            {value.lat.toFixed(6)}, {value.lng.toFixed(6)}
+            {value.location.lat.toFixed(6)}, {value.location.lng.toFixed(6)}
           </p>
         </div>
       )}
