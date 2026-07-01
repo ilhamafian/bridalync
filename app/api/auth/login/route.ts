@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     return createResponse(
       {
         freelancer,
-        redirectTo: freelancer.onboarding_completed ? "/" : "/onboarding",
+        redirectTo: freelancer.onboarding_completed ? "/dashboard" : "/onboarding",
       },
       200
     );

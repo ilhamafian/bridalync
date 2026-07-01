@@ -86,12 +86,21 @@ export default function OnboardingPage() {
     setIsSubmitting(true);
     setError(null);
 
+    let charge_by: "offering" | "style" = "offering";
+
+    if (selectedRole === "hijabstylist") {
+      charge_by = "style";
+    } else if (selectedRole === "makeupartist") {
+      charge_by = "offering";
+    }
+
     try {
       const response = await fetch("/api/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           role: selectedRole,
+          charge_by,
           travel: travelEnabled
             ? {
                 enabled: true,
@@ -114,7 +123,7 @@ export default function OnboardingPage() {
           "redirectTo" in payload &&
           typeof payload.redirectTo === "string"
           ? payload.redirectTo
-          : "/"
+          : "/dashboard/settings"
       );
     } catch {
       setError("Something went wrong. Please try again.");

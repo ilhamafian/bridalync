@@ -25,12 +25,16 @@ export const bankAccountSettingSchema = z.object({
 });
 
 export const settingSchema = z.object({
+    user_id: z.string(),
     role: z.enum(["hijabstylist", "makeupartist"]),
     link: z.string().default(randomString(7)),
+    charge_by: z.enum(["offering", "style"]),
     travel: travelSettingSchema,
-    payment: paymentSettingSchema,
-    invoice: invoiceSettingSchema,
-    bank_account: bankAccountSettingSchema,
+    payment: paymentSettingSchema.default(() => paymentSettingSchema.parse({})),
+    invoice: invoiceSettingSchema.default(() => invoiceSettingSchema.parse({})),
+    bank_account: bankAccountSettingSchema.default(() =>
+        bankAccountSettingSchema.parse({})
+    ),
 });
 
 export type Setting = z.infer<typeof settingSchema>;

@@ -79,7 +79,7 @@ function getErrorMessage(payload: unknown) {
 function getRedirectPath(tab: AuthTab, payload: AuthSuccessPayload) {
   if (payload.redirectTo) return payload.redirectTo;
   if (tab === "signup") return "/onboarding";
-  if (payload.freelancer?.onboarding_completed) return "/";
+  if (payload.freelancer?.onboarding_completed) return "/dashboard";
   return "/onboarding";
 }
 

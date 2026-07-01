@@ -6,9 +6,8 @@ import { onboardingRequestSchema, type OnboardingRequest } from "@/schemas/userS
 import { publicUserSchema, updateUserSchema } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser, setAuthSession } from "@/utils/auth/session";
-import { randomString } from "@/utils/utils";
 import { toIdString } from "@/schemas/objectId";
-import { bankAccountSettingSchema, invoiceSettingSchema, paymentSettingSchema, TravelSetting } from "@/schemas/settingSchema";
+import { settingSchema, type TravelSetting } from "@/schemas/settingSchema";
 
 const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
   placeId: "travel-disabled",
@@ -64,7 +63,7 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    const { role, travel } = parsed.data;
+    const { role, travel, charge_by } = parsed.data;
 
     await new UserModel().update(
       userId,
@@ -72,15 +71,16 @@ export async function POST(req: NextRequest) {
       updateUserSchema
     );
 
-    await new SettingModel().create({
-      user_id: userId,
-      role,
-      link: randomString(7),
-      travel: buildTravelSetting(travel),
-      payment: paymentSettingSchema.parse({}),
-      invoice: invoiceSettingSchema.parse({}),
-      bank_account: bankAccountSettingSchema.parse({}),
-    });
+    const settingsModel = new SettingModel();
+    await settingsModel.insertSettings(
+      userId,
+      settingSchema.parse({
+        user_id: userId,
+        role,
+        charge_by,
+        travel: buildTravelSetting(travel),
+      })
+    );
 
     const updatedUser = await new UserModel().findById(userId);
     if (!updatedUser) {
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     await setAuthSession(parsedUser.data);
 
-    return createResponse({ redirectTo: "/" }, 200);
+    return createResponse({ redirectTo: "/dashboard/settings" }, 200);
   } catch (error) {
     return handleError(error);
   }

@@ -19,6 +19,7 @@ export const userSchema = z.object({
 
 export const onboardingRequestSchema = z.object({
   role: z.enum(["hijabstylist", "makeupartist"]),
+  charge_by: z.enum(["offering", "style"]),
   travel: z.discriminatedUnion("enabled", [
     z.object({ enabled: z.literal(false) }),
     z.object({

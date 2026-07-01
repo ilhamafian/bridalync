@@ -14,7 +14,7 @@ export default async function OnboardingLayout({
   }
 
   if (user.onboarding_completed) {
-    redirect("/");
+    redirect("/dashboard");
   }
 
   return children;

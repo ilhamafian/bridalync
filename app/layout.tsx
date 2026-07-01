@@ -38,7 +38,7 @@ export default function RootLayout({
       className={cn("h-full", "antialiased", geistSans.variable, geistMono.variable, "font-serif", notoSerif.variable)}
     >
       <body suppressHydrationWarning className="flex h-dvh items-center justify-center overflow-x-hidden max-md:py-0 md:py-6">
-        <div className="app-shell mx-auto flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-background max-md:rounded-none max-md:shadow-none max-md:ring-0 md:rounded-[2rem] md:shadow-2xl md:ring-1 md:ring-black/10 dark:md:ring-white/10">
+        <div className="app-shell relative mx-auto flex min-h-0 min-w-0 shrink-0 flex-col overflow-hidden bg-background max-md:rounded-none max-md:shadow-none max-md:ring-0 md:rounded-[2rem] md:shadow-2xl md:ring-1 md:ring-black/10 dark:md:ring-white/10">
           {children}
         </div>
       </body>
