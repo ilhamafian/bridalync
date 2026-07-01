@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 
 import { UserModel } from "@/models/User";
 import {
+  isOnboardingComplete,
   publicUserSchema,
   type PublicUser,
 } from "@/schemas/userSchema";
@@ -83,7 +84,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
 export async function setAuthSession(user: PublicUser) {
   const userId = toIdString(user._id);
   const token = createSessionToken({
-    onboarding_completed: user.onboarding_completed,
+    onboarding_completed: isOnboardingComplete(user.onboarding),
     userId,
   });
   if (!userId) {

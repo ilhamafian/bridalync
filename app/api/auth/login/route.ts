@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { authenticateUser, AuthError } from "@/utils/auth/user-auth";
 import { setAuthSession } from "@/utils/auth/session";
 import { loginRequestSchema } from "@/schemas/auth";
+import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function POST(req: NextRequest) {
@@ -20,7 +21,9 @@ export async function POST(req: NextRequest) {
     return createResponse(
       {
         freelancer,
-        redirectTo: freelancer.onboarding_completed ? "/dashboard" : "/onboarding",
+        redirectTo: isOnboardingComplete(freelancer.onboarding)
+          ? "/dashboard"
+          : "/onboarding",
       },
       200
     );

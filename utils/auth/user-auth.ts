@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 
 import { UserModel } from "@/models/User";
 import { userExists } from "@/utils/users";
-import { publicUserSchema, type PublicUser } from "@/schemas/userSchema";
+import { publicUserSchema, userSchema, type PublicUser } from "@/schemas/userSchema";
 
 const PASSWORD_SALT_ROUNDS = 12;
 
@@ -67,11 +67,12 @@ export async function createPartialAccount(input: {
 
   const passwordHash = await bcrypt.hash(input.password, PASSWORD_SALT_ROUNDS);
 
-  const user = await new UserModel().create({
-    email,
-    password: passwordHash,
-    onboarding_completed: false,
-  });
+  const user = await new UserModel().create(
+    userSchema.parse({
+      email,
+      password: passwordHash,
+    })
+  );
 
   return publicUserSchema.parse(user);
 }

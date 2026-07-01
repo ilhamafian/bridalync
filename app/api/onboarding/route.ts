@@ -1,13 +1,25 @@
 import { NextRequest } from "next/server";
+import { ZodSchema } from "zod";
 
+import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
 import { UserModel } from "@/models/User";
-import { onboardingRequestSchema, type OnboardingRequest } from "@/schemas/userSchema";
-import { publicUserSchema, updateUserSchema } from "@/schemas/userSchema";
+import {
+  getOnboardingResumeStep,
+  isOnboardingComplete,
+  onboardingStepRequestSchema,
+  publicUserSchema,
+  updateUserSchema,
+  type OnboardingStepRequest,
+  type UpdateUser,
+  type User,
+} from "@/schemas/userSchema";
+import { packageSchema } from "@/schemas/packageSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser, setAuthSession } from "@/utils/auth/session";
 import { toIdString } from "@/schemas/objectId";
 import { settingSchema, type TravelSetting } from "@/schemas/settingSchema";
+import { userExists } from "@/utils/users";
 
 const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
   placeId: "travel-disabled",
@@ -16,7 +28,9 @@ const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
   location: { lat: 0, lng: 0 },
 };
 
-function buildTravelSetting(travel: OnboardingRequest["travel"]): TravelSetting {
+function buildTravelSetting(
+  travel: Extract<OnboardingStepRequest, { step: "role_travel" }>["travel"]
+): TravelSetting {
   if (travel.enabled) {
     return {
       enabled: true,
@@ -32,14 +46,49 @@ function buildTravelSetting(travel: OnboardingRequest["travel"]): TravelSetting 
   };
 }
 
+async function updateOnboardingProgress(
+  userId: string,
+  onboarding: NonNullable<UpdateUser["onboarding"]>
+) {
+  const userUpdates: UpdateUser = { onboarding };
+
+  await new UserModel().update(
+    userId,
+    userUpdates as Partial<User>,
+    updateUserSchema as ZodSchema<Partial<User>>
+  );
+}
+
+async function refreshSession(userId: string) {
+  const updatedUser = await new UserModel().findById(userId);
+  if (!updatedUser) {
+    return null;
+  }
+
+  const parsedUser = publicUserSchema.safeParse(updatedUser);
+  if (!parsedUser.success) {
+    return null;
+  }
+
+  await setAuthSession(parsedUser.data);
+  return parsedUser.data;
+}
+
 export async function GET() {
   try {
     const user = await getSessionUser();
-    if (!user || user.onboarding_completed) {
+    if (!user || isOnboardingComplete(user.onboarding)) {
       return createResponse({ error: "Unauthorized" }, 401);
     }
 
-    return createResponse({ roles: UserModel.userRoles, user }, 200);
+    return createResponse(
+      {
+        roles: UserModel.userRoles,
+        user,
+        resumeStep: getOnboardingResumeStep(user.onboarding),
+      },
+      200
+    );
   } catch (error) {
     return handleError(error);
   }
@@ -48,7 +97,7 @@ export async function GET() {
 export async function POST(req: NextRequest) {
   try {
     const user = await getSessionUser();
-    if (!user || user.onboarding_completed) {
+    if (!user || isOnboardingComplete(user.onboarding)) {
       return createResponse({ error: "Unauthorized" }, 401);
     }
 
@@ -58,43 +107,138 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const parsed = onboardingRequestSchema.safeParse(body);
+    const parsed = onboardingStepRequestSchema.safeParse(body);
     if (!parsed.success) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    const { role, travel, charge_by } = parsed.data;
+    const stepData = parsed.data;
 
-    await new UserModel().update(
-      userId,
-      { role, onboarding_completed: true },
-      updateUserSchema
-    );
+    switch (stepData.step) {
+      case "role_travel": {
+        const { role, travel, charge_by } = stepData;
 
-    const settingsModel = new SettingModel();
-    await settingsModel.insertSettings(
-      userId,
-      settingSchema.parse({
-        user_id: userId,
-        role,
-        charge_by,
-        travel: buildTravelSetting(travel),
-      })
-    );
+        await new UserModel().update(
+          userId,
+          {
+            role,
+            onboarding: {
+              initial_onboarding: true,
+              congfigureTravelSettings: true,
+            },
+          } as Partial<User>,
+          updateUserSchema as ZodSchema<Partial<User>>
+        );
 
-    const updatedUser = await new UserModel().findById(userId);
-    if (!updatedUser) {
-      return createResponse({ error: "User not found" }, 404);
+        const settingsModel = new SettingModel();
+        await settingsModel.insertSettings(
+          userId,
+          settingSchema.parse({
+            user_id: userId,
+            role,
+            charge_by,
+            travel: buildTravelSetting(travel),
+          })
+        );
+
+        await refreshSession(userId);
+        return createResponse({ ok: true }, 200);
+      }
+
+      case "package": {
+        const { name, price, session_templates } = stepData;
+
+        await new PackageModel().create(
+          packageSchema.parse({
+            user_id: userId,
+            name,
+            price,
+            session_templates,
+          })
+        );
+
+        await updateOnboardingProgress(userId, {
+          createdFirstPackage: true,
+        });
+        await refreshSession(userId);
+        return createResponse({ ok: true }, 200);
+      }
+
+      case "invoice": {
+        const {
+          company_name,
+          terms_and_conditions,
+          company_registration_number,
+        } = stepData;
+
+        const settingsModel = new SettingModel();
+        await settingsModel.updateByUserId(userId, {
+          invoice: {
+            company_name,
+            terms_and_conditions,
+            company_registration_number,
+          },
+        });
+
+        await updateOnboardingProgress(userId, {
+          configuredInvoice: true,
+        });
+        await refreshSession(userId);
+        return createResponse({ ok: true }, 200);
+      }
+
+      case "bank_account": {
+        const { bank_name, account_number, account_name } = stepData;
+
+        const settingsModel = new SettingModel();
+        await settingsModel.updateByUserId(userId, {
+          bank_account: {
+            bank_name,
+            account_number,
+            account_name,
+          },
+        });
+
+        await updateOnboardingProgress(userId, {
+          configureBankAccount: true,
+        });
+        await refreshSession(userId);
+        return createResponse({ ok: true }, 200);
+      }
+
+      case "username": {
+        const username = stepData.username.toLowerCase();
+
+        if (await userExists(username)) {
+          return createResponse(
+            { error: "That username is already taken." },
+            409
+          );
+        }
+
+        await new UserModel().update(
+          userId,
+          {
+            username,
+            onboarding: {
+              configuredUsername: true,
+            },
+          } as Partial<User>,
+          updateUserSchema as ZodSchema<Partial<User>>
+        );
+
+        await refreshSession(userId);
+        return createResponse({ ok: true }, 200);
+      }
+
+      case "preview_bookings": {
+        await updateOnboardingProgress(userId, {
+          previewedBookings: true,
+        });
+        await refreshSession(userId);
+        return createResponse({ redirectTo: "/dashboard" }, 200);
+      }
     }
-
-    const parsedUser = publicUserSchema.safeParse(updatedUser);
-    if (!parsedUser.success) {
-      return createResponse({ error: "Invalid user data" }, 500);
-    }
-
-    await setAuthSession(parsedUser.data);
-
-    return createResponse({ redirectTo: "/dashboard/settings" }, 200);
   } catch (error) {
     return handleError(error);
   }

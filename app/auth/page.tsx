@@ -1,11 +1,15 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { signupPasswordSchema } from "@/schemas/auth";
+import {
+  isOnboardingComplete,
+  type OnboardingProgress,
+} from "@/schemas/onboardingSchema";
 
 type AuthTab = "login" | "signup";
 type SignupStep = "credentials" | "verify-email";
@@ -59,7 +63,7 @@ function GoogleIcon({ className }: { className?: string }) {
 type AuthSuccessPayload = {
   redirectTo?: string;
   freelancer?: {
-    onboarding_completed?: boolean;
+    onboarding?: OnboardingProgress;
   };
 };
 
@@ -79,7 +83,7 @@ function getErrorMessage(payload: unknown) {
 function getRedirectPath(tab: AuthTab, payload: AuthSuccessPayload) {
   if (payload.redirectTo) return payload.redirectTo;
   if (tab === "signup") return "/onboarding";
-  if (payload.freelancer?.onboarding_completed) return "/dashboard";
+  if (isOnboardingComplete(payload.freelancer?.onboarding)) return "/dashboard";
   return "/onboarding";
 }
 
@@ -95,6 +99,30 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
 
   const isVerifyStep = tab === "signup" && signupStep === "verify-email";
+
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7761/ingest/1e7837b5-e141-40fc-8ba8-b3a77ed8ed12", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "c1388c",
+      },
+      body: JSON.stringify({
+        sessionId: "c1388c",
+        runId: "post-fix",
+        hypothesisId: "H1",
+        location: "app/auth/page.tsx:mount",
+        message: "Auth client mounted without mongodb import chain",
+        data: {
+          importSource: "@/schemas/onboardingSchema",
+          hasOnboardingHelper: typeof isOnboardingComplete === "function",
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, []);
 
   async function handleSendVerificationCode() {
     const response = await fetch("/api/auth/send-verification-code", {

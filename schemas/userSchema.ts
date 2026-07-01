@@ -1,13 +1,37 @@
 import { z } from "zod";
-import { addressSchema } from "./addressSchema";
+
+import {
+  defaultOnboardingProgress,
+  onboardingProgressSchema,
+} from "./onboardingSchema";
 import { objectIdSchema } from "./objectId";
 
+export {
+  defaultOnboardingProgress,
+  getOnboardingResumeStep,
+  isInitialOnboardingComplete,
+  isOnboardingComplete,
+  ONBOARDING_STEP_ORDER,
+  onboardingBankAccountSchema,
+  onboardingInvoiceSchema,
+  onboardingPackageSchema,
+  onboardingPreviewBookingsSchema,
+  onboardingProgressSchema,
+  onboardingRequestSchema,
+  onboardingRoleTravelSchema,
+  onboardingStepRequestSchema,
+  onboardingUsernameSchema,
+  type OnboardingProgress,
+  type OnboardingRequest,
+  type OnboardingStepId,
+  type OnboardingStepRequest,
+  type OnboardingUser,
+} from "./onboardingSchema";
 
 export const userSchema = z.object({
   _id: objectIdSchema.optional(),
   email: z.email(),
   password: z.string().min(1),
-  onboarding_completed: z.boolean().default(false),
   // filled in later during onboarding
   username: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
@@ -15,22 +39,10 @@ export const userSchema = z.object({
   mobile: z.string().min(1).optional(),
   country_code: z.string().min(1).optional(),
   language: z.string().min(1).optional(),
+  onboarding: onboardingProgressSchema.default(() => defaultOnboardingProgress()),
 });
 
-export const onboardingRequestSchema = z.object({
-  role: z.enum(["hijabstylist", "makeupartist"]),
-  charge_by: z.enum(["offering", "style"]),
-  travel: z.discriminatedUnion("enabled", [
-    z.object({ enabled: z.literal(false) }),
-    z.object({
-      enabled: z.literal(true),
-      rate_per_km: z.number().min(0),
-      location: addressSchema,
-    }),
-  ]),
-});
-
-export type OnboardingRequest = z.infer<typeof onboardingRequestSchema>;
+export const userOnboardingSchema = userSchema;
 
 // What the signup API accepts (only mandatory fields)
 export const signupUserSchema = userSchema.pick({
@@ -39,7 +51,10 @@ export const signupUserSchema = userSchema.pick({
 });
 // What profile update accepts (all optional except what you require)
 export const updateUserSchema = userSchema
-  .omit({ email: true, password: true })
+  .omit({ email: true, password: true, onboarding: true })
+  .extend({
+    onboarding: onboardingProgressSchema.partial().optional(),
+  })
   .partial();
 
 export const publicUserSchema = userSchema.omit({ password: true });

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { isOnboardingComplete } from "@/schemas/userSchema";
 import { getSessionUser } from "@/utils/auth/session";
 
 export default async function OnboardingLayout({
@@ -13,7 +14,7 @@ export default async function OnboardingLayout({
     redirect("/auth");
   }
 
-  if (user.onboarding_completed) {
+  if (isOnboardingComplete(user.onboarding)) {
     redirect("/dashboard");
   }
 

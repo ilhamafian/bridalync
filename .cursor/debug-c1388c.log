@@ -1,0 +1,1 @@
+{"sessionId":"c1388c","runId":"post-fix","hypothesisId":"H1","location":"app/auth/page.tsx:mount","message":"Auth client mounted without mongodb import chain","data":{"importSource":"@/schemas/onboardingSchema","hasOnboardingHelper":true},"timestamp":1782895158959}

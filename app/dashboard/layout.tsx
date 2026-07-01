@@ -7,6 +7,7 @@ import {
   SidebarProvider,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { isOnboardingComplete } from "@/schemas/userSchema";
 import { getSessionUser } from "@/utils/auth/session";
 
 export default async function DashboardLayout({
@@ -20,7 +21,7 @@ export default async function DashboardLayout({
     redirect("/auth");
   }
 
-  if (!user.onboarding_completed) {
+  if (!isOnboardingComplete(user.onboarding)) {
     redirect("/onboarding");
   }
 
