@@ -39,7 +39,7 @@ export const invoiceSettingSchema = z.object({
     terms_and_conditions: z.string().default(DEFAULT_TERMS_AND_CONDITIONS),
     company_name: z.string().default("Test Company"),
     company_registration_number: z.string().default("1234567890").optional(),
-    company_logo: z.string().default("https://via.placeholder.com/150").optional(),
+    company_logo: z.string().optional(),
 });
 
 export const settingSchema = z.object({
@@ -54,9 +54,15 @@ export const settingSchema = z.object({
     invoice: invoiceSettingSchema.default(() => invoiceSettingSchema.parse({})),
 });
 
-export const settingUpdateSchema = settingSchema
-    .omit({ user_id: true })
-    .partial();
+/** Partial updates must not apply parent `.default()` values (e.g. invoice on bank-only saves). */
+export const settingUpdateSchema = z.object({
+    role: settingSchema.shape.role.optional(),
+    charge_by: settingSchema.shape.charge_by.optional(),
+    travel: travelSettingSchema.partial().optional(),
+    payment: paymentSettingSchema.partial().optional(),
+    bank_account: bankAccountSettingSchema.partial().optional(),
+    invoice: invoiceSettingSchema.partial().optional(),
+});
 
 export type Setting = z.infer<typeof settingSchema>;
 export type SettingUpdate = z.infer<typeof settingUpdateSchema>;
