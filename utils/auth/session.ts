@@ -19,9 +19,9 @@ type SessionPayload = {
 };
 
 function getAuthSecret() {
-  const secret = process.env.AUTH_SECRET ?? process.env.UI_KIT_SECRET;
+  const secret = process.env.AUTH_SECRET;
   if (!secret) {
-    throw new Error("AUTH_SECRET or UI_KIT_SECRET must be set");
+    throw new Error("AUTH_SECRET must be set");
   }
   return secret;
 }

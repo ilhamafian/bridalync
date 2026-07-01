@@ -40,7 +40,6 @@ export class SettingModel extends ModelBase<Setting> {
       await this.create({
         user_id,
         role: settings.role,
-        link: randomString(7),
         charge_by: settings.charge_by,
         travel: settings.travel,
         payment: settings.payment,

@@ -73,7 +73,7 @@ const travelStepSchema = z.discriminatedUnion("enabled", [
 export const onboardingRoleTravelSchema = z.object({
   step: z.literal("role_travel"),
   role: z.enum(["hijabstylist", "makeupartist"]),
-  charge_by: z.enum(["offering", "style"]),
+  charge_by: z.enum(["package", "style"]),
   travel: travelStepSchema,
 });
 
@@ -82,6 +82,7 @@ export const onboardingInvoiceSchema = z.object({
   company_name: z.string().min(1),
   terms_and_conditions: z.string().min(1),
   company_registration_number: z.string().optional(),
+  company_logo: z.url().optional(),
 });
 
 export const onboardingBankAccountSchema = z.object({

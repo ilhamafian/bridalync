@@ -144,9 +144,9 @@ function getErrorMessage(payload: unknown) {
   return "Something went wrong. Please try again.";
 }
 
-function getChargeBy(role: string): "offering" | "style" {
+function getChargeBy(role: string): "package" | "style" {
   if (role === "hijabstylist") return "style";
-  return "offering";
+  return "package";
 }
 
 export default function OnboardingPage() {
@@ -163,6 +163,8 @@ export default function OnboardingPage() {
     DEFAULT_TERMS_AND_CONDITIONS
   );
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
+  const [companyLogo, setCompanyLogo] = useState("");
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
@@ -286,6 +288,61 @@ export default function OnboardingPage() {
     );
   }
 
+  async function handleCompanyLogoChange(
+    event: React.ChangeEvent<HTMLInputElement>
+  ) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Choose an image file.");
+      return;
+    }
+
+    if (file.size > 4 * 1024 * 1024) {
+      setError("Image must be 4 MB or smaller.");
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    setError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await fetch("/api/onboarding/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        throw new Error(getErrorMessage(payload));
+      }
+
+      if (
+        payload &&
+        typeof payload === "object" &&
+        "url" in payload &&
+        typeof payload.url === "string"
+      ) {
+        setCompanyLogo(payload.url);
+      } else {
+        throw new Error("Upload failed. Please try again.");
+      }
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "Could not upload logo. Please try again."
+      );
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  }
+
   async function handleContinueFromInvoice() {
     if (!companyName.trim()) {
       setError("Enter your company or business name.");
@@ -295,6 +352,10 @@ export default function OnboardingPage() {
       setError("Enter your terms and conditions.");
       return;
     }
+    if (isUploadingLogo) {
+      setError("Wait for the logo upload to finish.");
+      return;
+    }
 
     await runStep(
       {
@@ -302,6 +363,7 @@ export default function OnboardingPage() {
         company_name: companyName.trim(),
         terms_and_conditions: termsAndConditions.trim(),
         company_registration_number: companyRegistrationNumber.trim() || undefined,
+        company_logo: companyLogo || undefined,
       },
       "bank_account"
     );
@@ -507,6 +569,52 @@ export default function OnboardingPage() {
                   />
                 </label>
 
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-foreground">
+                    Company logo (optional)
+                  </span>
+                  <div className="flex items-center gap-3">
+                    {companyLogo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={companyLogo}
+                        alt="Company logo preview"
+                        className="size-16 shrink-0 rounded-md border border-border object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-16 shrink-0 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 text-xs text-muted-foreground">
+                        No logo
+                      </div>
+                    )}
+                    <label className="flex min-w-0 flex-1 cursor-pointer flex-col gap-1">
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        onChange={(event) => void handleCompanyLogoChange(event)}
+                        disabled={isUploadingLogo || isSubmitting}
+                        className="sr-only"
+                      />
+                      <span
+                        className={cn(
+                          "inline-flex h-10 items-center justify-center rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground transition-colors",
+                          "hover:bg-muted/50",
+                          (isUploadingLogo || isSubmitting) &&
+                            "pointer-events-none opacity-50"
+                        )}
+                      >
+                        {isUploadingLogo
+                          ? "Uploading…"
+                          : companyLogo
+                            ? "Change logo"
+                            : "Upload logo"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        JPEG, PNG, WebP, or GIF. Max 4 MB.
+                      </span>
+                    </label>
+                  </div>
+                </div>
+
                 <label className="flex flex-col gap-1.5">
                   <span className="text-sm font-medium text-foreground">
                     Terms and conditions
@@ -675,7 +783,11 @@ export default function OnboardingPage() {
                 type="button"
                 size="lg"
                 className="h-11 w-full rounded-xl text-sm"
-                disabled={isSubmitting || (step === "role" && !selectedRole)}
+                disabled={
+                  isSubmitting ||
+                  isUploadingLogo ||
+                  (step === "role" && !selectedRole)
+                }
                 onClick={() => {
                   if (step === "role") handleContinueFromRole();
                   else if (step === "travel") void handleContinueFromTravel();

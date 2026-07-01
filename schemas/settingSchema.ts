@@ -45,8 +45,7 @@ export const invoiceSettingSchema = z.object({
 export const settingSchema = z.object({
     user_id: z.string(),
     role: z.enum(["hijabstylist", "makeupartist"]),
-    link: z.string().default(randomString(7)),
-    charge_by: z.enum(["offering", "style"]),
+    charge_by: z.enum(["package", "style"]),
     travel: travelSettingSchema,
     payment: paymentSettingSchema.default(() => paymentSettingSchema.parse({})),
     bank_account: bankAccountSettingSchema.default(() =>

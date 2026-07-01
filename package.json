@@ -11,6 +11,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
     "@tabler/icons-react": "^3.44.0",
+    "@vercel/blob": "^2.5.0",
     "@vis.gl/react-google-maps": "^1.8.3",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",

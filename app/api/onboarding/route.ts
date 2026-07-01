@@ -201,6 +201,7 @@ export async function POST(req: NextRequest) {
           company_name,
           terms_and_conditions,
           company_registration_number,
+          company_logo,
         } = stepData;
 
         const settingsModel = new SettingModel();
@@ -209,6 +210,7 @@ export async function POST(req: NextRequest) {
             company_name,
             terms_and_conditions,
             company_registration_number,
+            ...(company_logo ? { company_logo } : {}),
           },
         });
 
