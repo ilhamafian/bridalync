@@ -1,7 +1,6 @@
 import { z } from "zod";
 
 import { addressSchema } from "@/schemas/addressSchema";
-import { randomString } from "@/utils/utils";
 
 export const travelSettingSchema = z.object({
     enabled: z.boolean(),
@@ -44,7 +43,6 @@ export const invoiceSettingSchema = z.object({
 
 export const settingSchema = z.object({
     user_id: z.string(),
-    role: z.enum(["hijabstylist", "makeupartist"]),
     charge_by: z.enum(["package", "style"]),
     travel: travelSettingSchema,
     payment: paymentSettingSchema.default(() => paymentSettingSchema.parse({})),
@@ -52,11 +50,12 @@ export const settingSchema = z.object({
         bankAccountSettingSchema.parse({})
     ),
     invoice: invoiceSettingSchema.default(() => invoiceSettingSchema.parse({})),
+    created_at: z.coerce.date().optional(),
+    updated_at: z.coerce.date().optional(),
 });
 
 /** Partial updates must not apply parent `.default()` values (e.g. invoice on bank-only saves). */
 export const settingUpdateSchema = z.object({
-    role: settingSchema.shape.role.optional(),
     charge_by: settingSchema.shape.charge_by.optional(),
     travel: travelSettingSchema.partial().optional(),
     payment: paymentSettingSchema.partial().optional(),
@@ -64,8 +63,15 @@ export const settingUpdateSchema = z.object({
     invoice: invoiceSettingSchema.partial().optional(),
 });
 
+export const publicSettingSchema = settingSchema.extend({
+    // Client-safe: avoid importing MongoDB ObjectId schema into browser bundle.
+    // API routes may still return ObjectId; accept unknown here and normalize at boundaries.
+    _id: z.unknown().optional(),
+});
+
 export type Setting = z.infer<typeof settingSchema>;
 export type SettingUpdate = z.infer<typeof settingUpdateSchema>;
+export type PublicSetting = z.infer<typeof publicSettingSchema>;
 export type TravelSetting = z.infer<typeof travelSettingSchema>;
 export type PaymentSetting = z.infer<typeof paymentSettingSchema>;
 export type BankAccountSetting = z.infer<typeof bankAccountSettingSchema>;

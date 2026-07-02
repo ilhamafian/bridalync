@@ -2,7 +2,6 @@ import { ZodSchema } from "zod";
 
 import { ModelBase } from "@/models/ModelBase";
 import { settingSchema, settingUpdateSchema, type Setting } from "@/schemas/settingSchema";
-import { randomString } from "@/utils/utils";
 import { toIdString } from "@/schemas/objectId";
 
 
@@ -39,7 +38,6 @@ export class SettingModel extends ModelBase<Setting> {
     } else {
       await this.create({
         user_id,
-        role: settings.role,
         charge_by: settings.charge_by,
         travel: settings.travel,
         payment: settings.payment,

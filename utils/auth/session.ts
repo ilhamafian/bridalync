@@ -4,8 +4,8 @@ import { cookies } from "next/headers";
 import { UserModel } from "@/models/User";
 import {
   isOnboardingComplete,
-  publicUserSchema,
-  type PublicUser,
+  sessionUserSchema,
+  type SessionUser,
 } from "@/schemas/userSchema";
 import { toIdString } from "@/schemas/objectId";
 
@@ -81,7 +81,7 @@ export function verifySessionToken(token: string): SessionPayload | null {
   return payload;
 }
 
-export async function setAuthSession(user: PublicUser) {
+export async function setAuthSession(user: SessionUser) {
   const userId = toIdString(user._id);
   const token = createSessionToken({
     onboarding_completed: isOnboardingComplete(user.onboarding),
@@ -101,7 +101,7 @@ export async function setAuthSession(user: PublicUser) {
   });
 }
 
-export async function getSessionUser(): Promise<PublicUser | null> {
+export async function getSessionUser(): Promise<SessionUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
@@ -112,7 +112,7 @@ export async function getSessionUser(): Promise<PublicUser | null> {
   const user = await new UserModel().findById(payload.userId);
   if (!user) return null;
 
-  const parsed = publicUserSchema.safeParse(user);
+  const parsed = sessionUserSchema.safeParse(user);
   return parsed.success ? parsed.data : null;
 }
 

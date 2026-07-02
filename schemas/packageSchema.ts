@@ -8,6 +8,8 @@ export const packageSchema = z.object({
         order: z.number(),
     })),
     user_id: z.string(),
+    created_at: z.coerce.date().optional(),
+    updated_at: z.coerce.date().optional(),
 });
 
 export type Package = z.infer<typeof packageSchema>;

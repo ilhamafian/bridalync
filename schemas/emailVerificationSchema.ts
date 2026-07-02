@@ -5,6 +5,7 @@ export const emailVerificationSchema = z.object({
   code_hash: z.string().min(1),
   expires_at: z.coerce.date(),
   created_at: z.coerce.date(),
+  updated_at: z.coerce.date().optional(),
 });
 
 export type EmailVerification = z.infer<typeof emailVerificationSchema>;

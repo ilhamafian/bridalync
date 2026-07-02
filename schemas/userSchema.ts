@@ -14,7 +14,6 @@ export {
   ONBOARDING_STEP_ORDER,
   onboardingBankAccountSchema,
   onboardingInvoiceSchema,
-  onboardingPreviewBookingsSchema,
   onboardingProgressSchema,
   onboardingRequestSchema,
   onboardingRoleTravelSchema,
@@ -34,11 +33,13 @@ export const userSchema = z.object({
   // filled in later during onboarding
   username: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
-  role: z.string().min(1).optional(),
+  role: z.enum(["hijabstylist", "makeupartist"]).optional(),
   mobile: z.string().min(1).optional(),
   country_code: z.string().min(1).optional(),
   language: z.string().min(1).optional(),
   onboarding: onboardingProgressSchema.default(() => defaultOnboardingProgress()),
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
 });
 
 export const userOnboardingSchema = userSchema;
@@ -56,9 +57,13 @@ export const updateUserSchema = userSchema
   })
   .partial();
 
-export const publicUserSchema = userSchema.omit({ password: true });
+export const publicUserSchema = userSchema.omit({ password: true, onboarding: true });
+
+// Server/session-safe user: keep onboarding (no password).
+export const sessionUserSchema = userSchema.omit({ password: true });
 
 export type PublicUser = z.infer<typeof publicUserSchema>;
+export type SessionUser = z.infer<typeof sessionUserSchema>;
 export type User = z.infer<typeof userSchema>;
 
 export type SignupUser = z.infer<typeof signupUserSchema>;

@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 
 import { UserModel } from "@/models/User";
-import { publicUserSchema, userSchema, type PublicUser } from "@/schemas/userSchema";
+import { sessionUserSchema, userSchema, type SessionUser } from "@/schemas/userSchema";
 
 const PASSWORD_SALT_ROUNDS = 12;
 
@@ -55,7 +55,7 @@ export async function userEmailExists(email: string) {
 export async function createPartialAccount(input: {
   email: string;
   password: string;
-}): Promise<PublicUser> {
+}): Promise<SessionUser> {
   const email = normalizeEmail(input.email);
 
   if (await userEmailExists(email)) {
@@ -74,13 +74,13 @@ export async function createPartialAccount(input: {
     })
   );
 
-  return publicUserSchema.parse(user);
+  return sessionUserSchema.parse(user);
 }
 
 export async function authenticateUser(input: {
   email: string;
   password: string;
-}): Promise<PublicUser> {
+}): Promise<SessionUser> {
   const email = normalizeEmail(input.email);
   const user = await new UserModel().findOne({ email } as never);
 
@@ -97,5 +97,5 @@ export async function authenticateUser(input: {
     throw new AuthError("INVALID_CREDENTIALS", "Invalid email or password.");
   }
 
-  return publicUserSchema.parse(user);
+  return sessionUserSchema.parse(user);
 }

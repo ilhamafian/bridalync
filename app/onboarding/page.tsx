@@ -176,7 +176,13 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     fetch("/api/onboarding")
-      .then((res) => (res.ok ? res.json() : null))
+      .then(async (res) => {
+        if (res.status === 401) {
+          router.replace("/dashboard");
+          return null;
+        }
+        return res.ok ? res.json() : null;
+      })
       .then((data) => {
         if (data?.user) {
           setUser(data.user);
@@ -189,7 +195,7 @@ export default function OnboardingPage() {
       })
       .catch(() => setError("Could not load onboarding data."))
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [router]);
 
   async function submitStep(body: OnboardingStepRequest) {
     const response = await fetch("/api/onboarding", {
@@ -406,8 +412,8 @@ export default function OnboardingPage() {
     );
   }
 
-  async function handleComplete() {
-    await runStep({ step: "preview_profile" }, "dashboard");
+  function handleComplete() {
+    router.push("/dashboard");
   }
 
   function handleBack() {
@@ -418,7 +424,8 @@ export default function OnboardingPage() {
   }
 
   const stepConfig = STEP_CONFIG[step];
-  const previousStep = getPreviousStep(step);
+  const previousStep =
+    step === "preview_profile" ? null : getPreviousStep(step);
   const profileUsername = username || user?.username || "";
   const profileHost = appUrl ? formatAppHost(appUrl) : "";
   const profilePath =
@@ -435,9 +442,7 @@ export default function OnboardingPage() {
         : "your-name";
   const continueLabel =
     step === "preview_profile"
-      ? isSubmitting
-        ? "Finishing…"
-        : "Go to dashboard"
+      ? "Go to dashboard"
       : isSubmitting
         ? "Saving…"
         : "Continue";
@@ -796,7 +801,7 @@ export default function OnboardingPage() {
                     void handleContinueFromBankAccount();
                   else if (step === "username")
                     void handleContinueFromUsername();
-                  else void handleComplete();
+                  else handleComplete();
                 }}
               >
                 {continueLabel}

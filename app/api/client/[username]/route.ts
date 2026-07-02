@@ -4,6 +4,8 @@ import { PackageModel } from "@/models/Package";
 import { UserModel } from "@/models/User";
 import { toIdString } from "@/schemas/objectId";
 import { SettingModel } from "@/models/Setting";
+import { publicUserSchema } from "@/schemas/userSchema";
+import { publicSettingSchema } from "@/schemas/settingSchema";
 
 export async function GET (request: NextRequest) {
     try {
@@ -15,6 +17,7 @@ export async function GET (request: NextRequest) {
         if (!user?._id) {
             return createResponse({ error: "User not found" }, 404);
         }
+        const publicUser = publicUserSchema.parse(user);
         const user_id = toIdString(user._id);
         const packages = await new PackageModel().getPackagesByUserId(user_id);
         if (!packages) {
@@ -25,10 +28,12 @@ export async function GET (request: NextRequest) {
             return createResponse({ error: "Settings not found" }, 404);
         }
 
+        const publicSettings = publicSettingSchema.parse(settings);
+
         const response = {
-            user,
+            user: publicUser,
             packages,
-            settings,
+            settings: publicSettings,
         }
         return createResponse(response);
     } catch (error) {

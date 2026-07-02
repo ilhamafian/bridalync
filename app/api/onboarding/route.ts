@@ -9,7 +9,7 @@ import {
   isOnboardingComplete,
   onboardingProgressSchema,
   onboardingStepRequestSchema,
-  publicUserSchema,
+  sessionUserSchema,
   updateUserSchema,
   type OnboardingStepRequest,
   type UpdateUser,
@@ -93,7 +93,7 @@ async function refreshSession(userId: string) {
     return null;
   }
 
-  const parsedUser = publicUserSchema.safeParse(updatedUser);
+  const parsedUser = sessionUserSchema.safeParse(updatedUser);
   if (!parsedUser.success) {
     return null;
   }
@@ -184,7 +184,6 @@ export async function POST(req: NextRequest) {
           userId,
           settingSchema.parse({
             user_id: userId,
-            role,
             charge_by,
             travel: buildTravelSetting(travel),
           })
@@ -261,14 +260,6 @@ export async function POST(req: NextRequest) {
 
         await refreshSession(userId);
         return createResponse({ ok: true }, 200);
-      }
-
-      case "preview_profile": {
-        await updateOnboardingProgress(userId, {
-          previewedBookings: true,
-        });
-        await refreshSession(userId);
-        return createResponse({ redirectTo: "/dashboard" }, 200);
       }
     }
   } catch (error) {

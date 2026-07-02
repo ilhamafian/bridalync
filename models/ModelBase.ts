@@ -75,7 +75,12 @@ export abstract class ModelBase<T extends Record<string, any>> {
   }
 
   async create(data: T): Promise<WithId<T>> {
-    const validated = this.validate(data);
+    const now = new Date();
+    const validated = this.validate({
+      ...(data as any),
+      created_at: now,
+      updated_at: now,
+    });
     const collection = await this.getCollection();
     const result = await collection.insertOne(
       validated as OptionalUnlessRequiredId<T>
@@ -94,7 +99,7 @@ export abstract class ModelBase<T extends Record<string, any>> {
     const collection = await this.getCollection();
     return collection.updateOne(
       this.buildIdFilter(id),
-      { $set: validated } as any
+      { $set: { ...(validated as any), updated_at: new Date() } } as any
     );
   }
 

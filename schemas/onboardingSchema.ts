@@ -9,7 +9,6 @@ export const onboardingProgressSchema = z.object({
   configuredInvoice: z.boolean().default(false),
   configureBankAccount: z.boolean().default(false),
   configuredUsername: z.boolean().default(false),
-  previewedBookings: z.boolean().default(false),
 });
 
 export type OnboardingProgress = z.infer<typeof onboardingProgressSchema>;
@@ -34,8 +33,7 @@ export function isOnboardingComplete(
     onboarding.createdFirstPackage &&
     onboarding.configuredInvoice &&
     onboarding.configureBankAccount &&
-    onboarding.configuredUsername &&
-    onboarding.previewedBookings
+    onboarding.configuredUsername
   );
 }
 
@@ -57,7 +55,6 @@ export function getOnboardingResumeStep(
   if (!onboarding.configuredInvoice) return "invoice";
   if (!onboarding.configureBankAccount) return "bank_account";
   if (!onboarding.configuredUsername) return "username";
-  if (!onboarding.previewedBookings) return "preview_profile";
   return "preview_profile";
 }
 
@@ -100,16 +97,11 @@ export const onboardingUsernameSchema = z.object({
     .regex(/^[a-z0-9_-]+$/i, "Use letters, numbers, hyphens, or underscores."),
 });
 
-export const onboardingPreviewBookingsSchema = z.object({
-  step: z.literal("preview_profile"),
-});
-
 export const onboardingStepRequestSchema = z.discriminatedUnion("step", [
   onboardingRoleTravelSchema,
   onboardingInvoiceSchema,
   onboardingBankAccountSchema,
   onboardingUsernameSchema,
-  onboardingPreviewBookingsSchema,
 ]);
 
 export type OnboardingStepRequest = z.infer<typeof onboardingStepRequestSchema>;
