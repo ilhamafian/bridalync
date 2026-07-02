@@ -16,4 +16,8 @@ export class PackageModel extends ModelBase<Package> {
     const result = await this.find({ user_id: user._id.toString() });
     return result;
   }
+  async getPackagesByUserId(user_id: string): Promise<Package[] | null> {
+    const result = await this.find({ user_id });
+    return result ? result: null;
+  }
 }

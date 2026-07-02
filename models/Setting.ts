@@ -10,12 +10,12 @@ export class SettingModel extends ModelBase<Setting> {
   protected collectionName = "settings";
   protected schema = settingSchema;
 
-  async findByUserId(user_id: string) {
+  async findSettingsByUserId(user_id: string) {
     return this.findOne({ user_id } as never);
   }
 
-  async updateByUserId(user_id: string, update: Partial<Setting>) {
-    const setting = await this.findByUserId(user_id);
+  async updateSettingsByUserId(user_id: string, update: Partial<Setting>) {
+    const setting = await this.findSettingsByUserId(user_id);
     if (!setting) {
       throw new Error("Settings not found");
     }
@@ -33,9 +33,9 @@ export class SettingModel extends ModelBase<Setting> {
   }
 
   async insertSettings(user_id: string, settings: Setting) {
-    const setting = await this.findByUserId(user_id);
+    const setting = await this.findSettingsByUserId(user_id);
     if (setting) {
-      await this.updateByUserId(user_id, settings);
+      await this.updateSettingsByUserId(user_id, settings);
     } else {
       await this.create({
         user_id,

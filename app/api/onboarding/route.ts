@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
         } = stepData;
 
         const settingsModel = new SettingModel();
-        await settingsModel.updateByUserId(userId, {
+        await settingsModel.updateSettingsByUserId(userId, {
           invoice: {
             company_name,
             terms_and_conditions,
@@ -224,7 +224,7 @@ export async function POST(req: NextRequest) {
         const { bank_name, account_number, account_name } = stepData;
 
         const settingsModel = new SettingModel();
-        await settingsModel.updateByUserId(userId, {
+        await settingsModel.updateSettingsByUserId(userId, {
           bank_account: {
             bank_name,
             account_number,

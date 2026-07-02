@@ -10,9 +10,9 @@ export default async function ClientLayout({
   params: Promise<{ client: string }>;
 }) {
   const { client } = await params;
-  const user = await new UserModel().findByUsername(client.toLowerCase());
+  const user = await new UserModel().checkUserOnboarded(client.toLowerCase());
 
-  if (!user?._id) {
+  if (!user) {
     notFound();
   }
 
