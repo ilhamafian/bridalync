@@ -157,10 +157,10 @@ export default function ClientPage() {
           </p>
 
           <div className="flex w-full flex-col items-end gap-4">
-            <BookingPackagePicker
+            {/* <BookingPackagePicker
               selectedPackageId={selectedPackageId}
               onPackageChange={setSelectedPackageId}
-            />
+            /> */}
             <Button
               size="lg"
               className="bg-chart-4 text-white hover:bg-chart-4/90"
