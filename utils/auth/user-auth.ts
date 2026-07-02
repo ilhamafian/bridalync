@@ -1,7 +1,6 @@
 import bcrypt from "bcryptjs";
 
 import { UserModel } from "@/models/User";
-import { userExists } from "@/utils/users";
 import { publicUserSchema, userSchema, type PublicUser } from "@/schemas/userSchema";
 
 const PASSWORD_SALT_ROUNDS = 12;
@@ -37,7 +36,8 @@ async function ensureUniqueUsername(baseUsername: string) {
   let username = baseUsername;
   let suffix = 0;
 
-  while (await userExists(username)) {
+  const user = await new UserModel().findByUsername(username);
+  while (user?._id) {
     suffix += 1;
     username = `${baseUsername}${suffix}`;
   }

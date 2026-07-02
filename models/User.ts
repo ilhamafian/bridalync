@@ -10,4 +10,9 @@ export class UserModel extends ModelBase<User> {
     { value: "makeupartist", label: "Makeup Artist" },
     { value: "hijabstylist", label: "Hijab Stylist" },
   ];
+
+  async findByUsername(username: string): Promise<User | null> {
+    const result = await this.findOne({ username: username.toLowerCase() });
+    return result ? result: null;
+  }
 }

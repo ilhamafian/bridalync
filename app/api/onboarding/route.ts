@@ -20,7 +20,6 @@ import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser, setAuthSession } from "@/utils/auth/session";
 import { toIdString } from "@/schemas/objectId";
 import { settingSchema, type TravelSetting } from "@/schemas/settingSchema";
-import { userExists } from "@/utils/users";
 import { getAppUrl } from "@/utils/appUrl";
 
 const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
@@ -242,8 +241,8 @@ export async function POST(req: NextRequest) {
 
       case "username": {
         const username = stepData.username.toLowerCase();
-
-        if (await userExists(username)) {
+        const user = await new UserModel().findByUsername(username);
+        if (user?._id) {
           return createResponse(
             { error: "That username is already taken." },
             409
