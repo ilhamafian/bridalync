@@ -29,11 +29,46 @@ const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
   location: { lat: 0, lng: 0 },
 };
 
-const DEFAULT_SAMPLE_PACKAGE = {
-  name: "Sample session",
-  price: 1000,
-  session_templates: [{ name: "Sample session", order: 0 }],
-};
+const DEFAULT_PACKAGES = [
+  {
+    name: "Nikah",
+    price: 800,
+    session_templates: [{ name: "Nikah", order: 0 }],
+  },
+  {
+    name: "Sanding",
+    price: 800,
+    session_templates: [{ name: "Sanding", order: 0 }],
+  },
+  {
+    name: "Nikah & Sanding",
+    price: 1500,
+    session_templates: [
+      { name: "Nikah", order: 0 },
+      { name: "Sanding", order: 1 },
+    ],
+  },
+  {
+    name: "Tunang",
+    price: 450,
+    session_templates: [{ name: "Tunang", order: 0 }],
+  },
+  {
+    name: "Konvo",
+    price: 450,
+    session_templates: [{ name: "Konvo", order: 0 }],
+  },
+  {
+    name: "Photoshoot",
+    price: 450,
+    session_templates: [{ name: "Photoshoot", order: 0 }],
+  },
+  {
+    name: "Trial Makeup",
+    price: 600,
+    session_templates: [{ name: "Trial Makeup", order: 0 }],
+  },
+] as const;
 
 function buildTravelSetting(
   travel: Extract<OnboardingStepRequest, { step: "role_travel" }>["travel"]
@@ -69,16 +104,20 @@ async function updateOnboardingProgress(
   );
 }
 
-async function ensureDefaultSamplePackage(userId: string) {
+async function ensureDefaultPackages(userId: string) {
   const packageModel = new PackageModel();
   const existing = await packageModel.findOne({ user_id: userId } as never);
 
   if (!existing) {
-    await packageModel.create(
-      packageSchema.parse({
-        user_id: userId,
-        ...DEFAULT_SAMPLE_PACKAGE,
-      })
+    await Promise.all(
+      DEFAULT_PACKAGES.map((pkg) =>
+        packageModel.create(
+          packageSchema.parse({
+            user_id: userId,
+            ...pkg,
+          })
+        )
+      )
     );
   }
 
@@ -115,7 +154,7 @@ export async function GET() {
       user.onboarding?.congfigureTravelSettings &&
       !user.onboarding.createdFirstPackage
     ) {
-      await ensureDefaultSamplePackage(userId);
+      await ensureDefaultPackages(userId);
       const refreshedUser = await refreshSession(userId);
       if (refreshedUser) {
         return createResponse(
@@ -189,7 +228,7 @@ export async function POST(req: NextRequest) {
           })
         );
 
-        await ensureDefaultSamplePackage(userId);
+        await ensureDefaultPackages(userId);
         await refreshSession(userId);
         return createResponse({ ok: true }, 200);
       }

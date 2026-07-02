@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import { addressSchema } from "@/schemas/addressSchema";
 
+const hhmm = /^([01]\d|2[0-3]):([0-5]\d)$/;
+
 export const travelSettingSchema = z.object({
     enabled: z.boolean(),
     rate_per_km: z.number(),
@@ -41,6 +43,29 @@ export const invoiceSettingSchema = z.object({
     company_logo: z.string().optional(),
 });
 
+export const timeSlotSchema = z.object({
+  startTime: z.string().regex(hhmm, "Expected HH:mm"),
+  endTime: z.string().regex(hhmm, "Expected HH:mm"),
+})
+.refine(
+  ({ startTime, endTime }) => startTime < endTime,
+  {
+    message: "End time must be after start time",
+    path: ["endTime"],
+  }
+);
+
+export const DEFAULT_TIME_SLOTS = [
+  { startTime: "06:00", endTime: "08:00" },
+  { startTime: "10:00", endTime: "12:00" },
+  { startTime: "14:00", endTime: "16:00" },
+  { startTime: "18:00", endTime: "20:00" },
+] as const;
+
+export const timeSlotSettingSchema = z
+  .array(timeSlotSchema)
+  .default(() => DEFAULT_TIME_SLOTS.map((slot) => ({ ...slot })));
+
 export const settingSchema = z.object({
     user_id: z.string(),
     charge_by: z.enum(["package", "style"]),
@@ -50,6 +75,7 @@ export const settingSchema = z.object({
         bankAccountSettingSchema.parse({})
     ),
     invoice: invoiceSettingSchema.default(() => invoiceSettingSchema.parse({})),
+    time_slots: timeSlotSettingSchema,
     created_at: z.coerce.date().optional(),
     updated_at: z.coerce.date().optional(),
 });
@@ -61,13 +87,16 @@ export const settingUpdateSchema = z.object({
     payment: paymentSettingSchema.partial().optional(),
     bank_account: bankAccountSettingSchema.partial().optional(),
     invoice: invoiceSettingSchema.partial().optional(),
+    time_slots: z.array(timeSlotSchema).optional(),
 });
 
-export const publicSettingSchema = settingSchema.extend({
-    // Client-safe: avoid importing MongoDB ObjectId schema into browser bundle.
-    // API routes may still return ObjectId; accept unknown here and normalize at boundaries.
-    _id: z.unknown().optional(),
-});
+export const publicSettingSchema = settingSchema
+    .omit({ bank_account: true })
+    .extend({
+        // Client-safe: avoid importing MongoDB ObjectId schema into browser bundle.
+        // API routes may still return ObjectId; accept unknown here and normalize at boundaries.
+        _id: z.unknown().optional(),
+    });
 
 export type Setting = z.infer<typeof settingSchema>;
 export type SettingUpdate = z.infer<typeof settingUpdateSchema>;
@@ -75,3 +104,5 @@ export type PublicSetting = z.infer<typeof publicSettingSchema>;
 export type TravelSetting = z.infer<typeof travelSettingSchema>;
 export type PaymentSetting = z.infer<typeof paymentSettingSchema>;
 export type BankAccountSetting = z.infer<typeof bankAccountSettingSchema>;
+export type TimeSlot = z.infer<typeof timeSlotSchema>;
+export type TimeSlotSetting = z.infer<typeof timeSlotSettingSchema>;

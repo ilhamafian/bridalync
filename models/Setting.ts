@@ -43,6 +43,7 @@ export class SettingModel extends ModelBase<Setting> {
         payment: settings.payment,
         bank_account: settings.bank_account,
         invoice: settings.invoice,
+        time_slots: settings.time_slots,
       });
     }
   }
