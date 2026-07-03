@@ -11,8 +11,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import type { Address } from "@/schemas/addressSchema";
+import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
-import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -51,14 +53,6 @@ type ClientPackage = {
   session_templates: SessionTemplate[];
 };
 
-type ScheduledSession = {
-  id: string;
-  order: number;
-  name: string;
-  date: Date;
-  timeSlot: TimeSlot;
-};
-
 function normalizePackageId(id: unknown): string {
   if (typeof id === "string") return id;
   if (
@@ -89,7 +83,7 @@ function sortSessionTemplates(templates: SessionTemplate[]): SessionTemplate[] {
 
 function getNextSessionTemplate(
   templates: SessionTemplate[],
-  scheduled: ScheduledSession[]
+  scheduled: SessionForm[]
 ): SessionTemplate | null {
   const scheduledOrders = new Set(scheduled.map((session) => session.order));
   return (
@@ -103,15 +97,6 @@ function formatTimeSlot(slot: TimeSlot): string {
   return `${slot.startTime} – ${slot.endTime}`;
 }
 
-function formatSessionDate(date: Date): string {
-  return date.toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
 export default function ClientPage() {
   const params = useParams();
   const client = params.client as string;
@@ -120,9 +105,9 @@ export default function ClientPage() {
   const [clientPackages, setClientPackages] = useState<ClientPackage[]>([]);
   const [settings, setSettings] = useState<PublicSetting | null>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const [scheduledSessions, setScheduledSessions] = useState<ScheduledSession[]>(
-    []
-  );
+  const [sessions, setSessions] = useState<SessionForm[]>([]);
+  const [sameLocationForAll, setSameLocationForAll] = useState(true);
+  const [sharedLocation, setSharedLocation] = useState<Address | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(
     null
@@ -147,8 +132,8 @@ export default function ClientPage() {
   );
 
   const nextSessionTemplate = useMemo(
-    () => getNextSessionTemplate(sessionTemplates, scheduledSessions),
-    [sessionTemplates, scheduledSessions]
+    () => getNextSessionTemplate(sessionTemplates, sessions),
+    [sessionTemplates, sessions]
   );
 
   const timeSlots = settings?.time_slots ?? [];
@@ -175,31 +160,40 @@ export default function ClientPage() {
   }, [client]);
 
   useEffect(() => {
-    setScheduledSessions([]);
+    setSessions([]);
     setSelectedDate(undefined);
     setSelectedTimeSlot(null);
+    setSharedLocation(null);
   }, [selectedPackageId]);
+
+  useEffect(() => {
+    if (!sameLocationForAll || !sharedLocation) return;
+    setSessions((current) =>
+      current.map((session) => ({ ...session, location: sharedLocation }))
+    );
+  }, [sameLocationForAll, sharedLocation]);
 
   function handleAddSession() {
     if (!nextSessionTemplate || !selectedDate || !selectedTimeSlot) return;
 
-    setScheduledSessions((current) => [
+    setSessions((current) => [
       ...current,
       {
-        id: crypto.randomUUID(),
+        client_key: crypto.randomUUID(),
+        status: "scheduled",
         order: nextSessionTemplate.order,
         name: nextSessionTemplate.name,
         date: selectedDate,
-        timeSlot: selectedTimeSlot,
+        time_slot: selectedTimeSlot,
       },
     ]);
     setSelectedDate(undefined);
     setSelectedTimeSlot(null);
   }
 
-  function handleRemoveSession(sessionId: string) {
-    setScheduledSessions((current) => {
-      const removed = current.find((session) => session.id === sessionId);
+  function handleRemoveSession(clientKey: string) {
+    setSessions((current) => {
+      const removed = current.find((session) => session.client_key === clientKey);
       if (!removed) return current;
 
       return current.filter((session) => session.order < removed.order);
@@ -208,7 +202,10 @@ export default function ClientPage() {
 
   const allSessionsScheduled =
     sessionTemplates.length > 0 &&
-    scheduledSessions.length === sessionTemplates.length;
+    sessions.length === sessionTemplates.length;
+
+  const allLocationsSet =
+    sessions.length > 0 && sessions.every((session) => session.location);
 
   function goToNextStep() {
     const index = STEP_ORDER.indexOf(step);
@@ -312,7 +309,7 @@ export default function ClientPage() {
               : "All sessions scheduled"}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {scheduledSessions.length} of {sessionTemplates.length} session
+            {sessions.length} of {sessionTemplates.length} session
             {sessionTemplates.length === 1 ? "" : "s"} scheduled
           </p>
 
@@ -371,49 +368,11 @@ export default function ClientPage() {
               <p className="text-sm font-medium text-foreground">
                 Your bookings
               </p>
-              {scheduledSessions.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground">
-                  No sessions yet — pick a date and time below.
-                </p>
-              ) : (
-                <ul className="flex w-full flex-col gap-2">
-                  {sortSessionTemplates(
-                    scheduledSessions.map((session) => ({
-                      name: session.name,
-                      order: session.order,
-                    }))
-                  ).map((template) => {
-                    const session = scheduledSessions.find(
-                      (item) => item.order === template.order
-                    );
-                    if (!session) return null;
-
-                    return (
-                      <li
-                        key={session.id}
-                        className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-sm"
-                      >
-                        <div className="min-w-0 text-left">
-                          <p className="font-medium text-foreground">
-                            {session.name} — {formatSessionDate(session.date)},{" "}
-                            {formatTimeSlot(session.timeSlot)}
-                          </p>
-                        </div>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          className="shrink-0 text-muted-foreground"
-                          onClick={() => handleRemoveSession(session.id)}
-                          aria-label={`Remove ${session.name} session`}
-                        >
-                          <XIcon />
-                        </Button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
+              <BookingSessionList
+                sessions={sessions}
+                onRemove={handleRemoveSession}
+                emptyMessage="No sessions yet — pick a date and time below."
+              />
             </div>
 
             <div className="flex w-full justify-end gap-2">
@@ -454,10 +413,10 @@ export default function ClientPage() {
               onSameLocationForAllChange={setSameLocationForAll}
               sharedLocation={sharedLocation}
               onSharedLocationChange={setSharedLocation}
-              onSessionLocationChange={(sessionId, location) =>
+              onSessionLocationChange={(clientKey, location) =>
                 setSessions((current) =>
                   current.map((session) =>
-                    session.id === sessionId
+                    session.client_key === clientKey
                       ? { ...session, location }
                       : session
                   )
@@ -473,6 +432,7 @@ export default function ClientPage() {
             <Button
               size="lg"
               className="bg-chart-4 text-white hover:bg-chart-4/90"
+              disabled={!allLocationsSet}
               onClick={goToNextStep}
             >
               Next

@@ -3,12 +3,12 @@
 import { XIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { formatLocationAddress, formatSessionSummary } from "@/utils/booking/utils"
-import type { BookingSession } from "@/schemas/booking"
+import { formatLocationAddress, formatSessionSummary } from "@/utils/session"
+import type { SessionForm } from "@/schemas/sessionSchema"
 
 type BookingSessionListProps = {
-  sessions: BookingSession[]
-  onRemove?: (sessionId: string) => void
+  sessions: SessionForm[]
+  onRemove?: (clientKey: string) => void
   showLocation?: boolean
   emptyMessage?: string
 }
@@ -29,7 +29,7 @@ export function BookingSessionList({
     <ul className="flex w-full flex-col gap-2">
       {sessions.map((session) => (
         <li
-          key={session.id}
+          key={session.client_key}
           className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-sm"
         >
           <div className="min-w-0 text-left">
@@ -48,8 +48,8 @@ export function BookingSessionList({
               variant="ghost"
               size="icon-sm"
               className="shrink-0 text-muted-foreground"
-              onClick={() => onRemove(session.id)}
-              aria-label={`Remove ${session.eventType} session`}
+              onClick={() => onRemove(session.client_key)}
+              aria-label={`Remove ${session.name} session`}
             >
               <XIcon />
             </Button>
