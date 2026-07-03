@@ -1,18 +1,21 @@
 "use client";
 
+import { BookingAddOnPicker } from "@/components/BookingAddOnPicker";
 import { BookingContactForm } from "@/components/BookingContactForm";
-import { BookingInvoice, BookingQuotation } from "@/components/BookingQuotation";
+import { BookingQuotation } from "@/components/BookingQuotation";
 import {
   BookingPackagePicker,
   type PackageOption,
 } from "@/components/BookingPackagePicker";
 import { BookingSessionList } from "@/components/BookingSessionList";
+import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { SessionLocationPicker } from "@/components/SessionLocationPicker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { calculateBookingQuotation } from "@/utils/booking/pricing";
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
 import { Client } from "@/schemas/clientSchema";
@@ -31,7 +34,9 @@ type BookingStep =
   | "style"
   | "addons"
   | "details"
-  | "review";
+  | "review"
+  | "t&c"
+  | "payment";
 
 const BASE_STEP_ORDER: BookingStep[] = [
   "intro",
@@ -43,6 +48,8 @@ const BASE_STEP_ORDER: BookingStep[] = [
   "addons",
   "details",
   "review",
+  "t&c",
+  "payment",
 ];
 
 function buildStepOrder(hasStyles: boolean, hasAddOns: boolean): BookingStep[] {
@@ -68,7 +75,11 @@ type ClientPackage = {
 type ClientStyle = {
   _id?: unknown;
   name: string;
+  price: number;
+  image_src?: string;
 };
+
+type CatalogAddOn = AddOn & { _id?: unknown };
 
 const EMPTY_CONTACT: Client = {
   name: "",
@@ -139,6 +150,8 @@ export default function ClientPage() {
     null
   );
   const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
+  const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
+  const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const packages = useMemo(
     () => toPackageOptions(clientPackages),
     [clientPackages]
@@ -170,6 +183,65 @@ export default function ClientPage() {
     return buildStepOrder(hasStyles, hasAddOns);
   }, [styles, addOns, settings?.charge_by]);
 
+  const styleOptions = useMemo(
+    () =>
+      styles
+        .map((style) => ({
+          id: normalizePackageId(style._id),
+          name: style.name,
+          price: style.price,
+          imageSrc: style.image_src,
+        }))
+        .filter((style) => style.id.length > 0),
+    [styles]
+  );
+
+  const addOnOptions = useMemo(
+    () =>
+      (addOns as CatalogAddOn[]).map((addOn, index) => {
+        const id = normalizePackageId(addOn._id);
+        return {
+          id: id.length > 0 ? id : `addon-${index}`,
+          name: addOn.name,
+          price: addOn.price,
+        };
+      }),
+    [addOns]
+  );
+
+  const selectedStyle = useMemo(
+    () => styleOptions.find((style) => style.id === selectedStyleId) ?? null,
+    [styleOptions, selectedStyleId]
+  );
+
+  const selectedAddOnItems = useMemo(
+    () =>
+      addOnOptions.filter((addOn) => selectedAddOnIds.includes(addOn.id)),
+    [addOnOptions, selectedAddOnIds]
+  );
+
+  const quotation = useMemo(
+    () =>
+      calculateBookingQuotation({
+        chargeBy: settings?.charge_by ?? "package",
+        selectedPackage: selectedPackage
+          ? { name: selectedPackage.name, price: selectedPackage.price }
+          : null,
+        selectedStyle: selectedStyle
+          ? { name: selectedStyle.name, price: selectedStyle.price }
+          : null,
+        selectedAddOns: selectedAddOnItems.map((addOn) => ({
+          name: addOn.name,
+          price: addOn.price,
+        })),
+        depositAmount: settings?.payment.deposit_amount ?? 50,
+      }),
+    [settings, selectedPackage, selectedStyle, selectedAddOnItems]
+  );
+
+  const contactDetailsValid =
+    contact.name.trim().length > 0 && contact.email.trim().length > 0;
+
   const fetchClient = async () => {
     setLoading(true);
     try {
@@ -179,9 +251,11 @@ export default function ClientPage() {
       const packageOptions = toPackageOptions(fetchedPackages);
       setClientPackages(fetchedPackages);
       setStyles((data.styles as ClientStyle[] | undefined) ?? []);
-      setAddOns((data.add_ons as AddOn[] | undefined) ?? []);
+      setAddOns((data.add_ons as CatalogAddOn[] | undefined) ?? []);
       setSettings((data.settings as PublicSetting | undefined) ?? null);
       setSelectedPackageId((current) => current ?? packageOptions[0]?.id ?? null);
+      setSelectedStyleId(null);
+      setSelectedAddOnIds([]);
     } catch (error) {
       console.error(error);
     } finally {
@@ -198,6 +272,8 @@ export default function ClientPage() {
     setSelectedDate(undefined);
     setSelectedTimeSlot(null);
     setSharedLocation(null);
+    setSelectedStyleId(null);
+    setSelectedAddOnIds([]);
   }, [selectedPackageId]);
 
   useEffect(() => {
@@ -475,6 +551,57 @@ export default function ClientPage() {
           </div>
         </div>
       )}
+      {step === "style" && (
+        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            What style do you want?
+          </h1>
+          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            Pick the look you&apos;re going for.
+          </p>
+          <div className="flex w-full flex-col items-end gap-4">
+            <BookingStylePicker
+              styles={styleOptions}
+              selectedStyleId={selectedStyleId}
+              onStyleChange={setSelectedStyleId}
+            />
+            <Button
+              size="lg"
+              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              disabled={!selectedStyleId}
+              onClick={goToNextStep}
+            >
+              Next
+              <ChevronRightIcon />
+            </Button>
+          </div>
+        </div>
+      )}
+      {step === "addons" && (
+        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Any add-ons?
+          </h1>
+          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            Optional extras — pick any that apply, or skip.
+          </p>
+          <div className="flex w-full flex-col items-end gap-4">
+            <BookingAddOnPicker
+              addOns={addOnOptions}
+              selectedAddOnIds={selectedAddOnIds}
+              onSelectionChange={setSelectedAddOnIds}
+            />
+            <Button
+              size="lg"
+              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              onClick={goToNextStep}
+            >
+              Next
+              <ChevronRightIcon />
+            </Button>
+          </div>
+        </div>
+      )}
       {step === "details" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -482,26 +609,37 @@ export default function ClientPage() {
           </h1>
           <BookingContactForm value={contact} onChange={setContact} />
           <Button
-              size="lg"
-              className="bg-chart-4 text-white hover:bg-chart-4/90"
-              disabled={!allLocationsSet}
-              onClick={goToNextStep}
-            >
+            size="lg"
+            className="bg-chart-4 text-white hover:bg-chart-4/90"
+            disabled={!contactDetailsValid}
+            onClick={goToNextStep}
+          >
               Next
               <ChevronRightIcon />
             </Button>
         </div>
       )}
-      {
-        step === "review" && (
-          <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
-            <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Review your booking
-            </h1>
-            <BookingQuotation quotation={quotation} />
-          </div>
-        )
-      }
+      {step === "review" && (
+        <div className="flex w-full max-w-md flex-1 flex-col items-center">
+          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Review your booking
+          </h1>
+          <BookingQuotation
+            quotation={quotation}
+            sessions={sessions}
+            companyName={settings?.invoice.company_name}
+            termsAndConditions={settings?.invoice.terms_and_conditions}
+            balanceDueBeforeDays={settings?.payment.balance_due_before}
+          />
+        </div>
+      )}
+      {step === "t&c" && (
+        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Terms and Conditions
+          </h1>
+        </div>
+      )}
     </div>
   );
 }

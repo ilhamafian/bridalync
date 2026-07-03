@@ -49,11 +49,8 @@ export function BookingPackagePicker({
           >
             <span className="min-w-0 flex-1">
               <span className="block font-medium">{pkg.name}</span>
-              <span className="block text-xs opacity-80">
-                {pkg.sessionCount} session{pkg.sessionCount === 1 ? "" : "s"}
-              </span>
             </span>
-            <span className="shrink-0 pl-3 font-medium">{formatRm(pkg.price)}</span>
+            <span className="shrink-0 pl-3 font-medium">  {pkg.sessionCount} session{pkg.sessionCount === 1 ? "" : "s"}</span>
           </Button>
         ))}
       </CardContent>

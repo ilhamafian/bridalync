@@ -1,11 +1,17 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
+import type { SessionForm } from "@/schemas/sessionSchema"
 import { BookingQuotationSummary, formatRm } from "@/utils/booking/pricing"
+import { formatLocationAddress, formatSessionSummary } from "@/utils/session"
 import { cn } from "@/lib/utils"
 
 type BookingQuotationProps = {
   quotation: BookingQuotationSummary
+  sessions?: SessionForm[]
+  companyName?: string
+  termsAndConditions?: string
+  balanceDueBeforeDays?: number
   className?: string
 }
 
@@ -33,7 +39,16 @@ function InvoiceRow({
   )
 }
 
-export function BookingQuotation({ quotation, className }: BookingQuotationProps) {
+export function BookingQuotation({
+  quotation,
+  sessions = [],
+  companyName,
+  termsAndConditions,
+  balanceDueBeforeDays,
+  className,
+}: BookingQuotationProps) {
+  const sortedSessions = [...sessions].sort((a, b) => a.order - b.order)
+
   return (
     <Card
       className={cn(
@@ -43,21 +58,52 @@ export function BookingQuotation({ quotation, className }: BookingQuotationProps
     >
       <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
         <div>
-          <p className="text-sm font-medium text-foreground">Invoice</p>
+          <p className="text-sm font-medium text-foreground">
+            {companyName ? companyName : "Quotation"}
+          </p>
           <p className="text-xs text-muted-foreground">
             Review your total before confirming.
           </p>
         </div>
 
-        <div className="space-y-2 border-b border-border pb-4">
-          {quotation.lineItems.map((item) => (
-            <InvoiceRow
-              key={item.label}
-              label={item.label}
-              amount={formatRm(item.amountRm)}
-            />
-          ))}
-        </div>
+        {sortedSessions.length > 0 && (
+          <div className="space-y-2 border-b border-border pb-4">
+            <p className="text-sm font-medium text-foreground">Sessions</p>
+            <ul className="flex flex-col gap-2">
+              {sortedSessions.map((session) => (
+                <li
+                  key={session.client_key}
+                  className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm"
+                >
+                  <p className="font-medium text-foreground">
+                    {formatSessionSummary(session)}
+                  </p>
+                  {session.location && (
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {formatLocationAddress(session.location)}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {quotation.lineItems.length > 0 ? (
+          <div className="space-y-2 border-b border-border pb-4">
+            {quotation.lineItems.map((item) => (
+              <InvoiceRow
+                key={item.label}
+                label={item.label}
+                amount={formatRm(item.amountRm)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="border-b border-border pb-4 text-sm text-muted-foreground">
+            No line items yet.
+          </p>
+        )}
 
         <div className="space-y-2">
           <InvoiceRow
@@ -74,7 +120,24 @@ export function BookingQuotation({ quotation, className }: BookingQuotationProps
             <span>Balance payment</span>
             <span>{formatRm(quotation.balanceRm)}</span>
           </div>
+          {balanceDueBeforeDays != null && (
+            <p className="text-xs text-muted-foreground">
+              Balance due {balanceDueBeforeDays} day
+              {balanceDueBeforeDays === 1 ? "" : "s"} before your session.
+            </p>
+          )}
         </div>
+
+        {termsAndConditions && (
+          <div className="border-t border-border pt-4">
+            <p className="mb-2 text-sm font-medium text-foreground">
+              Terms & conditions
+            </p>
+            <p className="whitespace-pre-line text-xs text-muted-foreground">
+              {termsAndConditions}
+            </p>
+          </div>
+        )}
       </CardContent>
     </Card>
   )

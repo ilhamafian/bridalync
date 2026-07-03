@@ -1,5 +1,3 @@
-
-
 export type QuotationLineItem = {
   label: string;
   amountRm: number;
@@ -12,43 +10,51 @@ export type BookingQuotationSummary = {
   balanceRm: number;
 };
 
+export type QuotationLineItemInput = {
+  name: string;
+  price: number;
+};
+
+export type CalculateQuotationInput = {
+  chargeBy: "package" | "style";
+  selectedPackage: QuotationLineItemInput | null;
+  selectedStyle: QuotationLineItemInput | null;
+  selectedAddOns: QuotationLineItemInput[];
+  depositAmount: number;
+};
+
 export function formatRm(amount: number) {
   return `RM${amount.toLocaleString("en-MY")}`;
 }
 
 export function calculateBookingQuotation(
-  packageId: string,
-  addOns: string[]
+  input: CalculateQuotationInput
 ): BookingQuotationSummary {
-  const pkg = { id: packageId, label: "Package 1", priceRm: 100 };
   const lineItems: QuotationLineItem[] = [];
 
-  if (pkg) {
+  if (input.chargeBy === "package" && input.selectedPackage) {
     lineItems.push({
-      label: pkg.label,
-      amountRm: pkg.priceRm,
+      label: input.selectedPackage.name,
+      amountRm: input.selectedPackage.price,
     });
   }
 
-  if (Array.isArray(addOns)) {
-    for (const addOnId of addOns) {
-      const addOn = { id: addOnId, label: "Add-on 1", priceRm: 10 };
-      if (addOn && "priceRm" in addOn) {
-        lineItems.push({
-          label: addOn.label.replace(/\s*\(RM\d+\)\s*$/, ""),
-          amountRm: addOn.priceRm,
-        });
-      }
-    }
-  } else if (addOns === "not-sure") {
+  if (input.chargeBy === "style" && input.selectedStyle) {
     lineItems.push({
-      label: "Add-ons (to be confirmed)",
-      amountRm: 0,
+      label: input.selectedStyle.name,
+      amountRm: input.selectedStyle.price,
+    });
+  }
+
+  for (const addOn of input.selectedAddOns) {
+    lineItems.push({
+      label: addOn.name,
+      amountRm: addOn.price,
     });
   }
 
   const totalRm = lineItems.reduce((sum, item) => sum + item.amountRm, 0);
-  const depositRm = 50;
+  const depositRm = input.depositAmount;
   const balanceRm = Math.max(totalRm - depositRm, 0);
 
   return {
@@ -57,4 +63,21 @@ export function calculateBookingQuotation(
     depositRm,
     balanceRm,
   };
+}
+
+/** @deprecated Use BookingQuotationSummary */
+export type BookingInvoiceSummary = BookingQuotationSummary;
+
+/** @deprecated Use calculateBookingQuotation */
+export function calculateBookingInvoice(
+  packageId: string,
+  addOnIds: string[]
+): BookingQuotationSummary {
+  return calculateBookingQuotation({
+    chargeBy: "package",
+    selectedPackage: { name: packageId, price: 0 },
+    selectedStyle: null,
+    selectedAddOns: addOnIds.map((id) => ({ name: id, price: 0 })),
+    depositAmount: 50,
+  });
 }
