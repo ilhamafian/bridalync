@@ -1,11 +1,11 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
-import { formatRm, type BookingInvoiceSummary } from "@/utils/booking/pricing"
+import { BookingQuotationSummary, formatRm } from "@/utils/booking/pricing"
 import { cn } from "@/lib/utils"
 
-type BookingInvoiceProps = {
-  invoice: BookingInvoiceSummary
+type BookingQuotationProps = {
+  quotation: BookingQuotationSummary
   className?: string
 }
 
@@ -33,7 +33,7 @@ function InvoiceRow({
   )
 }
 
-export function BookingInvoice({ invoice, className }: BookingInvoiceProps) {
+export function BookingQuotation({ quotation, className }: BookingQuotationProps) {
   return (
     <Card
       className={cn(
@@ -50,7 +50,7 @@ export function BookingInvoice({ invoice, className }: BookingInvoiceProps) {
         </div>
 
         <div className="space-y-2 border-b border-border pb-4">
-          {invoice.lineItems.map((item) => (
+          {quotation.lineItems.map((item) => (
             <InvoiceRow
               key={item.label}
               label={item.label}
@@ -62,17 +62,17 @@ export function BookingInvoice({ invoice, className }: BookingInvoiceProps) {
         <div className="space-y-2">
           <InvoiceRow
             label="Total"
-            amount={formatRm(invoice.totalRm)}
+            amount={formatRm(quotation.totalRm)}
             emphasis
           />
           <InvoiceRow
             label="Deposit"
-            amount={formatRm(invoice.depositRm)}
+            amount={formatRm(quotation.depositRm)}
             emphasis
           />
           <div className="flex items-start justify-between gap-3 border-t border-border pt-3 text-sm font-semibold text-foreground">
             <span>Balance payment</span>
-            <span>{formatRm(invoice.balanceRm)}</span>
+            <span>{formatRm(quotation.balanceRm)}</span>
           </div>
         </div>
       </CardContent>

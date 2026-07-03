@@ -2,7 +2,7 @@
 
 import { CheckCircle2Icon, XCircleIcon } from "lucide-react";
 
-import { BookingInvoice } from "@/components/BookingInvoice";
+import { BookingInvoice } from "@/components/BookingQuotation";
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { Button } from "@/components/ui/button";
 import type { BookingInvoiceSummary } from "@/utils/booking/pricing";

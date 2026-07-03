@@ -1,5 +1,7 @@
 "use client";
 
+import { BookingContactForm } from "@/components/BookingContactForm";
+import { BookingInvoice, BookingQuotation } from "@/components/BookingQuotation";
 import {
   BookingPackagePicker,
   type PackageOption,
@@ -11,7 +13,9 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
+import { Client } from "@/schemas/clientSchema";
 import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
@@ -29,7 +33,7 @@ type BookingStep =
   | "details"
   | "review";
 
-const STEP_ORDER: BookingStep[] = [
+const BASE_STEP_ORDER: BookingStep[] = [
   "intro",
   "name",
   "events",
@@ -41,6 +45,14 @@ const STEP_ORDER: BookingStep[] = [
   "review",
 ];
 
+function buildStepOrder(hasStyles: boolean, hasAddOns: boolean): BookingStep[] {
+  return BASE_STEP_ORDER.filter((step) => {
+    if (step === "style" && !hasStyles) return false;
+    if (step === "addons" && !hasAddOns) return false;
+    return true;
+  });
+}
+
 type SessionTemplate = {
   name: string;
   order: number;
@@ -51,6 +63,18 @@ type ClientPackage = {
   name: string;
   price: number;
   session_templates: SessionTemplate[];
+};
+
+type ClientStyle = {
+  _id?: unknown;
+  name: string;
+};
+
+const EMPTY_CONTACT: Client = {
+  name: "",
+  mobile: "",
+  country_code: "+60",
+  email: "",
 };
 
 function normalizePackageId(id: unknown): string {
@@ -103,6 +127,8 @@ export default function ClientPage() {
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<BookingStep>("intro");
   const [clientPackages, setClientPackages] = useState<ClientPackage[]>([]);
+  const [styles, setStyles] = useState<ClientStyle[]>([]);
+  const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [settings, setSettings] = useState<PublicSetting | null>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
@@ -112,7 +138,7 @@ export default function ClientPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(
     null
   );
-
+  const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
   const packages = useMemo(
     () => toPackageOptions(clientPackages),
     [clientPackages]
@@ -138,6 +164,12 @@ export default function ClientPage() {
 
   const timeSlots = settings?.time_slots ?? [];
 
+  const stepOrder = useMemo(() => {
+    const hasStyles = styles.length > 0 && settings?.charge_by === "style";
+    const hasAddOns = addOns.length > 0;
+    return buildStepOrder(hasStyles, hasAddOns);
+  }, [styles, addOns, settings?.charge_by]);
+
   const fetchClient = async () => {
     setLoading(true);
     try {
@@ -146,6 +178,8 @@ export default function ClientPage() {
       const fetchedPackages = (data.packages ?? []) as ClientPackage[];
       const packageOptions = toPackageOptions(fetchedPackages);
       setClientPackages(fetchedPackages);
+      setStyles((data.styles as ClientStyle[] | undefined) ?? []);
+      setAddOns((data.add_ons as AddOn[] | undefined) ?? []);
       setSettings((data.settings as PublicSetting | undefined) ?? null);
       setSelectedPackageId((current) => current ?? packageOptions[0]?.id ?? null);
     } catch (error) {
@@ -208,16 +242,16 @@ export default function ClientPage() {
     sessions.length > 0 && sessions.every((session) => session.location);
 
   function goToNextStep() {
-    const index = STEP_ORDER.indexOf(step);
-    if (index < STEP_ORDER.length - 1) {
-      setStep(STEP_ORDER[index + 1]);
+    const index = stepOrder.indexOf(step);
+    if (index < stepOrder.length - 1) {
+      setStep(stepOrder[index + 1]);
     }
   }
 
   function goToPreviousStep() {
-    const index = STEP_ORDER.indexOf(step);
+    const index = stepOrder.indexOf(step);
     if (index > 0) {
-      setStep(STEP_ORDER[index - 1]);
+      setStep(stepOrder[index - 1]);
     }
   }
 
@@ -255,7 +289,7 @@ export default function ClientPage() {
       )}
       {step === "name" && (
         <div className="flex flex-1 flex-col items-center justify-center">
-          <Input type="text" placeholder="Enter your name" />
+          <Input type="text" placeholder="Enter your name" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
           <Button
             size="lg"
             className="bg-chart-4 text-white hover:bg-chart-4/90"
@@ -441,6 +475,33 @@ export default function ClientPage() {
           </div>
         </div>
       )}
+      {step === "details" && (
+        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Can I get your details?
+          </h1>
+          <BookingContactForm value={contact} onChange={setContact} />
+          <Button
+              size="lg"
+              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              disabled={!allLocationsSet}
+              onClick={goToNextStep}
+            >
+              Next
+              <ChevronRightIcon />
+            </Button>
+        </div>
+      )}
+      {
+        step === "review" && (
+          <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+            <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Review your booking
+            </h1>
+            <BookingQuotation quotation={quotation} />
+          </div>
+        )
+      }
     </div>
   );
 }

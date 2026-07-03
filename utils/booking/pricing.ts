@@ -1,12 +1,12 @@
 
 
-export type InvoiceLineItem = {
+export type QuotationLineItem = {
   label: string;
   amountRm: number;
 };
 
-export type BookingInvoiceSummary = {
-  lineItems: InvoiceLineItem[];
+export type BookingQuotationSummary = {
+  lineItems: QuotationLineItem[];
   totalRm: number;
   depositRm: number;
   balanceRm: number;
@@ -16,12 +16,12 @@ export function formatRm(amount: number) {
   return `RM${amount.toLocaleString("en-MY")}`;
 }
 
-export function calculateBookingInvoice(
+export function calculateBookingQuotation(
   packageId: string,
   addOns: string[]
-): BookingInvoiceSummary {
+): BookingQuotationSummary {
   const pkg = { id: packageId, label: "Package 1", priceRm: 100 };
-  const lineItems: InvoiceLineItem[] = [];
+  const lineItems: QuotationLineItem[] = [];
 
   if (pkg) {
     lineItems.push({

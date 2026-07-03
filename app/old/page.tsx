@@ -5,7 +5,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 
 import { BookingAddOnPicker } from "@/components/BookingAddOnPicker";
 import { BookingContactForm } from "@/components/BookingContactForm";
-import { BookingInvoice } from "@/components/BookingInvoice";
+import { BookingInvoice } from "@/components/BookingQuotation";
 import { BookingPackagePicker } from "@/components/BookingPackagePicker";
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
