@@ -10,7 +10,6 @@ type BookingQuotationProps = {
   quotation: BookingQuotationSummary
   sessions?: SessionForm[]
   companyName?: string
-  termsAndConditions?: string
   balanceDueBeforeDays?: number
   className?: string
 }
@@ -43,7 +42,6 @@ export function BookingQuotation({
   quotation,
   sessions = [],
   companyName,
-  termsAndConditions,
   balanceDueBeforeDays,
   className,
 }: BookingQuotationProps) {
@@ -127,17 +125,6 @@ export function BookingQuotation({
             </p>
           )}
         </div>
-
-        {termsAndConditions && (
-          <div className="border-t border-border pt-4">
-            <p className="mb-2 text-sm font-medium text-foreground">
-              Terms & conditions
-            </p>
-            <p className="whitespace-pre-line text-xs text-muted-foreground">
-              {termsAndConditions}
-            </p>
-          </div>
-        )}
       </CardContent>
     </Card>
   )

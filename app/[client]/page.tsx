@@ -152,6 +152,7 @@ export default function ClientPage() {
   const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
   const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const packages = useMemo(
     () => toPackageOptions(clientPackages),
     [clientPackages]
@@ -256,6 +257,7 @@ export default function ClientPage() {
       setSelectedPackageId((current) => current ?? packageOptions[0]?.id ?? null);
       setSelectedStyleId(null);
       setSelectedAddOnIds([]);
+      setTermsAccepted(false);
     } catch (error) {
       console.error(error);
     } finally {
@@ -274,6 +276,7 @@ export default function ClientPage() {
     setSharedLocation(null);
     setSelectedStyleId(null);
     setSelectedAddOnIds([]);
+    setTermsAccepted(false);
   }, [selectedPackageId]);
 
   useEffect(() => {
@@ -624,20 +627,60 @@ export default function ClientPage() {
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Review your booking
           </h1>
-          <BookingQuotation
-            quotation={quotation}
-            sessions={sessions}
-            companyName={settings?.invoice.company_name}
-            termsAndConditions={settings?.invoice.terms_and_conditions}
-            balanceDueBeforeDays={settings?.payment.balance_due_before}
-          />
+          <div className="flex w-full flex-col items-end gap-4">
+            <BookingQuotation
+              quotation={quotation}
+              sessions={sessions}
+              companyName={settings?.invoice.company_name}
+              balanceDueBeforeDays={settings?.payment.balance_due_before}
+            />
+            <Button
+              size="lg"
+              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              onClick={goToNextStep}
+            >
+              Next
+              <ChevronRightIcon />
+            </Button>
+          </div>
         </div>
       )}
       {step === "t&c" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+        <div className="flex w-full max-w-md flex-1 flex-col items-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Terms and Conditions
           </h1>
+          <div className="flex w-full flex-col items-end gap-4">
+            <Card className="mx-auto w-full min-h-128 min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
+              <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
+                <div className="max-h-96 overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
+                  <p className="whitespace-pre-line text-xs text-muted-foreground">
+                    {settings?.invoice.terms_and_conditions ??
+                      "No terms and conditions available."}
+                  </p>
+                </div>
+                <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(event) => setTermsAccepted(event.target.checked)}
+                    className="mt-0.5 size-4 shrink-0 rounded border-border accent-primary"
+                  />
+                  <span>I have read and agree to the terms and conditions</span>
+                </label>
+              </CardContent>
+            </Card>
+            <Button
+              size="lg"
+              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              disabled={!termsAccepted}
+              onClick={goToNextStep}
+            >
+              Agree and continue
+              <ChevronRightIcon />
+            </Button>
+          </div>
+    
         </div>
       )}
     </div>
