@@ -3,6 +3,7 @@ import { z } from "zod";
 export const packageSchema = z.object({
     name: z.string(),
     price: z.number(),
+    deposit: z.number(),
     session_templates: z.array(z.object({
         name: z.string(),
         order: z.number(),

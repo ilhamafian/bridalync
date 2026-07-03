@@ -15,12 +15,15 @@ export type QuotationLineItemInput = {
   price: number;
 };
 
+export type QuotationPackageInput = QuotationLineItemInput & {
+  deposit: number;
+};
+
 export type CalculateQuotationInput = {
   chargeBy: "package" | "style";
-  selectedPackage: QuotationLineItemInput | null;
+  selectedPackage: QuotationPackageInput | null;
   selectedStyle: QuotationLineItemInput | null;
   selectedAddOns: QuotationLineItemInput[];
-  depositAmount: number;
 };
 
 export function formatRm(amount: number) {
@@ -54,7 +57,7 @@ export function calculateBookingQuotation(
   }
 
   const totalRm = lineItems.reduce((sum, item) => sum + item.amountRm, 0);
-  const depositRm = input.depositAmount;
+  const depositRm = input.selectedPackage?.deposit ?? 0;
   const balanceRm = Math.max(totalRm - depositRm, 0);
 
   return {
@@ -75,9 +78,8 @@ export function calculateBookingInvoice(
 ): BookingQuotationSummary {
   return calculateBookingQuotation({
     chargeBy: "package",
-    selectedPackage: { name: packageId, price: 0 },
+    selectedPackage: { name: packageId, price: 0, deposit: 0 },
     selectedStyle: null,
     selectedAddOns: addOnIds.map((id) => ({ name: id, price: 0 })),
-    depositAmount: 50,
   });
 }

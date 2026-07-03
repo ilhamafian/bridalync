@@ -33,16 +33,19 @@ const DEFAULT_PACKAGES = [
   {
     name: "Nikah",
     price: 800,
+    deposit: 250,
     session_templates: [{ name: "Nikah", order: 0 }],
   },
   {
     name: "Sanding",
     price: 800,
+    deposit: 250,
     session_templates: [{ name: "Sanding", order: 0 }],
   },
   {
     name: "Nikah & Sanding",
     price: 1500,
+    deposit: 400,
     session_templates: [
       { name: "Nikah", order: 0 },
       { name: "Sanding", order: 1 },
@@ -51,21 +54,25 @@ const DEFAULT_PACKAGES = [
   {
     name: "Tunang",
     price: 450,
+    deposit: 150,
     session_templates: [{ name: "Tunang", order: 0 }],
   },
   {
     name: "Konvo",
     price: 450,
+    deposit: 150,
     session_templates: [{ name: "Konvo", order: 0 }],
   },
   {
     name: "Photoshoot",
     price: 450,
+    deposit: 150,
     session_templates: [{ name: "Photoshoot", order: 0 }],
   },
   {
     name: "Trial Makeup",
     price: 600,
+    deposit: 200,
     session_templates: [{ name: "Trial Makeup", order: 0 }],
   },
 ] as const;

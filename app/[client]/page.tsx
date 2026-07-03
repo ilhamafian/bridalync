@@ -69,6 +69,7 @@ type ClientPackage = {
   _id?: unknown;
   name: string;
   price: number;
+  deposit: number;
   session_templates: SessionTemplate[];
 };
 
@@ -226,7 +227,11 @@ export default function ClientPage() {
       calculateBookingQuotation({
         chargeBy: settings?.charge_by ?? "package",
         selectedPackage: selectedPackage
-          ? { name: selectedPackage.name, price: selectedPackage.price }
+          ? {
+              name: selectedPackage.name,
+              price: selectedPackage.price,
+              deposit: selectedPackage.deposit,
+            }
           : null,
         selectedStyle: selectedStyle
           ? { name: selectedStyle.name, price: selectedStyle.price }
@@ -235,7 +240,6 @@ export default function ClientPage() {
           name: addOn.name,
           price: addOn.price,
         })),
-        depositAmount: settings?.payment.deposit_amount ?? 50,
       }),
     [settings, selectedPackage, selectedStyle, selectedAddOnItems]
   );

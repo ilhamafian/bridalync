@@ -11,7 +11,6 @@ export const travelSettingSchema = z.object({
 });
 
 export const paymentSettingSchema = z.object({
-    deposit_amount: z.number().default(50),
     balance_due_before: z.number().default(3),
 });
 
