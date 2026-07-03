@@ -24,6 +24,7 @@ import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { PublicUser, User } from "@/schemas/userSchema";
 
 type BookingStep =
   | "intro"
@@ -70,6 +71,7 @@ type ClientPackage = {
   name: string;
   price: number;
   deposit: number;
+  order: number;
   session_templates: SessionTemplate[];
 };
 
@@ -102,8 +104,12 @@ function normalizePackageId(id: unknown): string {
   return "";
 }
 
+function sortPackages(packages: ClientPackage[]): ClientPackage[] {
+  return [...packages].sort((a, b) => a.order - b.order);
+}
+
 function toPackageOptions(packages: ClientPackage[]): PackageOption[] {
-  return packages
+  return sortPackages(packages)
     .map((pkg) => ({
       id: normalizePackageId(pkg._id),
       name: pkg.name,
@@ -143,6 +149,7 @@ export default function ClientPage() {
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [settings, setSettings] = useState<PublicSetting | null>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [user, setUser] = useState<PublicUser | null>(null);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
   const [sameLocationForAll, setSameLocationForAll] = useState(true);
   const [sharedLocation, setSharedLocation] = useState<Address | null>(null);
@@ -254,6 +261,7 @@ export default function ClientPage() {
       const data = await response.json();
       const fetchedPackages = (data.packages ?? []) as ClientPackage[];
       const packageOptions = toPackageOptions(fetchedPackages);
+      setUser(data.user as PublicUser);
       setClientPackages(fetchedPackages);
       setStyles((data.styles as ClientStyle[] | undefined) ?? []);
       setAddOns((data.add_ons as CatalogAddOn[] | undefined) ?? []);
@@ -366,7 +374,7 @@ export default function ClientPage() {
           onClick={goToNextStep}
         >
           <h1 className="max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Hi, nice to meet you! Can you tell me your name?
+            Hi, I'm {user?.name}. Your professional {user?.role}.
           </h1>
         </button>
       )}

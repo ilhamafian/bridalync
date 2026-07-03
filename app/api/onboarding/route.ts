@@ -34,18 +34,21 @@ const DEFAULT_PACKAGES = [
     name: "Nikah",
     price: 800,
     deposit: 250,
+    order: 0,
     session_templates: [{ name: "Nikah", order: 0 }],
   },
   {
     name: "Sanding",
     price: 800,
     deposit: 250,
+    order: 1,
     session_templates: [{ name: "Sanding", order: 0 }],
   },
   {
     name: "Nikah & Sanding",
     price: 1500,
-    deposit: 400,
+    deposit: 400, 
+    order: 2,
     session_templates: [
       { name: "Nikah", order: 0 },
       { name: "Sanding", order: 1 },
@@ -55,24 +58,28 @@ const DEFAULT_PACKAGES = [
     name: "Tunang",
     price: 450,
     deposit: 150,
+    order: 3,
     session_templates: [{ name: "Tunang", order: 0 }],
   },
   {
     name: "Konvo",
     price: 450,
     deposit: 150,
+    order: 4,
     session_templates: [{ name: "Konvo", order: 0 }],
   },
   {
     name: "Photoshoot",
     price: 450,
     deposit: 150,
+    order: 5,
     session_templates: [{ name: "Photoshoot", order: 0 }],
   },
   {
     name: "Trial Makeup",
     price: 600,
     deposit: 200,
+    order: 6,
     session_templates: [{ name: "Trial Makeup", order: 0 }],
   },
 ] as const;
@@ -285,8 +292,9 @@ export async function POST(req: NextRequest) {
       }
 
       case "username": {
-        const username = stepData.username.toLowerCase();
-        const user = await new UserModel().findByUsername(username);
+        const { username, name } = stepData;
+        const normalizedUsername = username.toLowerCase();
+        const user = await new UserModel().findByUsername(normalizedUsername);
         if (user?._id) {
           return createResponse(
             { error: "That username is already taken." },
@@ -296,7 +304,7 @@ export async function POST(req: NextRequest) {
 
         await new UserModel().update(
           userId,
-          { username } as Partial<User>,
+          { username: normalizedUsername, name: name.trim() } as Partial<User>,
           updateUserSchema as ZodSchema<Partial<User>>
         );
 

@@ -168,6 +168,7 @@ export default function OnboardingPage() {
   const [bankName, setBankName] = useState("");
   const [accountNumber, setAccountNumber] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [appUrl, setAppUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -187,6 +188,7 @@ export default function OnboardingPage() {
         if (data?.user) {
           setUser(data.user);
           if (data.user.role) setSelectedRole(data.user.role);
+          if (data.user.name) setDisplayName(data.user.name);
           if (data.user.username) setUsername(data.user.username);
         }
         if (Array.isArray(data?.roles)) setRoles(data.roles);
@@ -393,6 +395,12 @@ export default function OnboardingPage() {
   }
 
   async function handleContinueFromUsername() {
+    const trimmedName = displayName.trim();
+    if (!trimmedName) {
+      setError("Enter what clients should call you.");
+      return;
+    }
+
     const normalizedUsername = username.trim().toLowerCase();
     if (normalizedUsername.length < 3) {
       setError("Username must be at least 3 characters.");
@@ -406,6 +414,7 @@ export default function OnboardingPage() {
     await runStep(
       {
         step: "username",
+        name: trimmedName,
         username: normalizedUsername,
       },
       "preview_profile"
@@ -687,10 +696,33 @@ export default function OnboardingPage() {
             )}
 
             {step === "username" && (
-              <div className="flex flex-col gap-1.5">
-                <span className="text-sm font-medium text-foreground">
-                  Username:
-                </span>
+              <>
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="display-name"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    What should clients call you?
+                  </label>
+                  <input
+                    id="display-name"
+                    type="text"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    placeholder="e.g. Sarah or Kak Sarah"
+                    className={inputClassName}
+                    aria-label="What clients should call you"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Your first name or a short nickname — shown on your booking
+                    page.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-foreground">
+                    Username:
+                  </span>
                 <div
                   className={cn(
                     "flex h-10 w-full overflow-hidden rounded-md border border-border bg-background",
@@ -719,6 +751,7 @@ export default function OnboardingPage() {
                   Letters, numbers, hyphens, and underscores only.
                 </p>
               </div>
+              </>
             )}
 
             {step === "preview_profile" && (

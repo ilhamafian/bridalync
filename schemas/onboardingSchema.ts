@@ -91,6 +91,7 @@ export const onboardingBankAccountSchema = z.object({
 
 export const onboardingUsernameSchema = z.object({
   step: z.literal("username"),
+  name: z.string().min(1),
   username: z
     .string()
     .min(3)
@@ -117,6 +118,7 @@ export type OnboardingUser = {
   _id?: string;
   email?: string;
   role?: string;
+  name?: string;
   username?: string;
   onboarding?: OnboardingProgress;
 };
