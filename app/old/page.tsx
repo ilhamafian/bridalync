@@ -244,7 +244,7 @@ export default function ClientPage() {
             spot.
           </p>
 
-          <div className="flex w-full flex-col items-end gap-4">
+          {/* <div className="flex w-full flex-col items-end gap-4">
             <SessionLocationPicker
               sessions={sessions}
               sameLocationForAll={sameLocationForAll}
@@ -275,7 +275,7 @@ export default function ClientPage() {
               Next
               <ChevronRightIcon />
             </Button>
-          </div>
+          </div> */}
         </div>
       )}
 

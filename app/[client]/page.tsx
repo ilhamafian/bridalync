@@ -4,12 +4,17 @@ import {
   BookingPackagePicker,
   type PackageOption,
 } from "@/components/BookingPackagePicker";
+import { BookingSessionList } from "@/components/BookingSessionList";
+import { SessionLocationPicker } from "@/components/SessionLocationPicker";
 import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
+import { ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type BookingStep =
   | "intro"
@@ -34,11 +39,24 @@ const STEP_ORDER: BookingStep[] = [
   "review",
 ];
 
+type SessionTemplate = {
+  name: string;
+  order: number;
+};
+
 type ClientPackage = {
   _id?: unknown;
   name: string;
   price: number;
-  session_templates: { name: string; order: number }[];
+  session_templates: SessionTemplate[];
+};
+
+type ScheduledSession = {
+  id: string;
+  order: number;
+  name: string;
+  date: Date;
+  timeSlot: TimeSlot;
 };
 
 function normalizePackageId(id: unknown): string {
@@ -65,21 +83,85 @@ function toPackageOptions(packages: ClientPackage[]): PackageOption[] {
     .filter((pkg) => pkg.id.length > 0);
 }
 
+function sortSessionTemplates(templates: SessionTemplate[]): SessionTemplate[] {
+  return [...templates].sort((a, b) => a.order - b.order);
+}
+
+function getNextSessionTemplate(
+  templates: SessionTemplate[],
+  scheduled: ScheduledSession[]
+): SessionTemplate | null {
+  const scheduledOrders = new Set(scheduled.map((session) => session.order));
+  return (
+    sortSessionTemplates(templates).find(
+      (template) => !scheduledOrders.has(template.order)
+    ) ?? null
+  );
+}
+
+function formatTimeSlot(slot: TimeSlot): string {
+  return `${slot.startTime} – ${slot.endTime}`;
+}
+
+function formatSessionDate(date: Date): string {
+  return date.toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default function ClientPage() {
   const params = useParams();
   const client = params.client as string;
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<BookingStep>("intro");
-  const [packages, setPackages] = useState<PackageOption[]>([]);
+  const [clientPackages, setClientPackages] = useState<ClientPackage[]>([]);
+  const [settings, setSettings] = useState<PublicSetting | null>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [scheduledSessions, setScheduledSessions] = useState<ScheduledSession[]>(
+    []
+  );
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(
+    null
+  );
+
+  const packages = useMemo(
+    () => toPackageOptions(clientPackages),
+    [clientPackages]
+  );
+
+  const selectedPackage = useMemo(
+    () =>
+      clientPackages.find(
+        (pkg) => normalizePackageId(pkg._id) === selectedPackageId
+      ) ?? null,
+    [clientPackages, selectedPackageId]
+  );
+
+  const sessionTemplates = useMemo(
+    () => sortSessionTemplates(selectedPackage?.session_templates ?? []),
+    [selectedPackage]
+  );
+
+  const nextSessionTemplate = useMemo(
+    () => getNextSessionTemplate(sessionTemplates, scheduledSessions),
+    [sessionTemplates, scheduledSessions]
+  );
+
+  const timeSlots = settings?.time_slots ?? [];
 
   const fetchClient = async () => {
     setLoading(true);
     try {
       const response = await fetch(`/api/client/${client}`);
       const data = await response.json();
-      const packageOptions = toPackageOptions(data.packages ?? []);
-      setPackages(packageOptions);
+      const fetchedPackages = (data.packages ?? []) as ClientPackage[];
+      const packageOptions = toPackageOptions(fetchedPackages);
+      setClientPackages(fetchedPackages);
+      setSettings((data.settings as PublicSetting | undefined) ?? null);
       setSelectedPackageId((current) => current ?? packageOptions[0]?.id ?? null);
     } catch (error) {
       console.error(error);
@@ -91,6 +173,42 @@ export default function ClientPage() {
   useEffect(() => {
     fetchClient();
   }, [client]);
+
+  useEffect(() => {
+    setScheduledSessions([]);
+    setSelectedDate(undefined);
+    setSelectedTimeSlot(null);
+  }, [selectedPackageId]);
+
+  function handleAddSession() {
+    if (!nextSessionTemplate || !selectedDate || !selectedTimeSlot) return;
+
+    setScheduledSessions((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        order: nextSessionTemplate.order,
+        name: nextSessionTemplate.name,
+        date: selectedDate,
+        timeSlot: selectedTimeSlot,
+      },
+    ]);
+    setSelectedDate(undefined);
+    setSelectedTimeSlot(null);
+  }
+
+  function handleRemoveSession(sessionId: string) {
+    setScheduledSessions((current) => {
+      const removed = current.find((session) => session.id === sessionId);
+      if (!removed) return current;
+
+      return current.filter((session) => session.order < removed.order);
+    });
+  }
+
+  const allSessionsScheduled =
+    sessionTemplates.length > 0 &&
+    scheduledSessions.length === sessionTemplates.length;
 
   function goToNextStep() {
     const index = STEP_ORDER.indexOf(step);
@@ -177,6 +295,184 @@ export default function ClientPage() {
               size="lg"
               className="bg-chart-4 text-white hover:bg-chart-4/90"
               disabled={!selectedPackageId}
+              onClick={goToNextStep}
+            >
+              Next
+              <ChevronRightIcon />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {step === "datetime" && (
+        <div className="flex w-full max-w-md flex-1 flex-col items-center">
+          <h1 className="mb-2 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {nextSessionTemplate
+              ? `When would you like to book your ${nextSessionTemplate.name} session?`
+              : "All sessions scheduled"}
+          </h1>
+          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            {scheduledSessions.length} of {sessionTemplates.length} session
+            {sessionTemplates.length === 1 ? "" : "s"} scheduled
+          </p>
+
+          <div className="flex w-full flex-col items-end gap-4">
+            {nextSessionTemplate && (
+              <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
+                <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
+                  <p className="text-sm text-muted-foreground">
+                    Scheduling session {nextSessionTemplate.order + 1} of{" "}
+                    {sessionTemplates.length}:{" "}
+                    <span className="font-medium text-foreground">
+                      {nextSessionTemplate.name}
+                    </span>
+                  </p>
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => {
+                      setSelectedDate(date);
+                      setSelectedTimeSlot(null);
+                    }}
+                    disabled={{ before: new Date() }}
+                    captionLayout="dropdown"
+                    className="p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
+                  />
+                </CardContent>
+                <CardFooter className="w-full flex-col items-stretch gap-3 border-t bg-card">
+                  <p className="text-sm font-medium text-foreground">
+                    Available slots
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {timeSlots.map((slot) => (
+                      <Button
+                        key={`${slot.startTime}-${slot.endTime}`}
+                        type="button"
+                        variant={
+                          selectedTimeSlot?.startTime === slot.startTime &&
+                          selectedTimeSlot?.endTime === slot.endTime
+                            ? "default"
+                            : "outline"
+                        }
+                        size="lg"
+                        disabled={!selectedDate}
+                        className="h-8 w-full"
+                        onClick={() => setSelectedTimeSlot(slot)}
+                      >
+                        {formatTimeSlot(slot)}
+                      </Button>
+                    ))}
+                  </div>
+                </CardFooter>
+              </Card>
+            )}
+
+            <div className="w-full space-y-2">
+              <p className="text-sm font-medium text-foreground">
+                Your bookings
+              </p>
+              {scheduledSessions.length === 0 ? (
+                <p className="text-center text-sm text-muted-foreground">
+                  No sessions yet — pick a date and time below.
+                </p>
+              ) : (
+                <ul className="flex w-full flex-col gap-2">
+                  {sortSessionTemplates(
+                    scheduledSessions.map((session) => ({
+                      name: session.name,
+                      order: session.order,
+                    }))
+                  ).map((template) => {
+                    const session = scheduledSessions.find(
+                      (item) => item.order === template.order
+                    );
+                    if (!session) return null;
+
+                    return (
+                      <li
+                        key={session.id}
+                        className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-sm"
+                      >
+                        <div className="min-w-0 text-left">
+                          <p className="font-medium text-foreground">
+                            {session.name} — {formatSessionDate(session.date)},{" "}
+                            {formatTimeSlot(session.timeSlot)}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          className="shrink-0 text-muted-foreground"
+                          onClick={() => handleRemoveSession(session.id)}
+                          aria-label={`Remove ${session.name} session`}
+                        >
+                          <XIcon />
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            <div className="flex w-full justify-end gap-2">
+              {nextSessionTemplate && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  disabled={!selectedDate || !selectedTimeSlot}
+                  onClick={handleAddSession}
+                >
+                  Add {nextSessionTemplate.name} session
+                </Button>
+              )}
+              <Button
+                size="lg"
+                className="bg-chart-4 text-white hover:bg-chart-4/90"
+                disabled={!allSessionsScheduled}
+                onClick={goToNextStep}
+              >
+                Next
+                <ChevronRightIcon />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {step === "location" && (
+        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Where would you like to book your session?
+          </h1>
+
+          <div className="flex w-full flex-col items-end gap-4">
+            <SessionLocationPicker
+              sessions={sessions}
+              sameLocationForAll={sameLocationForAll}
+              onSameLocationForAllChange={setSameLocationForAll}
+              sharedLocation={sharedLocation}
+              onSharedLocationChange={setSharedLocation}
+              onSessionLocationChange={(sessionId, location) =>
+                setSessions((current) =>
+                  current.map((session) =>
+                    session.id === sessionId
+                      ? { ...session, location }
+                      : session
+                  )
+                )
+              }
+            />
+
+            <div className="w-full space-y-2">
+              <p className="text-sm font-medium text-foreground">Summary</p>
+              <BookingSessionList sessions={sessions} showLocation />
+            </div>
+
+            <Button
+              size="lg"
+              className="bg-chart-4 text-white hover:bg-chart-4/90"
               onClick={goToNextStep}
             >
               Next
