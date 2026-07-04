@@ -13,6 +13,8 @@ type SessionLocationPickerProps = {
   sharedLocation: Address | null
   onSharedLocationChange: (location: Address) => void
   onSessionLocationChange: (clientKey: string, location: Address) => void
+  sharedLocationHelperText?: string
+  sessionLocationHelperTextByKey?: Record<string, string | undefined>
 }
 
 export function SessionLocationPicker({
@@ -22,6 +24,8 @@ export function SessionLocationPicker({
   sharedLocation,
   onSharedLocationChange,
   onSessionLocationChange,
+  sharedLocationHelperText,
+  sessionLocationHelperTextByKey,
 }: SessionLocationPickerProps) {
   return (
     <MapsProvider>
@@ -51,6 +55,11 @@ export function SessionLocationPicker({
               value={sharedLocation}
               onChange={onSharedLocationChange}
             />
+            {sharedLocationHelperText && (
+              <p className="text-xs text-muted-foreground">
+                {sharedLocationHelperText}
+              </p>
+            )}
           </div>
         ) : (
           <ul className="flex flex-col gap-6">
@@ -68,6 +77,11 @@ export function SessionLocationPicker({
                     onSessionLocationChange(session.client_key, location)
                   }
                 />
+                {sessionLocationHelperTextByKey?.[session.client_key] && (
+                  <p className="text-xs text-muted-foreground">
+                    {sessionLocationHelperTextByKey[session.client_key]}
+                  </p>
+                )}
               </li>
             ))}
           </ul>

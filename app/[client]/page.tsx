@@ -23,8 +23,8 @@ import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { PublicUser, User } from "@/schemas/userSchema";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { PublicUser } from "@/schemas/userSchema";
 
 type BookingStep =
   | "intro"
@@ -91,6 +91,63 @@ const EMPTY_CONTACT: Client = {
   email: "",
 };
 
+type LocationCoordinates = Address["location"];
+
+type TravelDistanceResponse = {
+  distanceKm: number;
+};
+
+type SessionRoadDistance = {
+  requestKey: string;
+  status: "loading" | "ready" | "error";
+  distanceKm?: number;
+};
+
+function buildLocationKey(location: LocationCoordinates): string {
+  return `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`;
+}
+
+function buildTravelDistanceRequestKey(
+  origin: LocationCoordinates,
+  destination: LocationCoordinates
+): string {
+  return `${buildLocationKey(origin)}->${buildLocationKey(destination)}`;
+}
+
+function formatRoadDistanceLabel(distanceKm: number): string {
+  return `${distanceKm.toFixed(distanceKm >= 10 ? 1 : 2)} km away by road`;
+}
+
+async function requestTravelDistance(
+  origin: LocationCoordinates,
+  destination: LocationCoordinates,
+  signal: AbortSignal
+): Promise<TravelDistanceResponse> {
+  const response = await fetch("/api/travel-distance", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ origin, destination }),
+    signal,
+  });
+
+  const payload = (await response.json()) as {
+    distanceKm?: unknown;
+    error?: unknown;
+  };
+
+  if (!response.ok || typeof payload.distanceKm !== "number") {
+    throw new Error(
+      typeof payload.error === "string"
+        ? payload.error
+        : "Unable to calculate road distance."
+    );
+  }
+
+  return { distanceKm: payload.distanceKm };
+}
+
 function normalizePackageId(id: unknown): string {
   if (typeof id === "string") return id;
   if (
@@ -153,6 +210,9 @@ export default function ClientPage() {
   const [sessions, setSessions] = useState<SessionForm[]>([]);
   const [sameLocationForAll, setSameLocationForAll] = useState(true);
   const [sharedLocation, setSharedLocation] = useState<Address | null>(null);
+  const [sessionRoadDistances, setSessionRoadDistances] = useState<
+    Record<string, SessionRoadDistance>
+  >({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(
     null
@@ -161,6 +221,7 @@ export default function ClientPage() {
   const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const sessionRoadDistancesRef = useRef(sessionRoadDistances);
   const packages = useMemo(
     () => toPackageOptions(clientPackages),
     [clientPackages]
@@ -228,6 +289,10 @@ export default function ClientPage() {
       addOnOptions.filter((addOn) => selectedAddOnIds.includes(addOn.id)),
     [addOnOptions, selectedAddOnIds]
   );
+
+  const travelOrigin = settings?.travel.enabled
+    ? settings.travel.location.location
+    : null;
 
   const quotation = useMemo(
     () =>
@@ -298,6 +363,153 @@ export default function ClientPage() {
     );
   }, [sameLocationForAll, sharedLocation]);
 
+  useEffect(() => {
+    sessionRoadDistancesRef.current = sessionRoadDistances;
+  }, [sessionRoadDistances]);
+
+  useEffect(() => {
+    if (!travelOrigin) {
+      setSessionRoadDistances({});
+      return;
+    }
+
+    const sessionsWithLocation = sessions.filter(
+      (session): session is SessionForm & { location: Address } =>
+        Boolean(session.location)
+    );
+
+    if (sessionsWithLocation.length === 0) {
+      setSessionRoadDistances({});
+      return;
+    }
+
+    const requestGroups = new Map<
+      string,
+      {
+        requestKey: string;
+        destination: LocationCoordinates;
+        sessionKeys: string[];
+      }
+    >();
+
+    for (const session of sessionsWithLocation) {
+      const requestKey = buildTravelDistanceRequestKey(
+        travelOrigin,
+        session.location.location
+      );
+      const existingGroup = requestGroups.get(requestKey);
+
+      if (existingGroup) {
+        existingGroup.sessionKeys.push(session.client_key);
+        continue;
+      }
+
+      requestGroups.set(requestKey, {
+        requestKey,
+        destination: session.location.location,
+        sessionKeys: [session.client_key],
+      });
+    }
+
+    const currentDistances = sessionRoadDistancesRef.current;
+    const groupsToFetch = Array.from(requestGroups.values()).filter((group) =>
+      !group.sessionKeys.some((sessionKey) => {
+        const currentDistance = currentDistances[sessionKey];
+        return (
+          currentDistance?.requestKey === group.requestKey &&
+          currentDistance.status === "ready"
+        );
+      })
+    );
+
+    setSessionRoadDistances((current) => {
+      const next: Record<string, SessionRoadDistance> = {};
+
+      for (const group of requestGroups.values()) {
+        const cachedDistance = group.sessionKeys
+          .map((sessionKey) => current[sessionKey])
+          .find(
+            (entry) =>
+              entry?.requestKey === group.requestKey && entry.status === "ready"
+          );
+
+        const sharedEntry =
+          cachedDistance ?? ({ requestKey: group.requestKey, status: "loading" } as const);
+
+        for (const sessionKey of group.sessionKeys) {
+          next[sessionKey] = sharedEntry;
+        }
+      }
+
+      return next;
+    });
+
+    if (groupsToFetch.length === 0) return;
+
+    const abortController = new AbortController();
+
+    void Promise.all(
+      groupsToFetch.map(async (group) => {
+        try {
+          const result = await requestTravelDistance(
+            travelOrigin,
+            group.destination,
+            abortController.signal
+          );
+
+          setSessionRoadDistances((current) => {
+            let changed = false;
+            const next = { ...current };
+
+            for (const sessionKey of group.sessionKeys) {
+              const currentDistance = current[sessionKey];
+              if (!currentDistance || currentDistance.requestKey !== group.requestKey) {
+                continue;
+              }
+
+              next[sessionKey] = {
+                requestKey: group.requestKey,
+                status: "ready",
+                distanceKm: result.distanceKm,
+              };
+              changed = true;
+            }
+
+            return changed ? next : current;
+          });
+        } catch (error) {
+          if (abortController.signal.aborted) return;
+
+          console.error(error);
+
+          setSessionRoadDistances((current) => {
+            let changed = false;
+            const next = { ...current };
+
+            for (const sessionKey of group.sessionKeys) {
+              const currentDistance = current[sessionKey];
+              if (!currentDistance || currentDistance.requestKey !== group.requestKey) {
+                continue;
+              }
+
+              next[sessionKey] = {
+                requestKey: group.requestKey,
+                status: "error",
+              };
+              changed = true;
+            }
+
+            return changed ? next : current;
+          });
+        }
+      })
+    );
+
+    return () => {
+      abortController.abort();
+    };
+  }, [sessions, travelOrigin?.lat, travelOrigin?.lng]);
+
   function handleAddSession() {
     if (!nextSessionTemplate || !selectedDate || !selectedTimeSlot) return;
 
@@ -331,6 +543,48 @@ export default function ClientPage() {
 
   const allLocationsSet =
     sessions.length > 0 && sessions.every((session) => session.location);
+
+  const sessionLocationHelperTextByKey = useMemo(() => {
+    const messages: Record<string, string | undefined> = {};
+
+    if (!travelOrigin) {
+      return messages;
+    }
+
+    for (const session of sessions) {
+      if (!session.location) {
+        messages[session.client_key] = undefined;
+        continue;
+      }
+
+      const roadDistance = sessionRoadDistances[session.client_key];
+      if (!roadDistance) {
+        messages[session.client_key] = undefined;
+        continue;
+      }
+
+      if (roadDistance.status === "loading") {
+        messages[session.client_key] = "Calculating road distance...";
+        continue;
+      }
+
+      if (roadDistance.status === "error") {
+        messages[session.client_key] = "Road distance unavailable right now.";
+        continue;
+      }
+
+      messages[session.client_key] = formatRoadDistanceLabel(
+        roadDistance.distanceKm ?? 0
+      );
+    }
+
+    return messages;
+  }, [sessions, sessionRoadDistances, travelOrigin]);
+
+  const sharedLocationHelperText =
+    sameLocationForAll && sessions.length > 0
+      ? sessionLocationHelperTextByKey[sessions[0].client_key]
+      : undefined;
 
   function goToNextStep() {
     const index = stepOrder.indexOf(step);
@@ -538,6 +792,8 @@ export default function ClientPage() {
               onSameLocationForAllChange={setSameLocationForAll}
               sharedLocation={sharedLocation}
               onSharedLocationChange={setSharedLocation}
+              sharedLocationHelperText={sharedLocationHelperText}
+              sessionLocationHelperTextByKey={sessionLocationHelperTextByKey}
               onSessionLocationChange={(clientKey, location) =>
                 setSessions((current) =>
                   current.map((session) =>
