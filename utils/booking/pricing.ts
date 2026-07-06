@@ -1,3 +1,8 @@
+import type { SessionForm } from "@/schemas/sessionSchema";
+import type { TimeSlot } from "@/schemas/settingSchema";
+
+import { calculateTravelFeeRm } from "@/utils/booking/travel";
+
 export type QuotationLineItem = {
   label: string;
   amountRm: number;
@@ -19,15 +24,27 @@ export type QuotationPackageInput = QuotationLineItemInput & {
   deposit: number;
 };
 
+export type TravelQuotationInput = {
+  enabled: boolean;
+  ratePerKm: number;
+  timeSlots: TimeSlot[];
+  sessions: Pick<SessionForm, "client_key" | "date" | "time_slot" | "location">[];
+  distanceKmBySessionKey: Record<string, number | undefined>;
+};
+
 export type CalculateQuotationInput = {
   chargeBy: "package" | "style";
   selectedPackage: QuotationPackageInput | null;
   selectedStyle: QuotationLineItemInput | null;
   selectedAddOns: QuotationLineItemInput[];
+  travel?: TravelQuotationInput;
 };
 
 export function formatRm(amount: number) {
-  return `RM${amount.toLocaleString("en-MY")}`;
+  return `RM${amount.toLocaleString("en-MY", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }
 
 export function calculateBookingQuotation(
@@ -35,17 +52,27 @@ export function calculateBookingQuotation(
 ): BookingQuotationSummary {
   const lineItems: QuotationLineItem[] = [];
 
+  const travelFeeRm =
+    input.travel?.enabled === true
+      ? calculateTravelFeeRm({
+          sessions: input.travel.sessions,
+          timeSlots: input.travel.timeSlots,
+          ratePerKm: input.travel.ratePerKm,
+          distanceKmBySessionKey: input.travel.distanceKmBySessionKey,
+        })
+      : 0;
+
   if (input.chargeBy === "package" && input.selectedPackage) {
     lineItems.push({
       label: input.selectedPackage.name,
-      amountRm: input.selectedPackage.price,
+      amountRm: input.selectedPackage.price + travelFeeRm,
     });
   }
 
   if (input.chargeBy === "style" && input.selectedStyle) {
     lineItems.push({
       label: input.selectedStyle.name,
-      amountRm: input.selectedStyle.price,
+      amountRm: input.selectedStyle.price + travelFeeRm,
     });
   }
 

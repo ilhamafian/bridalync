@@ -294,6 +294,17 @@ export default function ClientPage() {
     ? settings.travel.location.location
     : null;
 
+  const distanceKmBySessionKey = useMemo(() => {
+    const distances: Record<string, number | undefined> = {};
+
+    for (const [sessionKey, roadDistance] of Object.entries(sessionRoadDistances)) {
+      distances[sessionKey] =
+        roadDistance.status === "ready" ? roadDistance.distanceKm : undefined;
+    }
+
+    return distances;
+  }, [sessionRoadDistances]);
+
   const quotation = useMemo(
     () =>
       calculateBookingQuotation({
@@ -312,8 +323,25 @@ export default function ClientPage() {
           name: addOn.name,
           price: addOn.price,
         })),
+        travel:
+          settings?.travel.enabled === true
+            ? {
+                enabled: true,
+                ratePerKm: settings.travel.rate_per_km,
+                timeSlots: settings.time_slots,
+                sessions,
+                distanceKmBySessionKey,
+              }
+            : undefined,
       }),
-    [settings, selectedPackage, selectedStyle, selectedAddOnItems]
+    [
+      settings,
+      selectedPackage,
+      selectedStyle,
+      selectedAddOnItems,
+      sessions,
+      distanceKmBySessionKey,
+    ]
   );
 
   const contactDetailsValid =

@@ -81,7 +81,7 @@ export const POST = withApiHandler(
 
     const parsed = googleRoutesResponseSchema.safeParse(
       await googleResponse.json()
-    );
+    ); 
 
     if (!parsed.success) {
       console.error("Unexpected Google Routes response:", parsed.error.format());
