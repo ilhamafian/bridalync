@@ -1,10 +1,14 @@
 import { NextRequest } from "next/server";
 
-import { calculateBookingInvoice } from "@/utils/booking/pricing";
 import { createBooking } from "@/models/Booking";
-import { freelancerExists } from "@/utils/users";
 import { createBookingRequestSchema } from "@/schemas/bookingRecord";
 import { createResponse, handleError } from "@/utils/apiHelper";
+import {
+  mapSessionsForStorage,
+  resolveBookingQuotation,
+  resolveFreelancerForBooking,
+} from "@/utils/booking/createBooking";
+import { freelancerExists } from "@/utils/users";
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,12 +26,35 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: "Freelancer not found" }, 404);
     }
 
-    const { intent, ...bookingData } = data;
-    const invoice = calculateBookingInvoice(bookingData.packageId, bookingData.addOns);
+    const freelancer = await resolveFreelancerForBooking(data.freelancerUsername);
+    if (!freelancer) {
+      return createResponse({ error: "Freelancer not found" }, 404);
+    }
+
+    if (data.intent === "booking" && !freelancer.user.stripe_account_id) {
+      return createResponse(
+        { error: "This stylist is not ready to accept bookings yet." },
+        503
+      );
+    }
+
+    const { invoice, packageName } = await resolveBookingQuotation(
+      freelancer.userId,
+      data
+    );
+
     const booking = await createBooking({
-      ...bookingData,
+      freelancerUsername: data.freelancerUsername.toLowerCase(),
+      freelancerUserId: freelancer.userId,
+      contact: data.contact,
+      packageId: data.packageId,
+      packageName,
+      styleId: data.style?.id,
+      styleName: data.style?.name,
+      addOnIds: data.addOns.map((addOn) => addOn.id),
+      sessions: mapSessionsForStorage(data),
       invoice,
-      status: intent === "booking" ? "pending" : "enquiry",
+      status: data.intent === "booking" ? "pending" : "enquiry",
     });
 
     return createResponse(

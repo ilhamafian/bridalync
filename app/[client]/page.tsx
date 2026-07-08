@@ -15,7 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { calculateBookingQuotation } from "@/utils/booking/pricing";
+import { calculateBookingQuotation, formatRm } from "@/utils/booking/pricing";
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
 import { Client } from "@/schemas/clientSchema";
@@ -116,6 +116,19 @@ function buildTravelDistanceRequestKey(
 
 function formatRoadDistanceLabel(distanceKm: number): string {
   return `${distanceKm.toFixed(distanceKm >= 10 ? 1 : 2)} km away by road`;
+}
+
+function getErrorMessage(payload: unknown) {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "error" in payload &&
+    typeof payload.error === "string"
+  ) {
+    return payload.error;
+  }
+
+  return "Something went wrong. Please try again.";
 }
 
 async function requestTravelDistance(
@@ -221,6 +234,8 @@ export default function ClientPage() {
   const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
   const sessionRoadDistancesRef = useRef(sessionRoadDistances);
   const packages = useMemo(
     () => toPackageOptions(clientPackages),
@@ -628,6 +643,79 @@ export default function ClientPage() {
     }
   }
 
+  async function handlePayDeposit() {
+    if (isPaying || !selectedPackageId || sessions.length === 0) return;
+
+    setIsPaying(true);
+    setPaymentError(null);
+
+    try {
+      const bookingResponse = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          freelancerUsername: client,
+          intent: "booking",
+          contact,
+          packageId: selectedPackageId,
+          style: selectedStyle ?? undefined,
+          addOns: selectedAddOnItems,
+          sessions,
+          distanceKmBySessionKey,
+        }),
+      });
+
+      const bookingPayload: unknown = await bookingResponse.json();
+      if (!bookingResponse.ok) {
+        throw new Error(getErrorMessage(bookingPayload));
+      }
+
+      const bookingId =
+        bookingPayload &&
+        typeof bookingPayload === "object" &&
+        "id" in bookingPayload &&
+        typeof bookingPayload.id === "string"
+          ? bookingPayload.id
+          : null;
+
+      if (!bookingId) {
+        throw new Error("Could not create booking.");
+      }
+
+      const checkoutResponse = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId,
+          freelancerUsername: client,
+        }),
+      });
+
+      const checkoutPayload: unknown = await checkoutResponse.json();
+      if (!checkoutResponse.ok) {
+        throw new Error(getErrorMessage(checkoutPayload));
+      }
+
+      if (
+        checkoutPayload &&
+        typeof checkoutPayload === "object" &&
+        "url" in checkoutPayload &&
+        typeof checkoutPayload.url === "string"
+      ) {
+        window.location.href = checkoutPayload.url;
+        return;
+      }
+
+      throw new Error("Could not start Stripe Checkout.");
+    } catch (error) {
+      setPaymentError(
+        error instanceof Error ? error.message : "Payment could not be started."
+      );
+    } finally {
+      setIsPaying(false);
+    }
+  }
+
   return(
     <div
       className={cn(
@@ -977,6 +1065,40 @@ export default function ClientPage() {
             </Button>
           </div>
     
+        </div>
+      )}
+      {step === "payment" && (
+        <div className="flex w-full max-w-md flex-1 flex-col items-center">
+          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Pay your deposit
+          </h1>
+          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            Secure card payment through Stripe. Your booking is confirmed once the
+            deposit is received.
+          </p>
+          <div className="flex w-full flex-col items-end gap-4">
+            <BookingQuotation
+              quotation={quotation}
+              sessions={sessions}
+              companyName={settings?.invoice.company_name}
+              balanceDueBeforeDays={settings?.payment.balance_due_before}
+            />
+            {paymentError && (
+              <p className="w-full text-sm text-destructive" role="alert">
+                {paymentError}
+              </p>
+            )}
+            <Button
+              size="lg"
+              className="h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
+              disabled={isPaying || quotation.depositRm <= 0}
+              onClick={() => void handlePayDeposit()}
+            >
+              {isPaying
+                ? "Redirecting to Stripe…"
+                : `Pay ${formatRm(quotation.depositRm)} deposit`}
+            </Button>
+          </div>
         </div>
       )}
     </div>

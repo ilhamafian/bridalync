@@ -1,18 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { MALAYSIAN_BANKS } from "@/constants/malaysianBanks";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
 import { DEFAULT_TERMS_AND_CONDITIONS } from "@/schemas/settingSchema";
@@ -49,10 +41,6 @@ const STEP_CONFIG: Record<
   invoice: {
     title: "Invoice details",
     description: "These details appear on invoices sent to clients.",
-  },
-  bank_account: {
-    title: "Bank account",
-    description: "Where should we send the payments to?",
   },
   username: {
     title: "Choose a username",
@@ -150,7 +138,22 @@ function getChargeBy(role: string): "package" | "style" {
 }
 
 export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-16 text-sm text-muted-foreground">
+          Loading onboarding…
+        </div>
+      }
+    >
+      <OnboardingPageContent />
+    </Suspense>
+  );
+}
+
+function OnboardingPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [step, setStep] = useState<OnboardingStepId>("role");
   const [user, setUser] = useState<OnboardingUser | null>(null);
   const [roles, setRoles] = useState<UserRole[]>([]);
@@ -165,15 +168,13 @@ export default function OnboardingPage() {
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
   const [companyLogo, setCompanyLogo] = useState("");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [accountName, setAccountName] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [appUrl, setAppUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const stepFromUrl = searchParams.get("step");
 
   useEffect(() => {
     fetch("/api/onboarding")
@@ -192,12 +193,19 @@ export default function OnboardingPage() {
           if (data.user.username) setUsername(data.user.username);
         }
         if (Array.isArray(data?.roles)) setRoles(data.roles);
-        if (data?.resumeStep) setStep(data.resumeStep);
+        if (
+          stepFromUrl &&
+          ONBOARDING_STEP_ORDER.includes(stepFromUrl as OnboardingStepId)
+        ) {
+          setStep(stepFromUrl as OnboardingStepId);
+        } else if (data?.resumeStep) {
+          setStep(data.resumeStep);
+        }
         if (typeof data?.appUrl === "string") setAppUrl(data.appUrl);
       })
       .catch(() => setError("Could not load onboarding data."))
       .finally(() => setIsLoading(false));
-  }, [router]);
+  }, [router, stepFromUrl]);
 
   async function submitStep(body: OnboardingStepRequest) {
     const response = await fetch("/api/onboarding", {
@@ -372,23 +380,6 @@ export default function OnboardingPage() {
         terms_and_conditions: termsAndConditions.trim(),
         company_registration_number: companyRegistrationNumber.trim() || undefined,
         company_logo: companyLogo || undefined,
-      },
-      "bank_account"
-    );
-  }
-
-  async function handleContinueFromBankAccount() {
-    if (!bankName || !accountNumber.trim() || !accountName.trim()) {
-      setError("Fill in all bank account fields.");
-      return;
-    }
-
-    await runStep(
-      {
-        step: "bank_account",
-        bank_name: bankName,
-        account_number: accountNumber.trim(),
-        account_name: accountName.trim(),
       },
       "username"
     );
@@ -645,56 +636,6 @@ export default function OnboardingPage() {
               </>
             )}
 
-            {step === "bank_account" && (
-              <>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium text-foreground">
-                    Bank name
-                  </span>
-                  <Select
-                    value={bankName || undefined}
-                    onValueChange={setBankName}
-                  >
-                    <SelectTrigger className="h-10 w-full text-sm">
-                      <SelectValue placeholder="Select a bank" />
-                    </SelectTrigger>
-                    <SelectContent position="popper" className="w-(--radix-select-trigger-width)">
-                      {MALAYSIAN_BANKS.map((bank) => (
-                        <SelectItem key={bank.value} value={bank.value}>
-                          {bank.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium text-foreground">
-                    Account number
-                  </span>
-                  <input
-                    type="text"
-                    value={accountNumber}
-                    onChange={(event) => setAccountNumber(event.target.value)}
-                    className={inputClassName}
-                  />
-                </label>
-
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium text-foreground">
-                    Account name
-                  </span>
-                  <input
-                    type="text"
-                    value={accountName}
-                    onChange={(event) => setAccountName(event.target.value)}
-                    className={inputClassName}
-                  />
-                </label>
-
-              </>
-            )}
-
             {step === "username" && (
               <>
                 <div className="flex flex-col gap-1.5">
@@ -830,8 +771,6 @@ export default function OnboardingPage() {
                   if (step === "role") handleContinueFromRole();
                   else if (step === "travel") void handleContinueFromTravel();
                   else if (step === "invoice") void handleContinueFromInvoice();
-                  else if (step === "bank_account")
-                    void handleContinueFromBankAccount();
                   else if (step === "username")
                     void handleContinueFromUsername();
                   else handleComplete();

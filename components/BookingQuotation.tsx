@@ -38,6 +38,77 @@ function InvoiceRow({
   )
 }
 
+type BookingInvoiceProps = {
+  invoice: BookingQuotationSummary
+  companyName?: string
+  balanceDueBeforeDays?: number
+  className?: string
+}
+
+export function BookingInvoice({
+  invoice,
+  companyName,
+  balanceDueBeforeDays,
+  className,
+}: BookingInvoiceProps) {
+  return (
+    <Card
+      className={cn(
+        "mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80",
+        className
+      )}
+    >
+      <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            {companyName ? companyName : "Invoice"}
+          </p>
+          <p className="text-xs text-muted-foreground">Payment summary</p>
+        </div>
+
+        {invoice.lineItems.length > 0 ? (
+          <div className="space-y-2 border-b border-border pb-4">
+            {invoice.lineItems.map((item) => (
+              <InvoiceRow
+                key={item.label}
+                label={item.label}
+                amount={formatRm(item.amountRm)}
+              />
+            ))}
+          </div>
+        ) : (
+          <p className="border-b border-border pb-4 text-sm text-muted-foreground">
+            No line items.
+          </p>
+        )}
+
+        <div className="space-y-2">
+          <InvoiceRow
+            label="Total"
+            amount={formatRm(invoice.totalRm)}
+            emphasis
+          />
+          <InvoiceRow
+            label="Deposit"
+            amount={formatRm(invoice.depositRm)}
+            emphasis
+          />
+          <div className="flex items-start justify-between gap-3 border-t border-border pt-3 text-sm font-semibold text-foreground">
+            <span>Balance payment</span>
+            <span>{formatRm(invoice.balanceRm)}</span>
+          </div>
+          {balanceDueBeforeDays != null && (
+            <p className="text-xs text-muted-foreground">
+              Balance due {balanceDueBeforeDays} day
+              {balanceDueBeforeDays === 1 ? "" : "s"} before your session.
+            </p>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function BookingQuotation({
   quotation,
   sessions = [],

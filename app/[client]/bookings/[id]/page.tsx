@@ -1,51 +1,138 @@
 "use client";
 
 import { CheckCircle2Icon, XCircleIcon } from "lucide-react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 import { BookingInvoice } from "@/components/BookingQuotation";
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { Button } from "@/components/ui/button";
-import type { BookingInvoiceSummary } from "@/utils/booking/pricing";
-
-type BookingStatus = "pending" | "confirmed" | "failed";
-
-const MOCK_STATUS: BookingStatus = "confirmed";
-
-const MOCK_PACKAGE_LABEL = "Akad Nikah";
-const MOCK_STYLE_LABEL = "Neat & Clean";
-const MOCK_CONTACT_NAME = "Aisyah Rahman";
-const MOCK_CONTACT_PHONE = "+60 12-345 6789";
-const MOCK_DEPOSIT_LABEL = "RM100";
-
-const MOCK_INVOICE: BookingInvoiceSummary = {
-  lineItems: [
-    { label: "Akad Nikah", amountRm: 350 },
-    { label: "Gandik", amountRm: 80 },
-  ],
-  totalRm: 430,
-  depositRm: 100,
-  balanceRm: 330,
-};
-
-const MOCK_SESSIONS: any[] = [
-  {
-    id: "session-1",
-    eventType: "akad",
-    date: "2026-08-15",
-    slotId: "10-12",
-    location: {
-      label: "Grand Ballroom",
-      address: "123 Jalan Ampang, Kuala Lumpur",
-      lat: 3.1579,
-      lng: 101.7116,
-    },
-  },
-];
+import type { PublicBooking } from "@/schemas/bookingRecord";
+import { formatRm } from "@/utils/booking/pricing";
 
 export default function BookingResultPage() {
-  const isSuccess = MOCK_STATUS === "confirmed";
-  const isFailure = MOCK_STATUS === "failed";
-  const isPending = MOCK_STATUS === "pending";
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-16 text-sm text-muted-foreground">
+          Loading booking…
+        </div>
+      }
+    >
+      <BookingResultPageContent />
+    </Suspense>
+  );
+}
+
+function BookingResultPageContent() {
+  const params = useParams();
+  const searchParams = useSearchParams();
+  const client = params.client as string;
+  const bookingId = params.id as string;
+  const paymentState = searchParams.get("payment");
+  const returnedFromCheckout = paymentState === "success";
+
+  const [booking, setBooking] = useState<PublicBooking | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [confirmingTooLong, setConfirmingTooLong] = useState(false);
+
+  useEffect(() => {
+    if (!returnedFromCheckout || booking?.status !== "pending") {
+      setConfirmingTooLong(false);
+      return;
+    }
+
+    const timer = setTimeout(() => {
+      setConfirmingTooLong(true);
+    }, 30000);
+
+    return () => clearTimeout(timer);
+  }, [booking?.status, returnedFromCheckout]);
+
+  useEffect(() => {
+    let cancelled = false;
+    let pollTimer: ReturnType<typeof setTimeout> | undefined;
+
+    async function loadBooking(options?: { silent?: boolean }) {
+      if (!options?.silent) {
+        setLoading(true);
+      }
+
+      try {
+        const response = await fetch(
+          `/api/bookings/${bookingId}?client=${encodeURIComponent(client)}`
+        );
+        const payload: unknown = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            payload &&
+              typeof payload === "object" &&
+              "error" in payload &&
+              typeof payload.error === "string"
+              ? payload.error
+              : "Booking not found."
+          );
+        }
+
+        if (cancelled) return;
+
+        const nextBooking = payload as PublicBooking;
+        setBooking(nextBooking);
+        setError(null);
+
+        if (
+          nextBooking.status === "pending" &&
+          returnedFromCheckout
+        ) {
+          pollTimer = setTimeout(() => {
+            void loadBooking({ silent: true });
+          }, 2500);
+        }
+      } catch (fetchError) {
+        if (!cancelled) {
+          setError(
+            fetchError instanceof Error
+              ? fetchError.message
+              : "Could not load booking."
+          );
+        }
+      } finally {
+        if (!cancelled && !options?.silent) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void loadBooking();
+
+    return () => {
+      cancelled = true;
+      if (pollTimer) clearTimeout(pollTimer);
+    };
+  }, [bookingId, client, returnedFromCheckout]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-16 text-sm text-muted-foreground">
+        Loading booking…
+      </div>
+    );
+  }
+
+  if (error || !booking) {
+    return (
+      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-16 text-sm text-destructive">
+        {error ?? "Booking not found."}
+      </div>
+    );
+  }
+
+  const isSuccess = booking.status === "confirmed";
+  const isFailure = booking.status === "failed";
+  const isPending = booking.status === "pending";
+  const isConfirmingPayment = isPending && paymentState === "success";
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pt-16 pb-16 dark:bg-zinc-950">
@@ -54,9 +141,7 @@ export default function BookingResultPage() {
           {isSuccess && (
             <CheckCircle2Icon className="size-12 text-emerald-600 dark:text-emerald-400" />
           )}
-          {isFailure && (
-            <XCircleIcon className="size-12 text-destructive" />
-          )}
+          {isFailure && <XCircleIcon className="size-12 text-destructive" />}
           {isPending && (
             <div className="size-12 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
           )}
@@ -64,59 +149,65 @@ export default function BookingResultPage() {
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             {isSuccess && "Booking confirmed"}
             {isFailure && "Payment failed"}
-            {isPending && "Booking pending"}
+            {isConfirmingPayment && "Confirming payment"}
+            {isPending && !isConfirmingPayment && "Booking pending"}
           </h1>
 
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {isSuccess &&
-              `Your deposit of ${MOCK_DEPOSIT_LABEL} was received. The remaining balance is due before your session.`}
+              `Your deposit of ${formatRm(booking.invoice.depositRm)} was received. The remaining balance is due before your session.`}
             {isFailure &&
               "We couldn't process your deposit. You can try booking again or contact the stylist."}
-            {isPending && "Your booking is awaiting payment confirmation."}
+            {isConfirmingPayment &&
+              "Stripe accepted your payment. We're waiting for confirmation — this usually takes a few seconds."}
+            {isConfirmingPayment && confirmingTooLong && (
+              <span className="mt-2 block text-xs text-muted-foreground">
+                If this takes longer than a minute, the payment webhook may not
+                be reaching your app. For local dev, run{" "}
+                <code className="rounded bg-muted px-1 py-0.5">
+                  stripe listen --forward-to localhost:3000/api/stripe/webhooks
+                  --forward-connect-to localhost:3000/api/stripe/webhooks
+                </code>
+                .
+              </span>
+            )}
+            {isPending &&
+              !isConfirmingPayment &&
+              "Your booking is awaiting payment. Complete checkout to secure your slot."}
           </p>
         </div>
 
         <div className="w-full space-y-2">
           <p className="text-sm font-medium text-foreground">Booking details</p>
           <div className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
-            <p className="font-medium text-foreground">{MOCK_PACKAGE_LABEL}</p>
+            <p className="font-medium text-foreground">{booking.packageName}</p>
+            {booking.styleName && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Style: {booking.styleName}
+              </p>
+            )}
             <p className="mt-1 text-xs text-muted-foreground">
-              Style: {MOCK_STYLE_LABEL}
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {MOCK_CONTACT_NAME} · {MOCK_CONTACT_PHONE}
+              {booking.contact.name} · {booking.contact.email}
             </p>
           </div>
         </div>
 
         <div className="w-full space-y-2">
           <p className="text-sm font-medium text-foreground">Sessions</p>
-          <BookingSessionList sessions={MOCK_SESSIONS} showLocation />
+          <BookingSessionList sessions={booking.sessions} showLocation />
         </div>
 
-        <BookingInvoice invoice={MOCK_INVOICE} />
+        <BookingInvoice invoice={booking.invoice} />
 
-        <div className="flex w-full flex-col gap-2">
-          {isFailure && (
-            <Button
-              size="lg"
-              className="h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
-            >
-              Try again
-            </Button>
-          )}
-          <Button
-            variant={isFailure ? "outline" : "default"}
-            size="lg"
-            className={
-              isFailure
-                ? "h-11 w-full"
-                : "h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
-            }
-          >
-            WhatsApp
-          </Button>
-        </div>
+        <Button
+          size="lg"
+          className="h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
+          onClick={() => {
+            window.location.href = `/${client}`;
+          }}
+        >
+          Back to booking page
+        </Button>
       </div>
     </div>
   );

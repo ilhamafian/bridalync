@@ -1,0 +1,113 @@
+import { z } from "zod";
+
+import { addressSchema } from "@/schemas/addressSchema";
+import { sessionSchema } from "@/schemas/sessionSchema";
+import { timeSlotSchema } from "@/schemas/settingSchema";
+
+export const bookingContactSchema = z.object({
+  name: z.string().min(1),
+  email: z.email(),
+  mobile: z.string().optional(),
+  country_code: z.string().optional(),
+});
+
+export const quotationSummarySchema = z.object({
+  lineItems: z.array(
+    z.object({
+      label: z.string(),
+      amountRm: z.number(),
+    })
+  ),
+  totalRm: z.number(),
+  depositRm: z.number(),
+  balanceRm: z.number(),
+});
+
+export const bookingSessionRecordSchema = sessionSchema.extend({
+  client_key: z.string().optional(),
+});
+
+export const bookingRecordSchema = z.object({
+  _id: z.unknown().optional(),
+  freelancerUsername: z.string(),
+  freelancerUserId: z.string(),
+  contact: bookingContactSchema,
+  packageId: z.string(),
+  packageName: z.string(),
+  styleId: z.string().nullish(),
+  styleName: z.string().nullish(),
+  addOnIds: z.array(z.string()),
+  sessions: z.array(bookingSessionRecordSchema),
+  invoice: quotationSummarySchema,
+  status: z.enum(["pending", "confirmed", "failed", "enquiry", "cancelled"]),
+  stripeCheckoutSessionId: z.string().optional(),
+  stripePaymentIntentId: z.string().optional(),
+  created_at: z.coerce.date().optional(),
+  updated_at: z.coerce.date().optional(),
+});
+
+export type BookingRecord = z.infer<typeof bookingRecordSchema>;
+
+/** Booking loaded from the database — always has an `_id`. */
+export type PersistedBookingRecord = BookingRecord & { _id: unknown };
+
+const bookingLineItemInputSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  price: z.number(),
+});
+
+const bookingSessionInputSchema = z.object({
+  client_key: z.string(),
+  status: z.literal("scheduled"),
+  name: z.string(),
+  order: z.number(),
+  date: z.coerce.date(),
+  time_slot: timeSlotSchema,
+  location: addressSchema,
+});
+
+export const createBookingRequestSchema = z.object({
+  freelancerUsername: z.string().min(1),
+  intent: z.enum(["booking", "enquiry"]).default("booking"),
+  contact: bookingContactSchema,
+  packageId: z.string().min(1),
+  style: bookingLineItemInputSchema.optional(),
+  addOns: z.array(bookingLineItemInputSchema).default([]),
+  sessions: z.array(bookingSessionInputSchema).min(1),
+  distanceKmBySessionKey: z.record(z.string(), z.number()).optional(),
+});
+
+export type CreateBookingRequest = z.infer<typeof createBookingRequestSchema>;
+
+export const publicBookingSchema = bookingRecordSchema
+  .omit({
+    freelancerUserId: true,
+    stripeCheckoutSessionId: true,
+    stripePaymentIntentId: true,
+  })
+  .extend({
+    _id: z.string(),
+  });
+
+export type PublicBooking = z.infer<typeof publicBookingSchema>;
+
+export function toPublicBooking(booking: PersistedBookingRecord): PublicBooking {
+  const { freelancerUserId, stripeCheckoutSessionId, stripePaymentIntentId, ...rest } =
+    booking;
+
+  const id =
+    typeof booking._id === "string"
+      ? booking._id
+      : (booking._id as { toString(): string }).toString();
+
+  return publicBookingSchema.parse({
+    ...rest,
+    _id: id,
+  });
+}
+
+export const updateBookingStatusSchema = z.object({
+  freelancerUsername: z.string().min(1),
+  status: z.enum(["pending", "confirmed", "failed", "cancelled"]),
+});

@@ -6,8 +6,15 @@ import { Button } from "@/components/ui/button"
 import { formatLocationAddress, formatSessionSummary } from "@/utils/session"
 import type { SessionForm } from "@/schemas/sessionSchema"
 
+type SessionListItem = Pick<
+  SessionForm,
+  "name" | "date" | "time_slot" | "location" | "order"
+> & {
+  client_key?: string
+}
+
 type BookingSessionListProps = {
-  sessions: SessionForm[]
+  sessions: SessionListItem[]
   onRemove?: (clientKey: string) => void
   showLocation?: boolean
   emptyMessage?: string
@@ -27,9 +34,14 @@ export function BookingSessionList({
 
   return (
     <ul className="flex w-full flex-col gap-2">
-      {sessions.map((session) => (
+      {sessions.map((session) => {
+        const clientKey = session.client_key
+        return (
         <li
-          key={session.client_key}
+          key={
+            session.client_key ??
+            `${session.order}-${session.name}-${new Date(session.date).toISOString()}-${session.time_slot.startTime}-${session.time_slot.endTime}`
+          }
           className="flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-3 py-2.5 text-sm"
         >
           <div className="min-w-0 text-left">
@@ -42,20 +54,21 @@ export function BookingSessionList({
               </p>
             )}
           </div>
-          {onRemove && (
+          {onRemove && clientKey && (
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
               className="shrink-0 text-muted-foreground"
-              onClick={() => onRemove(session.client_key)}
+              onClick={() => onRemove(clientKey)}
               aria-label={`Remove ${session.name} session`}
             >
               <XIcon />
             </Button>
           )}
         </li>
-      ))}
+        )
+      })}
     </ul>
   )
 }

@@ -7,9 +7,7 @@ import { UserModel } from "@/models/User";
 import {
   getOnboardingResumeStep,
   isOnboardingComplete,
-  onboardingProgressSchema,
   onboardingStepRequestSchema,
-  sessionUserSchema,
   updateUserSchema,
   type OnboardingStepRequest,
   type UpdateUser,
@@ -17,10 +15,18 @@ import {
 } from "@/schemas/userSchema";
 import { packageSchema } from "@/schemas/packageSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
-import { getSessionUser, setAuthSession } from "@/utils/auth/session";
+import { getSessionUser } from "@/utils/auth/session";
 import { toIdString } from "@/schemas/objectId";
 import { settingSchema, type TravelSetting } from "@/schemas/settingSchema";
 import { getAppUrl } from "@/utils/appUrl";
+import {
+  refreshSession,
+  updateOnboardingProgress,
+} from "@/utils/onboarding/progress";
+import {
+  buildStripeOwner,
+  provisionDeferredStripeAccount,
+} from "@/utils/stripe/connect";
 
 const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
   placeId: "travel-disabled",
@@ -84,6 +90,29 @@ const DEFAULT_PACKAGES = [
   },
 ] as const;
 
+function buildStripeConnectStatus(user: {
+  stripe_account_id?: string;
+  is_stripe_connected?: boolean;
+  deferred_onboarding?: {
+    has_minimal_account?: boolean;
+    pending_earnings?: number;
+    earnings_count?: number;
+    onboarding_notifications?: boolean;
+  };
+}) {
+  return {
+    accountId: user.stripe_account_id ?? null,
+    isStripeConnected: user.is_stripe_connected ?? false,
+    deferredOnboarding: {
+      hasMinimalAccount: user.deferred_onboarding?.has_minimal_account ?? false,
+      pendingEarnings: user.deferred_onboarding?.pending_earnings ?? 0,
+      earningsCount: user.deferred_onboarding?.earnings_count ?? 0,
+      onboardingNotifications:
+        user.deferred_onboarding?.onboarding_notifications ?? false,
+    },
+  };
+}
+
 function buildTravelSetting(
   travel: Extract<OnboardingStepRequest, { step: "role_travel" }>["travel"]
 ): TravelSetting {
@@ -100,22 +129,6 @@ function buildTravelSetting(
     rate_per_km: 0,
     location: DISABLED_TRAVEL_LOCATION,
   };
-}
-
-async function updateOnboardingProgress(
-  userId: string,
-  partial: NonNullable<UpdateUser["onboarding"]>
-) {
-  const userModel = new UserModel();
-  const user = await userModel.findById(userId);
-  const current = onboardingProgressSchema.parse(user?.onboarding ?? {});
-  const merged = onboardingProgressSchema.parse({ ...current, ...partial });
-
-  await userModel.update(
-    userId,
-    { onboarding: merged } as Partial<User>,
-    updateUserSchema as ZodSchema<Partial<User>>
-  );
 }
 
 async function ensureDefaultPackages(userId: string) {
@@ -140,21 +153,6 @@ async function ensureDefaultPackages(userId: string) {
   });
 }
 
-async function refreshSession(userId: string) {
-  const updatedUser = await new UserModel().findById(userId);
-  if (!updatedUser) {
-    return null;
-  }
-
-  const parsedUser = sessionUserSchema.safeParse(updatedUser);
-  if (!parsedUser.success) {
-    return null;
-  }
-
-  await setAuthSession(parsedUser.data);
-  return parsedUser.data;
-}
-
 export async function GET() {
   try {
     const user = await getSessionUser();
@@ -177,6 +175,36 @@ export async function GET() {
             user: refreshedUser,
             resumeStep: getOnboardingResumeStep(refreshedUser.onboarding),
             appUrl: getAppUrl(),
+            stripeConnect: buildStripeConnectStatus(refreshedUser),
+          },
+          200
+        );
+      }
+    }
+
+    if (
+      userId &&
+      user.onboarding?.configuredInvoice &&
+      !user.onboarding.configureBankAccount &&
+      user.email
+    ) {
+      await provisionDeferredStripeAccount(
+        userId,
+        buildStripeOwner(user),
+        user.stripe_account_id
+      );
+      await updateOnboardingProgress(userId, {
+        configureBankAccount: true,
+      });
+      const refreshedUser = await refreshSession(userId);
+      if (refreshedUser) {
+        return createResponse(
+          {
+            roles: UserModel.userRoles,
+            user: refreshedUser,
+            resumeStep: getOnboardingResumeStep(refreshedUser.onboarding),
+            appUrl: getAppUrl(),
+            stripeConnect: buildStripeConnectStatus(refreshedUser),
           },
           200
         );
@@ -189,6 +217,7 @@ export async function GET() {
         user,
         resumeStep: getOnboardingResumeStep(user.onboarding),
         appUrl: getAppUrl(),
+        stripeConnect: buildStripeConnectStatus(user),
       },
       200
     );
@@ -265,26 +294,18 @@ export async function POST(req: NextRequest) {
           },
         });
 
+        if (!user.email) {
+          return createResponse({ error: "Unauthorized" }, 401);
+        }
+
+        await provisionDeferredStripeAccount(
+          userId,
+          buildStripeOwner(user),
+          user.stripe_account_id
+        );
+
         await updateOnboardingProgress(userId, {
           configuredInvoice: true,
-        });
-        await refreshSession(userId);
-        return createResponse({ ok: true }, 200);
-      }
-
-      case "bank_account": {
-        const { bank_name, account_number, account_name } = stepData;
-
-        const settingsModel = new SettingModel();
-        await settingsModel.updateSettingsByUserId(userId, {
-          bank_account: {
-            bank_name,
-            account_number,
-            account_name,
-          },
-        });
-
-        await updateOnboardingProgress(userId, {
           configureBankAccount: true,
         });
         await refreshSession(userId);

@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 
 import { getBookingById, updateBookingStatus } from "@/utils/bookings";
 import {
-  publicBookingSchema,
+  toPublicBooking,
   updateBookingStatusSchema,
 } from "@/schemas/bookingRecord";
 import { createResponse, handleError } from "@/utils/apiHelper";
@@ -25,19 +25,7 @@ export async function GET(
       return createResponse({ error: "Booking not found" }, 404);
     }
 
-    const result = publicBookingSchema.safeParse({
-      ...booking,
-      _id: booking._id.toString(),
-    });
-
-    if (!result.success) {
-      return createResponse({ error: "Invalid booking data" }, 500);
-    }
-
-    return createResponse({
-      ...result.data,
-      _id: result.data._id.toString(),
-    });
+    return createResponse(toPublicBooking(booking));
   } catch (error) {
     return handleError(error);
   }
@@ -72,19 +60,7 @@ export async function PATCH(
       return createResponse({ error: "Booking not found" }, 404);
     }
 
-    const result = publicBookingSchema.safeParse({
-      ...updated,
-      _id: updated._id.toString(),
-    });
-
-    if (!result.success) {
-      return createResponse({ error: "Invalid booking data" }, 500);
-    }
-
-    return createResponse({
-      ...result.data,
-      _id: result.data._id.toString(),
-    });
+    return createResponse(toPublicBooking(updated));
   } catch (error) {
     return handleError(error);
   }

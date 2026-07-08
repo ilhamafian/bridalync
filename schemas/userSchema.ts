@@ -12,7 +12,6 @@ export {
   isInitialOnboardingComplete,
   isOnboardingComplete,
   ONBOARDING_STEP_ORDER,
-  onboardingBankAccountSchema,
   onboardingInvoiceSchema,
   onboardingProgressSchema,
   onboardingRequestSchema,
@@ -26,6 +25,19 @@ export {
   type OnboardingUser,
 } from "./onboardingSchema";
 
+export const deferredOnboardingSchema = z.object({
+  has_minimal_account: z.boolean().default(false),
+  pending_earnings: z.number().default(0),
+  earnings_count: z.number().default(0),
+  onboarding_notifications: z.boolean().default(false),
+});
+
+export const defaultDeferredOnboarding = (): z.infer<
+  typeof deferredOnboardingSchema
+> => deferredOnboardingSchema.parse({});
+
+export type DeferredOnboarding = z.infer<typeof deferredOnboardingSchema>;
+
 export const userSchema = z.object({
   _id: objectIdSchema.optional(),
   email: z.email(),
@@ -37,6 +49,11 @@ export const userSchema = z.object({
   mobile: z.string().min(1).optional(),
   country_code: z.string().min(1).optional(),
   language: z.string().min(1).optional(),
+  stripe_account_id: z.string().optional(),
+  is_stripe_connected: z.boolean().default(false),
+  deferred_onboarding: deferredOnboardingSchema.default(() =>
+    defaultDeferredOnboarding()
+  ),
   onboarding: onboardingProgressSchema.default(() => defaultOnboardingProgress()),
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
@@ -54,6 +71,7 @@ export const updateUserSchema = userSchema
   .omit({ email: true, password: true, onboarding: true })
   .extend({
     onboarding: onboardingProgressSchema.partial().optional(),
+    deferred_onboarding: deferredOnboardingSchema.partial().optional(),
   })
   .partial();
 

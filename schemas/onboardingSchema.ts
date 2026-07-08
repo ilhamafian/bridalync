@@ -41,7 +41,6 @@ export const ONBOARDING_STEP_ORDER = [
   "role",
   "travel",
   "invoice",
-  "bank_account",
   "username",
   "preview_profile",
 ] as const;
@@ -53,7 +52,6 @@ export function getOnboardingResumeStep(
 ): OnboardingStepId {
   if (!onboarding?.congfigureTravelSettings) return "role";
   if (!onboarding.configuredInvoice) return "invoice";
-  if (!onboarding.configureBankAccount) return "bank_account";
   if (!onboarding.configuredUsername) return "username";
   return "preview_profile";
 }
@@ -82,13 +80,6 @@ export const onboardingInvoiceSchema = z.object({
   company_logo: z.url().optional(),
 });
 
-export const onboardingBankAccountSchema = z.object({
-  step: z.literal("bank_account"),
-  bank_name: z.string().min(1),
-  account_number: z.string().min(1),
-  account_name: z.string().min(1),
-});
-
 export const onboardingUsernameSchema = z.object({
   step: z.literal("username"),
   name: z.string().min(1),
@@ -101,7 +92,6 @@ export const onboardingUsernameSchema = z.object({
 export const onboardingStepRequestSchema = z.discriminatedUnion("step", [
   onboardingRoleTravelSchema,
   onboardingInvoiceSchema,
-  onboardingBankAccountSchema,
   onboardingUsernameSchema,
 ]);
 
