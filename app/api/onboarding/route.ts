@@ -313,10 +313,10 @@ export async function POST(req: NextRequest) {
       }
 
       case "username": {
-        const { username, name } = stepData;
+        const { username, name, mobile, country_code } = stepData;
         const normalizedUsername = username.toLowerCase();
-        const user = await new UserModel().findByUsername(normalizedUsername);
-        if (user?._id) {
+        const existingUser = await new UserModel().findByUsername(normalizedUsername);
+        if (existingUser?._id) {
           return createResponse(
             { error: "That username is already taken." },
             409
@@ -325,7 +325,12 @@ export async function POST(req: NextRequest) {
 
         await new UserModel().update(
           userId,
-          { username: normalizedUsername, name: name.trim() } as Partial<User>,
+          {
+            username: normalizedUsername,
+            name: name.trim(),
+            mobile: mobile.trim(),
+            country_code,
+          } as Partial<User>,
           updateUserSchema as ZodSchema<Partial<User>>
         );
 

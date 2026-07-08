@@ -6,6 +6,21 @@ import {
   updateBookingStatusSchema,
 } from "@/schemas/bookingRecord";
 import { createResponse, handleError } from "@/utils/apiHelper";
+import { getFreelancerByUsername } from "@/utils/users";
+
+function toPublicBookingFreelancer(
+  freelancer: NonNullable<Awaited<ReturnType<typeof getFreelancerByUsername>>>
+) {
+  if (!freelancer.mobile || !freelancer.country_code) {
+    return null;
+  }
+
+  return {
+    name: freelancer.name?.trim() || freelancer.username || "Stylist",
+    mobile: freelancer.mobile,
+    country_code: freelancer.country_code,
+  };
+}
 
 export async function GET(
   req: NextRequest,
@@ -25,7 +40,11 @@ export async function GET(
       return createResponse({ error: "Booking not found" }, 404);
     }
 
-    return createResponse(toPublicBooking(booking));
+    const freelancer = await getFreelancerByUsername(freelancerUsername);
+
+    return createResponse(
+      toPublicBooking(booking, freelancer ? toPublicBookingFreelancer(freelancer) : null)
+    );
   } catch (error) {
     return handleError(error);
   }
@@ -60,7 +79,11 @@ export async function PATCH(
       return createResponse({ error: "Booking not found" }, 404);
     }
 
-    return createResponse(toPublicBooking(updated));
+    const freelancer = await getFreelancerByUsername(parsed.data.freelancerUsername);
+
+    return createResponse(
+      toPublicBooking(updated, freelancer ? toPublicBookingFreelancer(freelancer) : null)
+    );
   } catch (error) {
     return handleError(error);
   }

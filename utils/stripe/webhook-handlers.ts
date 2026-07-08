@@ -57,7 +57,10 @@ export async function handlePaymentIntentSucceeded(paymentIntent: {
   metadata?: StripeMetadata;
   id?: string;
 }) {
-  if (paymentIntent.metadata?.type !== "booking_deposit") {
+  if (
+    paymentIntent.metadata?.type !== "booking_deposit" &&
+    paymentIntent.metadata?.type !== "booking_full_payment"
+  ) {
     return;
   }
 

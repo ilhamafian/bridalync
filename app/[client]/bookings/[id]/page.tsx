@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2Icon, XCircleIcon } from "lucide-react";
+import { CheckCircle2Icon, MessageCircleIcon, XCircleIcon } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
@@ -9,6 +9,10 @@ import { BookingSessionList } from "@/components/BookingSessionList";
 import { Button } from "@/components/ui/button";
 import type { PublicBooking } from "@/schemas/bookingRecord";
 import { formatRm } from "@/utils/booking/pricing";
+import {
+  buildBookingResultMessage,
+  buildWhatsAppUrl,
+} from "@/utils/booking/messages";
 
 export default function BookingResultPage() {
   return (
@@ -133,6 +137,17 @@ function BookingResultPageContent() {
   const isFailure = booking.status === "failed";
   const isPending = booking.status === "pending";
   const isConfirmingPayment = isPending && paymentState === "success";
+  const whatsAppUrl =
+    booking.freelancer?.mobile && booking.freelancer.country_code
+      ? buildWhatsAppUrl(
+          booking.freelancer.country_code,
+          booking.freelancer.mobile,
+          buildBookingResultMessage(
+            booking.freelancer.name,
+            booking
+          )
+        )
+      : null;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pt-16 pb-16 dark:bg-zinc-950">
@@ -155,9 +170,12 @@ function BookingResultPageContent() {
 
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
             {isSuccess &&
-              `Your deposit of ${formatRm(booking.invoice.depositRm)} was received. The remaining balance is due before your session.`}
+              (booking.paymentOption === "full" ||
+              booking.invoice.balanceRm === 0
+                ? `Your payment of ${formatRm(booking.invoice.totalRm)} was received. You're all set.`
+                : `Your deposit of ${formatRm(booking.invoice.depositRm)} was received. The remaining balance is due before your session.`)}
             {isFailure &&
-              "We couldn't process your deposit. You can try booking again or contact the stylist."}
+              "We couldn't process your payment. You can try booking again or contact the stylist."}
             {isConfirmingPayment &&
               "Stripe accepted your payment. We're waiting for confirmation — this usually takes a few seconds."}
             {isConfirmingPayment && confirmingTooLong && (
@@ -197,17 +215,25 @@ function BookingResultPageContent() {
           <BookingSessionList sessions={booking.sessions} showLocation />
         </div>
 
-        <BookingInvoice invoice={booking.invoice} />
+        <BookingInvoice
+          invoice={booking.invoice}
+          paymentOption={booking.paymentOption}
+        />
 
-        <Button
-          size="lg"
-          className="h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
-          onClick={() => {
-            window.location.href = `/${client}`;
-          }}
-        >
-          Back to booking page
-        </Button>
+        {whatsAppUrl && (
+          <Button
+            size="lg"
+            variant="outline"
+            className="h-11 w-full gap-2"
+            asChild
+          >
+            <a href={whatsAppUrl} target="_blank" rel="noopener noreferrer">
+              <MessageCircleIcon className="size-4" />
+              WhatsApp {booking.freelancer?.name ?? "stylist"}
+            </a>
+          </Button>
+        )}
+
       </div>
     </div>
   );

@@ -15,7 +15,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { calculateBookingQuotation, formatRm } from "@/utils/booking/pricing";
+import { calculateBookingQuotation, formatRm, applyPaymentOption, requiresFullPayment } from "@/utils/booking/pricing";
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
 import { Client } from "@/schemas/clientSchema";
@@ -236,6 +236,9 @@ export default function ClientPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentOption, setPaymentOption] = useState<"deposit" | "full">(
+    "deposit"
+  );
   const sessionRoadDistancesRef = useRef(sessionRoadDistances);
   const packages = useMemo(
     () => toPackageOptions(clientPackages),
@@ -358,6 +361,23 @@ export default function ClientPage() {
       distanceKmBySessionKey,
     ]
   );
+
+  const balanceDueBeforeDays = settings?.payment.balance_due_before ?? 3;
+  const mustPayFull = useMemo(
+    () => requiresFullPayment(sessions, balanceDueBeforeDays),
+    [sessions, balanceDueBeforeDays]
+  );
+  const effectivePaymentOption = mustPayFull ? "full" : paymentOption;
+  const payableQuotation = useMemo(
+    () => applyPaymentOption(quotation, effectivePaymentOption),
+    [quotation, effectivePaymentOption]
+  );
+
+  useEffect(() => {
+    if (mustPayFull && paymentOption !== "full") {
+      setPaymentOption("full");
+    }
+  }, [mustPayFull, paymentOption]);
 
   const contactDetailsValid =
     contact.name.trim().length > 0 && contact.email.trim().length > 0;
@@ -643,7 +663,7 @@ export default function ClientPage() {
     }
   }
 
-  async function handlePayDeposit() {
+  async function handlePay() {
     if (isPaying || !selectedPackageId || sessions.length === 0) return;
 
     setIsPaying(true);
@@ -662,6 +682,7 @@ export default function ClientPage() {
           addOns: selectedAddOnItems,
           sessions,
           distanceKmBySessionKey,
+          paymentOption: effectivePaymentOption,
         }),
       });
 
@@ -1013,10 +1034,11 @@ export default function ClientPage() {
           </h1>
           <div className="flex w-full flex-col items-end gap-4">
             <BookingQuotation
-              quotation={quotation}
+              quotation={payableQuotation}
               sessions={sessions}
               companyName={settings?.invoice.company_name}
-              balanceDueBeforeDays={settings?.payment.balance_due_before}
+              balanceDueBeforeDays={balanceDueBeforeDays}
+              paymentOption={effectivePaymentOption}
             />
             <Button
               size="lg"
@@ -1070,18 +1092,72 @@ export default function ClientPage() {
       {step === "payment" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Pay your deposit
+            {effectivePaymentOption === "full"
+              ? "Pay in full"
+              : "Choose how to pay"}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Secure card payment through Stripe. Your booking is confirmed once the
-            deposit is received.
+            {mustPayFull
+              ? `Your session is within ${balanceDueBeforeDays} day${
+                  balanceDueBeforeDays === 1 ? "" : "s"
+                }, so full payment is required.`
+              : "Pay a deposit now, or settle the full amount upfront. Secure card payment through Stripe."}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
+            {!mustPayFull && quotation.depositRm > 0 && (
+              <div
+                className="flex w-full flex-col gap-2"
+                role="radiogroup"
+                aria-label="Payment option"
+              >
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={effectivePaymentOption === "deposit"}
+                  onClick={() => setPaymentOption("deposit")}
+                  className={cn(
+                    "flex w-full flex-col items-start gap-0.5 rounded-lg border px-3 py-3 text-left text-sm transition-colors",
+                    effectivePaymentOption === "deposit"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card hover:bg-muted/40"
+                  )}
+                >
+                  <span className="font-medium text-foreground">
+                    Pay deposit — {formatRm(quotation.depositRm)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Balance of {formatRm(quotation.balanceRm)} due{" "}
+                    {balanceDueBeforeDays} day
+                    {balanceDueBeforeDays === 1 ? "" : "s"} before your session.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  role="radio"
+                  aria-checked={effectivePaymentOption === "full"}
+                  onClick={() => setPaymentOption("full")}
+                  className={cn(
+                    "flex w-full flex-col items-start gap-0.5 rounded-lg border px-3 py-3 text-left text-sm transition-colors",
+                    effectivePaymentOption === "full"
+                      ? "border-primary bg-primary/5"
+                      : "border-border bg-card hover:bg-muted/40"
+                  )}
+                >
+                  <span className="font-medium text-foreground">
+                    Pay in full — {formatRm(quotation.totalRm)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Nothing left to pay later.
+                  </span>
+                </button>
+              </div>
+            )}
             <BookingQuotation
-              quotation={quotation}
+              quotation={payableQuotation}
               sessions={sessions}
               companyName={settings?.invoice.company_name}
-              balanceDueBeforeDays={settings?.payment.balance_due_before}
+              balanceDueBeforeDays={balanceDueBeforeDays}
+              paymentOption={effectivePaymentOption}
             />
             {paymentError && (
               <p className="w-full text-sm text-destructive" role="alert">
@@ -1091,12 +1167,14 @@ export default function ClientPage() {
             <Button
               size="lg"
               className="h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
-              disabled={isPaying || quotation.depositRm <= 0}
-              onClick={() => void handlePayDeposit()}
+              disabled={isPaying || payableQuotation.depositRm <= 0}
+              onClick={() => void handlePay()}
             >
               {isPaying
                 ? "Redirecting to Stripe…"
-                : `Pay ${formatRm(quotation.depositRm)} deposit`}
+                : effectivePaymentOption === "full"
+                  ? `Pay ${formatRm(payableQuotation.totalRm)} now`
+                  : `Pay ${formatRm(payableQuotation.depositRm)} deposit`}
             </Button>
           </div>
         </div>

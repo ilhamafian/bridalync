@@ -87,6 +87,8 @@ export const onboardingUsernameSchema = z.object({
     .string()
     .min(3)
     .regex(/^[a-z0-9_-]+$/i, "Use letters, numbers, hyphens, or underscores."),
+  mobile: z.string().min(1, "Phone number is required"),
+  country_code: z.string().min(1, "Country code is required"),
 });
 
 export const onboardingStepRequestSchema = z.discriminatedUnion("step", [
@@ -110,5 +112,7 @@ export type OnboardingUser = {
   role?: string;
   name?: string;
   username?: string;
+  mobile?: string;
+  country_code?: string;
   onboarding?: OnboardingProgress;
 };

@@ -40,11 +40,69 @@ export type CalculateQuotationInput = {
   travel?: TravelQuotationInput;
 };
 
+/** Round money to whole ringgit; `formatRm` still shows `.00`. */
+export function roundRm(amount: number) {
+  return Math.round(amount);
+}
+
 export function formatRm(amount: number) {
-  return `RM${amount.toLocaleString("en-MY", {
+  return `RM${roundRm(amount).toLocaleString("en-MY", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
+}
+
+export function getEarliestSessionDate(
+  sessions: Array<{ date: Date | string }>
+): Date | null {
+  if (sessions.length === 0) return null;
+
+  let earliest: Date | null = null;
+  for (const session of sessions) {
+    const date =
+      session.date instanceof Date ? session.date : new Date(session.date);
+    if (Number.isNaN(date.getTime())) continue;
+    if (!earliest || date.getTime() < earliest.getTime()) {
+      earliest = date;
+    }
+  }
+  return earliest;
+}
+
+/** Whole calendar days from today (local) until the session date. */
+export function daysUntilSessionDate(sessionDate: Date) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const target = new Date(sessionDate);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * When the earliest session is closer than `balance_due_before` days,
+ * deposit is no longer allowed — full payment only.
+ */
+export function requiresFullPayment(
+  sessions: Array<{ date: Date | string }>,
+  balanceDueBeforeDays: number
+) {
+  const earliest = getEarliestSessionDate(sessions);
+  if (!earliest) return false;
+  return daysUntilSessionDate(earliest) < balanceDueBeforeDays;
+}
+
+export function applyPaymentOption(
+  quotation: BookingQuotationSummary,
+  paymentOption: "deposit" | "full"
+): BookingQuotationSummary {
+  if (paymentOption === "full") {
+    return {
+      ...quotation,
+      depositRm: quotation.totalRm,
+      balanceRm: 0,
+    };
+  }
+  return quotation;
 }
 
 export function calculateBookingQuotation(
@@ -65,26 +123,27 @@ export function calculateBookingQuotation(
   if (input.chargeBy === "package" && input.selectedPackage) {
     lineItems.push({
       label: input.selectedPackage.name,
-      amountRm: input.selectedPackage.price + travelFeeRm,
+      amountRm: roundRm(input.selectedPackage.price + travelFeeRm),
     });
   }
 
   if (input.chargeBy === "style" && input.selectedStyle) {
     lineItems.push({
       label: input.selectedStyle.name,
-      amountRm: input.selectedStyle.price + travelFeeRm,
+      amountRm: roundRm(input.selectedStyle.price + travelFeeRm),
     });
   }
 
   for (const addOn of input.selectedAddOns) {
     lineItems.push({
       label: addOn.name,
-      amountRm: addOn.price,
+      amountRm: roundRm(addOn.price),
     });
   }
 
   const totalRm = lineItems.reduce((sum, item) => sum + item.amountRm, 0);
-  const depositRm = input.selectedPackage?.deposit ?? 0;
+  const packageDepositRm = roundRm(input.selectedPackage?.deposit ?? 0);
+  const depositRm = Math.min(packageDepositRm, totalRm);
   const balanceRm = Math.max(totalRm - depositRm, 0);
 
   return {

@@ -39,6 +39,7 @@ export const bookingRecordSchema = z.object({
   addOnIds: z.array(z.string()),
   sessions: z.array(bookingSessionRecordSchema),
   invoice: quotationSummarySchema,
+  paymentOption: z.enum(["deposit", "full"]).default("deposit"),
   status: z.enum(["pending", "confirmed", "failed", "enquiry", "cancelled"]),
   stripeCheckoutSessionId: z.string().optional(),
   stripePaymentIntentId: z.string().optional(),
@@ -76,9 +77,16 @@ export const createBookingRequestSchema = z.object({
   addOns: z.array(bookingLineItemInputSchema).default([]),
   sessions: z.array(bookingSessionInputSchema).min(1),
   distanceKmBySessionKey: z.record(z.string(), z.number()).optional(),
+  paymentOption: z.enum(["deposit", "full"]).default("deposit"),
 });
 
 export type CreateBookingRequest = z.infer<typeof createBookingRequestSchema>;
+
+export const publicBookingFreelancerSchema = z.object({
+  name: z.string(),
+  mobile: z.string(),
+  country_code: z.string(),
+});
 
 export const publicBookingSchema = bookingRecordSchema
   .omit({
@@ -88,11 +96,16 @@ export const publicBookingSchema = bookingRecordSchema
   })
   .extend({
     _id: z.string(),
+    freelancer: publicBookingFreelancerSchema.optional(),
   });
 
+export type PublicBookingFreelancer = z.infer<typeof publicBookingFreelancerSchema>;
 export type PublicBooking = z.infer<typeof publicBookingSchema>;
 
-export function toPublicBooking(booking: PersistedBookingRecord): PublicBooking {
+export function toPublicBooking(
+  booking: PersistedBookingRecord,
+  freelancer?: PublicBookingFreelancer | null
+): PublicBooking {
   const { freelancerUserId, stripeCheckoutSessionId, stripePaymentIntentId, ...rest } =
     booking;
 
@@ -104,6 +117,7 @@ export function toPublicBooking(booking: PersistedBookingRecord): PublicBooking 
   return publicBookingSchema.parse({
     ...rest,
     _id: id,
+    ...(freelancer ? { freelancer } : {}),
   });
 }
 

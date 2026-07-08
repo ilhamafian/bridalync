@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
+import { PhoneNumberInput, isValidPhoneNumber, DEFAULT_COUNTRY_CODE } from "@/components/PhoneNumberInput";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
@@ -44,7 +45,8 @@ const STEP_CONFIG: Record<
   },
   username: {
     title: "Choose a username",
-    description: "This becomes your public booking link.",
+    description:
+      "Set your public booking link and WhatsApp number so clients can reach you.",
   },
   preview_profile: {
     title: "Preview booking profile",
@@ -170,6 +172,8 @@ function OnboardingPageContent() {
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [appUrl, setAppUrl] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -191,6 +195,8 @@ function OnboardingPageContent() {
           if (data.user.role) setSelectedRole(data.user.role);
           if (data.user.name) setDisplayName(data.user.name);
           if (data.user.username) setUsername(data.user.username);
+          if (data.user.mobile) setMobile(data.user.mobile);
+          if (data.user.country_code) setCountryCode(data.user.country_code);
         }
         if (Array.isArray(data?.roles)) setRoles(data.roles);
         if (
@@ -402,11 +408,23 @@ function OnboardingPageContent() {
       return;
     }
 
+    const trimmedMobile = mobile.trim();
+    if (!trimmedMobile) {
+      setError("Enter your WhatsApp number.");
+      return;
+    }
+    if (!isValidPhoneNumber(trimmedMobile)) {
+      setError("Enter a valid phone number.");
+      return;
+    }
+
     await runStep(
       {
         step: "username",
         name: trimmedName,
         username: normalizedUsername,
+        mobile: trimmedMobile,
+        country_code: countryCode,
       },
       "preview_profile"
     );
@@ -657,6 +675,26 @@ function OnboardingPageContent() {
                   <p className="text-xs text-muted-foreground">
                     Your first name or a short nickname — shown on your booking
                     page.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="stylist-mobile"
+                    className="text-sm font-medium text-foreground"
+                  >
+                    WhatsApp number
+                  </label>
+                  <PhoneNumberInput
+                    mobileInputId="stylist-mobile"
+                    countryCode={countryCode}
+                    mobile={mobile}
+                    onCountryCodeChange={setCountryCode}
+                    onMobileChange={setMobile}
+                    inputClassName={inputClassName}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Clients will use this to message you after booking.
                   </p>
                 </div>
 

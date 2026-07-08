@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { invoice, packageName } = await resolveBookingQuotation(
+    const { invoice, packageName, paymentOption } = await resolveBookingQuotation(
       freelancer.userId,
       data
     );
@@ -54,6 +54,7 @@ export async function POST(req: NextRequest) {
       addOnIds: data.addOns.map((addOn) => addOn.id),
       sessions: mapSessionsForStorage(data),
       invoice,
+      paymentOption,
       status: data.intent === "booking" ? "pending" : "enquiry",
     });
 

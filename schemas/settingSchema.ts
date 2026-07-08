@@ -22,7 +22,7 @@ export const bankAccountSettingSchema = z.object({
 });
 
 export const DEFAULT_TERMS_AND_CONDITIONS = `Booking deposit:
-A non-refundable booking deposit of RM50/slot for bawal/shawl styling or RM100/slot for turkish styling is required as soon as possible to secure slot.
+A non-refundable booking deposit is required to secure slot.
 
 Balance payment:
 The remaining amount must be fully settled no later than 3 days before the event date.

@@ -9,6 +9,7 @@ export type BookingCheckoutMetadata = {
   packageName: string;
   clientName: string;
   clientEmail: string;
+  paymentOption: string;
   depositRm: string;
   totalRm: string;
   balanceRm: string;
@@ -19,9 +20,12 @@ export function buildBookingCheckoutMetadata(input: {
   freelancerUsername: string;
 }): BookingCheckoutMetadata {
   const bookingId = String(input.booking._id);
+  const paymentOption =
+    input.booking.paymentOption ??
+    (input.booking.invoice.balanceRm === 0 ? "full" : "deposit");
 
   return {
-    type: "booking_deposit",
+    type: paymentOption === "full" ? "booking_full_payment" : "booking_deposit",
     platform: "bridalync",
     bookingId,
     freelancerUsername: input.freelancerUsername,
@@ -29,6 +33,7 @@ export function buildBookingCheckoutMetadata(input: {
     packageName: input.booking.packageName,
     clientName: input.booking.contact.name,
     clientEmail: input.booking.contact.email,
+    paymentOption,
     depositRm: String(input.booking.invoice.depositRm),
     totalRm: String(input.booking.invoice.totalRm),
     balanceRm: String(input.booking.invoice.balanceRm),

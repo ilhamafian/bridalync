@@ -4,12 +4,21 @@ import type { CreateBookingRequest } from "@/schemas/bookingRecord";
 import { toIdString } from "@/schemas/objectId";
 import { toDbSession } from "@/schemas/sessionSchema";
 import { getFreelancerByUsername } from "@/utils/users";
-import { calculateBookingQuotation } from "@/utils/booking/pricing";
+import {
+  applyPaymentOption,
+  calculateBookingQuotation,
+  requiresFullPayment,
+  type BookingQuotationSummary,
+} from "@/utils/booking/pricing";
 
 export async function resolveBookingQuotation(
   freelancerUserId: string,
   input: CreateBookingRequest
-) {
+): Promise<{
+  invoice: BookingQuotationSummary;
+  packageName: string;
+  paymentOption: "deposit" | "full";
+}> {
   const packageModel = new PackageModel();
   const settingsModel = new SettingModel();
 
@@ -32,7 +41,7 @@ export async function resolveBookingQuotation(
       ? { name: input.style.name, price: input.style.price }
       : null;
 
-  const invoice = calculateBookingQuotation({
+  const quotation = calculateBookingQuotation({
     chargeBy,
     selectedPackage: {
       name: pkg.name,
@@ -55,9 +64,26 @@ export async function resolveBookingQuotation(
       : undefined,
   });
 
+  const balanceDueBeforeDays = settings.payment?.balance_due_before ?? 3;
+  const mustPayFull = requiresFullPayment(
+    input.sessions,
+    balanceDueBeforeDays
+  );
+  const paymentOption: "deposit" | "full" =
+    mustPayFull || input.paymentOption === "full" ? "full" : "deposit";
+
+  if (input.paymentOption === "deposit" && mustPayFull) {
+    throw new Error(
+      `Full payment is required when booking within ${balanceDueBeforeDays} day${
+        balanceDueBeforeDays === 1 ? "" : "s"
+      } of your session.`
+    );
+  }
+
   return {
-    invoice,
+    invoice: applyPaymentOption(quotation, paymentOption),
     packageName: pkg.name,
+    paymentOption,
   };
 }
 

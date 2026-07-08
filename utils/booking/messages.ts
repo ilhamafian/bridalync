@@ -1,8 +1,6 @@
-import type { AddOnsSelection, BookingContact, BookingSession } from "@/schemas/booking";
 import type { PublicBooking } from "@/schemas/bookingRecord";
-import { formatLocationAddress, formatSessionSummary, getPackageLabel, getStyleLabel } from "@/utils/booking/utils";
-import type { BookingPackageId, BookingStyleId } from "@/utils/booking/constants";
-import { formatRm, type BookingInvoiceSummary } from "@/utils/booking/pricing";
+import { formatLocationAddress, formatSessionSummary } from "@/utils/session";
+import { formatRm } from "@/utils/booking/pricing";
 
 export function toWhatsAppNumber(countryCode: string, mobile: string) {
   const normalizedCountryCode = countryCode.replace(/\D/g, "");
@@ -19,62 +17,12 @@ export function buildWhatsAppUrl(
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
-type BuildBookingMessageInput = {
-  freelancerName: string;
-  contact: BookingContact;
-  packageId: BookingPackageId;
-  styleId: BookingStyleId;
-  sessions: BookingSession[];
-  addOns: AddOnsSelection;
-  invoice: BookingInvoiceSummary;
-  intent: "booking" | "enquiry";
-};
-
-function formatAddOnsSummary(addOns: AddOnsSelection) {
-  if (addOns === "skipped") return "None";
-  if (addOns === "not-sure") return "Not sure yet";
-  return addOns
-    .map((id) => id.replace("-", " "))
-    .join(", ");
-}
-
-export function buildBookingMessage({
-  freelancerName,
-  contact,
-  packageId,
-  styleId,
-  sessions,
-  addOns,
-  invoice,
-  intent,
-}: BuildBookingMessageInput) {
-  const intro =
-    intent === "booking"
-      ? `Hi ${freelancerName}, I'd like to book now.`
-      : `Hi ${freelancerName}, I have an enquiry about my booking.`;
-
-  const sessionLines = sessions
-    .map((session) => `• ${formatSessionSummary(session)}`)
-    .join("\n");
-
-  return [
-    intro,
-    "",
-    `Name: ${contact.name}`,
-    `Phone: ${contact.phone}`,
-    `Email: ${contact.email}`,
-    "",
-    `Package: ${getPackageLabel(packageId)}`,
-    `Style: ${getStyleLabel(styleId)}`,
-    `Add-ons: ${formatAddOnsSummary(addOns)}`,
-    "",
-    "Sessions:",
-    sessionLines,
-    "",
-    `Total: ${formatRm(invoice.totalRm)}`,
-    `Deposit: ${formatRm(invoice.depositRm)}`,
-    `Balance: ${formatRm(invoice.balanceRm)}`,
-  ].join("\n");
+function formatClientPhone(contact: PublicBooking["contact"]) {
+  if (contact.mobile) {
+    const prefix = contact.country_code ? `${contact.country_code} ` : "";
+    return `${prefix}${contact.mobile}`.trim();
+  }
+  return "Not provided";
 }
 
 function formatBookingStatusIntro(
@@ -95,7 +43,7 @@ function formatBookingStatusIntro(
 
 export function buildBookingResultMessage(
   freelancerName: string,
-  booking: PublicBooking & { _id: string }
+  booking: PublicBooking
 ) {
   const sessionLines = booking.sessions
     .map((session) => {
@@ -107,17 +55,20 @@ export function buildBookingResultMessage(
     })
     .join("\n");
 
+  const addOnSummary =
+    booking.addOnIds.length > 0 ? booking.addOnIds.join(", ") : "None";
+
   return [
     formatBookingStatusIntro(freelancerName, booking.status),
     "",
     `Booking ref: ${booking._id}`,
     `Name: ${booking.contact.name}`,
-    `Phone: ${booking.contact.phone}`,
+    `Phone: ${formatClientPhone(booking.contact)}`,
     `Email: ${booking.contact.email}`,
     "",
-    `Package: ${getPackageLabel(booking.packageId)}`,
-    `Style: ${getStyleLabel(booking.style)}`,
-    `Add-ons: ${formatAddOnsSummary(booking.addOns)}`,
+    `Package: ${booking.packageName}`,
+    ...(booking.styleName ? [`Style: ${booking.styleName}`] : []),
+    `Add-ons: ${addOnSummary}`,
     "",
     "Sessions:",
     sessionLines,
