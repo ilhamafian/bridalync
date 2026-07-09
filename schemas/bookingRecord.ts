@@ -56,6 +56,8 @@ const bookingLineItemInputSchema = z.object({
   id: z.string(),
   name: z.string(),
   price: z.number(),
+  deposit: z.number().optional(),
+  categoryName: z.string().optional(),
 });
 
 const bookingSessionInputSchema = z.object({

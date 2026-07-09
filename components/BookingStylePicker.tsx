@@ -7,29 +7,74 @@ import { Card, CardContent } from "@/components/ui/card"
 import { formatRm } from "@/utils/booking/pricing"
 import { cn } from "@/lib/utils"
 
-export type StyleOption = {
+export type StyleCategoryOption = {
+  id: string
+  name: string
+}
+
+export type StyleVariantOption = {
   id: string
   name: string
   price: number
+  deposit: number
   imageSrc?: string
 }
 
 type BookingStylePickerProps = {
-  styles: StyleOption[]
-  selectedStyleId: string | null
-  onStyleChange: (styleId: string) => void
+  mode: "category"
+  categories: StyleCategoryOption[]
+  selectedCategoryId: string | null
+  onCategoryChange: (categoryId: string) => void
+} | {
+  mode: "variant"
+  variants: StyleVariantOption[]
+  selectedVariantId: string | null
+  onVariantChange: (variantId: string) => void
 }
 
-export function BookingStylePicker({
-  styles,
-  selectedStyleId,
-  onStyleChange,
-}: BookingStylePickerProps) {
-  if (styles.length === 0) {
+export function BookingStylePicker(props: BookingStylePickerProps) {
+  if (props.mode === "category") {
+    const { categories, selectedCategoryId, onCategoryChange } = props
+
+    if (categories.length === 0) {
+      return (
+        <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
+          <CardContent className="pt-(--card-spacing) text-center text-sm text-muted-foreground">
+            No styles available.
+          </CardContent>
+        </Card>
+      )
+    }
+
+    return (
+      <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
+        <CardContent className="flex flex-col gap-2 pt-(--card-spacing)">
+          {categories.map((category) => (
+            <Button
+              key={category.id}
+              type="button"
+              variant={selectedCategoryId === category.id ? "default" : "outline"}
+              size="lg"
+              className={cn(
+                "h-auto min-h-14 w-full justify-start px-3 py-2 text-left whitespace-normal"
+              )}
+              onClick={() => onCategoryChange(category.id)}
+            >
+              <span className="font-medium">{category.name}</span>
+            </Button>
+          ))}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const { variants, selectedVariantId, onVariantChange } = props
+
+  if (variants.length === 0) {
     return (
       <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
         <CardContent className="pt-(--card-spacing) text-center text-sm text-muted-foreground">
-          No styles available.
+          No variants available.
         </CardContent>
       </Card>
     )
@@ -38,23 +83,23 @@ export function BookingStylePicker({
   return (
     <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
       <CardContent className="flex flex-col gap-2 pt-(--card-spacing)">
-        {styles.map((style) => (
+        {variants.map((variant) => (
           <Button
-            key={style.id}
+            key={variant.id}
             type="button"
-            variant={selectedStyleId === style.id ? "default" : "outline"}
+            variant={selectedVariantId === variant.id ? "default" : "outline"}
             size="lg"
             className={cn(
               "h-auto min-h-14 w-full justify-start px-3 py-2 text-left whitespace-normal"
             )}
-            onClick={() => onStyleChange(style.id)}
+            onClick={() => onVariantChange(variant.id)}
           >
             <span className="flex w-full items-center gap-3">
-              {style.imageSrc && (
+              {variant.imageSrc && (
                 <span className="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted">
                   <Image
-                    src={style.imageSrc}
-                    alt={style.name}
+                    src={variant.imageSrc}
+                    alt={variant.name}
                     fill
                     className="object-cover"
                     sizes="56px"
@@ -62,8 +107,7 @@ export function BookingStylePicker({
                 </span>
               )}
               <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                <span>{style.name}</span>
-                <span className="shrink-0 font-medium">{formatRm(style.price)}</span>
+                <span>{variant.name}</span>
               </span>
             </span>
           </Button>

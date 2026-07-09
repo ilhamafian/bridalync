@@ -1,6 +1,8 @@
 import { NextRequest } from "next/server";
 import { createResponse, handleError } from "@/utils/apiHelper";
+import { AddOnModel } from "@/models/AddOn";
 import { PackageModel } from "@/models/Package";
+import { StyleModel } from "@/models/Style";
 import { UserModel } from "@/models/User";
 import { toIdString } from "@/schemas/objectId";
 import { SettingModel } from "@/models/Setting";
@@ -19,10 +21,7 @@ export async function GET (request: NextRequest) {
         }
         const publicUser = publicUserSchema.parse(user);
         const user_id = toIdString(user._id);
-        const packages = await new PackageModel().getPackagesByUserId(user_id);
-        if (!packages) {
-            return createResponse({ error: "Packages not found" }, 404);
-        }
+        const packages = (await new PackageModel().getPackagesByUserId(user_id)) ?? [];
         const settings = await new SettingModel().findSettingsByUserId(user_id);
         if (!settings) {
             return createResponse({ error: "Settings not found" }, 404);
@@ -30,9 +29,21 @@ export async function GET (request: NextRequest) {
 
         const publicSettings = publicSettingSchema.parse(settings);
 
+        const chargeBy = publicSettings.charge_by ?? "package";
+        const styles =
+            chargeBy === "style"
+                ? (await new StyleModel().getStylesByUserId(user_id)) ?? []
+                : [];
+        const add_ons =
+            chargeBy === "style"
+                ? (await new AddOnModel().getAddOnsByUserId(user_id)) ?? []
+                : [];
+
         const response = {
             user: publicUser,
             packages,
+            styles,
+            add_ons,
             settings: publicSettings,
         }
         return createResponse(response);

@@ -38,10 +38,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { invoice, packageName, paymentOption } = await resolveBookingQuotation(
-      freelancer.userId,
-      data
-    );
+    const { invoice, packageName, styleId, styleName, paymentOption } =
+      await resolveBookingQuotation(freelancer.userId, data);
 
     const booking = await createBooking({
       freelancerUsername: data.freelancerUsername.toLowerCase(),
@@ -49,8 +47,8 @@ export async function POST(req: NextRequest) {
       contact: data.contact,
       packageId: data.packageId,
       packageName,
-      styleId: data.style?.id,
-      styleName: data.style?.name,
+      styleId,
+      styleName,
       addOnIds: data.addOns.map((addOn) => addOn.id),
       sessions: mapSessionsForStorage(data),
       invoice,

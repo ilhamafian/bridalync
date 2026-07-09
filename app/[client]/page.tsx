@@ -69,17 +69,33 @@ type SessionTemplate = {
 type ClientPackage = {
   _id?: unknown;
   name: string;
-  price: number;
-  deposit: number;
+  price?: number;
+  deposit?: number;
   order: number;
   session_templates: SessionTemplate[];
 };
 
-type ClientStyle = {
+type StyleVariant = {
+  name: string;
+  order: number;
+  price: number;
+  deposit: number;
+  image_url?: string;
+};
+
+type ClientStyleCategory = {
   _id?: unknown;
   name: string;
+  order: number;
+  variants: StyleVariant[];
+};
+
+type SelectedStyleForBooking = {
+  id: string;
+  name: string;
   price: number;
-  image_src?: string;
+  deposit: number;
+  categoryName: string;
 };
 
 type CatalogAddOn = AddOn & { _id?: unknown };
@@ -178,12 +194,16 @@ function sortPackages(packages: ClientPackage[]): ClientPackage[] {
   return [...packages].sort((a, b) => a.order - b.order);
 }
 
+function buildStyleVariantId(styleDocId: string, variantOrder: number): string {
+  return `${styleDocId}:${variantOrder}`;
+}
+
 function toPackageOptions(packages: ClientPackage[]): PackageOption[] {
   return sortPackages(packages)
     .map((pkg) => ({
       id: normalizePackageId(pkg._id),
       name: pkg.name,
-      price: pkg.price,
+      price: pkg.price ?? 0,
       sessionCount: pkg.session_templates.length,
     }))
     .filter((pkg) => pkg.id.length > 0);
@@ -215,7 +235,7 @@ export default function ClientPage() {
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<BookingStep>("intro");
   const [clientPackages, setClientPackages] = useState<ClientPackage[]>([]);
-  const [styles, setStyles] = useState<ClientStyle[]>([]);
+  const [styles, setStyles] = useState<ClientStyleCategory[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [settings, setSettings] = useState<PublicSetting | null>(null);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
@@ -231,7 +251,10 @@ export default function ClientPage() {
     null
   );
   const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
-  const [selectedStyleId, setSelectedStyleId] = useState<string | null>(null);
+  const [selectedStyleCategoryId, setSelectedStyleCategoryId] = useState<
+    string | null
+  >(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
@@ -271,18 +294,68 @@ export default function ClientPage() {
     return buildStepOrder(hasStyles, hasAddOns);
   }, [styles, addOns, settings?.charge_by]);
 
-  const styleOptions = useMemo(
+  const styleCategories = useMemo(
     () =>
-      styles
+      [...styles]
+        .sort((a, b) => a.order - b.order)
         .map((style) => ({
           id: normalizePackageId(style._id),
           name: style.name,
-          price: style.price,
-          imageSrc: style.image_src,
         }))
         .filter((style) => style.id.length > 0),
     [styles]
   );
+
+  const styleVariants = useMemo(() => {
+    if (!selectedStyleCategoryId) return [];
+
+    const category = styles.find(
+      (style) => normalizePackageId(style._id) === selectedStyleCategoryId
+    );
+    if (!category) return [];
+
+    return [...category.variants]
+      .sort((a, b) => a.order - b.order)
+      .map((variant) => ({
+        id: buildStyleVariantId(selectedStyleCategoryId, variant.order),
+        name: variant.name,
+        price: variant.price,
+        deposit: variant.deposit,
+        imageSrc: variant.image_url,
+      }));
+  }, [selectedStyleCategoryId, styles]);
+
+  const selectedStyle = useMemo((): SelectedStyleForBooking | null => {
+    if (!selectedVariantId) return null;
+
+    const separatorIndex = selectedVariantId.lastIndexOf(":");
+    if (separatorIndex === -1) return null;
+
+    const styleDocId = selectedVariantId.slice(0, separatorIndex);
+    const variantOrder = Number.parseInt(
+      selectedVariantId.slice(separatorIndex + 1),
+      10
+    );
+    if (!styleDocId || Number.isNaN(variantOrder)) return null;
+
+    const category = styles.find(
+      (style) => normalizePackageId(style._id) === styleDocId
+    );
+    if (!category) return null;
+
+    const variant = category.variants.find(
+      (item) => item.order === variantOrder
+    );
+    if (!variant) return null;
+
+    return {
+      id: selectedVariantId,
+      name: variant.name,
+      price: variant.price,
+      deposit: variant.deposit,
+      categoryName: category.name,
+    };
+  }, [selectedVariantId, styles]);
 
   const addOnOptions = useMemo(
     () =>
@@ -297,10 +370,7 @@ export default function ClientPage() {
     [addOns]
   );
 
-  const selectedStyle = useMemo(
-    () => styleOptions.find((style) => style.id === selectedStyleId) ?? null,
-    [styleOptions, selectedStyleId]
-  );
+  const chargeBy = settings?.charge_by ?? "package";
 
   const selectedAddOnItems = useMemo(
     () =>
@@ -326,16 +396,21 @@ export default function ClientPage() {
   const quotation = useMemo(
     () =>
       calculateBookingQuotation({
-        chargeBy: settings?.charge_by ?? "package",
+        chargeBy,
         selectedPackage: selectedPackage
           ? {
               name: selectedPackage.name,
-              price: selectedPackage.price,
-              deposit: selectedPackage.deposit,
+              price: selectedPackage.price ?? 0,
+              deposit:
+                chargeBy === "style" ? 0 : (selectedPackage.deposit ?? 0),
             }
           : null,
         selectedStyle: selectedStyle
-          ? { name: selectedStyle.name, price: selectedStyle.price }
+          ? {
+              name: selectedStyle.name,
+              price: selectedStyle.price,
+              deposit: selectedStyle.deposit,
+            }
           : null,
         selectedAddOns: selectedAddOnItems.map((addOn) => ({
           name: addOn.name,
@@ -354,6 +429,7 @@ export default function ClientPage() {
       }),
     [
       settings,
+      chargeBy,
       selectedPackage,
       selectedStyle,
       selectedAddOnItems,
@@ -391,11 +467,12 @@ export default function ClientPage() {
       const packageOptions = toPackageOptions(fetchedPackages);
       setUser(data.user as PublicUser);
       setClientPackages(fetchedPackages);
-      setStyles((data.styles as ClientStyle[] | undefined) ?? []);
+      setStyles((data.styles as ClientStyleCategory[] | undefined) ?? []);
       setAddOns((data.add_ons as CatalogAddOn[] | undefined) ?? []);
       setSettings((data.settings as PublicSetting | undefined) ?? null);
       setSelectedPackageId((current) => current ?? packageOptions[0]?.id ?? null);
-      setSelectedStyleId(null);
+      setSelectedStyleCategoryId(null);
+      setSelectedVariantId(null);
       setSelectedAddOnIds([]);
       setTermsAccepted(false);
     } catch (error) {
@@ -414,7 +491,8 @@ export default function ClientPage() {
     setSelectedDate(undefined);
     setSelectedTimeSlot(null);
     setSharedLocation(null);
-    setSelectedStyleId(null);
+    setSelectedStyleCategoryId(null);
+    setSelectedVariantId(null);
     setSelectedAddOnIds([]);
     setTermsAccepted(false);
   }, [selectedPackageId]);
@@ -678,7 +756,15 @@ export default function ClientPage() {
           intent: "booking",
           contact,
           packageId: selectedPackageId,
-          style: selectedStyle ?? undefined,
+          style: selectedStyle
+            ? {
+                id: selectedStyle.id,
+                name: selectedStyle.name,
+                price: selectedStyle.price,
+                deposit: selectedStyle.deposit,
+                categoryName: selectedStyle.categoryName,
+              }
+            : undefined,
           addOns: selectedAddOnItems,
           sessions,
           distanceKmBySessionKey,
@@ -962,26 +1048,62 @@ export default function ClientPage() {
       {step === "style" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            What style do you want?
+            {selectedStyleCategoryId
+              ? "Choose your variant"
+              : "What style do you want?"}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Pick the look you&apos;re going for.
+            {selectedStyleCategoryId
+              ? "Pick the specific look within this style."
+              : "Pick the look category you are going for."}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
-            <BookingStylePicker
-              styles={styleOptions}
-              selectedStyleId={selectedStyleId}
-              onStyleChange={setSelectedStyleId}
-            />
-            <Button
-              size="lg"
-              className="bg-chart-4 text-white hover:bg-chart-4/90"
-              disabled={!selectedStyleId}
-              onClick={goToNextStep}
-            >
-              Next
-              <ChevronRightIcon />
-            </Button>
+            {!selectedStyleCategoryId ? (
+              <BookingStylePicker
+                mode="category"
+                categories={styleCategories}
+                selectedCategoryId={selectedStyleCategoryId}
+                onCategoryChange={(categoryId) => {
+                  setSelectedStyleCategoryId(categoryId);
+                  setSelectedVariantId(null);
+                }}
+              />
+            ) : (
+              <BookingStylePicker
+                mode="variant"
+                variants={styleVariants}
+                selectedVariantId={selectedVariantId}
+                onVariantChange={setSelectedVariantId}
+              />
+            )}
+            <div className="flex w-full flex-col gap-2">
+              {selectedStyleCategoryId && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="lg"
+                  className="w-full"
+                  onClick={() => {
+                    if (selectedVariantId) {
+                      setSelectedVariantId(null);
+                      return;
+                    }
+                    setSelectedStyleCategoryId(null);
+                  }}
+                >
+                  Back
+                </Button>
+              )}
+              <Button
+                size="lg"
+                className="bg-chart-4 text-white hover:bg-chart-4/90"
+                disabled={!selectedVariantId}
+                onClick={goToNextStep}
+              >
+                Next
+                <ChevronRightIcon />
+              </Button>
+            </div>
           </div>
         </div>
       )}

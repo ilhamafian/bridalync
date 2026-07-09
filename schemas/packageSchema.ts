@@ -2,8 +2,8 @@ import { z } from "zod";
 
 export const packageSchema = z.object({
     name: z.string(),
-    price: z.number(),
-    deposit: z.number(),
+    price: z.number().optional(),
+    deposit: z.number().optional(),
     order: z.number(),
     session_templates: z.array(z.object({
         name: z.string(),

@@ -1,8 +1,10 @@
 import { NextRequest } from "next/server";
 import { ZodSchema } from "zod";
 
+import { AddOnModel } from "@/models/AddOn";
 import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
+import { StyleModel } from "@/models/Style";
 import { UserModel } from "@/models/User";
 import {
   getOnboardingResumeStep,
@@ -13,11 +15,13 @@ import {
   type UpdateUser,
   type User,
 } from "@/schemas/userSchema";
+import { addOnSchema } from "@/schemas/addOnSchema";
 import { packageSchema } from "@/schemas/packageSchema";
+import { styleSchema } from "@/schemas/styleSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
 import { toIdString } from "@/schemas/objectId";
-import { settingSchema, type TravelSetting } from "@/schemas/settingSchema";
+import { settingSchema, getDefaultTimeSlots, type TravelSetting } from "@/schemas/settingSchema";
 import { getAppUrl } from "@/utils/appUrl";
 import {
   refreshSession,
@@ -35,7 +39,7 @@ const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
   location: { lat: 0, lng: 0 },
 };
 
-const DEFAULT_PACKAGES = [
+const MUA_PACKAGES = [
   {
     name: "Nikah",
     price: 800,
@@ -90,6 +94,74 @@ const DEFAULT_PACKAGES = [
   },
 ] as const;
 
+const HS_PACKAGES = [
+  {
+    name: "Nikah",
+    order: 0,
+    session_templates: [{ name: "Nikah", order: 0 }],
+  },
+  {
+    name: "Sanding",
+    order: 1,
+    session_templates: [{ name: "Sanding", order: 0 }],
+  },
+  {
+    name: "Nikah & Sanding",
+    order: 2,
+    session_templates: [
+      { name: "Nikah", order: 0 },
+      { name: "Sanding", order: 1 },
+    ],
+  },
+  {
+    name: "Tunang",
+    order: 3,
+    session_templates: [{ name: "Tunang", order: 0 }],
+  },
+  {
+    name: "Event",
+    order: 4,
+    session_templates: [{ name: "Event", order: 0 }],
+  },
+  {
+    name: "Trial Hijab",
+    order: 6,
+    session_templates: [{ name: "Trial Hijab", order: 0 }],
+  },
+] as const;
+
+const STYLES = [
+  {
+    name: "SHAWL",
+    order: 0,
+    variants: [{ name: "Neat & Clean Shawl", order: 0 , price: 200, deposit: 50}, { name:"Flowy Shawl (No Draping)", order: 1 , price: 200, deposit: 50}, { name: "Flowy Shawl (Chest Covered)", order: 2 , price: 230, deposit: 50}, { name: "Baby Turkish", order: 3 , price: 230, deposit: 50}],
+  },
+  {
+    name: "BAWAL",
+    order: 1,
+    variants: [{ name: "Neat Bawal", order: 0 , price: 200, deposit: 50}, { name: "Bawal Drape", order: 1 , price: 230, deposit: 50}],
+  },
+  {
+    name: "Turkish",
+    order: 2,
+    variants: [{ name: "Turkish Net", order: 0 , price: 400, deposit: 100}],
+  }
+] as const;
+
+const ADD_ONS = [
+  {
+    name: "Gandik & Sanggul Lintang Setting",
+    order: 0,
+    price: 30,
+  },
+  {
+    name: "Jahit Accessories Baju",
+    order: 1,
+    price: 30,
+
+  }
+] as const;
+
 function buildStripeConnectStatus(user: {
   stripe_account_id?: string;
   is_stripe_connected?: boolean;
@@ -131,13 +203,16 @@ function buildTravelSetting(
   };
 }
 
-async function ensureDefaultPackages(userId: string) {
+async function seedPackages(
+  userId: string,
+  packages: readonly Record<string, unknown>[]
+) {
   const packageModel = new PackageModel();
   const existing = await packageModel.findOne({ user_id: userId } as never);
 
   if (!existing) {
     await Promise.all(
-      DEFAULT_PACKAGES.map((pkg) =>
+      packages.map((pkg) =>
         packageModel.create(
           packageSchema.parse({
             user_id: userId,
@@ -147,10 +222,72 @@ async function ensureDefaultPackages(userId: string) {
       )
     );
   }
+}
+
+async function seedStyles(userId: string) {
+  const styleModel = new StyleModel();
+  const existing = await styleModel.findOne({ user_id: userId } as never);
+
+  if (!existing) {
+    await Promise.all(
+      STYLES.map((style) =>
+        styleModel.create(
+          styleSchema.parse({
+            user_id: userId,
+            ...style,
+          })
+        )
+      )
+    );
+  }
+}
+
+async function seedAddOns(userId: string) {
+  const addOnModel = new AddOnModel();
+  const existing = await addOnModel.findOne({ user_id: userId } as never);
+
+  if (!existing) {
+    await Promise.all(
+      ADD_ONS.map((addOn) =>
+        addOnModel.create(
+          addOnSchema.parse({
+            user_id: userId,
+            ...addOn,
+          })
+        )
+      )
+    );
+  }
+}
+
+async function ensureDefaultCatalog(
+  userId: string,
+  chargeBy: "package" | "style"
+) {
+  if (chargeBy === "package") {
+    await seedPackages(userId, MUA_PACKAGES);
+  } else {
+    await Promise.all([
+      seedPackages(userId, HS_PACKAGES),
+      seedStyles(userId),
+      seedAddOns(userId),
+    ]);
+  }
 
   await updateOnboardingProgress(userId, {
     createdFirstPackage: true,
   });
+}
+
+async function resolveChargeBy(
+  userId: string,
+  user: { role?: string }
+): Promise<"package" | "style"> {
+  const settings = await new SettingModel().findSettingsByUserId(userId);
+  if (settings?.charge_by) {
+    return settings.charge_by;
+  }
+  return user.role === "hijabstylist" ? "style" : "package";
 }
 
 export async function GET() {
@@ -166,7 +303,8 @@ export async function GET() {
       user.onboarding?.congfigureTravelSettings &&
       !user.onboarding.createdFirstPackage
     ) {
-      await ensureDefaultPackages(userId);
+      const chargeBy = await resolveChargeBy(userId, user);
+      await ensureDefaultCatalog(userId, chargeBy);
       const refreshedUser = await refreshSession(userId);
       if (refreshedUser) {
         return createResponse(
@@ -268,10 +406,11 @@ export async function POST(req: NextRequest) {
             user_id: userId,
             charge_by,
             travel: buildTravelSetting(travel),
+            time_slots: getDefaultTimeSlots(charge_by),
           })
         );
 
-        await ensureDefaultPackages(userId);
+        await ensureDefaultCatalog(userId, charge_by);
         await refreshSession(userId);
         return createResponse({ ok: true }, 200);
       }

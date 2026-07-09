@@ -18,6 +18,7 @@ export type BookingQuotationSummary = {
 export type QuotationLineItemInput = {
   name: string;
   price: number;
+  deposit?: number;
 };
 
 export type QuotationPackageInput = QuotationLineItemInput & {
@@ -142,14 +143,18 @@ export function calculateBookingQuotation(
   }
 
   const totalRm = lineItems.reduce((sum, item) => sum + item.amountRm, 0);
-  const packageDepositRm = roundRm(input.selectedPackage?.deposit ?? 0);
-  const depositRm = Math.min(packageDepositRm, totalRm);
-  const balanceRm = Math.max(totalRm - depositRm, 0);
+  const depositRm = roundRm(
+    input.chargeBy === "style"
+      ? (input.selectedStyle?.deposit ?? 0)
+      : (input.selectedPackage?.deposit ?? 0)
+  );
+  const cappedDepositRm = Math.min(depositRm, totalRm);
+  const balanceRm = Math.max(totalRm - cappedDepositRm, 0);
 
   return {
     lineItems,
     totalRm,
-    depositRm,
+    depositRm: cappedDepositRm,
     balanceRm,
   };
 }

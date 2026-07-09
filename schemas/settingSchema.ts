@@ -54,16 +54,29 @@ export const timeSlotSchema = z.object({
   }
 );
 
-export const DEFAULT_TIME_SLOTS = [
+export const MUA_TIME_SLOTS = [
   { startTime: "06:00", endTime: "08:00" },
   { startTime: "10:00", endTime: "12:00" },
   { startTime: "14:00", endTime: "16:00" },
   { startTime: "18:00", endTime: "20:00" },
 ] as const;
-
+export const HS_TIME_SLOTS = [
+  { startTime: "07:00", endTime: "08:00" },
+  { startTime: "09:00", endTime: "10:00" },
+  { startTime: "11:00", endTime: "12:00" },
+  { startTime: "17:00", endTime: "18:00" },
+  { startTime: "19:00", endTime: "20:00" },
+] as const;
 export const timeSlotSettingSchema = z
   .array(timeSlotSchema)
-  .default(() => DEFAULT_TIME_SLOTS.map((slot) => ({ ...slot })));
+  .default(() => MUA_TIME_SLOTS.map((slot) => ({ ...slot })));
+
+export function getDefaultTimeSlots(
+  chargeBy: "package" | "style"
+): TimeSlot[] {
+  const slots = chargeBy === "style" ? HS_TIME_SLOTS : MUA_TIME_SLOTS;
+  return slots.map((slot) => ({ ...slot }));
+}
 
 export const settingSchema = z.object({
     user_id: z.string(),
