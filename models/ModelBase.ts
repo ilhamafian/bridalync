@@ -66,7 +66,8 @@ export abstract class ModelBase<T extends Record<string, any>> {
     } = {}
   ): Promise<WithId<T>[]> {
     const collection = await this.getCollection();
-    return collection.find(query, options).toArray() as Promise<WithId<T>[]>;
+    const results = await collection.find(query, options).toArray();
+    return results as WithId<T>[];
   }
 
   async count(query: Filter<T> = {} as Filter<T>): Promise<number> {

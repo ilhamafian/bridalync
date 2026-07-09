@@ -1,11 +1,7 @@
 import { redirect } from "next/navigation";
 
-import { AppSidebar } from "@/components/app-sidebar";
+import { BottomNav } from "@/components/bottom-nav";
 import { SiteHeader } from "@/components/site-header";
-import {
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { getSessionUser } from "@/utils/auth/session";
@@ -27,28 +23,17 @@ export default async function DashboardLayout({
 
   return (
     <TooltipProvider>
-      <SidebarProvider
-        defaultOpen={false}
-        className="h-full"
-        style={
-          {
-            "--sidebar-width": "calc(var(--spacing) * 72)",
-            "--header-height": "calc(var(--spacing) * 12)",
-          } as React.CSSProperties
-        }
-      >
-        <AppSidebar variant="inset" />
-        <SidebarInset>
-          <SiteHeader />
-          <div className="flex flex-1 flex-col">
-            <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-                {children}
-              </div>
+      <div className="flex h-full min-h-0 flex-col">
+        <SiteHeader />
+        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+              {children}
             </div>
           </div>
-        </SidebarInset>
-      </SidebarProvider>
+        </main>
+        <BottomNav />
+      </div>
     </TooltipProvider>
   );
 }
