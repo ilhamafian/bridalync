@@ -17,7 +17,22 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Bridalync",
-  description: "Simple calendar date picker",
+  description:
+    "Manage bridal bookings, clients, and schedules in one place.",
+  applicationName: "Bridalync",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Bridalync",
+  },
+  icons: {
+    icon: [
+      { url: "/bridalync.ico" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
+  },
 };
 
 export const viewport = {
@@ -25,6 +40,7 @@ export const viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
+  themeColor: "#ffffff",
 };
 
 export default function RootLayout({

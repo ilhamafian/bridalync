@@ -60,6 +60,26 @@ Early development. The app currently includes a calendar date picker as the firs
 | `STRIPE_SECRET_KEY` | Yes | Stripe secret key (`sk_test_...` or `sk_live_...`) |
 | `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key for client-side Stripe.js |
 | `STRIPE_WEBHOOK_SECRET` | Yes (Connect) | Webhook signing secret from the Stripe Dashboard |
+| `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Yes (PWA push) | Web Push VAPID public key |
+| `VAPID_PRIVATE_KEY` | Yes (PWA push) | Web Push VAPID private key |
+| `VAPID_SUBJECT` | No | `mailto:` or `https:` contact for VAPID (default `mailto:hello@bridalync.app`) |
+| `CRON_SECRET` | Yes (reminders) | Bearer token for `/api/cron/booking-reminders` (Vercel Cron uses this automatically) |
+
+Generate VAPID keys with:
+
+```bash
+npx web-push generate-vapid-keys
+```
+
+### Progressive Web App & push notifications
+
+Bridalync can be installed as a PWA. Freelancers enable notifications under **Settings → App & notifications**.
+
+- **New booking / enquiry** — push when a client submits via the public booking flow
+- **Booking confirmed** — push when Stripe payment confirms
+- **Upcoming session** — hourly cron (`vercel.json`) notifies for confirmed sessions starting within 24 hours
+
+On iOS, install via Share → **Add to Home Screen**, then open the home-screen app before enabling notifications.
 
 ### Stripe Connect setup
 
