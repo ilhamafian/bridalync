@@ -1,7 +1,7 @@
 import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
 import { StyleModel } from "@/models/Style";
-import type { CreateBookingRequest } from "@/schemas/bookingRecord";
+import type { CreateBookingRequest } from "@/schemas/bookingSchema";
 import { toIdString } from "@/schemas/objectId";
 import { toDbSession } from "@/schemas/sessionSchema";
 import { getFreelancerByUsername } from "@/utils/users";

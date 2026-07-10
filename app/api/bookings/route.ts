@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
 
 import { createBooking } from "@/models/Booking";
-import { createBookingRequestSchema } from "@/schemas/bookingRecord";
+import { createBookingRequestSchema } from "@/schemas/bookingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import {
   mapSessionsForStorage,

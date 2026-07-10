@@ -3,31 +3,31 @@ import { ObjectId } from "mongodb";
 import { bookingModel } from "@/models/Booking";
 import { UserModel } from "@/models/User";
 import {
-  bookingRecordSchema,
-  type BookingRecord,
-  type PersistedBookingRecord,
-} from "@/schemas/bookingRecord";
+  bookingSchema,
+  type Booking,
+  type PersistedBooking,
+} from "@/schemas/bookingSchema";
 
 export async function getBookingById(
   id: string
-): Promise<PersistedBookingRecord | null> {
+): Promise<PersistedBooking | null> {
   if (!ObjectId.isValid(id)) return null;
 
   const doc = await bookingModel.findById(id);
   if (!doc) return null;
 
-  return doc as PersistedBookingRecord;
+  return doc as PersistedBooking;
 }
 
-const bookingStatusUpdateSchema = bookingRecordSchema.pick({ status: true });
-const bookingPaymentUpdateSchema = bookingRecordSchema.pick({
+const bookingStatusUpdateSchema = bookingSchema.pick({ status: true });
+const bookingPaymentUpdateSchema = bookingSchema.pick({
   status: true,
   stripePaymentIntentId: true,
 });
 
 export async function updateBookingStatus(
   id: string,
-  status: BookingRecord["status"]
+  status: Booking["status"]
 ) {
   if (!ObjectId.isValid(id)) return null;
 
@@ -77,7 +77,7 @@ export async function markBookingPaymentFailed(bookingId: string) {
   return getBookingById(bookingId);
 }
 
-const bookingDashboardFieldsSchema = bookingRecordSchema.pick({
+const bookingDashboardFieldsSchema = bookingSchema.pick({
   contact: true,
   packageId: true,
   packageName: true,
@@ -92,7 +92,7 @@ const bookingDashboardFieldsSchema = bookingRecordSchema.pick({
 
 export async function updateDashboardBooking(
   id: string,
-  data: Partial<BookingRecord>
+  data: Partial<Booking>
 ) {
   if (!ObjectId.isValid(id)) return null;
 

@@ -1,4 +1,4 @@
-import type { PersistedBookingRecord } from "@/schemas/bookingRecord";
+import type { PersistedBooking } from "@/schemas/bookingSchema";
 
 export type BookingCheckoutMetadata = {
   type: string;
@@ -16,7 +16,7 @@ export type BookingCheckoutMetadata = {
 };
 
 export function buildBookingCheckoutMetadata(input: {
-  booking: PersistedBookingRecord;
+  booking: PersistedBooking;
   freelancerUsername: string;
 }): BookingCheckoutMetadata {
   const bookingId = String(input.booking._id);

@@ -1,32 +1,32 @@
 import { WithId } from "mongodb";
 
-import type { BookingRecord } from "@/schemas/bookingRecord";
+import type { Booking } from "@/schemas/bookingSchema";
 import { toIdString } from "@/schemas/objectId";
 
 export type SerializedBooking = {
   _id: string;
   freelancerUsername: string;
   freelancerUserId: string;
-  contact: BookingRecord["contact"];
+  contact: Booking["contact"];
   packageId: string;
   packageName: string;
   styleId: string | null;
   styleName: string | null;
   addOnIds: string[];
   sessions: Array<{
-    status: BookingRecord["sessions"][number]["status"];
+    status: Booking["sessions"][number]["status"];
     name: string;
     style?: string;
     style_variation?: string;
     order: number;
     date: string;
-    time_slot: BookingRecord["sessions"][number]["time_slot"];
-    location: BookingRecord["sessions"][number]["location"];
+    time_slot: Booking["sessions"][number]["time_slot"];
+    location: Booking["sessions"][number]["location"];
     client_key?: string;
   }>;
-  invoice: BookingRecord["invoice"];
-  paymentOption: BookingRecord["paymentOption"];
-  status: BookingRecord["status"];
+  invoice: Booking["invoice"];
+  paymentOption: Booking["paymentOption"];
+  status: Booking["status"];
   created_at?: string;
   updated_at?: string;
 };
@@ -39,7 +39,7 @@ function toIsoDate(value: Date | string | undefined) {
 }
 
 export function serializeBooking(
-  booking: WithId<BookingRecord> | (BookingRecord & { _id: unknown })
+  booking: WithId<Booking> | (Booking & { _id: unknown })
 ): SerializedBooking {
   return {
     _id: toIdString(booking._id as never),

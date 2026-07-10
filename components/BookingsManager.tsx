@@ -47,7 +47,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
-import type { BookingRecord } from "@/schemas/bookingRecord";
+import type { Booking } from "@/schemas/bookingSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
 import {
   formatRm,
@@ -171,12 +171,12 @@ function matchesBookingFilter(
   }
 }
 
-function toDashboardStatus(status: BookingRecord["status"]): DashboardStatus {
+function toDashboardStatus(status: Booking["status"]): DashboardStatus {
   if (status === "completed" || status === "cancelled") return status;
   return "confirmed";
 }
 
-function statusLabel(status: BookingRecord["status"]) {
+function statusLabel(status: Booking["status"]) {
   switch (status) {
     case "confirmed":
       return "Confirmed";
@@ -242,7 +242,7 @@ function formatListDate(value: string | undefined) {
 }
 
 function statusBadgeVariant(
-  status: BookingRecord["status"]
+  status: Booking["status"]
 ): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
     case "confirmed":

@@ -1,4 +1,4 @@
-import type { PublicBooking } from "@/schemas/bookingRecord";
+import type { PublicBooking } from "@/schemas/bookingSchema";
 import { formatLocationAddress, formatSessionSummary } from "@/utils/session";
 import { formatRm } from "@/utils/booking/pricing";
 

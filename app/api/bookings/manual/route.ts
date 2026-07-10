@@ -4,7 +4,7 @@ import { createBooking } from "@/models/Booking";
 import {
   manualBookingInputSchema,
   type CreateBookingRequest,
-} from "@/schemas/bookingRecord";
+} from "@/schemas/bookingSchema";
 import { toIdString } from "@/schemas/objectId";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";

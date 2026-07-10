@@ -7,7 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { BookingInvoice } from "@/components/BookingQuotation";
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { Button } from "@/components/ui/button";
-import type { PublicBooking } from "@/schemas/bookingRecord";
+import type { PublicBooking } from "@/schemas/bookingSchema";
 import { formatRm } from "@/utils/booking/pricing";
 import {
   buildBookingResultMessage,

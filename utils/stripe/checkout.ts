@@ -1,6 +1,6 @@
 import { getStripe } from "@/lib/stripe";
 import { getAppUrl } from "@/utils/appUrl";
-import type { PersistedBookingRecord } from "@/schemas/bookingRecord";
+import type { PersistedBooking } from "@/schemas/bookingSchema";
 import {
   buildStripeOwner,
   ensurePaymentCapabilities,
@@ -12,7 +12,7 @@ function toStripeAmount(rm: number) {
 }
 
 export async function createDepositCheckoutSession(input: {
-  booking: PersistedBookingRecord;
+  booking: PersistedBooking;
   freelancerUsername: string;
   stripeAccountId: string;
   owner: ReturnType<typeof buildStripeOwner>;
