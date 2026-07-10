@@ -1,64 +1,88 @@
+import { DashboardHome } from "@/components/dashboard/DashboardHome";
+import { bookingModel } from "@/models/Booking";
+import { PackageModel } from "@/models/Package";
+import { SettingModel } from "@/models/Setting";
+import { toIdString } from "@/schemas/objectId";
+import { getDefaultTimeSlots } from "@/schemas/settingSchema";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  buildProfileUrl,
+  getAppUrl,
+} from "@/utils/appUrl";
+import { getSessionUser } from "@/utils/auth/session";
+import { serializeBooking } from "@/utils/booking/serializeBooking";
+import {
+  countUpcomingThisWeek,
+  flattenScheduleItems,
+  getBookingSummary,
+  getFirstName,
+  getGreeting,
+  getNextUpcomingBooking,
+  getOutstandingPayments,
+  getRecentActivity,
+  getSetupChecklist,
+  getTodaysSchedule,
+} from "@/utils/dashboard";
 
-export default function Page() {
+export default async function DashboardPage() {
+  const user = await getSessionUser();
+  // Layout already gates auth + onboarding; keep a safe fallback.
+  if (!user) {
+    return null;
+  }
+
+  const userId = toIdString(user._id);
+  if (!userId) {
+    return null;
+  }
+
+  const [bookings, packages, settings] = await Promise.all([
+    bookingModel.find({ freelancerUserId: userId }, { sort: { created_at: -1 } }),
+    new PackageModel().find({ user_id: userId }, { sort: { order: 1 } }),
+    new SettingModel().findSettingsByUserId(userId),
+  ]);
+
+  const serialized = bookings.map(serializeBooking);
+  const now = new Date();
+  const scheduleItems = flattenScheduleItems(serialized, now);
+  const todaysSchedule = getTodaysSchedule(scheduleItems, now);
+  const nextUpcoming = getNextUpcomingBooking(scheduleItems, now);
+  const summary = getBookingSummary(scheduleItems, now);
+  const outstanding = getOutstandingPayments(serialized);
+  const activity = getRecentActivity(serialized, 5);
+  const upcomingThisWeek = countUpcomingThisWeek(scheduleItems, now);
+
+  const timeSlotCount =
+    settings?.time_slots?.length ??
+    getDefaultTimeSlots(settings?.charge_by ?? "package").length;
+
+  const checklist = getSetupChecklist({
+    packageCount: packages.length,
+    timeSlotCount,
+    isStripeConnected: Boolean(user.is_stripe_connected),
+    hasUsername: Boolean(user.username?.trim()),
+  });
+
+  let bookingLink = "";
+  if (user.username) {
+    try {
+      bookingLink = buildProfileUrl(getAppUrl(), user.username);
+    } catch {
+      bookingLink = `/${user.username}`;
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <div>
-        <h2 className="text-lg font-semibold">Dashboard</h2>
-        <p className="text-sm text-muted-foreground">
-          Example content to preview how pages sit inside the layout.
-        </p>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Upcoming bookings</CardTitle>
-            <CardDescription>Next 7 days</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">12</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Revenue</CardTitle>
-            <CardDescription>This month</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">$8,420</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>New inquiries</CardTitle>
-            <CardDescription>Awaiting response</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">5</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent activity</CardTitle>
-          <CardDescription>
-            A wider card showing how full-width content looks.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Replace this with your real dashboard widgets, tables, or charts.
-        </CardContent>
-      </Card>
-    </div>
+    <DashboardHome
+      greeting={getGreeting(now)}
+      firstName={getFirstName(user.name)}
+      upcomingThisWeek={upcomingThisWeek}
+      todaysSchedule={todaysSchedule}
+      nextUpcoming={nextUpcoming}
+      summary={summary}
+      outstanding={outstanding}
+      activity={activity}
+      checklist={checklist}
+      bookingLink={bookingLink}
+    />
   );
 }
