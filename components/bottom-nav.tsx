@@ -7,6 +7,7 @@ import {
   IconCalendar,
   IconHome,
   IconSettings,
+  IconUser,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -16,14 +17,9 @@ const navItems: {
   title: string;
   href: string;
   icon: Icon;
+  emphasized?: boolean;
   match?: (pathname: string) => boolean;
 }[] = [
-  {
-    title: "Home",
-    href: "/dashboard",
-    icon: IconHome,
-    match: (pathname) => pathname === "/dashboard",
-  },
   {
     title: "Bookings",
     href: "/dashboard/bookings",
@@ -37,10 +33,23 @@ const navItems: {
     match: (pathname) => pathname.startsWith("/dashboard/packages"),
   },
   {
+    title: "Home",
+    href: "/dashboard",
+    icon: IconHome,
+    emphasized: true,
+    match: (pathname) => pathname === "/dashboard",
+  },
+  {
     title: "Settings",
     href: "/dashboard/settings",
     icon: IconSettings,
     match: (pathname) => pathname.startsWith("/dashboard/settings"),
+  },
+  {
+    title: "Profile",
+    href: "/dashboard/profile",
+    icon: IconUser,
+    match: (pathname) => pathname.startsWith("/dashboard/profile"),
   },
 ];
 
@@ -52,12 +61,35 @@ export function BottomNav() {
       aria-label="Main navigation"
       className="shrink-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
-      <div className="flex w-full items-center justify-around rounded-full border bg-background/95 px-4 py-2 shadow-lg backdrop-blur supports-backdrop-filter:bg-background/80">
+      <div className="relative flex h-14 w-full items-center justify-around overflow-visible rounded-full border bg-background/95 px-4 shadow-lg backdrop-blur supports-backdrop-filter:bg-background/80">
         {navItems.map((item) => {
           const isActive = item.match
             ? item.match(pathname)
             : pathname === item.href;
           const Icon = item.icon;
+          const isEmphasized = Boolean(item.emphasized);
+
+          if (isEmphasized) {
+            return (
+              <div
+                key={item.href}
+                className="relative flex size-11 shrink-0 items-center justify-center"
+              >
+                <Link
+                  href={item.href}
+                  className={cn(
+                    "absolute z-10 flex size-16 items-center justify-center rounded-full shadow-md transition-colors",
+                    isActive
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-primary text-primary-foreground hover:bg-primary/90"
+                  )}
+                >
+                  <Icon className="size-7 stroke-[2]" aria-hidden />
+                  <span className="sr-only">{item.title}</span>
+                </Link>
+              </div>
+            );
+          }
 
           return (
             <Link

@@ -86,3 +86,16 @@ export type User = z.infer<typeof userSchema>;
 
 export type SignupUser = z.infer<typeof signupUserSchema>;
 export type UpdateUser = z.infer<typeof updateUserSchema>;
+
+/** Dashboard profile edits — excludes email/password and internal fields. */
+export const profileUpdateSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .regex(/^[a-z0-9_-]+$/i, "Use letters, numbers, hyphens, or underscores."),
+  mobile: z.string().min(1, "Phone number is required"),
+  country_code: z.string().min(1, "Country code is required"),
+});
+
+export type ProfileUpdate = z.infer<typeof profileUpdateSchema>;

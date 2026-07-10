@@ -617,7 +617,7 @@ export function BookingsManager({
           value={statusFilter}
           onValueChange={(value) => setStatusFilter(value as BookingFilter)}
         >
-          <SelectTrigger id="booking-filter" className="w-[11.5rem]">
+          <SelectTrigger id="booking-filter" className="w-46">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
