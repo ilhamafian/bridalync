@@ -7,6 +7,7 @@ import {
   type Booking,
   type PersistedBooking,
 } from "@/schemas/bookingSchema";
+import { notifyBookingConfirmed } from "@/utils/push/bookingNotifications";
 
 export async function getBookingById(
   id: string
@@ -60,6 +61,14 @@ export async function confirmBookingPayment(
       booking.freelancerUserId,
       booking.invoice.depositRm
     );
+  }
+
+  if (booking) {
+    try {
+      await notifyBookingConfirmed(booking);
+    } catch (error) {
+      console.error("Failed to send booking confirmed push:", error);
+    }
   }
 
   return booking;

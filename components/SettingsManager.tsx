@@ -5,6 +5,7 @@ import { useRef, useState } from "react";
 import { IconPlus, IconTrash, IconUpload } from "@tabler/icons-react";
 
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
+import { PwaSettingsCard } from "@/components/PwaSettingsCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -780,6 +781,8 @@ export function SettingsManager({
           </Button>
         </CardFooter>
       </Card>
+
+      <PwaSettingsCard />
     </div>
   );
 }

@@ -50,6 +50,8 @@ export const bookingSchema = z.object({
   ]),
   stripeCheckoutSessionId: z.string().optional(),
   stripePaymentIntentId: z.string().optional(),
+  /** Keys of sessions that already received an upcoming-session push. */
+  sessionRemindersSent: z.array(z.string()).optional(),
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
 });

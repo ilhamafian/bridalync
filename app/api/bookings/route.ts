@@ -8,6 +8,7 @@ import {
   resolveBookingQuotation,
   resolveFreelancerForBooking,
 } from "@/utils/booking/createBooking";
+import { notifyNewClientBooking } from "@/utils/push/bookingNotifications";
 import { freelancerExists } from "@/utils/users";
 
 export async function POST(req: NextRequest) {
@@ -55,6 +56,12 @@ export async function POST(req: NextRequest) {
       paymentOption,
       status: data.intent === "booking" ? "pending" : "enquiry",
     });
+
+    try {
+      await notifyNewClientBooking(booking);
+    } catch (error) {
+      console.error("Failed to send new booking push:", error);
+    }
 
     return createResponse(
       {
