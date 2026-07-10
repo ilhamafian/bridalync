@@ -84,7 +84,7 @@ export function BottomNav() {
                       : "bg-primary text-primary-foreground hover:bg-primary/90"
                   )}
                 >
-                  <Icon className="size-7 stroke-[2]" aria-hidden />
+                  <Icon className="size-7 stroke-2" aria-hidden />
                   <span className="sr-only">{item.title}</span>
                 </Link>
               </div>
