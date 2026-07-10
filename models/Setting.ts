@@ -1,9 +1,12 @@
 import { ZodSchema } from "zod";
 
 import { ModelBase } from "@/models/ModelBase";
-import { settingSchema, settingUpdateSchema, type Setting } from "@/schemas/settingSchema";
+import {
+  settingSchema,
+  settingUpdateSchema,
+  type Setting,
+} from "@/schemas/settingSchema";
 import { toIdString } from "@/schemas/objectId";
-
 
 export class SettingModel extends ModelBase<Setting> {
   protected collectionName = "settings";
@@ -41,7 +44,6 @@ export class SettingModel extends ModelBase<Setting> {
         charge_by: settings.charge_by,
         travel: settings.travel,
         payment: settings.payment,
-        bank_account: settings.bank_account,
         invoice: settings.invoice,
         time_slots: settings.time_slots,
       });

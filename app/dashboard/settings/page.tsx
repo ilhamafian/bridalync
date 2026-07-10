@@ -1,65 +1,66 @@
+import { redirect } from "next/navigation";
+
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-  } from "@/components/ui/card";
-  
-  export default function Page() {
-    return (
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
-        <div>
-          <h2 className="text-lg font-semibold">Settings</h2>
-          <p className="text-sm text-muted-foreground">
-            Example content to preview how pages sit inside the layout.
-          </p>
-        </div>
-  
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upcoming bookings</CardTitle>
-              <CardDescription>Next 7 days</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold">12</p>
-            </CardContent>
-          </Card>
-  
-          <Card>
-            <CardHeader>
-              <CardTitle>Revenue</CardTitle>
-              <CardDescription>This month</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold">$8,420</p>
-            </CardContent>
-          </Card>
-  
-          <Card>
-            <CardHeader>
-              <CardTitle>New inquiries</CardTitle>
-              <CardDescription>Awaiting response</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-2xl font-semibold">5</p>
-            </CardContent>
-          </Card>
-        </div>
-  
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent activity</CardTitle>
-            <CardDescription>
-              A wider card showing how full-width content looks.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="text-sm text-muted-foreground">
-            Replace this with your real dashboard widgets, tables, or charts.
-          </CardContent>
-        </Card>
-      </div>
-    );
+  SettingsManager,
+  type SettingsItem,
+} from "@/components/SettingsManager";
+import { SettingModel } from "@/models/Setting";
+import { toIdString } from "@/schemas/objectId";
+import {
+  getDefaultTimeSlots,
+  paymentSettingSchema,
+  invoiceSettingSchema,
+} from "@/schemas/settingSchema";
+import { isOnboardingComplete } from "@/schemas/userSchema";
+import { getSessionUser } from "@/utils/auth/session";
+
+export default async function SettingsPage() {
+  const user = await getSessionUser();
+
+  if (!user) {
+    redirect("/auth");
   }
-  
+
+  if (!isOnboardingComplete(user.onboarding)) {
+    redirect("/onboarding");
+  }
+
+  const userId = toIdString(user._id);
+  if (!userId) {
+    redirect("/auth");
+  }
+
+  const setting = await new SettingModel().findSettingsByUserId(userId);
+  if (!setting) {
+    redirect("/onboarding");
+  }
+
+  const payment = paymentSettingSchema.parse(setting.payment ?? {});
+  const invoice = invoiceSettingSchema.parse(setting.invoice ?? {});
+  const timeSlots =
+    setting.time_slots?.length > 0
+      ? setting.time_slots
+      : getDefaultTimeSlots(setting.charge_by);
+
+  const initialSettings: SettingsItem = {
+    _id: toIdString(setting._id),
+    charge_by: setting.charge_by,
+    travel: setting.travel,
+    payment,
+    invoice: {
+      company_name: invoice.company_name,
+      company_registration_number: invoice.company_registration_number,
+      company_logo: invoice.company_logo,
+      terms_and_conditions: invoice.terms_and_conditions,
+    },
+    time_slots: timeSlots,
+  };
+
+  return (
+    <SettingsManager
+      initialSettings={initialSettings}
+      isStripeConnected={Boolean(user.is_stripe_connected)}
+      hasStripeAccount={Boolean(user.stripe_account_id)}
+    />
+  );
+}
