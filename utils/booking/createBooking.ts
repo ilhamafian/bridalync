@@ -28,7 +28,8 @@ function parseStyleVariantId(id: string): {
 
 export async function resolveBookingQuotation(
   freelancerUserId: string,
-  input: CreateBookingRequest
+  input: CreateBookingRequest,
+  options?: { relaxPaymentDeadline?: boolean }
 ): Promise<{
   invoice: BookingQuotationSummary;
   packageName: string;
@@ -132,7 +133,11 @@ export async function resolveBookingQuotation(
   const paymentOption: "deposit" | "full" =
     mustPayFull || input.paymentOption === "full" ? "full" : "deposit";
 
-  if (input.paymentOption === "deposit" && mustPayFull) {
+  if (
+    input.paymentOption === "deposit" &&
+    mustPayFull &&
+    !options?.relaxPaymentDeadline
+  ) {
     throw new Error(
       `Full payment is required when booking within ${balanceDueBeforeDays} day${
         balanceDueBeforeDays === 1 ? "" : "s"

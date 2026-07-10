@@ -76,3 +76,32 @@ export async function markBookingPaymentFailed(bookingId: string) {
 
   return getBookingById(bookingId);
 }
+
+const bookingDashboardFieldsSchema = bookingRecordSchema.pick({
+  contact: true,
+  packageId: true,
+  packageName: true,
+  styleId: true,
+  styleName: true,
+  addOnIds: true,
+  sessions: true,
+  invoice: true,
+  paymentOption: true,
+  status: true,
+});
+
+export async function updateDashboardBooking(
+  id: string,
+  data: Partial<BookingRecord>
+) {
+  if (!ObjectId.isValid(id)) return null;
+
+  await bookingModel.update(id, data, bookingDashboardFieldsSchema.partial());
+  return getBookingById(id);
+}
+
+export async function deleteBooking(id: string) {
+  if (!ObjectId.isValid(id)) return false;
+  await bookingModel.delete(id);
+  return true;
+}

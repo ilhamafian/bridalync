@@ -40,7 +40,14 @@ export const bookingRecordSchema = z.object({
   sessions: z.array(bookingSessionRecordSchema),
   invoice: quotationSummarySchema,
   paymentOption: z.enum(["deposit", "full"]).default("deposit"),
-  status: z.enum(["pending", "confirmed", "failed", "enquiry", "cancelled"]),
+  status: z.enum([
+    "pending",
+    "confirmed",
+    "completed",
+    "failed",
+    "enquiry",
+    "cancelled",
+  ]),
   stripeCheckoutSessionId: z.string().optional(),
   stripePaymentIntentId: z.string().optional(),
   created_at: z.coerce.date().optional(),
@@ -127,3 +134,25 @@ export const updateBookingStatusSchema = z.object({
   freelancerUsername: z.string().min(1),
   status: z.enum(["pending", "confirmed", "failed", "cancelled"]),
 });
+
+export const bookingStatusSchema = bookingRecordSchema.shape.status;
+
+export const manualBookingInputSchema = z.object({
+  contact: bookingContactSchema,
+  packageId: z.string().min(1),
+  style: bookingLineItemInputSchema.optional(),
+  addOns: z.array(bookingLineItemInputSchema).default([]),
+  sessions: z.array(bookingSessionInputSchema).min(1),
+  distanceKmBySessionKey: z.record(z.string(), z.number()).optional(),
+  paymentOption: z.enum(["deposit", "full"]).default("deposit"),
+  status: bookingStatusSchema.default("confirmed"),
+});
+
+export type ManualBookingInput = z.infer<typeof manualBookingInputSchema>;
+
+export const dashboardBookingUpdateSchema = manualBookingInputSchema.partial().extend({
+  contact: bookingContactSchema.optional(),
+  sessions: z.array(bookingSessionInputSchema).min(1).optional(),
+});
+
+export type DashboardBookingUpdate = z.infer<typeof dashboardBookingUpdateSchema>;

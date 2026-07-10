@@ -32,12 +32,16 @@ function formatBookingStatusIntro(
   switch (status) {
     case "confirmed":
       return `Hi ${freelancerName}, my booking is confirmed.`;
+    case "completed":
+      return `Hi ${freelancerName}, my booking is completed.`;
     case "failed":
       return `Hi ${freelancerName}, I had trouble completing my booking payment.`;
     case "pending":
       return `Hi ${freelancerName}, I have a pending booking.`;
     case "enquiry":
       return `Hi ${freelancerName}, I have an enquiry about my booking.`;
+    case "cancelled":
+      return `Hi ${freelancerName}, my booking was cancelled.`;
   }
 }
 
