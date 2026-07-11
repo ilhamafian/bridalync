@@ -21,7 +21,7 @@ const navItems: {
   match?: (pathname: string) => boolean;
 }[] = [
   {
-    title: "Bookings",
+    title: "Bookings",  
     href: "/dashboard/bookings",
     icon: IconCalendar,
     match: (pathname) => pathname.startsWith("/dashboard/bookings"),
