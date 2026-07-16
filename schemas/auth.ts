@@ -36,3 +36,20 @@ export const loginRequestSchema = z.object({
 });
 
 export type LoginRequest = z.infer<typeof loginRequestSchema>;
+
+export const forgotPasswordRequestSchema = z.object({
+  email: z.email(),
+});
+
+export type ForgotPasswordRequest = z.infer<typeof forgotPasswordRequestSchema>;
+
+export const resetPasswordRequestSchema = z.object({
+  email: z.email(),
+  code: z
+    .string()
+    .length(6, "Reset code must be 6 digits")
+    .regex(/^\d{6}$/, "Reset code must be 6 digits"),
+  password: signupPasswordSchema,
+});
+
+export type ResetPasswordRequest = z.infer<typeof resetPasswordRequestSchema>;

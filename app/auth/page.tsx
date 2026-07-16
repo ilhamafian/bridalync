@@ -13,6 +13,7 @@ import {
 
 type AuthTab = "login" | "signup";
 type SignupStep = "credentials" | "verify-email";
+type LoginStep = "credentials" | "forgot-email" | "forgot-reset";
 
 const inputClassName = cn(
   "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground",
@@ -91,6 +92,7 @@ export default function AuthPage() {
   const router = useRouter();
   const [tab, setTab] = useState<AuthTab>("login");
   const [signupStep, setSignupStep] = useState<SignupStep>("credentials");
+  const [loginStep, setLoginStep] = useState<LoginStep>("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [verificationCode, setVerificationCode] = useState("");
@@ -99,6 +101,27 @@ export default function AuthPage() {
   const [error, setError] = useState<string | null>(null);
 
   const isVerifyStep = tab === "signup" && signupStep === "verify-email";
+  const isForgotEmailStep = tab === "login" && loginStep === "forgot-email";
+  const isForgotResetStep = tab === "login" && loginStep === "forgot-reset";
+  const isAlternateStep = isVerifyStep || isForgotEmailStep || isForgotResetStep;
+
+  async function handleSendPasswordResetCode() {
+    const response = await fetch("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+
+    const payload: unknown = await response.json();
+    if (!response.ok) {
+      setError(getErrorMessage(payload));
+      return false;
+    }
+
+    setLoginStep("forgot-reset");
+    setVerificationCode("");
+    return true;
+  }
 
   async function handleSendVerificationCode() {
     const response = await fetch("/api/auth/send-verification-code", {
@@ -126,6 +149,41 @@ export default function AuthPage() {
     setError(null);
 
     try {
+      if (tab === "login" && loginStep === "forgot-email") {
+        await handleSendPasswordResetCode();
+        return;
+      }
+
+      if (tab === "login" && loginStep === "forgot-reset") {
+        const passwordResult = signupPasswordSchema.safeParse(password);
+        if (!passwordResult.success) {
+          setError(
+            passwordResult.error.issues[0]?.message ??
+              "Password does not meet requirements."
+          );
+          return;
+        }
+
+        const response = await fetch("/api/auth/reset-password", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            code: verificationCode,
+            password,
+          }),
+        });
+
+        const payload: unknown = await response.json();
+        if (!response.ok) {
+          setError(getErrorMessage(payload));
+          return;
+        }
+
+        router.push(getRedirectPath("login", payload as AuthSuccessPayload));
+        return;
+      }
+
       if (tab === "signup" && signupStep === "credentials") {
         const passwordResult = signupPasswordSchema.safeParse(password);
         if (!passwordResult.success) {
@@ -203,6 +261,21 @@ export default function AuthPage() {
     }
   }
 
+  async function handleResendResetCode() {
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      await handleSendPasswordResetCode();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
       {/* <Button
@@ -220,19 +293,27 @@ export default function AuthPage() {
         <h1 className="mb-2 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
           {isVerifyStep
             ? "Verify your email"
-            : tab === "login"
-              ? "Welcome back"
-              : "Create your account"}
+            : isForgotEmailStep
+              ? "Reset your password"
+              : isForgotResetStep
+                ? "Choose a new password"
+                : tab === "login"
+                  ? "Welcome back"
+                  : "Create your account"}
         </h1>
         <p className="mb-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
           {isVerifyStep
             ? `We sent a 6-digit code to ${email}. Enter it below to finish creating your account.`
-            : tab === "login"
-              ? "Log in to manage your bookings and clients."
-              : "Sign up to share your booking link and grow your business."}
+            : isForgotEmailStep
+              ? "Enter your email and we'll send you a 6-digit reset code."
+              : isForgotResetStep
+                ? `We sent a 6-digit code to ${email}. Enter it below with your new password.`
+                : tab === "login"
+                  ? "Log in to manage your bookings and clients."
+                  : "Sign up to share your booking link and grow your business."}
         </p>
 
-        {!isVerifyStep && (
+        {!isAlternateStep && (
         <div
           role="tablist"
           aria-label="Authentication mode"
@@ -253,6 +334,7 @@ export default function AuthPage() {
               onClick={() => {
                 setTab(value);
                 setSignupStep("credentials");
+                setLoginStep("credentials");
                 setError(null);
               }}
             >
@@ -262,7 +344,7 @@ export default function AuthPage() {
         </div>
         )}
 
-        {!isVerifyStep && (
+        {!isAlternateStep && (
         <>
         <div className="flex w-full flex-col gap-3">
           <Button
@@ -300,34 +382,62 @@ export default function AuthPage() {
           aria-label={
             isVerifyStep
               ? "Verify email form"
-              : tab === "login"
-                ? "Log in form"
-                : "Sign up form"
+              : isForgotEmailStep
+                ? "Forgot password form"
+                : isForgotResetStep
+                  ? "Reset password form"
+                  : tab === "login"
+                    ? "Log in form"
+                    : "Sign up form"
           }
         >
-          {isVerifyStep ? (
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-foreground">
-                Verification code
-              </span>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                placeholder="000000"
-                value={verificationCode}
-                onChange={(event) =>
-                  setVerificationCode(
-                    event.target.value.replace(/\D/g, "").slice(0, 6)
-                  )
-                }
-                className={cn(inputClassName, "text-center tracking-[0.3em]")}
-                minLength={6}
-                maxLength={6}
-                pattern="\d{6}"
-                required
-              />
-            </label>
+          {isVerifyStep || isForgotResetStep ? (
+            <>
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-foreground">
+                  {isForgotResetStep ? "Reset code" : "Verification code"}
+                </span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  placeholder="000000"
+                  value={verificationCode}
+                  onChange={(event) =>
+                    setVerificationCode(
+                      event.target.value.replace(/\D/g, "").slice(0, 6)
+                    )
+                  }
+                  className={cn(inputClassName, "text-center tracking-[0.3em]")}
+                  minLength={6}
+                  maxLength={6}
+                  pattern="\d{6}"
+                  required
+                />
+              </label>
+
+              {isForgotResetStep ? (
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-foreground">
+                    New password
+                  </span>
+                  <input
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    className={inputClassName}
+                    minLength={8}
+                    required
+                  />
+                  <span className="text-xs text-muted-foreground">
+                    At least 8 characters with uppercase, lowercase, a number,
+                    and a symbol.
+                  </span>
+                </label>
+              ) : null}
+            </>
           ) : (
             <>
           <label className="flex flex-col gap-1.5">
@@ -343,6 +453,7 @@ export default function AuthPage() {
             />
           </label>
 
+          {!isForgotEmailStep ? (
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-foreground">Password</span>
             <input
@@ -364,6 +475,22 @@ export default function AuthPage() {
               </span>
             )}
           </label>
+          ) : null}
+
+          {tab === "login" && loginStep === "credentials" ? (
+            <div className="-mt-2 flex justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setLoginStep("forgot-email");
+                  setError(null);
+                }}
+                className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+              >
+                Forgot password?
+              </button>
+            </div>
+          ) : null}
             </>
           )}
 
@@ -380,14 +507,22 @@ export default function AuthPage() {
             {isSubmitting
               ? isVerifyStep
                 ? "Verifying..."
-                : tab === "login"
-                  ? "Logging in..."
-                  : "Sending code..."
+                : isForgotEmailStep
+                  ? "Sending code..."
+                  : isForgotResetStep
+                    ? "Resetting..."
+                    : tab === "login"
+                      ? "Logging in..."
+                      : "Sending code..."
               : isVerifyStep
                 ? "Verify and create account"
-                : tab === "login"
-                  ? "Log in"
-                  : "Continue"}
+                : isForgotEmailStep
+                  ? "Send reset code"
+                  : isForgotResetStep
+                    ? "Reset password"
+                    : tab === "login"
+                      ? "Log in"
+                      : "Continue"}
           </Button>
 
           {isVerifyStep && (
@@ -411,6 +546,48 @@ export default function AuthPage() {
                 className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
               >
                 Back
+              </button>
+            </div>
+          )}
+
+          {isForgotResetStep && (
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => void handleResendResetCode()}
+                className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+              >
+                Resend code
+              </button>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setLoginStep("forgot-email");
+                  setVerificationCode("");
+                  setPassword("");
+                  setError(null);
+                }}
+                className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+              >
+                Back
+              </button>
+            </div>
+          )}
+
+          {isForgotEmailStep && (
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                disabled={isSubmitting}
+                onClick={() => {
+                  setLoginStep("credentials");
+                  setError(null);
+                }}
+                className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
+              >
+                Back to log in
               </button>
             </div>
           )}
