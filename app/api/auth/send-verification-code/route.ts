@@ -21,7 +21,12 @@ export async function POST(req: NextRequest) {
     return createResponse({ success: true });
   } catch (error) {
     if (error instanceof EmailVerificationError) {
-      const status = error.code === "EMAIL_TAKEN" ? 409 : 400;
+      const status =
+        error.code === "EMAIL_TAKEN"
+          ? 409
+          : error.code === "EMAIL_SEND_FAILED"
+            ? 502
+            : 400;
       return createResponse({ error: error.message }, status);
     }
 
