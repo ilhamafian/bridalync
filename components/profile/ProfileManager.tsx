@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import {
@@ -73,8 +74,10 @@ export function ProfileManager({
     initialProfile.country_code || DEFAULT_COUNTRY_CODE
   );
   const [saving, setSaving] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const router = useRouter();
 
   function normalizeUsername(value: string) {
     return value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
@@ -135,13 +138,54 @@ export function ProfileManager({
     }
   }
 
+  async function handleLogout() {
+    if (loggingOut) return;
+
+    setError(null);
+    setSuccess(null);
+    setLoggingOut(true);
+
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(
+          typeof data.error === "string" ? data.error : "Failed to log out."
+        );
+        return;
+      }
+
+      const redirectTo =
+        typeof data.redirectTo === "string" ? data.redirectTo : "/auth";
+      router.push(redirectTo);
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setLoggingOut(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <div>
-        <h2 className="text-lg font-semibold">Profile</h2>
-        <p className="text-sm text-muted-foreground">
-          Update how clients find and contact you.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold">Profile</h2>
+          <p className="text-sm text-muted-foreground">
+            Update how clients find and contact you.
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="destructive"
+          size="sm"
+          onClick={handleLogout}
+          disabled={saving || loggingOut}
+          className="shrink-0"
+        >
+          {loggingOut ? "Logging out…" : "Log out"}
+        </Button>
       </div>
 
       <Card>
@@ -237,7 +281,7 @@ export function ProfileManager({
           ) : null}
         </CardContent>
         <CardFooter>
-          <Button type="button" onClick={handleSave} disabled={saving}>
+          <Button type="button" onClick={handleSave} disabled={saving || loggingOut}>
             {saving ? "Saving…" : "Save profile"}
           </Button>
         </CardFooter>

@@ -205,7 +205,7 @@ export default function AuthPage() {
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
-      <Button
+      {/* <Button
         type="button"
         variant="ghost"
         size="sm"
@@ -214,7 +214,7 @@ export default function AuthPage() {
         className="absolute right-4 top-4 h-8 px-2 text-xs text-muted-foreground"
       >
         {isLoggingOut ? "Logging out…" : "Log out"}
-      </Button>
+      </Button> */}
       <div className="flex w-full max-w-md flex-col items-center">
         <p className="mb-2 text-sm font-medium text-primary">Bridalync</p>
         <h1 className="mb-2 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
