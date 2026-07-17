@@ -7,6 +7,7 @@ import {
   type Booking,
   type PersistedBooking,
 } from "@/schemas/bookingSchema";
+import { sendBookingPaymentConfirmationEmail } from "@/utils/email/booking-confirmation";
 import { notifyBookingConfirmed } from "@/utils/push/bookingNotifications";
 
 export async function getBookingById(
@@ -68,6 +69,18 @@ export async function confirmBookingPayment(
       await notifyBookingConfirmed(booking);
     } catch (error) {
       console.error("Failed to send booking confirmed push:", error);
+    }
+
+    try {
+      const freelancer = booking.freelancerUserId
+        ? await new UserModel().findById(booking.freelancerUserId)
+        : null;
+      await sendBookingPaymentConfirmationEmail(
+        booking,
+        freelancer?.name ?? null
+      );
+    } catch (error) {
+      console.error("Failed to send booking confirmation email:", error);
     }
   }
 
