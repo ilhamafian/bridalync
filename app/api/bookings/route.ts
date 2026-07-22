@@ -3,6 +3,7 @@ import { NextRequest } from "next/server";
 import { createBooking } from "@/models/Booking";
 import { createBookingRequestSchema } from "@/schemas/bookingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
+import { assertSessionsAvailable } from "@/utils/booking/availability.server";
 import {
   mapSessionsForStorage,
   resolveBookingQuotation,
@@ -37,6 +38,16 @@ export async function POST(req: NextRequest) {
         { error: "This stylist is not ready to accept bookings yet." },
         503
       );
+    }
+
+    try {
+      await assertSessionsAvailable(freelancer.userId, data.sessions);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "One or more selected sessions are no longer available.";
+      return createResponse({ error: message }, 409);
     }
 
     const { invoice, packageName, styleId, styleName, paymentOption } =

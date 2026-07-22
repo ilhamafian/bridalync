@@ -16,6 +16,12 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { calculateBookingQuotation, formatRm, applyPaymentOption, requiresFullPayment } from "@/utils/booking/pricing";
+import {
+  isSlotTaken,
+  normalizeSessionDate,
+  toDateKey,
+  type PublicBookedSlot,
+} from "@/utils/booking/availability";
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
 import { Client } from "@/schemas/clientSchema";
@@ -238,6 +244,7 @@ export default function ClientPage() {
   const [styles, setStyles] = useState<ClientStyleCategory[]>([]);
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [settings, setSettings] = useState<PublicSetting | null>(null);
+  const [bookedSlots, setBookedSlots] = useState<PublicBookedSlot[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
   const [user, setUser] = useState<PublicUser | null>(null);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
@@ -287,6 +294,14 @@ export default function ClientPage() {
   );
 
   const timeSlots = settings?.time_slots ?? [];
+
+  const isDateFullyBooked = (date: Date) =>
+    timeSlots.length > 0 &&
+    timeSlots.every((slot) =>
+      isSlotTaken(date, slot, bookedSlots, sessions)
+    );
+
+  const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
 
   const stepOrder = useMemo(() => {
     const hasStyles = styles.length > 0 && settings?.charge_by === "style";
@@ -470,6 +485,9 @@ export default function ClientPage() {
       setStyles((data.styles as ClientStyleCategory[] | undefined) ?? []);
       setAddOns((data.add_ons as CatalogAddOn[] | undefined) ?? []);
       setSettings((data.settings as PublicSetting | undefined) ?? null);
+      setBookedSlots(
+        (data.booked_slots as PublicBookedSlot[] | undefined) ?? []
+      );
       setSelectedPackageId((current) => current ?? packageOptions[0]?.id ?? null);
       setSelectedStyleCategoryId(null);
       setSelectedVariantId(null);
@@ -653,6 +671,9 @@ export default function ClientPage() {
 
   function handleAddSession() {
     if (!nextSessionTemplate || !selectedDate || !selectedTimeSlot) return;
+    if (isSlotTaken(selectedDate, selectedTimeSlot, bookedSlots, sessions)) {
+      return;
+    }
 
     setSessions((current) => [
       ...current,
@@ -661,7 +682,7 @@ export default function ClientPage() {
         status: "scheduled",
         order: nextSessionTemplate.order,
         name: nextSessionTemplate.name,
-        date: selectedDate,
+        date: normalizeSessionDate(selectedDate),
         time_slot: selectedTimeSlot,
       },
     ]);
@@ -933,7 +954,10 @@ export default function ClientPage() {
                       setSelectedDate(date);
                       setSelectedTimeSlot(null);
                     }}
-                    disabled={{ before: new Date() }}
+                    disabled={[
+                      { before: new Date() },
+                      (date) => isDateFullyBooked(date),
+                    ]}
                     captionLayout="dropdown"
                     className="p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
                   />
@@ -943,7 +967,15 @@ export default function ClientPage() {
                     Available slots
                   </p>
                   <div className="grid grid-cols-2 gap-3">
-                    {timeSlots.map((slot) => (
+                    {timeSlots.map((slot) => {
+                      const slotTaken = isSlotTaken(
+                        selectedDate,
+                        slot,
+                        bookedSlots,
+                        sessions
+                      );
+
+                      return (
                       <Button
                         key={`${slot.startTime}-${slot.endTime}`}
                         type="button"
@@ -954,14 +986,26 @@ export default function ClientPage() {
                             : "outline"
                         }
                         size="lg"
-                        disabled={!selectedDate}
-                        className="h-8 w-full"
+                        disabled={!selectedDate || slotTaken}
+                        className={cn(
+                          "h-8 w-full",
+                          slotTaken && "opacity-50"
+                        )}
                         onClick={() => setSelectedTimeSlot(slot)}
                       >
                         {formatTimeSlot(slot)}
                       </Button>
-                    ))}
+                      );
+                    })}
                   </div>
+                  {selectedDateKey &&
+                    timeSlots.every((slot) =>
+                      isSlotTaken(selectedDate, slot, bookedSlots, sessions)
+                    ) && (
+                      <p className="text-sm text-muted-foreground">
+                        All time slots are booked on this date.
+                      </p>
+                    )}
                 </CardFooter>
               </Card>
             )}
@@ -983,7 +1027,16 @@ export default function ClientPage() {
                   type="button"
                   variant="outline"
                   size="lg"
-                  disabled={!selectedDate || !selectedTimeSlot}
+                  disabled={
+                    !selectedDate ||
+                    !selectedTimeSlot ||
+                    isSlotTaken(
+                      selectedDate,
+                      selectedTimeSlot,
+                      bookedSlots,
+                      sessions
+                    )
+                  }
                   onClick={handleAddSession}
                 >
                   Add {nextSessionTemplate.name} session

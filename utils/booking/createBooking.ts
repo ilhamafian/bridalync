@@ -11,6 +11,7 @@ import {
   requiresFullPayment,
   type BookingQuotationSummary,
 } from "@/utils/booking/pricing";
+import { normalizeSessionDate } from "@/utils/booking/availability";
 
 function parseStyleVariantId(id: string): {
   styleDocId: string;
@@ -170,7 +171,10 @@ export async function resolveFreelancerForBooking(username: string) {
 
 export function mapSessionsForStorage(input: CreateBookingRequest) {
   return input.sessions.map((session) => ({
-    ...toDbSession(session),
+    ...toDbSession({
+      ...session,
+      date: normalizeSessionDate(session.date),
+    }),
     client_key: session.client_key,
   }));
 }

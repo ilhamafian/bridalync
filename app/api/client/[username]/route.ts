@@ -8,6 +8,8 @@ import { toIdString } from "@/schemas/objectId";
 import { SettingModel } from "@/models/Setting";
 import { publicUserSchema } from "@/schemas/userSchema";
 import { publicSettingSchema } from "@/schemas/settingSchema";
+import { bookingModel } from "@/models/Booking";
+import { getOccupiedSlotsFromBookings } from "@/utils/booking/availability";
 
 export async function GET (request: NextRequest) {
     try {
@@ -39,12 +41,19 @@ export async function GET (request: NextRequest) {
                 ? (await new AddOnModel().getAddOnsByUserId(user_id)) ?? []
                 : [];
 
+        const bookings = await bookingModel.find({
+            freelancerUserId: user_id,
+            status: { $in: ["pending", "confirmed", "completed"] },
+        });
+        const booked_slots = getOccupiedSlotsFromBookings(bookings);
+
         const response = {
             user: publicUser,
             packages,
             styles,
             add_ons,
             settings: publicSettings,
+            booked_slots,
         }
         return createResponse(response);
     } catch (error) {
