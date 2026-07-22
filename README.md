@@ -63,7 +63,7 @@ Early development. The app currently includes a calendar date picker as the firs
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Yes (PWA push) | Web Push VAPID public key |
 | `VAPID_PRIVATE_KEY` | Yes (PWA push) | Web Push VAPID private key |
 | `VAPID_SUBJECT` | No | `mailto:` or `https:` contact for VAPID (default `mailto:hello@bridalync.app`) |
-| `CRON_SECRET` | Yes (reminders) | Bearer token for `/api/cron/booking-reminders` (Vercel Cron uses this automatically) |
+| `CRON_SECRET` | Yes (reminders) | Bearer token for `/api/cron/booking-reminders` and `/api/cron/balance-reminders` (Vercel Cron uses this automatically) |
 
 Generate VAPID keys with:
 

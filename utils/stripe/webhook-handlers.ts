@@ -1,8 +1,13 @@
 import {
+  confirmBookingBalancePayment,
   confirmBookingPayment,
   markBookingPaymentFailed,
 } from "@/utils/bookings";
-import { getBookingIdFromMetadata } from "@/utils/stripe/metadata";
+import {
+  getBookingIdFromMetadata,
+  isBookingBalancePayment,
+  isBookingInitialPayment,
+} from "@/utils/stripe/metadata";
 import { syncPayoutOnboardingStatus } from "@/utils/stripe/connect";
 
 type StripeMetadata = Record<string, string> | undefined | null;
@@ -24,6 +29,11 @@ export async function handleBookingPaymentConfirmed(
     return;
   }
 
+  if (isBookingBalancePayment(metadata)) {
+    await confirmBookingBalancePayment(bookingId, paymentIntentId);
+    return;
+  }
+
   await confirmBookingPayment(bookingId, paymentIntentId);
 }
 
@@ -31,6 +41,11 @@ export async function handleBookingPaymentFailed(metadata: StripeMetadata) {
   const bookingId = getBookingIdFromMetadata(metadata);
   if (!bookingId) {
     console.warn("[stripe webhook] payment failed without bookingId metadata");
+    return;
+  }
+
+  // Balance checkout expiry should not fail an already-confirmed booking.
+  if (isBookingBalancePayment(metadata)) {
     return;
   }
 
@@ -58,8 +73,8 @@ export async function handlePaymentIntentSucceeded(paymentIntent: {
   id?: string;
 }) {
   if (
-    paymentIntent.metadata?.type !== "booking_deposit" &&
-    paymentIntent.metadata?.type !== "booking_full_payment"
+    !isBookingInitialPayment(paymentIntent.metadata) &&
+    !isBookingBalancePayment(paymentIntent.metadata)
   ) {
     return;
   }

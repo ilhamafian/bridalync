@@ -88,3 +88,71 @@ export async function createDepositCheckoutSession(input: {
 
   return session;
 }
+
+export async function createBalanceCheckoutSession(input: {
+  booking: PersistedBooking;
+  freelancerUsername: string;
+  stripeAccountId: string;
+  owner: ReturnType<typeof buildStripeOwner>;
+}) {
+  const stripe = getStripe();
+  const appUrl = getAppUrl();
+  const bookingId = String(input.booking._id);
+  const amountDueRm = input.booking.invoice.balanceRm;
+
+  if (amountDueRm <= 0) {
+    throw new Error("This booking has no remaining balance.");
+  }
+
+  await ensurePaymentCapabilities(input.stripeAccountId, input.owner);
+
+  const metadata = buildBookingCheckoutMetadata({
+    booking: input.booking,
+    freelancerUsername: input.freelancerUsername,
+    purpose: "balance",
+  });
+
+  const productName = `Balance — ${input.booking.packageName}`;
+  const productDescription = `Remaining booking balance with ${input.freelancerUsername} on Bridalync`;
+  const paymentDescription = `Bridalync balance — ${input.booking.packageName} (${input.freelancerUsername})`;
+
+  const session = await stripe.checkout.sessions.create(
+    {
+      mode: "payment",
+      customer_email: input.booking.contact.email,
+      line_items: [
+        {
+          price_data: {
+            currency: "myr",
+            unit_amount: toStripeAmount(amountDueRm),
+            product_data: {
+              name: productName,
+              description: productDescription,
+              metadata: {
+                bookingId: metadata.bookingId,
+                packageName: metadata.packageName,
+              },
+            },
+          },
+          quantity: 1,
+        },
+      ],
+      metadata,
+      payment_intent_data: {
+        metadata,
+        description: paymentDescription,
+      },
+      success_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=balance-success`,
+      cancel_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=cancelled`,
+    },
+    {
+      stripeAccount: input.stripeAccountId,
+    }
+  );
+
+  if (!session.url) {
+    throw new Error("Could not create Stripe Checkout session.");
+  }
+
+  return session;
+}

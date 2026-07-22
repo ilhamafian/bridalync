@@ -5,13 +5,17 @@ import { z } from "zod";
 import { bookingModel } from "@/models/Booking";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getBookingById } from "@/utils/bookings";
-import { createDepositCheckoutSession } from "@/utils/stripe/checkout";
+import {
+  createBalanceCheckoutSession,
+  createDepositCheckoutSession,
+} from "@/utils/stripe/checkout";
 import { buildStripeOwner } from "@/utils/stripe/connect";
 import { getFreelancerByUsername } from "@/utils/users";
 
 const checkoutRequestSchema = z.object({
   bookingId: z.string().min(1),
   freelancerUsername: z.string().min(1),
+  purpose: z.enum(["deposit", "balance"]).default("deposit"),
 });
 
 export async function POST(req: NextRequest) {
@@ -23,7 +27,7 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    const { bookingId, freelancerUsername } = parsed.data;
+    const { bookingId, freelancerUsername, purpose } = parsed.data;
     const booking = await getBookingById(bookingId);
 
     if (
@@ -33,8 +37,23 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: "Booking not found" }, 404);
     }
 
-    if (booking.status !== "pending") {
-      return createResponse({ error: "Booking can no longer be paid." }, 409);
+    if (purpose === "deposit") {
+      if (booking.status !== "pending") {
+        return createResponse({ error: "Booking can no longer be paid." }, 409);
+      }
+    } else {
+      if (booking.status !== "confirmed") {
+        return createResponse(
+          { error: "Balance can only be paid on a confirmed booking." },
+          409
+        );
+      }
+      if (booking.paymentOption !== "deposit" || booking.invoice.balanceRm <= 0) {
+        return createResponse(
+          { error: "This booking has no remaining balance." },
+          409
+        );
+      }
     }
 
     const freelancer = await getFreelancerByUsername(freelancerUsername);
@@ -45,12 +64,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const session = await createDepositCheckoutSession({
-      booking,
-      freelancerUsername: freelancerUsername.toLowerCase(),
-      stripeAccountId: freelancer.stripe_account_id,
-      owner: buildStripeOwner(freelancer),
-    });
+    const session =
+      purpose === "balance"
+        ? await createBalanceCheckoutSession({
+            booking,
+            freelancerUsername: freelancerUsername.toLowerCase(),
+            stripeAccountId: freelancer.stripe_account_id,
+            owner: buildStripeOwner(freelancer),
+          })
+        : await createDepositCheckoutSession({
+            booking,
+            freelancerUsername: freelancerUsername.toLowerCase(),
+            stripeAccountId: freelancer.stripe_account_id,
+            owner: buildStripeOwner(freelancer),
+          });
 
     await bookingModel.update(
       bookingId,

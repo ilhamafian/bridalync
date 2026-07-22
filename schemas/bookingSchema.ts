@@ -52,6 +52,8 @@ export const bookingSchema = z.object({
   stripePaymentIntentId: z.string().optional(),
   /** Keys of sessions that already received an upcoming-session push. */
   sessionRemindersSent: z.array(z.string()).optional(),
+  /** When the client was emailed a balance-due reminder. */
+  balanceReminderSentAt: z.coerce.date().optional(),
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
 });
@@ -104,6 +106,8 @@ export const publicBookingSchema = bookingSchema
     freelancerUserId: true,
     stripeCheckoutSessionId: true,
     stripePaymentIntentId: true,
+    sessionRemindersSent: true,
+    balanceReminderSentAt: true,
   })
   .extend({
     _id: z.string(),
@@ -117,8 +121,14 @@ export function toPublicBooking(
   booking: PersistedBooking,
   freelancer?: PublicBookingFreelancer | null
 ): PublicBooking {
-  const { freelancerUserId, stripeCheckoutSessionId, stripePaymentIntentId, ...rest } =
-    booking;
+  const {
+    freelancerUserId,
+    stripeCheckoutSessionId,
+    stripePaymentIntentId,
+    sessionRemindersSent,
+    balanceReminderSentAt,
+    ...rest
+  } = booking;
 
   const id =
     typeof booking._id === "string"

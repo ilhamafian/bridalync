@@ -7,6 +7,7 @@ import {
   type Booking,
   type PersistedBooking,
 } from "@/schemas/bookingSchema";
+import { sendBalancePaymentReceivedEmail } from "@/utils/email/balance-payment-received";
 import { sendBookingPaymentConfirmationEmail } from "@/utils/email/booking-confirmation";
 import { notifyBookingConfirmed } from "@/utils/push/bookingNotifications";
 
@@ -81,6 +82,64 @@ export async function confirmBookingPayment(
       );
     } catch (error) {
       console.error("Failed to send booking confirmation email:", error);
+    }
+  }
+
+  return booking;
+}
+
+export async function confirmBookingBalancePayment(
+  bookingId: string,
+  paymentIntentId?: string | null
+) {
+  if (!ObjectId.isValid(bookingId)) return null;
+
+  const existing = await getBookingById(bookingId);
+  if (!existing) return null;
+
+  if (
+    existing.paymentOption === "full" ||
+    existing.invoice.balanceRm <= 0
+  ) {
+    return existing;
+  }
+
+  const settledInvoice = {
+    ...existing.invoice,
+    depositRm: existing.invoice.totalRm,
+    balanceRm: 0,
+  };
+
+  await bookingModel.update(
+    bookingId,
+    {
+      paymentOption: "full",
+      invoice: settledInvoice,
+      ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
+    },
+    bookingSchema.pick({
+      paymentOption: true,
+      invoice: true,
+      stripePaymentIntentId: true,
+    })
+  );
+
+  const booking = await getBookingById(bookingId);
+  if (booking?.freelancerUserId && existing.invoice.balanceRm > 0) {
+    await new UserModel().recordDeferredEarning(
+      booking.freelancerUserId,
+      existing.invoice.balanceRm
+    );
+  }
+
+  if (booking) {
+    try {
+      const freelancer = booking.freelancerUserId
+        ? await new UserModel().findById(booking.freelancerUserId)
+        : null;
+      await sendBalancePaymentReceivedEmail(booking, freelancer?.name ?? null);
+    } catch (error) {
+      console.error("Failed to send balance received email:", error);
     }
   }
 
