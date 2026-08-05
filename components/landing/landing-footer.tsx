@@ -61,14 +61,16 @@ export function LandingFooter() {
           <p className="font-serif text-sm text-landing-cream-text/50">
             Privacy · Terms
           </p>
-          <Image
-            src="/landing/Bridalync Icon.png"
-            alt=""
-            width={36}
-            height={36}
-            className="size-9 rounded-full bg-landing-cream-text p-1"
-            aria-hidden="true"
-          />
+          <span className="flex size-11 items-center justify-center overflow-hidden rounded-full bg-landing-cream-text">
+            <Image
+              src="/landing/Bridalync Icon.png"
+              alt=""
+              width={44}
+              height={44}
+              className="size-9 object-contain"
+              aria-hidden="true"
+            />
+          </span>
         </div>
       </div>
     </footer>

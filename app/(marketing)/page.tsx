@@ -24,7 +24,7 @@ export default function LandingPage() {
               <span className="block text-[#828282]">disappointed.</span>
             </>
           }
-          imageSrc="/landing/Problem1.png"
+          imageSrc="/landing/Problem1.webp"
           imageAlt="Calendar crowded with social media notifications"
         />
 
@@ -36,7 +36,7 @@ export default function LandingPage() {
               <span className="text-[#828282]">mistake</span> starts there too.
             </>
           }
-          imageSrc="/landing/Problem2.png"
+          imageSrc="/landing/Problem2.webp"
           imageAlt="WhatsApp chat showing a double booking"
           reverse
         />
@@ -53,7 +53,7 @@ export default function LandingPage() {
               </span>
             </>
           }
-          imageSrc="/landing/Problem3.png"
+          imageSrc="/landing/Problem3.webp"
           imageAlt="Brain connected to multiple apps and platforms"
         />
 

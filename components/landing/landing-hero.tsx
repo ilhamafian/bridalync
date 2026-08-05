@@ -18,7 +18,7 @@ export function LandingHero() {
 
       <div className="relative mx-auto max-w-6xl">
         <Image
-          src="/landing/Hero Image.png"
+          src="/landing/Hero Image.webp"
           alt=""
           width={1600}
           height={1067}
@@ -33,7 +33,7 @@ export function LandingHero() {
             alt="Bridalync"
             width={72}
             height={72}
-            className="mb-5 size-12 rounded-2xl shadow-sm sm:mb-6 sm:size-16"
+            className="mb-5 size-12 rounded-2xl drop-shadow-[6px_8px_10px_rgba(0,0,0,0.28)] sm:mb-6 sm:size-14 lg:size-16"
             priority
           />
 

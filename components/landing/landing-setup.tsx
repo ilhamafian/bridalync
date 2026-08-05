@@ -39,7 +39,7 @@ export function LandingSetup() {
 
         <div className="relative mx-auto w-full max-w-[420px] rotate-[-0.58deg] lg:-ml-10 lg:mx-0 lg:max-w-none xl:-ml-14">
           <Image
-            src="/landing/setup1.png"
+            src="/landing/setup1.webp"
             alt="Instagram bio with Bridalync booking link"
             width={520}
             height={1040}
