@@ -3,10 +3,11 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 type LandingFeatureRowProps = {
-  title: string;
+  title: React.ReactNode;
   imageSrc: string;
   imageAlt: string;
   reverse?: boolean;
+  size?: "default" | "sm";
 };
 
 export function LandingFeatureRow({
@@ -14,6 +15,7 @@ export function LandingFeatureRow({
   imageSrc,
   imageAlt,
   reverse = false,
+  size = "default",
 }: LandingFeatureRowProps) {
   return (
     <section className="px-6 py-12 lg:px-8 lg:py-16">
@@ -24,7 +26,14 @@ export function LandingFeatureRow({
         )}
       >
         <div className="flex flex-col justify-center">
-          <h2 className="font-serif text-3xl leading-snug tracking-tight text-landing-ink sm:text-4xl lg:text-[2.5rem] lg:leading-[1.2]">
+          <h2
+            className={cn(
+              "font-serif font-bold leading-[1.1] tracking-tight text-landing-ink",
+              size === "sm"
+                ? "text-3xl sm:text-4xl lg:text-5xl xl:text-6xl"
+                : "text-4xl sm:text-5xl lg:text-7xl"
+            )}
+          >
             {title}
           </h2>
         </div>

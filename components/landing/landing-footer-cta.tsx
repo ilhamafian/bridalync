@@ -12,17 +12,17 @@ export function LandingFooterCta() {
       <Image
         src="/landing/Flower1.png"
         alt=""
-        width={280}
-        height={280}
-        className="pointer-events-none absolute -bottom-16 -left-10 w-48 opacity-90 sm:w-64 lg:w-72"
+        width={500}
+        height={500}
+        className="pointer-events-none absolute -bottom-4 -left-4 w-[min(55vw,20rem)] opacity-90 sm:-bottom-6 sm:-left-6 sm:w-[min(45vw,24rem)] lg:bottom-0 lg:left-0 lg:w-[28rem]"
         aria-hidden="true"
       />
       <Image
         src="/landing/Flower2.png"
         alt=""
-        width={280}
-        height={280}
-        className="pointer-events-none absolute -bottom-12 -right-8 w-44 opacity-90 sm:w-60 lg:w-72"
+        width={500}
+        height={500}
+        className="pointer-events-none absolute -bottom-4 -right-4 w-[min(55vw,20rem)] opacity-90 sm:-bottom-6 sm:-right-6 sm:w-[min(45vw,24rem)] lg:bottom-0 lg:right-0 lg:w-[28rem]"
         aria-hidden="true"
       />
 
@@ -31,14 +31,14 @@ export function LandingFooterCta() {
           Connect with us
         </h2>
         <p className="mt-4 font-serif text-lg text-landing-cream-text/85 sm:text-xl">
-          Follow along as we build Bridalync for bridal artists like you.
+        Book a personalised demo and discover how Bridalync saves you hours every week
         </p>
         <Button
           asChild
           size="lg"
-          className="mt-8 h-12 rounded-full border border-landing-cream-text/30 bg-landing-ink px-8 font-serif text-base font-medium text-landing-cream-text hover:bg-landing-ink/90"
+          className="mt-8 h-12 rounded-full border-2 border-landing-cream-text/40 bg-landing-cream-text/30 px-8 font-serif text-base font-medium text-landing-cream-text shadow-sm backdrop-blur-md hover:bg-landing-cream-text/40"
         >
-          <Link href="/auth?tab=signup">Let&apos;s connect</Link>
+          <Link href="/auth?tab=signup">Join Waitlist</Link>
         </Button>
       </div>
     </section>

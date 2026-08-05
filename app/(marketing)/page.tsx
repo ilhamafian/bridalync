@@ -14,20 +14,45 @@ export default function LandingPage() {
         <LandingHero />
 
         <LandingFeatureRow
-          title="One message overlooked. One booking forgotten. One bride disappointed."
+          title={
+            <>
+              <span className="block text-landing-ink">One message</span>
+              <span className="block text-[#828282]">overlooked.</span>
+              <span className="block text-landing-ink">One booking</span>
+              <span className="block text-[#828282]">forgotten.</span>
+              <span className="block text-landing-ink">One bride</span>
+              <span className="block text-[#828282]">disappointed.</span>
+            </>
+          }
           imageSrc="/landing/Problem1.png"
           imageAlt="Calendar crowded with social media notifications"
         />
 
         <LandingFeatureRow
-          title="Every booking starts with a chat. Every mistake starts there too."
+          title={
+            <>
+              Every booking starts with a{" "}
+              <span className="text-[#828282]">chat</span>. Every{" "}
+              <span className="text-[#828282]">mistake</span> starts there too.
+            </>
+          }
           imageSrc="/landing/Problem2.png"
           imageAlt="WhatsApp chat showing a double booking"
           reverse
         />
 
         <LandingFeatureRow
-          title="One app for enquiries. One app for availability. Another for invoices. Somehow, you're expected to keep it all together."
+          size="sm"
+          title={
+            <>
+              <span className="block text-landing-ink">One app for enquiries.</span>
+              <span className="block text-[#828282]">One app for availability.</span>
+              <span className="block text-landing-ink">Another for invoices.</span>
+              <span className="block bg-gradient-to-b from-[#828282] to-landing-ink bg-clip-text text-transparent">
+                Somehow, you&apos;re expected to keep it all together.
+              </span>
+            </>
+          }
           imageSrc="/landing/Problem3.png"
           imageAlt="Brain connected to multiple apps and platforms"
         />

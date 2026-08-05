@@ -10,23 +10,18 @@ type LandingLogoProps = {
 
 export function LandingLogo({ className, variant = "dark" }: LandingLogoProps) {
   return (
-    <Link
-      href="/"
-      className={cn(
-        "inline-flex items-center font-serif text-lg font-semibold tracking-[0.18em] uppercase sm:text-xl",
-        variant === "light" ? "text-landing-cream-text" : "text-landing-ink",
-        className
-      )}
-    >
+    <Link href="/" className={cn("inline-flex items-center", className)}>
       <Image
-        src="/landing/Bridalync Icon.png"
-        alt=""
-        width={36}
-        height={36}
-        className="mr-2.5 size-8 rounded-lg sm:size-9"
+        src="/landing/Bridalync Logo.png"
+        alt="Bridalync"
+        width={160}
+        height={48}
+        className={cn(
+          "h-9 w-auto sm:h-10",
+          variant === "light" && "brightness-0 invert"
+        )}
         priority
       />
-      Bridalync
     </Link>
   );
 }

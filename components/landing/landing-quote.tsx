@@ -2,28 +2,35 @@ import Image from "next/image";
 
 export function LandingQuote() {
   return (
-    <section className="relative overflow-hidden px-6 py-16 text-center lg:px-8 lg:py-24">
-      <Image
-        src="/landing/lipstick.png"
-        alt=""
-        width={80}
-        height={80}
-        className="pointer-events-none absolute left-[8%] top-8 hidden w-14 opacity-80 sm:block lg:left-[14%] lg:w-16"
-        aria-hidden="true"
-      />
-      <Image
-        src="/landing/veil.png"
-        alt=""
-        width={90}
-        height={110}
-        className="pointer-events-none absolute right-[8%] bottom-8 hidden w-16 opacity-80 sm:block lg:right-[14%] lg:w-20"
-        aria-hidden="true"
-      />
+    <section className="px-6 py-16 text-center lg:px-8 lg:py-24">
+      <div className="relative mx-auto max-w-2xl px-12 sm:px-14 lg:max-w-3xl lg:px-16">
+        <Image
+          src="/landing/lipstick.png"
+          alt=""
+          width={56}
+          height={56}
+          className="pointer-events-none absolute top-1/2 left-0 hidden w-9 -translate-y-1/2 opacity-80 sm:block lg:w-10"
+          aria-hidden="true"
+        />
 
-      <p className="relative mx-auto max-w-2xl font-serif text-2xl leading-snug text-landing-ink sm:text-3xl lg:text-[2.15rem] lg:leading-[1.35]">
-        You&apos;re busy making brides beautiful. Not managing chats, calendars,
-        and invoices.
-      </p>
+        <div className="space-y-1">
+          <p className="font-serif text-2xl font-bold leading-snug text-landing-ink sm:text-3xl lg:text-[2.15rem] lg:leading-[1.35]">
+            You&apos;re busy making brides beautiful.
+          </p>
+          <p className="font-serif text-2xl font-bold leading-snug text-landing-ink sm:text-3xl lg:text-[2.15rem] lg:leading-[1.35]">
+            Not managing chats, calendars, and invoices.
+          </p>
+        </div>
+
+        <Image
+          src="/landing/veil.png"
+          alt=""
+          width={80}
+          height={100}
+          className="pointer-events-none absolute top-1/2 right-0 hidden w-14 -translate-y-1/2 opacity-80 sm:block lg:w-16"
+          aria-hidden="true"
+        />
+      </div>
     </section>
   );
 }
