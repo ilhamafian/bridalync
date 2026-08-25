@@ -9,6 +9,7 @@ import {
 } from "@/components/BookingPackagePicker";
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
+import { ClientProfile } from "@/components/booking/ClientProfile";
 import { SessionLocationPicker } from "@/components/SessionLocationPicker";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -25,12 +26,13 @@ import {
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
 import { Client } from "@/schemas/clientSchema";
+import type { PublicReview } from "@/schemas/reviewSchema";
 import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PublicUser } from "@/schemas/userSchema";
+import type { PublicProfile } from "@/schemas/userSchema";
 
 type BookingStep =
   | "intro"
@@ -246,7 +248,8 @@ export default function ClientPage() {
   const [settings, setSettings] = useState<PublicSetting | null>(null);
   const [bookedSlots, setBookedSlots] = useState<PublicBookedSlot[]>([]);
   const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
-  const [user, setUser] = useState<PublicUser | null>(null);
+  const [user, setUser] = useState<PublicProfile | null>(null);
+  const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
   const [sameLocationForAll, setSameLocationForAll] = useState(true);
   const [sharedLocation, setSharedLocation] = useState<Address | null>(null);
@@ -480,7 +483,8 @@ export default function ClientPage() {
       const data = await response.json();
       const fetchedPackages = (data.packages ?? []) as ClientPackage[];
       const packageOptions = toPackageOptions(fetchedPackages);
-      setUser(data.user as PublicUser);
+      setUser(data.user as PublicProfile);
+      setReviews((data.reviews as PublicReview[] | undefined) ?? []);
       setClientPackages(fetchedPackages);
       setStyles((data.styles as ClientStyleCategory[] | undefined) ?? []);
       setAddOns((data.add_ons as CatalogAddOn[] | undefined) ?? []);
@@ -844,15 +848,10 @@ export default function ClientPage() {
     }
   }
 
-  return(
-    <div
-      className={cn(
-        "relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pb-16 dark:bg-zinc-950",
-        step === "intro" ? "pt-16" : "pt-4"
-      )}
-    >
+  return (
+    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col bg-zinc-50 dark:bg-zinc-950">
       {step !== "intro" && (
-        <div className="sticky top-0 z-10 mb-4 w-full max-w-md self-center bg-zinc-50 pt-2 dark:bg-zinc-950">
+        <div className="z-10 w-full max-w-md shrink-0 self-center bg-zinc-50 px-6 pt-4 dark:bg-zinc-950">
           <Button
             type="button"
             variant="ghost"
@@ -865,16 +864,24 @@ export default function ClientPage() {
           </Button>
         </div>
       )}
-      {step === "intro" && (
-        <button
-          type="button"
-          className={cn("flex flex-1 flex-col items-center justify-center")}
-          onClick={goToNextStep}
-        >
-          <h1 className="max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Hi, I'm {user?.name}. Your professional {user?.role}.
-          </h1>
-        </button>
+      <div
+        className={cn(
+          "flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16",
+          step === "intro" ? "pt-16" : "pt-4"
+        )}
+      >
+      {step === "intro" && loading && (
+        <p className="text-sm text-muted-foreground">Loading profile…</p>
+      )}
+      {step === "intro" && user && (
+        <ClientProfile
+          user={user}
+          reviews={reviews}
+          onBookNow={goToNextStep}
+        />
+      )}
+      {step === "intro" && !user && !loading && (
+        <p className="text-sm text-muted-foreground">Profile not found.</p>
       )}
       {step === "name" && (
         <div className="flex flex-1 flex-col items-center justify-center">
@@ -1354,6 +1361,7 @@ export default function ClientPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

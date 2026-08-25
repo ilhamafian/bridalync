@@ -5,6 +5,8 @@ import { UserModel } from "@/models/User";
 import { toIdString } from "@/schemas/objectId";
 import {
   isOnboardingComplete,
+  normalizeSocialLinks,
+  profilePhotoUpdateSchema,
   profileUpdateSchema,
   updateUserSchema,
   type User,
@@ -14,7 +16,20 @@ import { getSessionUser } from "@/utils/auth/session";
 import { getAppUrl, buildProfileDisplayUrl } from "@/utils/appUrl";
 import { refreshSession } from "@/utils/onboarding/progress";
 
-function serializeProfile(user: User) {
+function serializeProfile(user: {
+  _id?: unknown;
+  email: string;
+  name?: string;
+  username?: string;
+  mobile?: string;
+  country_code?: string;
+  role?: "hijabstylist" | "makeupartist";
+  profile_photo_url?: string;
+  social_links?: {
+    instagram?: string;
+    tiktok?: string;
+  };
+}) {
   const username = user.username ?? "";
   let profileUrl = "";
   let profileDisplayUrl = "";
@@ -36,6 +51,11 @@ function serializeProfile(user: User) {
     mobile: user.mobile ?? "",
     country_code: user.country_code ?? "",
     role: user.role ?? null,
+    profile_photo_url: user.profile_photo_url ?? "",
+    social_links: {
+      instagram: user.social_links?.instagram ?? "",
+      tiktok: user.social_links?.tiktok ?? "",
+    },
     profileUrl,
     profileDisplayUrl,
   };
@@ -75,6 +95,31 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
+    const userModel = new UserModel();
+
+    // Photo-only update (immediate save after upload / remove)
+    const photoOnly = profilePhotoUpdateSchema.safeParse(body);
+    if (
+      photoOnly.success &&
+      body &&
+      typeof body === "object" &&
+      Object.keys(body).length === 1 &&
+      "profile_photo_url" in body
+    ) {
+      await userModel.update(
+        userId,
+        { profile_photo_url: photoOnly.data.profile_photo_url.trim() },
+        updateUserSchema as ZodSchema<Partial<User>>
+      );
+
+      const refreshed = await refreshSession(userId);
+      if (!refreshed) {
+        return createResponse({ error: "Failed to refresh session." }, 500);
+      }
+
+      return createResponse({ profile: serializeProfile(refreshed) });
+    }
+
     const parsed = profileUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return createResponse({ error: parsed.error.format() }, 400);
@@ -84,8 +129,9 @@ export async function PATCH(req: NextRequest) {
     const username = parsed.data.username.trim().toLowerCase();
     const mobile = parsed.data.mobile.trim();
     const country_code = parsed.data.country_code.trim();
+    const profile_photo_url = parsed.data.profile_photo_url?.trim() || "";
+    const social_links = normalizeSocialLinks(parsed.data.social_links) ?? {};
 
-    const userModel = new UserModel();
     const existingWithUsername = await userModel.findByUsername(username);
     if (existingWithUsername?._id) {
       const existingId = toIdString(existingWithUsername._id as never);
@@ -99,7 +145,14 @@ export async function PATCH(req: NextRequest) {
 
     await userModel.update(
       userId,
-      { name, username, mobile, country_code },
+      {
+        name,
+        username,
+        mobile,
+        country_code,
+        profile_photo_url,
+        social_links,
+      },
       updateUserSchema as ZodSchema<Partial<User>>
     );
 

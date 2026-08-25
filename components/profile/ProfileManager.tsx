@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { IconPhoto, IconTrash, IconUpload } from "@tabler/icons-react";
 
 import {
   DEFAULT_COUNTRY_CODE,
@@ -20,6 +22,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { formatWhatsAppDisplay } from "@/utils/socialLinks";
+
+export type ProfileSocialLinks = {
+  instagram: string;
+  tiktok: string;
+};
 
 export type ProfileItem = {
   _id: string;
@@ -29,8 +37,15 @@ export type ProfileItem = {
   mobile: string;
   country_code: string;
   role: "hijabstylist" | "makeupartist" | null;
+  profile_photo_url: string;
+  social_links: ProfileSocialLinks;
   profileUrl: string;
   profileDisplayUrl: string;
+};
+
+const EMPTY_SOCIALS: ProfileSocialLinks = {
+  instagram: "",
+  tiktok: "",
 };
 
 const inputClassName = cn(
@@ -73,14 +88,119 @@ export function ProfileManager({
   const [countryCode, setCountryCode] = useState(
     initialProfile.country_code || DEFAULT_COUNTRY_CODE
   );
+  const [photoUrl, setPhotoUrl] = useState(
+    initialProfile.profile_photo_url || ""
+  );
+  const [socials, setSocials] = useState<ProfileSocialLinks>({
+    ...EMPTY_SOCIALS,
+    ...initialProfile.social_links,
+  });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   function normalizeUsername(value: string) {
     return value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+  }
+
+  function setSocialField(key: keyof ProfileSocialLinks, value: string) {
+    setSocials((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function persistProfilePhoto(nextUrl: string) {
+    const response = await fetch("/api/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ profile_photo_url: nextUrl }),
+    });
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(
+        typeof data.error === "string"
+          ? data.error
+          : "Could not save profile photo."
+      );
+    }
+
+    const saved = data.profile as ProfileItem;
+    setProfile((prev) => ({
+      ...prev,
+      profile_photo_url: saved.profile_photo_url || "",
+    }));
+    setPhotoUrl(saved.profile_photo_url || "");
+  }
+
+  async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    setUploading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "profile-photos");
+
+      const response = await fetch("/api/upload/image", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setError(
+          typeof data.error === "string"
+            ? data.error
+            : "Could not upload photo."
+        );
+        return;
+      }
+
+      if (typeof data.url !== "string") {
+        setError("Could not upload photo.");
+        return;
+      }
+
+      await persistProfilePhoto(data.url);
+      setSuccess("Profile photo saved.");
+    } catch (photoError) {
+      setError(
+        photoError instanceof Error
+          ? photoError.message
+          : "Could not save profile photo."
+      );
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleRemovePhoto() {
+    if (uploading || saving || loggingOut) return;
+
+    setUploading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await persistProfilePhoto("");
+      setSuccess("Profile photo removed.");
+    } catch (photoError) {
+      setError(
+        photoError instanceof Error
+          ? photoError.message
+          : "Could not remove profile photo."
+      );
+    } finally {
+      setUploading(false);
+    }
   }
 
   async function handleSave() {
@@ -113,6 +233,8 @@ export function ProfileManager({
           username: normalizedUsername,
           mobile: mobile.trim(),
           country_code: countryCode,
+          profile_photo_url: photoUrl,
+          social_links: socials,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -132,6 +254,8 @@ export function ProfileManager({
       setUsername(saved.username);
       setMobile(saved.mobile);
       setCountryCode(saved.country_code || DEFAULT_COUNTRY_CODE);
+      setPhotoUrl(saved.profile_photo_url || "");
+      setSocials({ ...EMPTY_SOCIALS, ...saved.social_links });
       setSuccess("Profile saved.");
     } finally {
       setSaving(false);
@@ -181,7 +305,7 @@ export function ProfileManager({
           variant="destructive"
           size="sm"
           onClick={handleLogout}
-          disabled={saving || loggingOut}
+          disabled={saving || loggingOut || uploading}
           className="shrink-0"
         >
           {loggingOut ? "Logging out…" : "Log out"}
@@ -212,6 +336,62 @@ export function ProfileManager({
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          <Field label="Profile photo">
+            <div className="flex items-center gap-3">
+              <div className="relative size-20 shrink-0 overflow-hidden rounded-full bg-muted">
+                {photoUrl ? (
+                  <Image
+                    src={photoUrl}
+                    alt="Profile photo"
+                    fill
+                    className="object-cover"
+                    sizes="80px"
+                  />
+                ) : (
+                  <div className="flex size-full items-center justify-center text-muted-foreground">
+                    <IconPhoto className="size-8" />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={saving || loggingOut || uploading}
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    <IconUpload />
+                    {uploading ? "Uploading…" : photoUrl ? "Replace" : "Upload"}
+                  </Button>
+                  {photoUrl ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={saving || loggingOut || uploading}
+                      onClick={() => void handleRemovePhoto()}
+                    >
+                      <IconTrash />
+                      Remove
+                    </Button>
+                  ) : null}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  JPEG, PNG, WebP, or GIF up to 4 MB. Saves automatically.
+                </p>
+              </div>
+              <input
+                ref={photoInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                className="hidden"
+                onChange={handlePhotoChange}
+              />
+            </div>
+          </Field>
+
           <Field label="Email">
             <Input
               className={inputClassName}
@@ -274,6 +454,54 @@ export function ProfileManager({
               mobileInputId="profile-mobile"
             />
           </Field>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Social links</CardTitle>
+          <CardDescription>
+            Shown on your public profile. Paste a URL or username for Instagram
+            and TikTok.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <Field label="Instagram" htmlFor="social-instagram">
+            <Input
+              id="social-instagram"
+              className={inputClassName}
+              value={socials.instagram}
+              onChange={(e) => setSocialField("instagram", e.target.value)}
+              placeholder="@yourhandle or instagram.com/…"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </Field>
+          <Field label="TikTok" htmlFor="social-tiktok">
+            <Input
+              id="social-tiktok"
+              className={inputClassName}
+              value={socials.tiktok}
+              onChange={(e) => setSocialField("tiktok", e.target.value)}
+              placeholder="@yourhandle or tiktok.com/@…"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </Field>
+          <Field label="WhatsApp">
+            <Input
+              className={inputClassName}
+              value={formatWhatsAppDisplay(countryCode, mobile)}
+              disabled
+              readOnly
+            />
+            <p className="text-xs text-muted-foreground">
+              Uses your WhatsApp number above. To change it, update the WhatsApp
+              number in Public profile, then save.
+            </p>
+          </Field>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           {success ? (
@@ -281,7 +509,11 @@ export function ProfileManager({
           ) : null}
         </CardContent>
         <CardFooter>
-          <Button type="button" onClick={handleSave} disabled={saving || loggingOut}>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={saving || loggingOut || uploading}
+          >
             {saving ? "Saving…" : "Save profile"}
           </Button>
         </CardFooter>

@@ -1,5 +1,6 @@
 "use client";
 
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -20,6 +21,58 @@ const inputClassName = cn(
   "placeholder:text-muted-foreground",
   "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
 );
+
+function PasswordField({
+  label,
+  value,
+  onChange,
+  autoComplete,
+  minLength,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: string;
+  minLength?: number;
+  hint?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-foreground">{label}</span>
+      <div className="relative">
+        <input
+          type={visible ? "text" : "password"}
+          autoComplete={autoComplete}
+          placeholder="••••••••"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className={cn(inputClassName, "pr-10")}
+          minLength={minLength}
+          required
+        />
+        <button
+          type="button"
+          onClick={() => setVisible((current) => !current)}
+          className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+          aria-label={visible ? "Hide password" : "Show password"}
+          aria-pressed={visible}
+        >
+          {visible ? (
+            <EyeOffIcon className="size-4" />
+          ) : (
+            <EyeIcon className="size-4" />
+          )}
+        </button>
+      </div>
+      {hint ? (
+        <span className="text-xs text-muted-foreground">{hint}</span>
+      ) : null}
+    </label>
+  );
+}
 
 function AppleIcon({ className }: { className?: string }) {
   return (
@@ -417,25 +470,14 @@ export default function AuthPage() {
               </label>
 
               {isForgotResetStep ? (
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium text-foreground">
-                    New password
-                  </span>
-                  <input
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className={inputClassName}
-                    minLength={8}
-                    required
-                  />
-                  <span className="text-xs text-muted-foreground">
-                    At least 8 characters with uppercase, lowercase, a number,
-                    and a symbol.
-                  </span>
-                </label>
+                <PasswordField
+                  label="New password"
+                  value={password}
+                  onChange={setPassword}
+                  autoComplete="new-password"
+                  minLength={8}
+                  hint="At least 8 characters with uppercase, lowercase, a number, and a symbol."
+                />
               ) : null}
             </>
           ) : (
@@ -454,27 +496,20 @@ export default function AuthPage() {
           </label>
 
           {!isForgotEmailStep ? (
-          <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-foreground">Password</span>
-            <input
-              type="password"
-              autoComplete={
-                tab === "login" ? "current-password" : "new-password"
-              }
-              placeholder="••••••••"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              className={inputClassName}
-              minLength={tab === "signup" ? 8 : 1}
-              required
-            />
-            {tab === "signup" && (
-              <span className="text-xs text-muted-foreground">
-                At least 8 characters with uppercase, lowercase, a number, and a
-                symbol.
-              </span>
-            )}
-          </label>
+          <PasswordField
+            label="Password"
+            value={password}
+            onChange={setPassword}
+            autoComplete={
+              tab === "login" ? "current-password" : "new-password"
+            }
+            minLength={tab === "signup" ? 8 : 1}
+            hint={
+              tab === "signup"
+                ? "At least 8 characters with uppercase, lowercase, a number, and a symbol."
+                : undefined
+            }
+          />
           ) : null}
 
           {tab === "login" && loginStep === "credentials" ? (

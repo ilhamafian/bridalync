@@ -210,6 +210,7 @@ function BookingResultPageContent() {
   }
 
   const isSuccess = booking.status === "confirmed";
+  const isCompleted = booking.status === "completed";
   const isFailure = booking.status === "failed";
   const isPending = booking.status === "pending";
   const outstandingBalance = hasOutstandingBalance(booking);
@@ -232,7 +233,7 @@ function BookingResultPageContent() {
     <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pt-16 pb-16 dark:bg-zinc-950">
       <div className="flex w-full max-w-md flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
-          {isFullyPaid && (
+          {(isFullyPaid || isCompleted) && (
             <CheckCircle2Icon className="size-12 text-emerald-600 dark:text-emerald-400" />
           )}
           {isSuccess && outstandingBalance && !isConfirmingBalance && (
@@ -251,10 +252,16 @@ function BookingResultPageContent() {
             {isConfirmingDeposit && "Confirming payment"}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
+              isCompleted &&
+              "Booking completed"}
+            {!isConfirmingDeposit &&
+              !isConfirmingBalance &&
+              !isCompleted &&
               isFullyPaid &&
               "Booking fully paid"}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
+              !isCompleted &&
               isSuccess &&
               outstandingBalance &&
               "Booking confirmed"}
@@ -263,12 +270,16 @@ function BookingResultPageContent() {
           </h1>
 
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            {isCompleted &&
+              "Your session is done. We hope everything went beautifully."}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
+              !isCompleted &&
               isFullyPaid &&
               `Your payment of ${formatRm(booking.invoice.totalRm)} was received. You're all set.`}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
+              !isCompleted &&
               isSuccess &&
               outstandingBalance &&
               `Your deposit of ${formatRm(booking.invoice.depositRm)} was received. The remaining balance of ${formatRm(booking.invoice.balanceRm)} is due before your session.`}
