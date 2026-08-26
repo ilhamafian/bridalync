@@ -269,8 +269,7 @@ export function ReviewsManager({
               className={textareaClassName}
               value={comment}
               onChange={(event) => setComment(event.target.value)}
-              maxLength={1000}
-              rows={3}
+              rows={6}
               placeholder="What they said about your work…"
             />
           </Field>
@@ -388,7 +387,7 @@ export function ReviewsManager({
                       </p>
                     ) : null}
                     {review.comment ? (
-                      <p className="mt-2 text-sm text-muted-foreground">
+                      <p className="mt-2 whitespace-pre-line text-sm text-muted-foreground">
                         {review.comment}
                       </p>
                     ) : null}

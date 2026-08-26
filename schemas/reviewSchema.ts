@@ -15,7 +15,7 @@ export const reviewSchema = z.object({
   event_date: z.coerce.date().optional(),
   /** Legacy — ratings are no longer collected. */
   rating: z.number().int().min(1).max(5).optional(),
-  comment: z.string().max(1000).optional(),
+  comment: z.string().optional(),
   image_urls: z.array(reviewImageUrlSchema).max(5).default([]),
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
@@ -26,7 +26,7 @@ export type Review = z.infer<typeof reviewSchema>;
 export const createManualReviewSchema = z.object({
   clientName: z.string().trim().min(1, "Client name is required").max(120),
   event_date: z.coerce.date(),
-  comment: z.string().trim().max(1000).optional(),
+  comment: z.string().trim().optional(),
   image_urls: z.array(reviewImageUrlSchema).max(5).default([]),
 });
 

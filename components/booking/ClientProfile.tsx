@@ -1,10 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import type { ComponentType } from "react";
+import { XIcon } from "lucide-react";
+import { useEffect, useRef, useState, type ComponentType } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { PublicReview } from "@/schemas/reviewSchema";
 import type { PublicProfile } from "@/schemas/userSchema";
 import { formatReviewEventDate } from "@/utils/reviews";
@@ -14,9 +22,12 @@ import {
 } from "@/utils/socialLinks";
 
 const roleLabel: Record<"hijabstylist" | "makeupartist", string> = {
-  hijabstylist: "Hijab stylist",
-  makeupartist: "Makeup artist",
+  hijabstylist: "Hijab Stylist",
+  makeupartist: "Makeup Artist",
 };
+
+/** Portrait fallback used until the opened photo reports its real dimensions. */
+const DEFAULT_PHOTO_RATIO = 3 / 4;
 
 function BrandIcon({
   paths,
@@ -125,126 +136,292 @@ export function ClientProfile({
   reviews,
   onBookNow,
 }: ClientProfileProps) {
+  const [selectedReview, setSelectedReview] = useState<PublicReview | null>(
+    null
+  );
+  const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_PHOTO_RATIO);
+  const lightboxClosedAtRef = useRef(0);
   const displayName = user.name?.trim() || user.username || "Stylist";
   const role = user.role ? roleLabel[user.role] : null;
   const socialEntries = buildSocialEntries(user);
 
-  return (
-    <Card className="mx-auto w-full max-w-md min-w-72 shrink-0 overflow-visible [--card-spacing:--spacing(6)] sm:min-w-80">
-      <CardContent className="flex flex-col gap-8 pt-(--card-spacing)">
-        <div className="flex items-center gap-4">
-          <div className="relative size-24 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-            {user.profile_photo_url ? (
-              <Image
-                src={user.profile_photo_url}
-                alt={displayName}
-                fill
-                className="object-cover"
-                sizes="96px"
-                priority
-              />
-            ) : (
-              <div className="flex size-full items-center justify-center text-xl font-semibold text-zinc-500 dark:text-zinc-400">
-                {initialsFromName(displayName)}
-              </div>
-            )}
-          </div>
+  function openLightbox(url: string) {
+    setImageAspectRatio(DEFAULT_PHOTO_RATIO);
+    setSelectedImageUrl(url);
+  }
 
-          <div className="min-w-0 flex-1">
-            <h1 className="truncate text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              {displayName}
-            </h1>
-            {role ? (
-              <p className="mt-0.5 text-sm text-zinc-600 dark:text-zinc-400">
-                {role}
-              </p>
-            ) : null}
-            <Button
-              type="button"
-              size="lg"
-              className="mt-3 h-10 w-full bg-chart-4 text-white hover:bg-chart-4/90 sm:w-auto"
-              onClick={onBookNow}
-            >
-              Book now
-            </Button>
-          </div>
+  function closeLightbox() {
+    lightboxClosedAtRef.current = Date.now();
+    setSelectedImageUrl(null);
+  }
+
+  /**
+   * Radix falls back to a deferred `click` for outside-dismissal on touch, which
+   * lands after the lightbox is already closed — hence the grace period.
+   */
+  function shouldKeepReviewOpen() {
+    return (
+      selectedImageUrl !== null ||
+      Date.now() - lightboxClosedAtRef.current < 500
+    );
+  }
+
+  useEffect(() => {
+    if (!selectedImageUrl) return;
+
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        closeLightbox();
+      }
+    }
+
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [selectedImageUrl]);
+
+  return (
+    <div className="mx-auto flex w-full max-w-md min-w-72 shrink-0 flex-col gap-10 sm:min-w-80">
+      <div className="flex flex-col items-center text-center">
+        <div className="relative size-28 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+          {user.profile_photo_url ? (
+            <Image
+              src={user.profile_photo_url}
+              alt={displayName}
+              fill
+              className="object-cover"
+              sizes="112px"
+              priority
+            />
+          ) : (
+            <div className="flex size-full items-center justify-center text-2xl font-semibold text-zinc-500 dark:text-zinc-400">
+              {initialsFromName(displayName)}
+            </div>
+          )}
         </div>
 
+        <h1 className="mt-5 max-w-full truncate text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          {displayName}
+        </h1>
+        {role ? (
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{role}</p>
+        ) : null}
+
+        <Button
+          type="button"
+          size="lg"
+          className="mt-6 h-11 w-full max-w-xs bg-chart-4 text-white hover:bg-chart-4/90"
+          onClick={onBookNow}
+        >
+          Book Now
+        </Button>
+
         {socialEntries.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             {socialEntries.map(({ key, label, href, icon: Icon }) => (
               <a
                 key={key}
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                aria-label={label}
-                className="inline-flex size-10 items-center justify-center rounded-full border border-zinc-200 text-zinc-700 transition-colors hover:border-zinc-400 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900 dark:hover:border-zinc-500"
+                className="inline-flex items-center gap-1.5 text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
               >
                 <Icon className="size-4" />
+                <span>{label}</span>
               </a>
             ))}
           </div>
         ) : null}
+      </div>
 
-        <section className="flex flex-col gap-4">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Reviews
-            </h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Client feedback and work photos.
-            </p>
-          </div>
+      <section className="mx-auto flex w-full max-w-xs flex-col gap-4">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Reviews
+          </h2>
+          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+            Client feedback and work photos.
+          </p>
+        </div>
 
-          {reviews.length === 0 ? (
-            <p className="text-sm text-zinc-500 dark:text-zinc-500">
-              No reviews yet.
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-4">
-              {reviews.map((review) => (
-                <li
-                  key={review._id}
-                  className="border-b border-zinc-200 pb-4 last:border-b-0 last:pb-0 dark:border-zinc-800"
+        {reviews.length === 0 ? (
+          <p className="text-sm text-zinc-500 dark:text-zinc-500">
+            No reviews yet.
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {reviews.map((review) => (
+              <li key={review._id}>
+                <button
+                  type="button"
+                  className="w-full rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  onClick={() => setSelectedReview(review)}
                 >
-                  <p className="font-medium text-zinc-900 dark:text-zinc-50">
-                    {review.clientName}
-                  </p>
-                  {review.event_date ? (
-                    <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-500">
-                      {formatReviewEventDate(review.event_date)}
-                    </p>
-                  ) : null}
-                  {review.comment ? (
-                    <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                      {review.comment}
-                    </p>
-                  ) : null}
-                  {(review.image_urls?.length ?? 0) > 0 ? (
-                    <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-                      {review.image_urls.map((url) => (
-                        <div
-                          key={url}
-                          className="relative size-20 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800"
-                        >
-                          <Image
-                            src={url}
-                            alt={`${review.clientName} review photo`}
-                            fill
-                            className="object-cover"
-                            sizes="80px"
-                          />
+                  <Card
+                    size="sm"
+                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
+                  >
+                    <CardContent className="flex flex-col gap-2">
+                      <div>
+                        <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                          {review.clientName}
+                        </p>
+                        {review.event_date ? (
+                          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-500">
+                            {formatReviewEventDate(review.event_date)}
+                          </p>
+                        ) : null}
+                      </div>
+                      {review.comment ? (
+                        <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                          {review.comment}
+                        </p>
+                      ) : null}
+                      {(review.image_urls?.length ?? 0) > 0 ? (
+                        <div className="flex gap-2 overflow-x-auto pb-1">
+                          {review.image_urls.map((url) => (
+                            <div
+                              key={url}
+                              className="relative size-36 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800"
+                            >
+                              <Image
+                                src={url}
+                                alt={`${review.clientName} review photo`}
+                                fill
+                                className="object-cover"
+                                sizes="144px"
+                              />
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </CardContent>
-    </Card>
+                      ) : null}
+                    </CardContent>
+                  </Card>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <Dialog
+        open={selectedReview !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            if (shouldKeepReviewOpen()) return;
+            setSelectedReview(null);
+          }
+        }}
+      >
+        <DialogContent
+          className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+          onPointerDownOutside={(event) => {
+            if (shouldKeepReviewOpen()) event.preventDefault();
+          }}
+          onInteractOutside={(event) => {
+            if (shouldKeepReviewOpen()) event.preventDefault();
+          }}
+          onEscapeKeyDown={(event) => {
+            if (shouldKeepReviewOpen()) event.preventDefault();
+          }}
+        >
+          {selectedReview ? (
+            <>
+              <DialogHeader className="pr-8">
+                <DialogTitle className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                  {selectedReview.clientName}
+                </DialogTitle>
+                {selectedReview.event_date ? (
+                  <DialogDescription>
+                    {formatReviewEventDate(selectedReview.event_date)}
+                  </DialogDescription>
+                ) : (
+                  <DialogDescription className="sr-only">
+                    Review details
+                  </DialogDescription>
+                )}
+              </DialogHeader>
+
+              {selectedReview.comment ? (
+                <p className="whitespace-pre-line text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                  {selectedReview.comment}
+                </p>
+              ) : null}
+
+              {(selectedReview.image_urls?.length ?? 0) > 0 ? (
+                <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+                  {selectedReview.image_urls.map((url) => (
+                    <button
+                      key={url}
+                      type="button"
+                      className="relative h-72 w-56 shrink-0 overflow-hidden rounded-lg bg-zinc-100 outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring dark:bg-zinc-800"
+                      onClick={() => openLightbox(url)}
+                      aria-label={`View full size photo from ${selectedReview.clientName}`}
+                    >
+                      <Image
+                        src={url}
+                        alt={`${selectedReview.clientName} review photo`}
+                        fill
+                        className="object-cover"
+                        sizes="256px"
+                      />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {selectedImageUrl ? (
+        <div
+          className="pointer-events-auto fixed inset-0 z-60 flex cursor-zoom-out items-center justify-center bg-black/90 p-4 sm:p-8"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Full size review photo"
+          onClick={closeLightbox}
+        >
+          <div
+            className="relative cursor-default overflow-hidden rounded-2xl"
+            style={{
+              width: `min(90vw, calc(80vh * ${imageAspectRatio}))`,
+              aspectRatio: imageAspectRatio,
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Image
+              src={selectedImageUrl}
+              alt={
+                selectedReview
+                  ? `${selectedReview.clientName} review photo`
+                  : "Review photo"
+              }
+              fill
+              className="object-cover"
+              sizes="90vw"
+              priority
+              onLoad={(event) => {
+                const { naturalWidth, naturalHeight } = event.currentTarget;
+                if (naturalWidth > 0 && naturalHeight > 0) {
+                  setImageAspectRatio(naturalWidth / naturalHeight);
+                }
+              }}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Close photo"
+              className="absolute top-2 right-2 rounded-full bg-black/60 text-zinc-50 hover:bg-black/80 hover:text-zinc-50"
+              onClick={closeLightbox}
+            >
+              <XIcon />
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
