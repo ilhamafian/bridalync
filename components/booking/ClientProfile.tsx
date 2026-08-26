@@ -4,6 +4,7 @@ import Image from "next/image";
 import { XIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 
+import { AnimatedFlow } from "@/components/animated-flow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -182,128 +183,141 @@ export function ClientProfile({
   }, [selectedImageUrl]);
 
   return (
-    <div className="mx-auto flex w-full max-w-md min-w-72 shrink-0 flex-col gap-10 sm:min-w-80">
-      <div className="flex flex-col items-center text-center">
-        <div className="relative size-28 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
-          {user.profile_photo_url ? (
-            <Image
-              src={user.profile_photo_url}
-              alt={displayName}
-              fill
-              className="object-cover"
-              sizes="112px"
-              priority
-            />
-          ) : (
-            <div className="flex size-full items-center justify-center text-2xl font-semibold text-zinc-500 dark:text-zinc-400">
-              {initialsFromName(displayName)}
-            </div>
-          )}
-        </div>
+    <>
+      <AnimatedFlow
+        variant="blush"
+        flowSpeed={0.9}
+        distortionWarp={1.4}
+        filmGrain={0.25}
+        rotationAngle={120}
+        className="pointer-events-none absolute inset-0 min-h-0"
+      />
 
-        <h1 className="mt-5 max-w-full truncate text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          {displayName}
-        </h1>
-        {role ? (
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{role}</p>
-        ) : null}
-
-        <Button
-          type="button"
-          size="lg"
-          className="mt-6 h-11 w-full max-w-xs bg-chart-4 text-white hover:bg-chart-4/90"
-          onClick={onBookNow}
-        >
-          Book Now
-        </Button>
-
-        {socialEntries.length > 0 ? (
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            {socialEntries.map(({ key, label, href, icon: Icon }) => (
-              <a
-                key={key}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-              >
-                <Icon className="size-4" />
-                <span>{label}</span>
-              </a>
-            ))}
+      <div className="relative z-10 mx-auto flex w-full max-w-md min-w-72 shrink-0 flex-col gap-10 sm:min-w-80">
+        <div className="flex flex-col items-center text-center">
+          <div className="relative size-28 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+            {user.profile_photo_url ? (
+              <Image
+                src={user.profile_photo_url}
+                alt={displayName}
+                fill
+                className="object-cover"
+                sizes="112px"
+                priority
+              />
+            ) : (
+              <div className="flex size-full items-center justify-center text-2xl font-semibold text-zinc-500 dark:text-zinc-400">
+                {initialsFromName(displayName)}
+              </div>
+            )}
           </div>
-        ) : null}
-      </div>
 
-      <section className="mx-auto flex w-full max-w-xs flex-col gap-4">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Reviews
-          </h2>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            Client feedback and work photos.
-          </p>
+          <h1 className="mt-5 max-w-full truncate text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            {displayName}
+          </h1>
+          {role ? (
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              {role}
+            </p>
+          ) : null}
+
+          <Button
+            type="button"
+            size="lg"
+            className="mt-6 h-11 w-full max-w-xs bg-rose-900 text-white hover:bg-rose-900/90"
+            onClick={onBookNow}
+          >
+            Book Now
+          </Button>
+
+          {socialEntries.length > 0 ? (
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+              {socialEntries.map(({ key, label, href, icon: Icon }) => (
+                <a
+                  key={key}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm text-zinc-600 transition-colors hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                >
+                  <Icon className="size-4" />
+                  <span>{label}</span>
+                </a>
+              ))}
+            </div>
+          ) : null}
         </div>
 
-        {reviews.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-500">
-            No reviews yet.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-3">
-            {reviews.map((review) => (
-              <li key={review._id}>
-                <button
-                  type="button"
-                  className="w-full rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  onClick={() => setSelectedReview(review)}
-                >
-                  <Card
-                    size="sm"
-                    className="transition-colors hover:bg-zinc-50 dark:hover:bg-zinc-900"
+        <section className="mx-auto flex w-full max-w-xs flex-col gap-4">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              Reviews
+            </h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              Client feedback and work photos.
+            </p>
+          </div>
+
+          {reviews.length === 0 ? (
+            <p className="text-sm text-zinc-500 dark:text-zinc-500">
+              No reviews yet.
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-3">
+              {reviews.map((review) => (
+                <li key={review._id}>
+                  <button
+                    type="button"
+                    className="w-full rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => setSelectedReview(review)}
                   >
-                    <CardContent className="flex flex-col gap-2">
-                      <div>
-                        <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
-                          {review.clientName}
-                        </p>
-                        {review.event_date ? (
-                          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-500">
-                            {formatReviewEventDate(review.event_date)}
+                    <Card
+                      size="sm"
+                      className="bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm transition-colors hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
+                    >
+                      <CardContent className="flex flex-col gap-2">
+                        <div>
+                          <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+                            {review.clientName}
+                          </p>
+                          {review.event_date ? (
+                            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-500">
+                              {formatReviewEventDate(review.event_date)}
+                            </p>
+                          ) : null}
+                        </div>
+                        {review.comment ? (
+                          <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                            {review.comment}
                           </p>
                         ) : null}
-                      </div>
-                      {review.comment ? (
-                        <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
-                          {review.comment}
-                        </p>
-                      ) : null}
-                      {(review.image_urls?.length ?? 0) > 0 ? (
-                        <div className="flex gap-2 overflow-x-auto pb-1">
-                          {review.image_urls.map((url) => (
-                            <div
-                              key={url}
-                              className="relative size-36 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800"
-                            >
-                              <Image
-                                src={url}
-                                alt={`${review.clientName} review photo`}
-                                fill
-                                className="object-cover"
-                                sizes="144px"
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      ) : null}
-                    </CardContent>
-                  </Card>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                        {(review.image_urls?.length ?? 0) > 0 ? (
+                          <div className="flex gap-2 overflow-x-auto pb-1">
+                            {review.image_urls.map((url) => (
+                              <div
+                                key={url}
+                                className="relative size-36 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800"
+                              >
+                                <Image
+                                  src={url}
+                                  alt={`${review.clientName} review photo`}
+                                  fill
+                                  className="object-cover"
+                                  sizes="144px"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ) : null}
+                      </CardContent>
+                    </Card>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
 
       <Dialog
         open={selectedReview !== null}
@@ -422,6 +436,6 @@ export function ClientProfile({
           </div>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }
