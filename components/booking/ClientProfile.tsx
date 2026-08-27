@@ -4,7 +4,6 @@ import Image from "next/image";
 import { XIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 
-import { AnimatedFlow } from "@/components/animated-flow";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -184,15 +183,6 @@ export function ClientProfile({
 
   return (
     <>
-      <AnimatedFlow
-        variant="blush"
-        flowSpeed={0.9}
-        distortionWarp={1.4}
-        filmGrain={0.25}
-        rotationAngle={120}
-        className="pointer-events-none absolute inset-0 min-h-0"
-      />
-
       <div className="relative z-10 mx-auto flex w-full max-w-md min-w-72 shrink-0 flex-col gap-10 sm:min-w-80">
         <div className="flex flex-col items-center text-center">
           <div className="relative size-28 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">

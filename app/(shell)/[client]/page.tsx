@@ -10,6 +10,7 @@ import {
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile } from "@/components/booking/ClientProfile";
+import { AnimatedFlow } from "@/components/animated-flow";
 import { SessionLocationPicker } from "@/components/SessionLocationPicker";
 import { TextGenerateEffect } from "@/components/text-generate-effect";
 import { Button } from "@/components/ui/button";
@@ -849,9 +850,17 @@ export default function ClientPage() {
   }
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col bg-zinc-50 dark:bg-zinc-950">
+    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <AnimatedFlow
+        variant="blush"
+        flowSpeed={0.9}
+        distortionWarp={1.4}
+        filmGrain={0.25}
+        rotationAngle={120}
+        className="pointer-events-none absolute inset-0 min-h-0"
+      />
       {step !== "intro" && (
-        <div className="z-10 w-full max-w-md shrink-0 self-center bg-zinc-50 px-6 pt-4 dark:bg-zinc-950">
+        <div className="relative z-10 w-full max-w-md shrink-0 self-center px-6 pt-4">
           <Button
             type="button"
             variant="ghost"
@@ -866,7 +875,7 @@ export default function ClientPage() {
       )}
       <div
         className={cn(
-          "flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16",
+          "relative z-10 flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16",
           step === "intro" ? "pt-16" : "pt-4"
         )}
       >
@@ -884,11 +893,13 @@ export default function ClientPage() {
         <p className="text-sm text-muted-foreground">Profile not found.</p>
       )}
       {step === "name" && (
-        <div className="flex flex-1 flex-col items-center justify-center gap-8">
-          <TextGenerateEffect
-            words={"But first,\nCan I have your name\nplease?"}
-            className="mb-4 max-w-md text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
-          />
+        <div className="relative flex w-full flex-1 flex-col items-center justify-center">
+          <div className="absolute bottom-[calc(50%+3rem)] flex w-full flex-col items-center px-6">
+            <TextGenerateEffect
+              words={"But first,\nWhat should I call you?"}
+              className="mb-6 w-full max-w-md text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
+            />
+          </div>
           <div className="relative max-w-full">
             <span
               aria-hidden
