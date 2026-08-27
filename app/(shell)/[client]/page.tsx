@@ -11,10 +11,10 @@ import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile } from "@/components/booking/ClientProfile";
 import { SessionLocationPicker } from "@/components/SessionLocationPicker";
+import { TextGenerateEffect } from "@/components/text-generate-effect";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { calculateBookingQuotation, formatRm, applyPaymentOption, requiresFullPayment } from "@/utils/booking/pricing";
 import {
@@ -884,18 +884,34 @@ export default function ClientPage() {
         <p className="text-sm text-muted-foreground">Profile not found.</p>
       )}
       {step === "name" && (
-        <div className="flex flex-1 flex-col items-center justify-center">
-          <Input type="text" placeholder="Enter your name" value={contact.name} onChange={(e) => setContact({ ...contact, name: e.target.value })} />
-          <Button
-            size="lg"
-            className="bg-chart-4 text-white hover:bg-chart-4/90"
-            onClick={goToNextStep}
-          >
-            Next
-            <ChevronRightIcon />
-          </Button>
+        <div className="flex flex-1 flex-col items-center justify-center gap-8">
+          <TextGenerateEffect
+            words={"But first,\nCan I have your name\nplease?"}
+            className="mb-4 max-w-md text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
+          />
+          <div className="relative max-w-full">
+            <span
+              aria-hidden
+              className="invisible block whitespace-pre px-1 text-2xl font-medium tracking-tight"
+            >
+              {contact.name || "Your name"}
+            </span>
+            <input
+              type="text"
+              autoFocus
+              placeholder="Your name"
+              value={contact.name}
+              onChange={(e) => setContact({ ...contact, name: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && contact.name.trim()) {
+                  e.preventDefault()
+                  goToNextStep()
+                }
+              }}
+              className="absolute inset-0 w-full min-w-0 border-0 bg-transparent px-1 text-left text-2xl font-medium tracking-tight text-zinc-900 caret-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-0 dark:text-zinc-50 dark:caret-zinc-50 dark:placeholder:text-zinc-500"
+            />
+          </div>
         </div>
-        
       )}
       {step === "events" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">

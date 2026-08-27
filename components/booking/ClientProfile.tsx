@@ -224,7 +224,7 @@ export function ClientProfile({
           <Button
             type="button"
             size="lg"
-            className="mt-6 h-11 w-full max-w-xs bg-rose-900 text-white hover:bg-rose-900/90"
+            className="mt-6 h-11 w-full max-w-xs bg-rose-800 text-white hover:bg-rose-800/90"
             onClick={onBookNow}
           >
             Book Now
