@@ -1033,19 +1033,21 @@ export default function ClientPage() {
 
           <div className="flex w-full flex-col items-end gap-4">
             {loading ? (
-              <p className="w-full text-center text-sm text-muted-foreground">
+              <p className="mx-auto w-full max-w-xs px-4 text-center text-sm text-muted-foreground">
                 Loading packages...
               </p>
             ) : (
-              <BookingPackagePicker
-                packages={packages}
-                selectedPackageId={selectedPackageId}
-                onPackageChange={setSelectedPackageId}
-              />
+              <div className="mx-auto w-full max-w-xs px-2">
+                <BookingPackagePicker
+                  packages={packages}
+                  selectedPackageId={selectedPackageId}
+                  onPackageChange={setSelectedPackageId}
+                />
+              </div>
             )}
             <Button
               size="lg"
-              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              className="mt-4 bg-chart-4 text-white hover:bg-chart-4/90"
               disabled={!selectedPackageId}
               onClick={goToNextStep}
             >
