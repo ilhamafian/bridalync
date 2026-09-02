@@ -1083,9 +1083,9 @@ export default function ClientPage() {
 
           <div className="flex w-full flex-col items-end gap-4">
             {nextSessionTemplate && (
-              <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
-                <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
-                  <p className="text-sm text-muted-foreground">
+              <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+                <CardContent className="flex flex-col items-center gap-4 pt-(--card-spacing)">
+                  <p className="text-center text-sm text-muted-foreground">
                     Scheduling session {nextSessionTemplate.order + 1} of{" "}
                     {sessionTemplates.length}:{" "}
                     <span className="font-medium text-foreground">
@@ -1104,10 +1104,10 @@ export default function ClientPage() {
                       (date) => isDateFullyBooked(date),
                     ]}
                     captionLayout="dropdown"
-                    className="p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)]"
+                    className="mx-auto p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)] [&_button[data-selected-single=true]]:bg-rose-800 [&_button[data-selected-single=true]]:text-white [&_button[data-selected-single=true]]:hover:bg-rose-800/90 [&_button[data-selected-single=true]]:hover:text-white"
                   />
                 </CardContent>
-                <CardFooter className="w-full flex-col items-stretch gap-3 border-t bg-card">
+                <CardFooter className="w-full flex-col items-stretch gap-3 border-t border-white/40 bg-transparent dark:border-white/15">
                   <p className="text-sm font-medium text-foreground">
                     Available slots
                   </p>
@@ -1134,6 +1134,9 @@ export default function ClientPage() {
                         disabled={!selectedDate || slotTaken}
                         className={cn(
                           "h-8 w-full",
+                          selectedTimeSlot?.startTime === slot.startTime &&
+                            selectedTimeSlot?.endTime === slot.endTime &&
+                            "bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white",
                           slotTaken && "opacity-50"
                         )}
                         onClick={() => setSelectedTimeSlot(slot)}
@@ -1163,6 +1166,7 @@ export default function ClientPage() {
                 sessions={sessions}
                 onRemove={handleRemoveSession}
                 emptyMessage="No sessions yet — pick a date and time below."
+                frosted
               />
             </div>
 
@@ -1228,7 +1232,7 @@ export default function ClientPage() {
 
             <div className="w-full space-y-2">
               <p className="text-sm font-medium text-foreground">Summary</p>
-              <BookingSessionList sessions={sessions} showLocation />
+              <BookingSessionList sessions={sessions} showLocation frosted />
             </div>
 
             <Button
@@ -1333,7 +1337,7 @@ export default function ClientPage() {
       {step === "details" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Can I get your details?
+            Almost there! Just need some final details...
           </h1>
           <BookingContactForm value={contact} onChange={setContact} />
           <Button

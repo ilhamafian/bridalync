@@ -29,7 +29,7 @@ export function SessionLocationPicker({
 }: SessionLocationPickerProps) {
   return (
     <MapsProvider>
-      <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
+      <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
       <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
       <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
               If you have not decided on the location yet, you can just put in the area you are in.
@@ -41,7 +41,7 @@ export function SessionLocationPicker({
             onChange={(event) =>
               onSameLocationForAllChange(event.target.checked)
             }
-            className="size-4 rounded border-border accent-primary"
+            className="size-4 rounded border-border accent-rose-800"
           />
           Same location for all sessions
         </label>
@@ -66,7 +66,7 @@ export function SessionLocationPicker({
             {sessions.map((session) => (
               <li
                 key={session.client_key}
-                className="flex flex-col gap-3 border-t border-border pt-4 first:border-t-0 first:pt-0"
+                className="flex flex-col gap-3 border-t border-white/40 pt-4 first:border-t-0 first:pt-0 dark:border-white/15"
               >
                 <p className="text-sm font-medium text-foreground">
                   {formatSessionSummary(session)}
