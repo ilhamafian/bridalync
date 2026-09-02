@@ -991,34 +991,45 @@ export default function ClientPage() {
         <p className="text-sm text-muted-foreground">Profile not found.</p>
       )}
       {step === "name" && (
-        <div className="relative flex w-full flex-1 flex-col items-center justify-center">
+        <div className="relative flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <div className="absolute bottom-[calc(50%+3rem)] flex w-full flex-col items-center px-6">
             <TextGenerateEffect
               words={"But first,\nWhat should I call you?"}
               className="mb-6 w-full max-w-md text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
             />
           </div>
-          <div className="relative max-w-full">
-            <span
-              aria-hidden
-              className="invisible block whitespace-pre px-1 text-2xl font-medium tracking-tight"
+          <div className="flex w-full flex-col items-end gap-12">
+            <div className="relative max-w-full self-center">
+              <span
+                aria-hidden
+                className="invisible block whitespace-pre px-1 text-2xl font-medium tracking-tight"
+              >
+                {contact.name || "Your name"}
+              </span>
+              <input
+                type="text"
+                autoFocus
+                placeholder="Your name"
+                value={contact.name}
+                onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && contact.name.trim()) {
+                    e.preventDefault()
+                    goToNextStep()
+                  }
+                }}
+                className="absolute inset-0 w-full min-w-0 border-0 bg-transparent px-1 text-left text-2xl font-medium tracking-tight text-zinc-900 caret-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-0 dark:text-zinc-50 dark:caret-zinc-50 dark:placeholder:text-zinc-500"
+              />
+            </div>
+            <Button
+              size="lg"
+              className="mr-4 bg-chart-4 text-white hover:bg-chart-4/90"
+              disabled={!contact.name.trim()}
+              onClick={goToNextStep}
             >
-              {contact.name || "Your name"}
-            </span>
-            <input
-              type="text"
-              autoFocus
-              placeholder="Your name"
-              value={contact.name}
-              onChange={(e) => setContact({ ...contact, name: e.target.value })}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && contact.name.trim()) {
-                  e.preventDefault()
-                  goToNextStep()
-                }
-              }}
-              className="absolute inset-0 w-full min-w-0 border-0 bg-transparent px-1 text-left text-2xl font-medium tracking-tight text-zinc-900 caret-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-0 dark:text-zinc-50 dark:caret-zinc-50 dark:placeholder:text-zinc-500"
-            />
+              Next
+              <ChevronRightIcon />
+            </Button>
           </div>
         </div>
       )}
