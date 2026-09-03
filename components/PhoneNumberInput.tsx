@@ -54,7 +54,7 @@ export function PhoneNumberInput({
     <div className="flex gap-2">
       <Select value={resolvedCountryCode} onValueChange={onCountryCodeChange}>
         <SelectTrigger
-          className="h-10 w-30 shrink-0"
+          className="h-10 w-30 shrink-0 data-[size=default]:h-10"
           aria-label="Country code"
         >
           <SelectValue />

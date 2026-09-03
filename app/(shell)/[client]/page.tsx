@@ -1336,19 +1336,25 @@ export default function ClientPage() {
       )}
       {step === "details" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
-          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Almost there! Just need some final details...
-          </h1>
-          <BookingContactForm value={contact} onChange={setContact} />
-          <Button
-            size="lg"
-            className="bg-chart-4 text-white hover:bg-chart-4/90"
-            disabled={!contactDetailsValid}
-            onClick={goToNextStep}
-          >
+          {/* <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+            Almost there! Just need some final info...
+          </h1> */}
+          <TextGenerateEffect
+              words={"Almost there!\nJust need some final info..."}
+              className="mb-6 w-full max-w-md text-center text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
+            />
+          <div className="flex w-full flex-col items-end gap-4">
+            <BookingContactForm value={contact} onChange={setContact} />
+            <Button
+              size="lg"
+              className="mt-2 bg-chart-4 text-white hover:bg-chart-4/90"
+              disabled={!contactDetailsValid}
+              onClick={goToNextStep}
+            >
               Next
               <ChevronRightIcon />
             </Button>
+          </div>
         </div>
       )}
       {step === "review" && (

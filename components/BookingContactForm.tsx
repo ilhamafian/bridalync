@@ -25,8 +25,8 @@ export function BookingContactForm({ value, onChange }: BookingContactFormProps)
   }
 
   return (
-    <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
-      <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
+    <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+      <CardContent className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">
             Phone number
@@ -45,7 +45,7 @@ export function BookingContactForm({ value, onChange }: BookingContactFormProps)
           <input
             type="email"
             autoComplete="email"
-            placeholder="you@example.com"
+            placeholder="your@email.com"
             value={value.email}
             onChange={(event) => updateField("email", event.target.value)}
             className={inputClassName}
