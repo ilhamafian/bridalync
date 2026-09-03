@@ -11,8 +11,10 @@ import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile } from "@/components/booking/ClientProfile";
 import { AnimatedFlow } from "@/components/animated-flow";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { SessionLocationPicker } from "@/components/SessionLocationPicker";
 import { TextGenerateEffect } from "@/components/text-generate-effect";
+import type { LocaleKey } from "@/locales";
 import {
   Stepper,
   StepperIndicator,
@@ -323,6 +325,7 @@ export default function ClientPage() {
   const [paymentOption, setPaymentOption] = useState<"deposit" | "full">(
     "full"
   );
+  const [locale, setLocale] = useState<LocaleKey>("ms");
   const sessionRoadDistancesRef = useRef(sessionRoadDistances);
   const packages = useMemo(
     () => toPackageOptions(clientPackages),
@@ -932,6 +935,11 @@ export default function ClientPage() {
         rotationAngle={120}
         className="pointer-events-none absolute inset-0 min-h-0"
       />
+      <div className="pointer-events-none fixed top-4 right-6 z-50">
+        <div className="pointer-events-auto">
+          <LanguageSelector value={locale} onChange={setLocale} />
+        </div>
+      </div>
       {step !== "intro" && (
         <div className="relative z-10 flex w-full shrink-0 flex-col items-center gap-3 px-6 pt-4">
           <div className="w-full max-w-md">
@@ -985,6 +993,7 @@ export default function ClientPage() {
           user={user}
           reviews={reviews}
           onBookNow={goToNextStep}
+          locale={locale}
         />
       )}
       {step === "intro" && !user && !loading && (

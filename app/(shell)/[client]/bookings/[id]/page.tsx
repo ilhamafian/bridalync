@@ -2,10 +2,12 @@
 
 import { CheckCircle2Icon, MessageCircleIcon, XCircleIcon } from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useState, type ReactNode } from "react";
 
+import { AnimatedFlow } from "@/components/animated-flow";
 import { BookingInvoice } from "@/components/BookingQuotation";
 import { BookingSessionList } from "@/components/BookingSessionList";
+import { LanguageSelector } from "@/components/LanguageSelector";
 import { Button } from "@/components/ui/button";
 import type { PublicBooking } from "@/schemas/bookingSchema";
 import { formatRm } from "@/utils/booking/pricing";
@@ -13,17 +15,56 @@ import {
   buildBookingResultMessage,
   buildWhatsAppUrl,
 } from "@/utils/booking/messages";
+import type { LocaleKey } from "@/locales";
+
+const frostedPanelClassName =
+  "rounded-lg bg-white/30 p-3 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15";
+
+function BookingResultLayout({ 
+  children,
+  locale,
+  onLocaleChange,
+}: { 
+  children: ReactNode;
+  locale: LocaleKey;
+  onLocaleChange: (locale: LocaleKey) => void;
+}) {
+  return (
+    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <AnimatedFlow
+        variant="blush"
+        flowSpeed={0.9}
+        distortionWarp={1.4}
+        filmGrain={0.25}
+        rotationAngle={120}
+        className="pointer-events-none absolute inset-0 min-h-0"
+      />
+      <div className="pointer-events-none fixed top-4 right-6 z-50">
+        <div className="pointer-events-auto">
+          <LanguageSelector value={locale} onChange={onLocaleChange} />
+        </div>
+      </div>
+      <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16 pt-16">
+        {children}
+      </div>
+    </div>
+  );
+}
 
 export default function BookingResultPage() {
+  const [locale, setLocale] = useState<LocaleKey>("ms");
+
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-16 text-sm text-muted-foreground">
-          Loading booking…
-        </div>
+        <BookingResultLayout locale={locale} onLocaleChange={setLocale}>
+          <div className="flex min-h-0 flex-1 items-center justify-center py-16 text-sm text-muted-foreground">
+            Loading booking…
+          </div>
+        </BookingResultLayout>
       }
     >
-      <BookingResultPageContent />
+      <BookingResultPageContent locale={locale} onLocaleChange={setLocale} />
     </Suspense>
   );
 }
@@ -36,7 +77,13 @@ function hasOutstandingBalance(booking: PublicBooking) {
   );
 }
 
-function BookingResultPageContent() {
+function BookingResultPageContent({
+  locale,
+  onLocaleChange,
+}: {
+  locale: LocaleKey;
+  onLocaleChange: (locale: LocaleKey) => void;
+}) {
   const params = useParams();
   const searchParams = useSearchParams();
   const client = params.client as string;
@@ -195,17 +242,21 @@ function BookingResultPageContent() {
 
   if (loading) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-16 text-sm text-muted-foreground">
-        Loading booking…
-      </div>
+      <BookingResultLayout locale={locale} onLocaleChange={onLocaleChange}>
+        <div className="flex min-h-0 flex-1 items-center justify-center py-16 text-sm text-muted-foreground">
+          Loading booking…
+        </div>
+      </BookingResultLayout>
     );
   }
 
   if (error || !booking) {
     return (
-      <div className="flex min-h-0 flex-1 items-center justify-center px-6 py-16 text-sm text-destructive">
-        {error ?? "Booking not found."}
-      </div>
+      <BookingResultLayout locale={locale} onLocaleChange={onLocaleChange}>
+        <div className="flex min-h-0 flex-1 items-center justify-center py-16 text-sm text-destructive">
+          {error ?? "Booking not found."}
+        </div>
+      </BookingResultLayout>
     );
   }
 
@@ -230,21 +281,21 @@ function BookingResultPageContent() {
       : null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pt-16 pb-16 dark:bg-zinc-950">
+    <BookingResultLayout locale={locale} onLocaleChange={onLocaleChange}>
       <div className="flex w-full max-w-md flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
           {(isFullyPaid || isCompleted) && (
-            <CheckCircle2Icon className="size-12 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2Icon className="size-12 text-rose-900 dark:text-rose-400" />
           )}
           {isSuccess && outstandingBalance && !isConfirmingBalance && (
-            <CheckCircle2Icon className="size-12 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2Icon className="size-12 text-rose-900 dark:text-rose-400" />
           )}
-          {isFailure && <XCircleIcon className="size-12 text-destructive" />}
+          {isFailure && <XCircleIcon className="size-12 text-rose-900 dark:text-rose-400" />}
           {(isConfirmingDeposit || isConfirmingBalance) && (
-            <div className="size-12 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+            <div className="size-12 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-rose-900 dark:border-t-rose-400" />
           )}
           {isPending && !isConfirmingDeposit && (
-            <div className="size-12 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-foreground" />
+            <div className="size-12 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-rose-900 dark:border-t-rose-400" />
           )}
 
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -306,7 +357,7 @@ function BookingResultPageContent() {
 
         <div className="w-full space-y-2">
           <p className="text-sm font-medium text-foreground">Booking details</p>
-          <div className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm">
+          <div className={frostedPanelClassName}>
             <p className="font-medium text-foreground">{booking.packageName}</p>
             {booking.styleName && (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -321,7 +372,11 @@ function BookingResultPageContent() {
 
         <div className="w-full space-y-2">
           <p className="text-sm font-medium text-foreground">Sessions</p>
-          <BookingSessionList sessions={booking.sessions} showLocation />
+          <BookingSessionList
+            sessions={booking.sessions}
+            showLocation
+            frosted
+          />
         </div>
 
         <BookingInvoice
@@ -333,7 +388,7 @@ function BookingResultPageContent() {
           <div className="flex w-full flex-col gap-2">
             <Button
               size="lg"
-              className="h-11 w-full"
+              className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
               disabled={payingBalance}
               onClick={() => void handlePayBalance()}
             >
@@ -355,12 +410,12 @@ function BookingResultPageContent() {
             asChild
           >
             <a href={whatsAppUrl} target="_blank" rel="noopener noreferrer">
-              <MessageCircleIcon className="size-4" />
+              <MessageCircleIcon className="size-4 text-rose-900 dark:text-rose-400" />
               WhatsApp {booking.freelancer?.name ?? "stylist"}
             </a>
           </Button>
         )}
       </div>
-    </div>
+    </BookingResultLayout>
   );
 }

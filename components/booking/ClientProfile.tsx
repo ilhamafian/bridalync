@@ -20,6 +20,7 @@ import {
   buildWhatsAppProfileUrl,
   socialLinksWithUrls,
 } from "@/utils/socialLinks";
+import { locales, type LocaleKey } from "@/locales";
 
 const roleLabel: Record<"hijabstylist" | "makeupartist", string> = {
   hijabstylist: "Hijab Stylist",
@@ -129,13 +130,16 @@ type ClientProfileProps = {
   user: PublicProfile;
   reviews: PublicReview[];
   onBookNow: () => void;
+  locale?: LocaleKey;
 };
 
 export function ClientProfile({
   user,
   reviews,
   onBookNow,
+  locale = "ms",
 }: ClientProfileProps) {
+  const t = locales[locale];
   const [selectedReview, setSelectedReview] = useState<PublicReview | null>(
     null
   );
@@ -217,7 +221,7 @@ export function ClientProfile({
             className="mt-6 h-11 w-full max-w-xs bg-rose-800 text-white hover:bg-rose-800/90"
             onClick={onBookNow}
           >
-            Book Now
+            {t.bookNow}
           </Button>
 
           {socialEntries.length > 0 ? (
@@ -241,16 +245,16 @@ export function ClientProfile({
         <section className="mx-auto flex w-full max-w-xs flex-col gap-4">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-              Reviews
+              {t.reviews}
             </h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              Client feedback and work photos.
+              {t.clientFeedback}
             </p>
           </div>
 
           {reviews.length === 0 ? (
             <p className="text-sm text-zinc-500 dark:text-zinc-500">
-              No reviews yet.
+              {t.noReviews}
             </p>
           ) : (
             <ul className="flex flex-col gap-3">

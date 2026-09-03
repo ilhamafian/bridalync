@@ -60,7 +60,7 @@ export function BookingInvoice({
   return (
     <Card
       className={cn(
-        "mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80",
+        "mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15",
         className
       )}
     >
@@ -73,7 +73,7 @@ export function BookingInvoice({
         </div>
 
         {invoice.lineItems.length > 0 ? (
-          <div className="space-y-2 border-b border-border pb-4">
+          <div className="space-y-2 border-b border-white/40 pb-4 dark:border-white/15">
             {invoice.lineItems.map((item) => (
               <InvoiceRow
                 key={item.label}
@@ -83,7 +83,7 @@ export function BookingInvoice({
             ))}
           </div>
         ) : (
-          <p className="border-b border-border pb-4 text-sm text-muted-foreground">
+          <p className="border-b border-white/40 pb-4 text-sm text-muted-foreground dark:border-white/15">
             No line items.
           </p>
         )}
@@ -101,7 +101,7 @@ export function BookingInvoice({
                 amount={formatRm(invoice.depositRm)}
                 emphasis
               />
-              <div className="flex items-start justify-between gap-3 border-t border-border pt-3 text-sm font-semibold text-foreground">
+              <div className="flex items-start justify-between gap-3 border-t border-white/40 pt-3 text-sm font-semibold text-foreground dark:border-white/15">
                 <span>Balance payment</span>
                 <span>{formatRm(invoice.balanceRm)}</span>
               </div>
@@ -114,7 +114,7 @@ export function BookingInvoice({
             </>
           )}
           {isFullPayment && (
-            <div className="flex items-start justify-between gap-3 border-t border-border pt-3 text-sm font-semibold text-foreground">
+            <div className="flex items-start justify-between gap-3 border-t border-white/40 pt-3 text-sm font-semibold text-foreground dark:border-white/15">
               <span>Amount due now</span>
               <span>{formatRm(invoice.totalRm)}</span>
             </div>
