@@ -140,7 +140,7 @@ export function BookingQuotation({
   return (
     <Card
       className={cn(
-        "mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80",
+        "mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15",
         className
       )}
     >
@@ -155,13 +155,13 @@ export function BookingQuotation({
         </div>
 
         {sortedSessions.length > 0 && (
-          <div className="space-y-2 border-b border-border pb-4">
+          <div className="space-y-2 border-b border-white/40 pb-4 dark:border-white/15">
             <p className="text-sm font-medium text-foreground">Sessions</p>
             <ul className="flex flex-col gap-2">
               {sortedSessions.map((session) => (
                 <li
                   key={session.client_key}
-                  className="rounded-lg border border-border bg-card px-3 py-2.5 text-sm"
+                  className="rounded-md px-1 py-2.5 text-sm"
                 >
                   <p className="font-medium text-foreground">
                     {formatSessionSummary(session)}
@@ -178,7 +178,7 @@ export function BookingQuotation({
         )}
 
         {quotation.lineItems.length > 0 ? (
-          <div className="space-y-2 border-b border-border pb-4">
+          <div className="space-y-2 border-b border-white/40 pb-4 dark:border-white/15">
             {quotation.lineItems.map((item) => (
               <InvoiceRow
                 key={item.label}
@@ -188,7 +188,7 @@ export function BookingQuotation({
             ))}
           </div>
         ) : (
-          <p className="border-b border-border pb-4 text-sm text-muted-foreground">
+          <p className="border-b border-white/40 pb-4 text-sm text-muted-foreground dark:border-white/15">
             No line items yet.
           </p>
         )}
@@ -206,7 +206,7 @@ export function BookingQuotation({
                 amount={formatRm(quotation.depositRm)}
                 emphasis
               />
-              <div className="flex items-start justify-between gap-3 border-t border-border pt-3 text-sm font-semibold text-foreground">
+              <div className="flex items-start justify-between gap-3 border-t border-white/40 pt-3 text-sm font-semibold text-foreground dark:border-white/15">
                 <span>Balance payment</span>
                 <span>{formatRm(quotation.balanceRm)}</span>
               </div>
@@ -219,7 +219,7 @@ export function BookingQuotation({
             </>
           )}
           {isFullPayment && (
-            <div className="flex items-start justify-between gap-3 border-t border-border pt-3 text-sm font-semibold text-foreground">
+            <div className="flex items-start justify-between gap-3 border-t border-white/40 pt-3 text-sm font-semibold text-foreground dark:border-white/15">
               <span>Amount due now</span>
               <span>{formatRm(quotation.totalRm)}</span>
             </div>

@@ -11,9 +11,10 @@ type BookingContactFormProps = {
 }
 
 const inputClassName = cn(
-  "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground",
+  "h-10 w-full rounded-md border border-input bg-input/20 px-3 text-xs/relaxed text-foreground transition-colors",
   "placeholder:text-muted-foreground",
-  "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+  "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30",
+  "dark:bg-input/30"
 )
 
 export function BookingContactForm({ value, onChange }: BookingContactFormProps) {

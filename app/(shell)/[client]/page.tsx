@@ -321,7 +321,7 @@ export default function ClientPage() {
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentOption, setPaymentOption] = useState<"deposit" | "full">(
-    "deposit"
+    "full"
   );
   const sessionRoadDistancesRef = useRef(sessionRoadDistances);
   const packages = useMemo(
@@ -1036,7 +1036,7 @@ export default function ClientPage() {
       {step === "events" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            What are you booking for?
+            What event are you booking for?
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
             Choose the package that matches your event.
@@ -1335,7 +1335,7 @@ export default function ClientPage() {
         </div>
       )}
       {step === "details" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center pb-24">
           {/* <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             Almost there! Just need some final info...
           </h1> */}
@@ -1387,9 +1387,9 @@ export default function ClientPage() {
             Terms and Conditions
           </h1>
           <div className="flex w-full flex-col items-end gap-4">
-            <Card className="mx-auto w-full min-h-128 min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
+            <Card className="mx-auto w-full min-h-128 min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
               <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
-                <div className="max-h-96 overflow-y-auto rounded-md border border-border bg-muted/30 p-3">
+                <div className="max-h-96 overflow-y-auto rounded-md border border-white/40 bg-white/20 p-3 dark:border-white/15 dark:bg-white/5">
                   <p className="whitespace-pre-line text-xs text-muted-foreground">
                     {settings?.invoice.terms_and_conditions ??
                       "No terms and conditions available."}
@@ -1400,7 +1400,7 @@ export default function ClientPage() {
                     type="checkbox"
                     checked={termsAccepted}
                     onChange={(event) => setTermsAccepted(event.target.checked)}
-                    className="mt-0.5 size-4 shrink-0 rounded border-border accent-primary"
+                    className="mt-0.5 size-4 shrink-0 rounded border-border accent-rose-800"
                   />
                   <span>I have read and agree to the terms and conditions</span>
                 </label>
@@ -1443,41 +1443,55 @@ export default function ClientPage() {
                 <button
                   type="button"
                   role="radio"
-                  aria-checked={effectivePaymentOption === "deposit"}
-                  onClick={() => setPaymentOption("deposit")}
+                  aria-checked={effectivePaymentOption === "full"}
+                  onClick={() => setPaymentOption("full")}
                   className={cn(
-                    "flex w-full flex-col items-start gap-0.5 rounded-lg border px-3 py-3 text-left text-sm transition-colors",
-                    effectivePaymentOption === "deposit"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-card hover:bg-muted/40"
+                    "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
+                    effectivePaymentOption === "full"
+                      ? "bg-rose-800 text-white shadow-sm"
+                      : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
                   )}
                 >
-                  <span className="font-medium text-foreground">
-                    Pay deposit — {formatRm(quotation.depositRm)}
+                  <span className="font-medium">
+                    Pay in full — {formatRm(quotation.totalRm)}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    Balance of {formatRm(quotation.balanceRm)} due{" "}
-                    {balanceDueBeforeDays} day
-                    {balanceDueBeforeDays === 1 ? "" : "s"} before your session.
+                  <span
+                    className={cn(
+                      "text-xs",
+                      effectivePaymentOption === "full"
+                        ? "text-white/80"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    Nothing left to pay later.
                   </span>
                 </button>
                 <button
                   type="button"
                   role="radio"
-                  aria-checked={effectivePaymentOption === "full"}
-                  onClick={() => setPaymentOption("full")}
+                  aria-checked={effectivePaymentOption === "deposit"}
+                  onClick={() => setPaymentOption("deposit")}
                   className={cn(
-                    "flex w-full flex-col items-start gap-0.5 rounded-lg border px-3 py-3 text-left text-sm transition-colors",
-                    effectivePaymentOption === "full"
-                      ? "border-primary bg-primary/5"
-                      : "border-border bg-card hover:bg-muted/40"
+                    "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
+                    effectivePaymentOption === "deposit"
+                      ? "bg-rose-800 text-white shadow-sm"
+                      : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
                   )}
                 >
-                  <span className="font-medium text-foreground">
-                    Pay in full — {formatRm(quotation.totalRm)}
+                  <span className="font-medium">
+                    Pay deposit — {formatRm(quotation.depositRm)}
                   </span>
-                  <span className="text-xs text-muted-foreground">
-                    Nothing left to pay later.
+                  <span
+                    className={cn(
+                      "text-xs",
+                      effectivePaymentOption === "deposit"
+                        ? "text-white/80"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    Balance of {formatRm(quotation.balanceRm)} due{" "}
+                    {balanceDueBeforeDays} day
+                    {balanceDueBeforeDays === 1 ? "" : "s"} before your session.
                   </span>
                 </button>
               </div>
