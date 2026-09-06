@@ -1269,31 +1269,32 @@ export default function ClientPage() {
               : "Pick the look category you are going for."}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
-            {!selectedStyleCategoryId ? (
-              <BookingStylePicker
-                mode="category"
-                categories={styleCategories}
-                selectedCategoryId={selectedStyleCategoryId}
-                onCategoryChange={(categoryId) => {
-                  setSelectedStyleCategoryId(categoryId);
-                  setSelectedVariantId(null);
-                }}
-              />
-            ) : (
-              <BookingStylePicker
-                mode="variant"
-                variants={styleVariants}
-                selectedVariantId={selectedVariantId}
-                onVariantChange={setSelectedVariantId}
-              />
-            )}
-            <div className="flex w-full flex-col gap-2">
+            <div className="mx-auto w-full max-w-xs px-2">
+              {!selectedStyleCategoryId ? (
+                <BookingStylePicker
+                  mode="category"
+                  categories={styleCategories}
+                  selectedCategoryId={selectedStyleCategoryId}
+                  onCategoryChange={(categoryId) => {
+                    setSelectedStyleCategoryId(categoryId);
+                    setSelectedVariantId(null);
+                  }}
+                />
+              ) : (
+                <BookingStylePicker
+                  mode="variant"
+                  variants={styleVariants}
+                  selectedVariantId={selectedVariantId}
+                  onVariantChange={setSelectedVariantId}
+                />
+              )}
+            </div>
+            <div className="flex w-full justify-end gap-2">
               {selectedStyleCategoryId && (
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="outline"
                   size="lg"
-                  className="w-full"
                   onClick={() => {
                     if (selectedVariantId) {
                       setSelectedVariantId(null);
