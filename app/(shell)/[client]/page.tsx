@@ -84,7 +84,7 @@ function buildStepOrder(hasStyles: boolean, hasAddOns: boolean): BookingStep[] {
 const PROGRESS_STEPS = [
   { key: "name", title: "Name" },
   { key: "events", title: "Event" },
-  { key: "datetime", title: "Date & Time" },
+  { key: "datetime", title: "Date" },
   { key: "location", title: "Location" },
   { key: "style", title: "Style" },
   { key: "payment", title: "Payment" },
@@ -393,32 +393,25 @@ export default function ClientPage() {
     () =>
       [...styles]
         .sort((a, b) => a.order - b.order)
-        .map((style) => ({
-          id: normalizePackageId(style._id),
-          name: style.name,
-        }))
+        .map((style) => {
+          const id = normalizePackageId(style._id);
+          return {
+            id,
+            name: style.name,
+            variants: [...style.variants]
+              .sort((a, b) => a.order - b.order)
+              .map((variant) => ({
+                id: buildStyleVariantId(id, variant.order),
+                name: variant.name,
+                price: variant.price,
+                deposit: variant.deposit,
+                imageSrc: variant.image_url,
+              })),
+          };
+        })
         .filter((style) => style.id.length > 0),
     [styles]
   );
-
-  const styleVariants = useMemo(() => {
-    if (!selectedStyleCategoryId) return [];
-
-    const category = styles.find(
-      (style) => normalizePackageId(style._id) === selectedStyleCategoryId
-    );
-    if (!category) return [];
-
-    return [...category.variants]
-      .sort((a, b) => a.order - b.order)
-      .map((variant) => ({
-        id: buildStyleVariantId(selectedStyleCategoryId, variant.order),
-        name: variant.name,
-        price: variant.price,
-        deposit: variant.deposit,
-        imageSrc: variant.image_url,
-      }));
-  }, [selectedStyleCategoryId, styles]);
 
   const selectedStyle = useMemo((): SelectedStyleForBooking | null => {
     if (!selectedVariantId) return null;
@@ -1259,53 +1252,22 @@ export default function ClientPage() {
       {step === "style" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {selectedStyleCategoryId
-              ? "Choose your variant"
-              : "What style do you want?"}
+            Choose your hijab style
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {selectedStyleCategoryId
-              ? "Pick the specific look within this style."
-              : "Pick the look category you are going for."}
+            Pick a look, then choose a variant.
           </p>
           <div className="flex w-full flex-col items-end gap-4">
-            <div className="mx-auto w-full max-w-xs px-2">
-              {!selectedStyleCategoryId ? (
-                <BookingStylePicker
-                  mode="category"
-                  categories={styleCategories}
-                  selectedCategoryId={selectedStyleCategoryId}
-                  onCategoryChange={(categoryId) => {
-                    setSelectedStyleCategoryId(categoryId);
-                    setSelectedVariantId(null);
-                  }}
-                />
-              ) : (
-                <BookingStylePicker
-                  mode="variant"
-                  variants={styleVariants}
-                  selectedVariantId={selectedVariantId}
-                  onVariantChange={setSelectedVariantId}
-                />
-              )}
+            <div className="mx-auto w-full max-w-sm px-2">
+              <BookingStylePicker
+                categories={styleCategories}
+                selectedCategoryId={selectedStyleCategoryId}
+                selectedVariantId={selectedVariantId}
+                onCategoryChange={setSelectedStyleCategoryId}
+                onVariantChange={setSelectedVariantId}
+              />
             </div>
-            <div className="flex w-full justify-end gap-2">
-              {selectedStyleCategoryId && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="lg"
-                  onClick={() => {
-                    if (selectedVariantId) {
-                      setSelectedVariantId(null);
-                      return;
-                    }
-                    setSelectedStyleCategoryId(null);
-                  }}
-                >
-                  Back
-                </Button>
-              )}
+            <div className="flex w-full justify-end">
               <Button
                 size="lg"
                 className="bg-chart-4 text-white hover:bg-chart-4/90"

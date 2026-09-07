@@ -15,7 +15,7 @@ export const en: Locale = {
   // Booking Steps
   packageSelection: "Package",
   eventSelection: "Events",
-  dateTimeSelection: "Date & Time",
+  dateTimeSelection: "Date",
   locationSelection: "Location",
   contactDetails: "Details",
   reviewBooking: "Review",
