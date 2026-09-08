@@ -42,7 +42,14 @@ import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import type { PublicProfile } from "@/schemas/userSchema";
 import { buildWhatsAppProfileUrl } from "@/utils/socialLinks";
 
@@ -119,6 +126,213 @@ function WhatsAppIcon({ className }: { className?: string }) {
     >
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
     </svg>
+  );
+}
+
+const WA_FAB_STORAGE_KEY = "bridalync-wa-fab-position";
+const WA_FAB_SIZE = 48;
+const WA_FAB_DRAG_THRESHOLD = 6;
+
+type FabPosition = { x: number; y: number };
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function readSavedFabPosition(): FabPosition | null {
+  try {
+    const raw = localStorage.getItem(WA_FAB_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<FabPosition>;
+    if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+      return { x: parsed.x, y: parsed.y };
+    }
+  } catch {
+    // Ignore invalid stored positions.
+  }
+  return null;
+}
+
+function saveFabPosition(position: FabPosition) {
+  try {
+    localStorage.setItem(WA_FAB_STORAGE_KEY, JSON.stringify(position));
+  } catch {
+    // Ignore storage failures (private mode, quota, etc).
+  }
+}
+
+function DraggableWhatsAppButton({ href }: { href: string }) {
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  const [position, setPosition] = useState<FabPosition | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const positionRef = useRef<FabPosition | null>(null);
+  const suppressClickRef = useRef(false);
+  const dragRef = useRef<{
+    pointerId: number;
+    startClientX: number;
+    startClientY: number;
+    originX: number;
+    originY: number;
+    moved: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    const saved = readSavedFabPosition();
+    if (!saved) return;
+
+    const parent = linkRef.current?.offsetParent as HTMLElement | null;
+    const width = parent?.clientWidth ?? window.innerWidth;
+    const height = parent?.clientHeight ?? window.innerHeight;
+    const next = {
+      x: clamp(saved.x, 0, Math.max(0, width - WA_FAB_SIZE)),
+      y: clamp(saved.y, 0, Math.max(0, height - WA_FAB_SIZE)),
+    };
+    positionRef.current = next;
+    setPosition(next);
+  }, []);
+
+  useEffect(() => {
+    function keepInBounds() {
+      setPosition((current) => {
+        if (!current) return current;
+        const parent = linkRef.current?.offsetParent as HTMLElement | null;
+        const width = parent?.clientWidth ?? window.innerWidth;
+        const height = parent?.clientHeight ?? window.innerHeight;
+        const next = {
+          x: clamp(current.x, 0, Math.max(0, width - WA_FAB_SIZE)),
+          y: clamp(current.y, 0, Math.max(0, height - WA_FAB_SIZE)),
+        };
+        if (next.x === current.x && next.y === current.y) return current;
+        positionRef.current = next;
+        saveFabPosition(next);
+        return next;
+      });
+    }
+
+    window.addEventListener("resize", keepInBounds);
+    return () => window.removeEventListener("resize", keepInBounds);
+  }, []);
+
+  function measureCurrentPosition(): FabPosition {
+    const el = linkRef.current;
+    const parent = el?.offsetParent as HTMLElement | null;
+    if (!el || !parent) {
+      return { x: 16, y: 16 };
+    }
+    const parentRect = parent.getBoundingClientRect();
+    const rect = el.getBoundingClientRect();
+    return {
+      x: rect.left - parentRect.left,
+      y: rect.top - parentRect.top,
+    };
+  }
+
+  function handlePointerDown(event: ReactPointerEvent<HTMLAnchorElement>) {
+    if (event.button !== 0) return;
+    const el = linkRef.current;
+    if (!el) return;
+
+    const origin = position ?? measureCurrentPosition();
+    if (!position) {
+      positionRef.current = origin;
+      setPosition(origin);
+    }
+
+    dragRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      originX: origin.x,
+      originY: origin.y,
+      moved: false,
+    };
+    suppressClickRef.current = false;
+    el.setPointerCapture(event.pointerId);
+    setIsDragging(true);
+  }
+
+  function handlePointerMove(event: ReactPointerEvent<HTMLAnchorElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - drag.startClientX;
+    const dy = event.clientY - drag.startClientY;
+    if (
+      Math.abs(dx) > WA_FAB_DRAG_THRESHOLD ||
+      Math.abs(dy) > WA_FAB_DRAG_THRESHOLD
+    ) {
+      drag.moved = true;
+    }
+
+    const parent = linkRef.current?.offsetParent as HTMLElement | null;
+    const width = parent?.clientWidth ?? window.innerWidth;
+    const height = parent?.clientHeight ?? window.innerHeight;
+
+    const next = {
+      x: clamp(drag.originX + dx, 0, Math.max(0, width - WA_FAB_SIZE)),
+      y: clamp(drag.originY + dy, 0, Math.max(0, height - WA_FAB_SIZE)),
+    };
+    positionRef.current = next;
+    setPosition(next);
+  }
+
+  function endDrag(event: ReactPointerEvent<HTMLAnchorElement>) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+
+    if (drag.moved) {
+      suppressClickRef.current = true;
+    }
+
+    dragRef.current = null;
+    setIsDragging(false);
+
+    try {
+      linkRef.current?.releasePointerCapture(event.pointerId);
+    } catch {
+      // Pointer may already be released.
+    }
+
+    if (positionRef.current) {
+      saveFabPosition(positionRef.current);
+    }
+  }
+
+  function handleClick(event: ReactMouseEvent<HTMLAnchorElement>) {
+    if (suppressClickRef.current) {
+      event.preventDefault();
+      suppressClickRef.current = false;
+    }
+  }
+
+  return (
+    <a
+      ref={linkRef}
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Chat on WhatsApp"
+      title="Drag to move · Tap to chat"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
+      onClick={handleClick}
+      style={
+        position
+          ? { left: position.x, top: position.y, right: "auto", bottom: "auto" }
+          : undefined
+      }
+      className={cn(
+        "absolute z-20 flex size-12 touch-none items-center justify-center rounded-full border border-zinc-900/10 bg-white/40 text-rose-900 shadow-md backdrop-blur-sm select-none hover:bg-white/55 hover:text-rose-900 hover:shadow-lg dark:border-white/20 dark:bg-white/10 dark:text-rose-400 dark:hover:bg-white/15 dark:hover:text-rose-300",
+        position ? null : "right-4 bottom-[22%]",
+        isDragging
+          ? "cursor-grabbing transition-none"
+          : "cursor-grab transition-colors active:scale-95"
+      )}
+    >
+      <WhatsAppIcon className="pointer-events-none size-6" />
+    </a>
   );
 }
 
@@ -1497,15 +1711,7 @@ export default function ClientPage() {
       )}
       </div>
       {step !== "intro" && whatsappUrl ? (
-        <a
-          href={whatsappUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Chat on WhatsApp"
-          className="absolute right-4 bottom-[22%] z-20 flex size-12 items-center justify-center rounded-full border border-zinc-900/10 bg-white/40 text-rose-900 shadow-md backdrop-blur-sm transition-colors hover:bg-white/55 hover:text-rose-900 hover:shadow-lg active:scale-95 dark:border-white/20 dark:bg-white/10 dark:text-rose-400 dark:hover:bg-white/15 dark:hover:text-rose-300"
-        >
-          <WhatsAppIcon className="size-6" />
-        </a>
+        <DraggableWhatsAppButton href={whatsappUrl} />
       ) : null}
     </div>
   );
