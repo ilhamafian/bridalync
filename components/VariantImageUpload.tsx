@@ -1,10 +1,20 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
+import Cropper, { type Area } from "react-easy-crop";
+import "react-easy-crop/react-easy-crop.css";
 import { IconPhoto, IconTrash, IconUpload } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +25,69 @@ type VariantImageUploadProps = {
   label?: string;
 };
 
+type CropSession = {
+  objectUrl: string;
+  fileName: string;
+};
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", () =>
+      reject(new Error("Could not load image for cropping."))
+    );
+    image.src = src;
+  });
+}
+
+async function getCroppedImageFile(
+  imageSrc: string,
+  pixelCrop: Area,
+  fileName: string
+): Promise<File> {
+  const image = await loadImage(imageSrc);
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  if (!context) {
+    throw new Error("Could not crop image.");
+  }
+
+  const outputSize = Math.min(pixelCrop.width, pixelCrop.height);
+  canvas.width = outputSize;
+  canvas.height = outputSize;
+
+  context.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    outputSize,
+    outputSize
+  );
+
+  const blob = await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (result) => {
+        if (!result) {
+          reject(new Error("Could not crop image."));
+          return;
+        }
+        resolve(result);
+      },
+      "image/jpeg",
+      0.92
+    );
+  });
+
+  const baseName = fileName.replace(/\.[^/.]+$/, "") || "style-image";
+  return new File([blob], `${baseName}.jpg`, { type: "image/jpeg" });
+}
+
 export function VariantImageUpload({
   value,
   onChange,
@@ -24,8 +97,26 @@ export function VariantImageUpload({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cropSession, setCropSession] = useState<CropSession | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
 
-  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  const onCropComplete = useCallback((_area: Area, areaPixels: Area) => {
+    setCroppedAreaPixels(areaPixels);
+  }, []);
+
+  function closeCropSession() {
+    if (cropSession?.objectUrl) {
+      URL.revokeObjectURL(cropSession.objectUrl);
+    }
+    setCropSession(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedAreaPixels(null);
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
 
@@ -33,12 +124,38 @@ export function VariantImageUpload({
       return;
     }
 
+    setError(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedAreaPixels(null);
+    setCropSession((current) => {
+      if (current?.objectUrl) {
+        URL.revokeObjectURL(current.objectUrl);
+      }
+      return {
+        objectUrl: URL.createObjectURL(file),
+        fileName: file.name,
+      };
+    });
+  }
+
+  async function handleConfirmCrop() {
+    if (!cropSession || !croppedAreaPixels) {
+      return;
+    }
+
     setUploading(true);
     setError(null);
 
     try {
+      const croppedFile = await getCroppedImageFile(
+        cropSession.objectUrl,
+        croppedAreaPixels,
+        cropSession.fileName
+      );
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", croppedFile);
       formData.append("folder", "style-images");
 
       const response = await fetch("/api/upload/image", {
@@ -57,6 +174,13 @@ export function VariantImageUpload({
       }
 
       onChange(data.url);
+      closeCropSession();
+    } catch (cropError) {
+      setError(
+        cropError instanceof Error
+          ? cropError.message
+          : "Could not crop image."
+      );
     } finally {
       setUploading(false);
     }
@@ -127,6 +251,78 @@ export function VariantImageUpload({
       />
 
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
+
+      <Dialog
+        open={cropSession !== null}
+        onOpenChange={(open) => {
+          if (!open && !uploading) {
+            closeCropSession();
+          }
+        }}
+      >
+        <DialogContent
+          className="z-60 sm:max-w-md"
+          overlayClassName="z-60"
+          showCloseButton={!uploading}
+        >
+          <DialogHeader>
+            <DialogTitle>Crop image</DialogTitle>
+            <DialogDescription>
+              Drag to reposition. Aspect ratio is locked to 1:1.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="relative h-72 w-full overflow-hidden rounded-lg bg-muted">
+            {cropSession ? (
+              <Cropper
+                image={cropSession.objectUrl}
+                crop={crop}
+                zoom={zoom}
+                aspect={1}
+                onCropChange={setCrop}
+                onZoomChange={setZoom}
+                onCropComplete={onCropComplete}
+                objectFit="contain"
+              />
+            ) : null}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="variant-image-zoom">Zoom</Label>
+            <input
+              id="variant-image-zoom"
+              type="range"
+              min={1}
+              max={3}
+              step={0.05}
+              value={zoom}
+              disabled={uploading}
+              onChange={(event) => setZoom(Number(event.target.value))}
+              className="w-full accent-rose-800"
+            />
+          </div>
+
+          <DialogFooter className="gap-2 sm:justify-stretch">
+            <Button
+              type="button"
+              variant="outline"
+              className="flex-1"
+              disabled={uploading}
+              onClick={closeCropSession}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="flex-1"
+              disabled={uploading || !croppedAreaPixels}
+              onClick={handleConfirmCrop}
+            >
+              {uploading ? "Uploading..." : "Apply crop"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
