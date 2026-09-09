@@ -1,9 +1,9 @@
 "use client";
 
-import Image from "next/image";
-import { useRef, useState } from "react";
-import { IconPlus, IconTrash, IconUpload } from "@tabler/icons-react";
+import { useState } from "react";
+import { IconPlus, IconTrash } from "@tabler/icons-react";
 
+import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import { PwaSettingsCard } from "@/components/PwaSettingsCard";
 import { Badge } from "@/components/ui/badge";
@@ -135,7 +135,6 @@ export function SettingsManager({
   const [stripeConnected] = useState(isStripeConnected);
   const [connectingStripe, setConnectingStripe] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
-  const logoInputRef = useRef<HTMLInputElement>(null);
 
   function clearSectionFeedback(section: SectionKey) {
     setSectionError((current) => ({ ...current, [section]: undefined }));
@@ -307,56 +306,6 @@ export function SettingsManager({
     }
 
     await patchSettings("time_slots", { time_slots: timeSlots });
-  }
-
-  async function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      setSectionError((current) => ({
-        ...current,
-        invoice: "Choose an image file.",
-      }));
-      return;
-    }
-    if (file.size > 4 * 1024 * 1024) {
-      setSectionError((current) => ({
-        ...current,
-        invoice: "Image must be 4 MB or smaller.",
-      }));
-      return;
-    }
-
-    setUploadingLogo(true);
-    clearSectionFeedback("invoice");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("folder", "company-logos");
-
-      const response = await fetch("/api/upload/image", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setSectionError((current) => ({
-          ...current,
-          invoice:
-            typeof data.error === "string"
-              ? data.error
-              : "Could not upload logo.",
-        }));
-        return;
-      }
-
-      setCompanyLogo(data.url as string);
-    } finally {
-      setUploadingLogo(false);
-    }
   }
 
   async function handleStripeConnect() {
@@ -580,61 +529,16 @@ export function SettingsManager({
               onChange={(event) => setCompanyReg(event.target.value)}
             />
           </Field>
-          <div className="flex flex-col gap-2">
-            <Label>Company logo</Label>
-            {companyLogo ? (
-              <div className="flex items-center gap-3 rounded-lg border p-2">
-                <div className="relative size-16 shrink-0 overflow-hidden rounded-md bg-muted">
-                  <Image
-                    src={companyLogo}
-                    alt="Company logo"
-                    fill
-                    className="object-cover"
-                    sizes="64px"
-                  />
-                </div>
-                <div className="flex flex-1 gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={uploadingLogo}
-                    onClick={() => logoInputRef.current?.click()}
-                  >
-                    <IconUpload className="size-4" />
-                    Change
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={uploadingLogo}
-                    onClick={() => setCompanyLogo("")}
-                  >
-                    <IconTrash className="size-4" />
-                    Remove
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={uploadingLogo}
-                onClick={() => logoInputRef.current?.click()}
-              >
-                <IconUpload className="size-4" />
-                {uploadingLogo ? "Uploading…" : "Upload logo"}
-              </Button>
-            )}
-            <input
-              ref={logoInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
-              className="hidden"
-              onChange={handleLogoUpload}
-            />
-          </div>
+          <CompanyLogoUpload
+            value={companyLogo}
+            onChange={(url) => {
+              clearSectionFeedback("invoice");
+              setCompanyLogo(url);
+            }}
+            disabled={savingSection === "invoice"}
+            onUploadingChange={setUploadingLogo}
+            hint="JPEG, PNG, WebP, or GIF. Max 4 MB. Cropped to 16:9."
+          />
           <Field label="Terms and conditions">
             <Textarea
               className={textareaClassName}

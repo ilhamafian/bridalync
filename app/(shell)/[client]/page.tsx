@@ -1517,14 +1517,24 @@ export default function ClientPage() {
                 onSelectionChange={setSelectedAddOnIds}
               />
             </div>
-            <Button
-              size="lg"
-              className="mt-4 bg-chart-4 text-white hover:bg-chart-4/90"
-              onClick={goToNextStep}
-            >
-              {t.next}
-              <ChevronRightIcon />
-            </Button>
+            <div className="mt-4 flex items-center gap-2">
+              <Button
+                size="lg"
+                variant="outline"
+                className="bg-white text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                onClick={goToNextStep}
+              >
+                {t.skip}
+              </Button>
+              <Button
+                size="lg"
+                className="bg-chart-4 text-white hover:bg-chart-4/90"
+                onClick={goToNextStep}
+              >
+                {t.next}
+                <ChevronRightIcon />
+              </Button>
+            </div>
           </div>
         </div>
       )}

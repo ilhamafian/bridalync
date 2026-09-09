@@ -2,6 +2,7 @@ export const ms = {
   // Common
   back: "Kembali",
   next: "Seterusnya",
+  skip: "Teruskan",
   bookNow: "Tempah Sekarang",
   selectLanguage: "Pilih bahasa",
   somethingWentWrong: "Ada masalah berlaku. Sila cuba lagi.",
@@ -85,7 +86,7 @@ export const ms = {
   noAddOnsAvailable: "Tiada tambahan tersedia.",
 
   // Contact
-  almostThere: "Kejap!\nCuma perlukan beberapa maklumat lagi...",
+  almostThere: "Hampir selesai!\nKami cuma perlukan beberapa maklumat tambahan...",
   phoneNumber: "Nombor telefon",
   email: "E-mel",
   emailPlaceholder: "emel@anda.com",
@@ -100,7 +101,7 @@ export const ms = {
   agreeContinue: "Setuju dan teruskan",
 
   // Payment
-  payInFull: "Bayar sepenuhnya",
+  payInFull: "Pilih cara bayaran",
   choosePayment: "Pilih cara bayaran",
   paymentOptionLabel: "Pilihan bayaran",
   sessionWithinDays:

@@ -4,6 +4,7 @@ export const en: Locale = {
   // Common
   back: "Back",
   next: "Next",
+  skip: "Skip",
   bookNow: "Book Now",
   selectLanguage: "Select language",
   somethingWentWrong: "Something went wrong. Please try again.",
@@ -103,7 +104,7 @@ export const en: Locale = {
   agreeContinue: "Agree and continue",
 
   // Payment
-  payInFull: "Pay in full",
+  payInFull: "Choose how to pay",
   choosePayment: "Choose how to pay",
   paymentOptionLabel: "Payment option",
   sessionWithinDays:
