@@ -9,8 +9,8 @@ export const ms = {
   // Client profile
   loadingProfile: "Memuatkan profil…",
   profileNotFound: "Profil tidak dijumpai.",
-  hijabStylist: "Penata Hijab",
-  makeupArtist: "Artis Solekan",
+  hijabStylist: "Hijab Stylist",
+  makeupArtist: "Makeup Artist",
   reviews: "Ulasan",
   clientFeedback: "Maklum balas pelanggan dan foto hasil kerja.",
   noReviews: "Tiada ulasan lagi.",
@@ -29,14 +29,14 @@ export const ms = {
   stepPayment: "Bayaran",
 
   // Name
-  nameQuestion: "Tapi dahulu,\nApa nama anda?",
+  nameQuestion: "Sebelum itu,\nApakah nama anda?",
   namePlaceholder: "Nama anda",
   phonePlaceholder: "cth. 123456789",
   countryCode: "Kod negara",
 
   // Events / packages
-  eventQuestion: "Acara apa yang anda ingin tempah?",
-  eventHelper: "Pilih pakej yang sepadan dengan acara anda.",
+  eventQuestion: "Majlis apa yang anda ingin tempah?",
+  eventHelper: "Pilih pakej yang sepadan dengan majlis anda.",
   loadingPackages: "Memuatkan pakej...",
   noPackagesAvailable: "Tiada pakej tersedia.",
   sessionCount: "{count} sesi",
@@ -71,7 +71,7 @@ export const ms = {
 
   // Style
   chooseStyle: "Pilih gaya hijab anda",
-  chooseStyleHelper: "Pilih rupa, kemudian pilih variasi.",
+  chooseStyleHelper: "Pilih jenis gaya, kemudian pilih variasi.",
   noStylesAvailable: "Tiada gaya tersedia.",
   noVariantsAvailable: "Tiada variasi tersedia.",
   noImage: "Tiada gambar",
@@ -85,7 +85,7 @@ export const ms = {
   noAddOnsAvailable: "Tiada tambahan tersedia.",
 
   // Contact
-  almostThere: "Hampir selesai!\nCuma perlukan beberapa maklumat akhir...",
+  almostThere: "Kejap!\nCuma perlukan beberapa maklumat lagi...",
   phoneNumber: "Nombor telefon",
   email: "E-mel",
   emailPlaceholder: "emel@anda.com",
