@@ -279,6 +279,44 @@ export function SettingsManager({
     });
   }
 
+  async function saveCompanyLogo(url: string) {
+    setCompanyLogo(url);
+    clearSectionFeedback("invoice");
+    setSavingSection("invoice");
+
+    try {
+      const response = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          invoice: { company_logo: url },
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setSectionError((current) => ({
+          ...current,
+          invoice:
+            typeof data.error === "string"
+              ? data.error
+              : "Failed to save logo.",
+        }));
+        return;
+      }
+
+      const saved = data.setting as SettingsItem;
+      setSettings(saved);
+      setCompanyLogo(saved.invoice.company_logo ?? "");
+      setSectionSuccess((current) => ({
+        ...current,
+        invoice: url ? "Logo saved." : "Logo removed.",
+      }));
+    } finally {
+      setSavingSection(null);
+    }
+  }
+
   async function saveTimeSlots() {
     if (timeSlots.length === 0) {
       setSectionError((current) => ({
@@ -532,12 +570,11 @@ export function SettingsManager({
           <CompanyLogoUpload
             value={companyLogo}
             onChange={(url) => {
-              clearSectionFeedback("invoice");
-              setCompanyLogo(url);
+              void saveCompanyLogo(url);
             }}
             disabled={savingSection === "invoice"}
             onUploadingChange={setUploadingLogo}
-            hint="JPEG, PNG, WebP, or GIF. Max 4 MB. Cropped to 16:9."
+            hint="JPEG, PNG, WebP, or GIF. Max 4 MB. Cropped to 16:9. Saves automatically."
           />
           <Field label="Terms and conditions">
             <Textarea
