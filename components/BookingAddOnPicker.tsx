@@ -1,5 +1,6 @@
 "use client"
 
+import { useLocale } from "@/components/LocaleProvider"
 import { Button } from "@/components/ui/button"
 import { formatRm } from "@/utils/booking/pricing"
 import { cn } from "@/lib/utils"
@@ -21,6 +22,8 @@ export function BookingAddOnPicker({
   selectedAddOnIds,
   onSelectionChange,
 }: BookingAddOnPickerProps) {
+  const { t } = useLocale()
+
   function toggleAddOn(addOnId: string) {
     if (selectedAddOnIds.includes(addOnId)) {
       onSelectionChange(selectedAddOnIds.filter((id) => id !== addOnId))
@@ -32,7 +35,7 @@ export function BookingAddOnPicker({
   if (addOns.length === 0) {
     return (
       <p className="mx-auto w-full max-w-xs px-4 text-center text-sm text-muted-foreground">
-        No add-ons available.
+        {t.noAddOnsAvailable}
       </p>
     )
   }

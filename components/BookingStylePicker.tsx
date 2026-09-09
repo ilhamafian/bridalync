@@ -5,6 +5,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { motion } from "motion/react"
 import { useEffect, useRef, useState } from "react"
 
+import { useLocale } from "@/components/LocaleProvider"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -42,6 +43,7 @@ function VariantCarousel({
   selectedVariantId: string | null
   onVariantChange: (variantId: string | null) => void
 }) {
+  const { t, format } = useLocale()
   const selectedIndex = selectedVariantId
     ? variants.findIndex((variant) => variant.id === selectedVariantId)
     : -1
@@ -147,7 +149,7 @@ function VariantCarousel({
             type="button"
             variant="secondary"
             size="icon"
-            aria-label="Previous variant"
+            aria-label={t.previousVariant}
             disabled={!canGoPrev}
             className="pointer-events-auto absolute top-1/2 left-2 size-9 -translate-y-1/2 rounded-full bg-white/90 shadow-sm backdrop-blur-sm hover:bg-white disabled:opacity-40"
             onClick={() => goToIndex(activeIndex - 1)}
@@ -158,7 +160,7 @@ function VariantCarousel({
             type="button"
             variant="secondary"
             size="icon"
-            aria-label="Next variant"
+            aria-label={t.nextVariant}
             disabled={!canGoNext}
             className="pointer-events-auto absolute top-1/2 size-9 -translate-y-1/2 rounded-full bg-white/90 shadow-sm backdrop-blur-sm hover:bg-white disabled:opacity-40"
             style={{ left: `calc(100% + ${CARD_GAP_PX}px)` }}
@@ -174,7 +176,7 @@ function VariantCarousel({
           <button
             key={variant.id}
             type="button"
-            aria-label={`Show ${variant.name}`}
+            aria-label={format(t.showVariant, { name: variant.name })}
             aria-current={activeIndex === index}
             className={cn(
               "size-1.5 rounded-full transition-all",
@@ -203,6 +205,8 @@ function VariantCard({
   dimmed?: boolean
   onSelect: () => void
 }) {
+  const { t } = useLocale()
+
   return (
     <Button
       type="button"
@@ -231,7 +235,7 @@ function VariantCard({
           </span>
         ) : (
           <span className="flex aspect-square w-full items-center justify-center bg-muted/60 text-sm text-muted-foreground">
-            No image
+            {t.noImage}
           </span>
         )}
         <span className="px-3 py-2.5 font-medium">{variant.name}</span>
@@ -247,10 +251,12 @@ export function BookingStylePicker({
   onCategoryChange,
   onVariantChange,
 }: BookingStylePickerProps) {
+  const { t } = useLocale()
+
   if (categories.length === 0) {
     return (
       <p className="mx-auto w-full max-w-xs px-4 text-center text-sm text-muted-foreground">
-        No styles available.
+        {t.noStylesAvailable}
       </p>
     )
   }
@@ -306,7 +312,7 @@ export function BookingStylePicker({
                 <div className="pt-2">
                   {category.variants.length === 0 ? (
                     <p className="px-2 py-1 text-sm text-muted-foreground">
-                      No variants available.
+                      {t.noVariantsAvailable}
                     </p>
                   ) : (
                     <VariantCarousel

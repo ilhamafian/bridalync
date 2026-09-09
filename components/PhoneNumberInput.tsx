@@ -38,6 +38,9 @@ type PhoneNumberInputProps = {
   onMobileChange: (mobile: string) => void;
   inputClassName?: string;
   mobileInputId?: string;
+  placeholder?: string;
+  countryCodeAriaLabel?: string;
+  mobileAriaLabel?: string;
 };
 
 export function PhoneNumberInput({
@@ -47,6 +50,9 @@ export function PhoneNumberInput({
   onMobileChange,
   inputClassName = defaultInputClassName,
   mobileInputId,
+  placeholder = "e.g. 123456789",
+  countryCodeAriaLabel = "Country code",
+  mobileAriaLabel = "Phone number",
 }: PhoneNumberInputProps) {
   const resolvedCountryCode = countryCode || DEFAULT_COUNTRY_CODE;
 
@@ -55,7 +61,7 @@ export function PhoneNumberInput({
       <Select value={resolvedCountryCode} onValueChange={onCountryCodeChange}>
         <SelectTrigger
           className="h-10 w-30 shrink-0 data-[size=default]:h-10"
-          aria-label="Country code"
+          aria-label={countryCodeAriaLabel}
         >
           <SelectValue />
         </SelectTrigger>
@@ -71,11 +77,11 @@ export function PhoneNumberInput({
         id={mobileInputId}
         type="tel"
         autoComplete="tel-national"
-        placeholder="e.g. 123456789"
+        placeholder={placeholder}
         value={mobile}
         onChange={(event) => onMobileChange(event.target.value)}
         className={inputClassName}
-        aria-label="Phone number"
+        aria-label={mobileAriaLabel}
       />
     </div>
   );

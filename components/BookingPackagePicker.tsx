@@ -1,5 +1,6 @@
 "use client"
 
+import { useLocale } from "@/components/LocaleProvider"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -21,10 +22,12 @@ export function BookingPackagePicker({
   selectedPackageId,
   onPackageChange,
 }: BookingPackagePickerProps) {
+  const { t, format } = useLocale()
+
   if (packages.length === 0) {
     return (
       <p className="mx-auto w-full max-w-xs px-4 text-center text-sm text-muted-foreground">
-        No packages available.
+        {t.noPackagesAvailable}
       </p>
     )
   }
@@ -51,7 +54,7 @@ export function BookingPackagePicker({
               <span className="block font-medium">{pkg.name}</span>
             </span>
             <span className="shrink-0 pl-3 font-medium">
-              {pkg.sessionCount} session{pkg.sessionCount === 1 ? "" : "s"}
+              {format(t.sessionCount, { count: pkg.sessionCount })}
             </span>
           </Button>
         )

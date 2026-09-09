@@ -43,7 +43,7 @@ function TextGenerateEffect({
         },
       )
     }
-  }, [animate, duration, filter, scope, staggerDelay])
+  }, [animate, duration, filter, scope, staggerDelay, words])
 
   return (
     <div

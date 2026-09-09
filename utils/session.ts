@@ -7,8 +7,11 @@ function toSessionDate(value: SessionSummaryFields["date"] | string): Date {
   return value instanceof Date ? value : new Date(value);
 }
 
-export function formatSessionSummary(session: SessionSummaryFields): string {
-  const dateStr = toSessionDate(session.date).toLocaleDateString(undefined, {
+export function formatSessionSummary(
+  session: SessionSummaryFields,
+  locale = "ms-MY"
+): string {
+  const dateStr = toSessionDate(session.date).toLocaleDateString(locale, {
     weekday: "short",
     day: "numeric",
     month: "short",

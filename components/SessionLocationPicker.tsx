@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { useLocale } from "@/components/LocaleProvider"
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker"
 import { formatSessionSummary } from "@/utils/session"
 import type { Address } from "@/schemas/addressSchema"
@@ -27,12 +28,14 @@ export function SessionLocationPicker({
   sharedLocationHelperText,
   sessionLocationHelperTextByKey,
 }: SessionLocationPickerProps) {
+  const { t, intlLocale } = useLocale()
+
   return (
     <MapsProvider>
       <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
       <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
       <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
-              If you have not decided on the location yet, you can just put in the area you are in.
+              {t.locationNotDecided}
             </p>
         <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
           <input
@@ -43,17 +46,20 @@ export function SessionLocationPicker({
             }
             className="size-4 rounded border-border accent-rose-800"
           />
-          Same location for all sessions
+          {t.sameLocationAll}
         </label>
 
         {sameLocationForAll ? (
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium text-foreground">
-              Location for all sessions
+              {t.locationAllSessions}
             </p>
             <LocationMapPicker
               value={sharedLocation}
               onChange={onSharedLocationChange}
+              hint={t.mapHint}
+              pinnedLabel={t.pinnedOnMap}
+              selectedLabel={t.selectedLocation}
             />
             {sharedLocationHelperText && (
               <p className="text-xs text-muted-foreground">
@@ -69,13 +75,16 @@ export function SessionLocationPicker({
                 className="flex flex-col gap-3 border-t border-white/40 pt-4 first:border-t-0 first:pt-0 dark:border-white/15"
               >
                 <p className="text-sm font-medium text-foreground">
-                  {formatSessionSummary(session)}
+                  {formatSessionSummary(session, intlLocale)}
                 </p>
                 <LocationMapPicker
                   value={session.location ?? null}
                   onChange={(location) =>
                     onSessionLocationChange(session.client_key, location)
                   }
+                  hint={t.mapHint}
+                  pinnedLabel={t.pinnedOnMap}
+                  selectedLabel={t.selectedLocation}
                 />
                 {sessionLocationHelperTextByKey?.[session.client_key] && (
                   <p className="text-xs text-muted-foreground">

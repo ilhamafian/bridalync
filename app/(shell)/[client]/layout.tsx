@@ -1,5 +1,6 @@
 // app/[client]/layout.tsx
 import { notFound } from "next/navigation";
+import { LocaleProvider } from "@/components/LocaleProvider";
 import { UserModel } from "@/models/User";
 
 export default async function ClientLayout({
@@ -16,5 +17,5 @@ export default async function ClientLayout({
     notFound();
   }
 
-  return <>{children}</>;
+  return <LocaleProvider>{children}</LocaleProvider>;
 }

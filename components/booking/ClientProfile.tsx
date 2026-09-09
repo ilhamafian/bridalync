@@ -4,6 +4,7 @@ import Image from "next/image";
 import { XIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 
+import { useLocale } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -20,12 +21,11 @@ import {
   buildWhatsAppProfileUrl,
   socialLinksWithUrls,
 } from "@/utils/socialLinks";
-import { locales, type LocaleKey } from "@/locales";
+import type { Locale } from "@/locales";
 
-const roleLabel: Record<"hijabstylist" | "makeupartist", string> = {
-  hijabstylist: "Hijab Stylist",
-  makeupartist: "Makeup Artist",
-};
+function roleLabel(role: "hijabstylist" | "makeupartist", t: Locale) {
+  return role === "hijabstylist" ? t.hijabStylist : t.makeupArtist;
+}
 
 /** Portrait fallback used until the opened photo reports its real dimensions. */
 const DEFAULT_PHOTO_RATIO = 3 / 4;
@@ -130,16 +130,14 @@ type ClientProfileProps = {
   user: PublicProfile;
   reviews: PublicReview[];
   onBookNow: () => void;
-  locale?: LocaleKey;
 };
 
 export function ClientProfile({
   user,
   reviews,
   onBookNow,
-  locale = "ms",
 }: ClientProfileProps) {
-  const t = locales[locale];
+  const { t, format, intlLocale } = useLocale();
   const [selectedReview, setSelectedReview] = useState<PublicReview | null>(
     null
   );
@@ -147,7 +145,7 @@ export function ClientProfile({
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_PHOTO_RATIO);
   const lightboxClosedAtRef = useRef(0);
   const displayName = user.name?.trim() || user.username || "Stylist";
-  const role = user.role ? roleLabel[user.role] : null;
+  const role = user.role ? roleLabel(user.role, t) : null;
   const socialEntries = buildSocialEntries(user);
 
   function openLightbox(url: string) {
@@ -276,7 +274,7 @@ export function ClientProfile({
                           </p>
                           {review.event_date ? (
                             <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-500">
-                              {formatReviewEventDate(review.event_date)}
+                              {formatReviewEventDate(review.event_date, intlLocale)}
                             </p>
                           ) : null}
                         </div>
@@ -294,7 +292,9 @@ export function ClientProfile({
                               >
                                 <Image
                                   src={url}
-                                  alt={`${review.clientName} review photo`}
+                                  alt={format(t.reviewPhotoAlt, {
+                                    name: review.clientName,
+                                  })}
                                   fill
                                   className="object-cover"
                                   sizes="144px"
@@ -342,11 +342,11 @@ export function ClientProfile({
                 </DialogTitle>
                 {selectedReview.event_date ? (
                   <DialogDescription>
-                    {formatReviewEventDate(selectedReview.event_date)}
+                    {formatReviewEventDate(selectedReview.event_date, intlLocale)}
                   </DialogDescription>
                 ) : (
                   <DialogDescription className="sr-only">
-                    Review details
+                    {t.reviewDetails}
                   </DialogDescription>
                 )}
               </DialogHeader>
@@ -365,11 +365,15 @@ export function ClientProfile({
                       type="button"
                       className="relative h-72 w-56 shrink-0 overflow-hidden rounded-lg bg-zinc-100 outline-none transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring dark:bg-zinc-800"
                       onClick={() => openLightbox(url)}
-                      aria-label={`View full size photo from ${selectedReview.clientName}`}
+                      aria-label={format(t.viewFullSizePhoto, {
+                        name: selectedReview.clientName,
+                      })}
                     >
                       <Image
                         src={url}
-                        alt={`${selectedReview.clientName} review photo`}
+                        alt={format(t.reviewPhotoAlt, {
+                          name: selectedReview.clientName,
+                        })}
                         fill
                         className="object-cover"
                         sizes="256px"
@@ -388,7 +392,7 @@ export function ClientProfile({
           className="pointer-events-auto fixed inset-0 z-60 flex cursor-zoom-out items-center justify-center bg-black/90 p-4 sm:p-8"
           role="dialog"
           aria-modal="true"
-          aria-label="Full size review photo"
+          aria-label={t.fullSizeReviewPhoto}
           onClick={closeLightbox}
         >
           <div
@@ -401,11 +405,9 @@ export function ClientProfile({
           >
             <Image
               src={selectedImageUrl}
-              alt={
-                selectedReview
-                  ? `${selectedReview.clientName} review photo`
-                  : "Review photo"
-              }
+              alt={format(t.reviewPhotoAlt, {
+                name: selectedReview?.clientName ?? "",
+              })}
               fill
               className="object-cover"
               sizes="90vw"
@@ -421,7 +423,7 @@ export function ClientProfile({
               type="button"
               variant="ghost"
               size="icon-sm"
-              aria-label="Close photo"
+              aria-label={t.closePhoto}
               className="absolute top-2 right-2 rounded-full bg-black/60 text-zinc-50 hover:bg-black/80 hover:text-zinc-50"
               onClick={closeLightbox}
             >

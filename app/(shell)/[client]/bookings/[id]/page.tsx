@@ -8,6 +8,7 @@ import { AnimatedFlow } from "@/components/animated-flow";
 import { BookingInvoice } from "@/components/BookingQuotation";
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { useLocale } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import type { PublicBooking } from "@/schemas/bookingSchema";
 import { formatRm } from "@/utils/booking/pricing";
@@ -15,20 +16,11 @@ import {
   buildBookingResultMessage,
   buildWhatsAppUrl,
 } from "@/utils/booking/messages";
-import type { LocaleKey } from "@/locales";
 
 const frostedPanelClassName =
   "rounded-lg bg-white/30 p-3 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15";
 
-function BookingResultLayout({ 
-  children,
-  locale,
-  onLocaleChange,
-}: { 
-  children: ReactNode;
-  locale: LocaleKey;
-  onLocaleChange: (locale: LocaleKey) => void;
-}) {
+function BookingResultLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <AnimatedFlow
@@ -41,7 +33,7 @@ function BookingResultLayout({
       />
       <div className="pointer-events-none fixed top-4 right-6 z-50">
         <div className="pointer-events-auto">
-          <LanguageSelector value={locale} onChange={onLocaleChange} />
+          <LanguageSelector />
         </div>
       </div>
       <div className="relative z-10 flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16 pt-16">
@@ -52,19 +44,19 @@ function BookingResultLayout({
 }
 
 export default function BookingResultPage() {
-  const [locale, setLocale] = useState<LocaleKey>("ms");
+  const { t } = useLocale();
 
   return (
     <Suspense
       fallback={
-        <BookingResultLayout locale={locale} onLocaleChange={setLocale}>
+        <BookingResultLayout>
           <div className="flex min-h-0 flex-1 items-center justify-center py-16 text-sm text-muted-foreground">
-            Loading booking…
+            {t.loadingBooking}
           </div>
         </BookingResultLayout>
       }
     >
-      <BookingResultPageContent locale={locale} onLocaleChange={setLocale} />
+      <BookingResultPageContent />
     </Suspense>
   );
 }
@@ -77,13 +69,8 @@ function hasOutstandingBalance(booking: PublicBooking) {
   );
 }
 
-function BookingResultPageContent({
-  locale,
-  onLocaleChange,
-}: {
-  locale: LocaleKey;
-  onLocaleChange: (locale: LocaleKey) => void;
-}) {
+function BookingResultPageContent() {
+  const { t, format } = useLocale();
   const params = useParams();
   const searchParams = useSearchParams();
   const client = params.client as string;
@@ -141,7 +128,7 @@ function BookingResultPageContent({
               "error" in payload &&
               typeof payload.error === "string"
               ? payload.error
-              : "Booking not found."
+              : t.bookingNotFound
           );
         }
 
@@ -166,7 +153,7 @@ function BookingResultPageContent({
           setError(
             fetchError instanceof Error
               ? fetchError.message
-              : "Could not load booking."
+              : t.couldNotLoadBooking
           );
         }
       } finally {
@@ -187,6 +174,7 @@ function BookingResultPageContent({
     client,
     returnedFromBalanceCheckout,
     returnedFromDepositCheckout,
+    t,
   ]);
 
   async function handlePayBalance() {
@@ -214,7 +202,7 @@ function BookingResultPageContent({
             "error" in payload &&
             typeof payload.error === "string"
             ? payload.error
-            : "Could not start balance payment."
+            : t.couldNotStartBalancePayment
         );
       }
 
@@ -228,12 +216,12 @@ function BookingResultPageContent({
         return;
       }
 
-      throw new Error("Could not start balance payment.");
+      throw new Error(t.couldNotStartBalancePayment);
     } catch (payBalanceError) {
       setPayError(
         payBalanceError instanceof Error
           ? payBalanceError.message
-          : "Could not start balance payment."
+          : t.couldNotStartBalancePayment
       );
     } finally {
       setPayingBalance(false);
@@ -242,9 +230,9 @@ function BookingResultPageContent({
 
   if (loading) {
     return (
-      <BookingResultLayout locale={locale} onLocaleChange={onLocaleChange}>
+      <BookingResultLayout>
         <div className="flex min-h-0 flex-1 items-center justify-center py-16 text-sm text-muted-foreground">
-          Loading booking…
+          {t.loadingBooking}
         </div>
       </BookingResultLayout>
     );
@@ -252,9 +240,9 @@ function BookingResultPageContent({
 
   if (error || !booking) {
     return (
-      <BookingResultLayout locale={locale} onLocaleChange={onLocaleChange}>
+      <BookingResultLayout>
         <div className="flex min-h-0 flex-1 items-center justify-center py-16 text-sm text-destructive">
-          {error ?? "Booking not found."}
+          {error ?? t.bookingNotFound}
         </div>
       </BookingResultLayout>
     );
@@ -281,7 +269,7 @@ function BookingResultPageContent({
       : null;
 
   return (
-    <BookingResultLayout locale={locale} onLocaleChange={onLocaleChange}>
+    <BookingResultLayout>
       <div className="flex w-full max-w-md flex-col items-center gap-6">
         <div className="flex flex-col items-center gap-3 text-center">
           {(isFullyPaid || isCompleted) && (
@@ -299,49 +287,50 @@ function BookingResultPageContent({
           )}
 
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {isConfirmingBalance && "Confirming payment"}
-            {isConfirmingDeposit && "Confirming payment"}
+            {isConfirmingBalance && t.confirmingPayment}
+            {isConfirmingDeposit && t.confirmingPayment}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
               isCompleted &&
-              "Booking completed"}
+              t.bookingCompleted}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
               !isCompleted &&
               isFullyPaid &&
-              "Booking fully paid"}
+              t.bookingFullyPaid}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
               !isCompleted &&
               isSuccess &&
               outstandingBalance &&
-              "Booking confirmed"}
-            {isFailure && "Payment failed"}
-            {isPending && !isConfirmingDeposit && "Booking pending"}
+              t.bookingConfirmed}
+            {isFailure && t.paymentFailed}
+            {isPending && !isConfirmingDeposit && t.bookingPending}
           </h1>
 
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            {isCompleted &&
-              "Your session is done. We hope everything went beautifully."}
+            {isCompleted && t.sessionDoneBeautifully}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
               !isCompleted &&
               isFullyPaid &&
-              `Your payment of ${formatRm(booking.invoice.totalRm)} was received. You're all set.`}
+              format(t.paymentReceived, {
+                amount: formatRm(booking.invoice.totalRm),
+              })}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
               !isCompleted &&
               isSuccess &&
               outstandingBalance &&
-              `Your deposit of ${formatRm(booking.invoice.depositRm)} was received. The remaining balance of ${formatRm(booking.invoice.balanceRm)} is due before your session.`}
-            {isFailure &&
-              "We couldn't process your payment. You can try booking again or contact the stylist."}
-            {(isConfirmingDeposit || isConfirmingBalance) &&
-              "Stripe accepted your payment. We're waiting for confirmation — this usually takes a few seconds."}
+              format(t.depositReceived, {
+                depositAmount: formatRm(booking.invoice.depositRm),
+                balanceAmount: formatRm(booking.invoice.balanceRm),
+              })}
+            {isFailure && t.paymentNotProcessed}
+            {(isConfirmingDeposit || isConfirmingBalance) && t.paymentAccepted}
             {(isConfirmingDeposit || isConfirmingBalance) && confirmingTooLong && (
               <span className="mt-2 block text-xs text-muted-foreground">
-                If this takes longer than a minute, the payment webhook may not
-                be reaching your app. For local dev, run{" "}
+                {t.webhookHint}{" "}
                 <code className="rounded bg-muted px-1 py-0.5">
                   stripe listen --forward-to localhost:3000/api/stripe/webhooks
                   --forward-connect-to localhost:3000/api/stripe/webhooks
@@ -349,19 +338,19 @@ function BookingResultPageContent({
                 .
               </span>
             )}
-            {isPending &&
-              !isConfirmingDeposit &&
-              "Your booking is awaiting payment. Complete checkout to secure your slot."}
+            {isPending && !isConfirmingDeposit && t.bookingAwaitingPayment}
           </p>
         </div>
 
         <div className="w-full space-y-2">
-          <p className="text-sm font-medium text-foreground">Booking details</p>
+          <p className="text-sm font-medium text-foreground">
+            {t.bookingDetails}
+          </p>
           <div className={frostedPanelClassName}>
             <p className="font-medium text-foreground">{booking.packageName}</p>
             {booking.styleName && (
               <p className="mt-1 text-xs text-muted-foreground">
-                Style: {booking.styleName}
+                {t.styleLabel}: {booking.styleName}
               </p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">
@@ -371,7 +360,9 @@ function BookingResultPageContent({
         </div>
 
         <div className="w-full space-y-2">
-          <p className="text-sm font-medium text-foreground">Sessions</p>
+          <p className="text-sm font-medium text-foreground">
+            {t.sessionsHeading}
+          </p>
           <BookingSessionList
             sessions={booking.sessions}
             showLocation

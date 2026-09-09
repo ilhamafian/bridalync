@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { useLocale } from "@/components/LocaleProvider"
 import type { SessionForm } from "@/schemas/sessionSchema"
 import { BookingQuotationSummary, formatRm } from "@/utils/booking/pricing"
 import { formatLocationAddress, formatSessionSummary } from "@/utils/session"
@@ -54,6 +55,7 @@ export function BookingInvoice({
   paymentOption,
   className,
 }: BookingInvoiceProps) {
+  const { t, format } = useLocale()
   const isFullPayment =
     paymentOption === "full" || invoice.balanceRm === 0
 
@@ -67,9 +69,9 @@ export function BookingInvoice({
       <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
         <div>
           <p className="text-sm font-medium text-foreground">
-            {companyName ? companyName : "Invoice"}
+            {companyName ? companyName : t.invoice}
           </p>
-          <p className="text-xs text-muted-foreground">Payment summary</p>
+          <p className="text-xs text-muted-foreground">{t.paymentSummary}</p>
         </div>
 
         {invoice.lineItems.length > 0 ? (
@@ -84,38 +86,37 @@ export function BookingInvoice({
           </div>
         ) : (
           <p className="border-b border-white/40 pb-4 text-sm text-muted-foreground dark:border-white/15">
-            No line items.
+            {t.noLineItems}
           </p>
         )}
 
         <div className="space-y-2">
           <InvoiceRow
-            label="Total"
+            label={t.total}
             amount={formatRm(invoice.totalRm)}
             emphasis
           />
           {!isFullPayment && (
             <>
               <InvoiceRow
-                label="Deposit due now"
+                label={t.depositDueNow}
                 amount={formatRm(invoice.depositRm)}
                 emphasis
               />
               <div className="flex items-start justify-between gap-3 border-t border-white/40 pt-3 text-sm font-semibold text-foreground dark:border-white/15">
-                <span>Balance payment</span>
+                <span>{t.balancePayment}</span>
                 <span>{formatRm(invoice.balanceRm)}</span>
               </div>
               {balanceDueBeforeDays != null && (
                 <p className="text-xs text-muted-foreground">
-                  Balance due {balanceDueBeforeDays} day
-                  {balanceDueBeforeDays === 1 ? "" : "s"} before your session.
+                  {format(t.balanceDueBefore, { days: balanceDueBeforeDays })}
                 </p>
               )}
             </>
           )}
           {isFullPayment && (
             <div className="flex items-start justify-between gap-3 border-t border-white/40 pt-3 text-sm font-semibold text-foreground dark:border-white/15">
-              <span>Amount due now</span>
+              <span>{t.amountDueNow}</span>
               <span>{formatRm(invoice.totalRm)}</span>
             </div>
           )}
@@ -133,6 +134,7 @@ export function BookingQuotation({
   paymentOption,
   className,
 }: BookingQuotationProps) {
+  const { t, format, intlLocale } = useLocale()
   const sortedSessions = [...sessions].sort((a, b) => a.order - b.order)
   const isFullPayment =
     paymentOption === "full" || quotation.balanceRm === 0
@@ -147,16 +149,16 @@ export function BookingQuotation({
       <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
         <div>
           <p className="text-sm font-medium text-foreground">
-            {companyName ? companyName : "Quotation"}
+            {companyName ? companyName : t.quotation}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Review your total before confirming.
-          </p>
+          <p className="text-xs text-muted-foreground">{t.reviewTotal}</p>
         </div>
 
         {sortedSessions.length > 0 && (
           <div className="space-y-2 border-b border-white/40 pb-4 dark:border-white/15">
-            <p className="text-sm font-medium text-foreground">Sessions</p>
+            <p className="text-sm font-medium text-foreground">
+              {t.sessionsHeading}
+            </p>
             <ul className="flex flex-col gap-2">
               {sortedSessions.map((session) => (
                 <li
@@ -164,7 +166,7 @@ export function BookingQuotation({
                   className="rounded-md px-1 py-2.5 text-sm"
                 >
                   <p className="font-medium text-foreground">
-                    {formatSessionSummary(session)}
+                    {formatSessionSummary(session, intlLocale)}
                   </p>
                   {session.location && (
                     <p className="mt-0.5 text-xs text-muted-foreground">
@@ -189,38 +191,37 @@ export function BookingQuotation({
           </div>
         ) : (
           <p className="border-b border-white/40 pb-4 text-sm text-muted-foreground dark:border-white/15">
-            No line items yet.
+            {t.noLineItemsYet}
           </p>
         )}
 
         <div className="space-y-2">
           <InvoiceRow
-            label="Total"
+            label={t.total}
             amount={formatRm(quotation.totalRm)}
             emphasis
           />
           {!isFullPayment && (
             <>
               <InvoiceRow
-                label="Deposit due now"
+                label={t.depositDueNow}
                 amount={formatRm(quotation.depositRm)}
                 emphasis
               />
               <div className="flex items-start justify-between gap-3 border-t border-white/40 pt-3 text-sm font-semibold text-foreground dark:border-white/15">
-                <span>Balance payment</span>
+                <span>{t.balancePayment}</span>
                 <span>{formatRm(quotation.balanceRm)}</span>
               </div>
               {balanceDueBeforeDays != null && (
                 <p className="text-xs text-muted-foreground">
-                  Balance due {balanceDueBeforeDays} day
-                  {balanceDueBeforeDays === 1 ? "" : "s"} before your session.
+                  {format(t.balanceDueBefore, { days: balanceDueBeforeDays })}
                 </p>
               )}
             </>
           )}
           {isFullPayment && (
             <div className="flex items-start justify-between gap-3 border-t border-white/40 pt-3 text-sm font-semibold text-foreground dark:border-white/15">
-              <span>Amount due now</span>
+              <span>{t.amountDueNow}</span>
               <span>{formatRm(quotation.totalRm)}</span>
             </div>
           )}

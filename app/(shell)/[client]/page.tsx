@@ -12,9 +12,10 @@ import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile } from "@/components/booking/ClientProfile";
 import { AnimatedFlow } from "@/components/animated-flow";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { useLocale } from "@/components/LocaleProvider";
 import { SessionLocationPicker } from "@/components/SessionLocationPicker";
 import { TextGenerateEffect } from "@/components/text-generate-effect";
-import type { LocaleKey } from "@/locales";
+import type { Locale } from "@/locales";
 import {
   Stepper,
   StepperIndicator,
@@ -89,13 +90,13 @@ function buildStepOrder(hasStyles: boolean, hasAddOns: boolean): BookingStep[] {
 }
 
 const PROGRESS_STEPS = [
-  { key: "name", title: "Name" },
-  { key: "events", title: "Event" },
-  { key: "datetime", title: "Date" },
-  { key: "location", title: "Location" },
-  { key: "style", title: "Style" },
-  { key: "payment", title: "Payment" },
-] as const;
+  { key: "name", titleKey: "stepName" },
+  { key: "events", titleKey: "stepEvent" },
+  { key: "datetime", titleKey: "stepDate" },
+  { key: "location", titleKey: "stepLocation" },
+  { key: "style", titleKey: "stepStyle" },
+  { key: "payment", titleKey: "stepPayment" },
+] as const satisfies readonly { key: string; titleKey: keyof Locale }[];
 
 type ProgressStepKey = (typeof PROGRESS_STEPS)[number]["key"];
 
@@ -162,6 +163,7 @@ function saveFabPosition(position: FabPosition) {
 }
 
 function DraggableWhatsAppButton({ href }: { href: string }) {
+  const { t } = useLocale();
   const linkRef = useRef<HTMLAnchorElement>(null);
   const [position, setPosition] = useState<FabPosition | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -311,8 +313,8 @@ function DraggableWhatsAppButton({ href }: { href: string }) {
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label="Chat on WhatsApp"
-      title="Drag to move · Tap to chat"
+      aria-label={t.chatOnWhatsApp}
+      title={t.dragToChat}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}
@@ -405,11 +407,11 @@ function buildTravelDistanceRequestKey(
   return `${buildLocationKey(origin)}->${buildLocationKey(destination)}`;
 }
 
-function formatRoadDistanceLabel(distanceKm: number): string {
-  return `${distanceKm.toFixed(distanceKm >= 10 ? 1 : 2)} km away by road`;
+function formatRoadDistance(distanceKm: number): string {
+  return distanceKm.toFixed(distanceKm >= 10 ? 1 : 2);
 }
 
-function getErrorMessage(payload: unknown) {
+function getErrorMessage(payload: unknown, fallback: string) {
   if (
     payload &&
     typeof payload === "object" &&
@@ -419,7 +421,7 @@ function getErrorMessage(payload: unknown) {
     return payload.error;
   }
 
-  return "Something went wrong. Please try again.";
+  return fallback;
 }
 
 async function requestTravelDistance(
@@ -441,11 +443,12 @@ async function requestTravelDistance(
     error?: unknown;
   };
 
+  // Only ever logged — the UI shows a translated "unavailable" message instead.
   if (!response.ok || typeof payload.distanceKm !== "number") {
     throw new Error(
       typeof payload.error === "string"
         ? payload.error
-        : "Unable to calculate road distance."
+        : "Travel distance request failed."
     );
   }
 
@@ -506,6 +509,7 @@ function formatTimeSlot(slot: TimeSlot): string {
 
 export default function ClientPage() {
   const params = useParams();
+  const { t, format, locale, dateFnsLocale } = useLocale();
   const client = params.client as string;
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<BookingStep>("intro");
@@ -539,7 +543,6 @@ export default function ClientPage() {
   const [paymentOption, setPaymentOption] = useState<"deposit" | "full">(
     "full"
   );
-  const [locale, setLocale] = useState<LocaleKey>("ms");
   const sessionRoadDistancesRef = useRef(sessionRoadDistances);
   const packages = useMemo(
     () => toPackageOptions(clientPackages),
@@ -1014,22 +1017,22 @@ export default function ClientPage() {
       }
 
       if (roadDistance.status === "loading") {
-        messages[session.client_key] = "Calculating road distance...";
+        messages[session.client_key] = t.calculatingDistance;
         continue;
       }
 
       if (roadDistance.status === "error") {
-        messages[session.client_key] = "Road distance unavailable right now.";
+        messages[session.client_key] = t.distanceUnavailable;
         continue;
       }
 
-      messages[session.client_key] = formatRoadDistanceLabel(
-        roadDistance.distanceKm ?? 0
-      );
+      messages[session.client_key] = format(t.distanceAway, {
+        distance: formatRoadDistance(roadDistance.distanceKm ?? 0),
+      });
     }
 
     return messages;
-  }, [sessions, sessionRoadDistances, travelOrigin]);
+  }, [sessions, sessionRoadDistances, travelOrigin, t, format]);
 
   const sharedLocationHelperText =
     sameLocationForAll && sessions.length > 0
@@ -1083,7 +1086,7 @@ export default function ClientPage() {
 
       const bookingPayload: unknown = await bookingResponse.json();
       if (!bookingResponse.ok) {
-        throw new Error(getErrorMessage(bookingPayload));
+        throw new Error(getErrorMessage(bookingPayload, t.somethingWentWrong));
       }
 
       const bookingId =
@@ -1095,7 +1098,7 @@ export default function ClientPage() {
           : null;
 
       if (!bookingId) {
-        throw new Error("Could not create booking.");
+        throw new Error(t.couldNotCreateBooking);
       }
 
       const checkoutResponse = await fetch("/api/stripe/checkout", {
@@ -1109,7 +1112,7 @@ export default function ClientPage() {
 
       const checkoutPayload: unknown = await checkoutResponse.json();
       if (!checkoutResponse.ok) {
-        throw new Error(getErrorMessage(checkoutPayload));
+        throw new Error(getErrorMessage(checkoutPayload, t.somethingWentWrong));
       }
 
       if (
@@ -1122,10 +1125,10 @@ export default function ClientPage() {
         return;
       }
 
-      throw new Error("Could not start Stripe Checkout.");
+      throw new Error(t.couldNotStartCheckout);
     } catch (error) {
       setPaymentError(
-        error instanceof Error ? error.message : "Payment could not be started."
+        error instanceof Error ? error.message : t.paymentCouldNotStart
       );
     } finally {
       setIsPaying(false);
@@ -1144,7 +1147,7 @@ export default function ClientPage() {
       />
       <div className="pointer-events-none fixed top-4 right-6 z-50">
         <div className="pointer-events-auto">
-          <LanguageSelector value={locale} onChange={setLocale} />
+          <LanguageSelector />
         </div>
       </div>
       {step !== "intro" && (
@@ -1158,7 +1161,7 @@ export default function ClientPage() {
               onClick={goToPreviousStep}
             >
               <ChevronLeftIcon />
-              Back
+              {t.back}
             </Button>
           </div>
           <Stepper value={progressValue} className="w-full max-w-lg px-4 sm:px-8">
@@ -1177,7 +1180,7 @@ export default function ClientPage() {
                       <span className="sr-only">{index + 1}</span>
                     </StepperIndicator>
                     <StepperTitle className="text-start text-[10px] font-semibold leading-tight group-data-[state=inactive]/step:text-muted-foreground sm:text-xs">
-                      {progressStep.title}
+                      {t[progressStep.titleKey]}
                     </StepperTitle>
                   </StepperTrigger>
                 </StepperItem>
@@ -1193,24 +1196,20 @@ export default function ClientPage() {
         )}
       >
       {step === "intro" && loading && (
-        <p className="text-sm text-muted-foreground">Loading profile…</p>
+        <p className="text-sm text-muted-foreground">{t.loadingProfile}</p>
       )}
       {step === "intro" && user && (
-        <ClientProfile
-          user={user}
-          reviews={reviews}
-          onBookNow={goToNextStep}
-          locale={locale}
-        />
+        <ClientProfile user={user} reviews={reviews} onBookNow={goToNextStep} />
       )}
       {step === "intro" && !user && !loading && (
-        <p className="text-sm text-muted-foreground">Profile not found.</p>
+        <p className="text-sm text-muted-foreground">{t.profileNotFound}</p>
       )}
       {step === "name" && (
         <div className="relative flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <div className="absolute bottom-[calc(50%+3rem)] flex w-full flex-col items-center px-6">
             <TextGenerateEffect
-              words={"But first,\nWhat should I call you?"}
+              key={locale}
+              words={t.nameQuestion}
               className="mb-6 w-full max-w-md text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
             />
           </div>
@@ -1220,12 +1219,12 @@ export default function ClientPage() {
                 aria-hidden
                 className="invisible block whitespace-pre px-1 text-2xl font-medium tracking-tight"
               >
-                {contact.name || "Your name"}
+                {contact.name || t.namePlaceholder}
               </span>
               <input
                 type="text"
                 autoFocus
-                placeholder="Your name"
+                placeholder={t.namePlaceholder}
                 value={contact.name}
                 onChange={(e) => setContact({ ...contact, name: e.target.value })}
                 onKeyDown={(e) => {
@@ -1243,7 +1242,7 @@ export default function ClientPage() {
               disabled={!contact.name.trim()}
               onClick={goToNextStep}
             >
-              Next
+              {t.next}
               <ChevronRightIcon />
             </Button>
           </div>
@@ -1252,16 +1251,16 @@ export default function ClientPage() {
       {step === "events" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            What event are you booking for?
+            {t.eventQuestion}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Choose the package that matches your event.
+            {t.eventHelper}
           </p>
 
           <div className="flex w-full flex-col items-end gap-4">
             {loading ? (
               <p className="mx-auto w-full max-w-xs px-4 text-center text-sm text-muted-foreground">
-                Loading packages...
+                {t.loadingPackages}
               </p>
             ) : (
               <div className="mx-auto w-full max-w-xs px-2">
@@ -1278,7 +1277,7 @@ export default function ClientPage() {
               disabled={!selectedPackageId}
               onClick={goToNextStep}
             >
-              Next
+              {t.next}
               <ChevronRightIcon />
             </Button>
           </div>
@@ -1289,12 +1288,14 @@ export default function ClientPage() {
         <div className="flex w-full max-w-md flex-1 flex-col items-center">
           <h1 className="mb-2 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
             {nextSessionTemplate
-              ? `When would you like to book your ${nextSessionTemplate.name} session?`
-              : "All sessions scheduled"}
+              ? format(t.bookSession, { sessionName: nextSessionTemplate.name })
+              : t.allSessionsScheduled}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {sessions.length} of {sessionTemplates.length} session
-            {sessionTemplates.length === 1 ? "" : "s"} scheduled
+            {format(t.sessionsScheduledCount, {
+              scheduled: sessions.length,
+              total: sessionTemplates.length,
+            })}
           </p>
 
           <div className="flex w-full flex-col items-end gap-4">
@@ -1302,14 +1303,17 @@ export default function ClientPage() {
               <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
                 <CardContent className="flex flex-col items-center gap-4 pt-(--card-spacing)">
                   <p className="text-center text-sm text-muted-foreground">
-                    Scheduling session {nextSessionTemplate.order + 1} of{" "}
-                    {sessionTemplates.length}:{" "}
+                    {format(t.schedulingSession, {
+                      current: nextSessionTemplate.order + 1,
+                      total: sessionTemplates.length,
+                    })}{" "}
                     <span className="font-medium text-foreground">
                       {nextSessionTemplate.name}
                     </span>
                   </p>
                   <Calendar
                     mode="single"
+                    locale={dateFnsLocale}
                     selected={selectedDate}
                     onSelect={(date) => {
                       setSelectedDate(date);
@@ -1325,7 +1329,7 @@ export default function ClientPage() {
                 </CardContent>
                 <CardFooter className="w-full flex-col items-stretch gap-3 border-t border-white/40 bg-transparent dark:border-white/15">
                   <p className="text-sm font-medium text-foreground">
-                    Available slots
+                    {t.availableSlots}
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     {timeSlots.map((slot) => {
@@ -1367,7 +1371,7 @@ export default function ClientPage() {
                       isSlotTaken(selectedDate, slot, bookedSlots, sessions)
                     ) && (
                       <p className="text-sm text-muted-foreground">
-                        All time slots are booked on this date.
+                        {t.allSlotsBooked}
                       </p>
                     )}
                 </CardFooter>
@@ -1376,12 +1380,12 @@ export default function ClientPage() {
 
             <div className="w-full space-y-2">
               <p className="text-sm font-medium text-foreground">
-                Your bookings
+                {t.yourBookings}
               </p>
               <BookingSessionList
                 sessions={sessions}
                 onRemove={handleRemoveSession}
-                emptyMessage="No sessions yet — pick a date and time below."
+                emptyMessage={t.noSessionsYet}
                 frosted
               />
             </div>
@@ -1404,7 +1408,9 @@ export default function ClientPage() {
                   }
                   onClick={handleAddSession}
                 >
-                  Add {nextSessionTemplate.name} session
+                  {format(t.addSession, {
+                    sessionName: nextSessionTemplate.name,
+                  })}
                 </Button>
               )}
               <Button
@@ -1413,7 +1419,7 @@ export default function ClientPage() {
                 disabled={!allSessionsScheduled}
                 onClick={goToNextStep}
               >
-                Next
+                {t.next}
                 <ChevronRightIcon />
               </Button>
             </div>
@@ -1423,7 +1429,7 @@ export default function ClientPage() {
       {step === "location" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Where would you like to book your session?
+            {t.bookingLocation}
           </h1>
 
           <div className="flex w-full flex-col items-end gap-4">
@@ -1447,7 +1453,7 @@ export default function ClientPage() {
             />
 
             <div className="w-full space-y-2">
-              <p className="text-sm font-medium text-foreground">Summary</p>
+              <p className="text-sm font-medium text-foreground">{t.summary}</p>
               <BookingSessionList sessions={sessions} showLocation frosted />
             </div>
 
@@ -1457,7 +1463,7 @@ export default function ClientPage() {
               disabled={!allLocationsSet}
               onClick={goToNextStep}
             >
-              Next
+              {t.next}
               <ChevronRightIcon />
             </Button>
           </div>
@@ -1466,10 +1472,10 @@ export default function ClientPage() {
       {step === "style" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Choose your hijab style
+            {t.chooseStyle}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Pick a look, then choose a variant.
+            {t.chooseStyleHelper}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
             <div className="mx-auto w-full max-w-sm px-2">
@@ -1488,7 +1494,7 @@ export default function ClientPage() {
                 disabled={!selectedVariantId}
                 onClick={goToNextStep}
               >
-                Next
+                {t.next}
                 <ChevronRightIcon />
               </Button>
             </div>
@@ -1498,10 +1504,10 @@ export default function ClientPage() {
       {step === "addons" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Any add-ons?
+            {t.addOnsTitle}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            Optional extras — pick any that apply, or skip.
+            {t.addOnsHelper}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
             <div className="mx-auto w-full max-w-xs px-2">
@@ -1516,7 +1522,7 @@ export default function ClientPage() {
               className="mt-4 bg-chart-4 text-white hover:bg-chart-4/90"
               onClick={goToNextStep}
             >
-              Next
+              {t.next}
               <ChevronRightIcon />
             </Button>
           </div>
@@ -1524,11 +1530,9 @@ export default function ClientPage() {
       )}
       {step === "details" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center pb-24">
-          {/* <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Almost there! Just need some final info...
-          </h1> */}
           <TextGenerateEffect
-              words={"Almost there!\nJust need some final info..."}
+              key={locale}
+              words={t.almostThere}
               className="mb-6 w-full max-w-md text-center text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
             />
           <div className="flex w-full flex-col items-end gap-4">
@@ -1539,7 +1543,7 @@ export default function ClientPage() {
               disabled={!contactDetailsValid}
               onClick={goToNextStep}
             >
-              Next
+              {t.next}
               <ChevronRightIcon />
             </Button>
           </div>
@@ -1548,7 +1552,7 @@ export default function ClientPage() {
       {step === "review" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Review your booking
+            {t.reviewBookingTitle}
           </h1>
           <div className="flex w-full flex-col items-end gap-4">
             <BookingQuotation
@@ -1563,7 +1567,7 @@ export default function ClientPage() {
               className="bg-chart-4 text-white hover:bg-chart-4/90"
               onClick={goToNextStep}
             >
-              Next
+              {t.next}
               <ChevronRightIcon />
             </Button>
           </div>
@@ -1572,7 +1576,7 @@ export default function ClientPage() {
       {step === "t&c" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            Terms and Conditions
+            {t.termsTitle}
           </h1>
           <div className="flex w-full flex-col items-end gap-4">
             <Card className="mx-auto w-full min-h-128 min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
@@ -1580,7 +1584,7 @@ export default function ClientPage() {
                 <div className="max-h-96 overflow-y-auto rounded-md border border-white/40 bg-white/20 p-3 dark:border-white/15 dark:bg-white/5">
                   <p className="whitespace-pre-line text-xs text-muted-foreground">
                     {settings?.invoice.terms_and_conditions ??
-                      "No terms and conditions available."}
+                      t.noTermsAvailable}
                   </p>
                 </div>
                 <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
@@ -1590,7 +1594,7 @@ export default function ClientPage() {
                     onChange={(event) => setTermsAccepted(event.target.checked)}
                     className="mt-0.5 size-4 shrink-0 rounded border-border accent-rose-800"
                   />
-                  <span>I have read and agree to the terms and conditions</span>
+                  <span>{t.agreeCheckbox}</span>
                 </label>
               </CardContent>
             </Card>
@@ -1600,7 +1604,7 @@ export default function ClientPage() {
               disabled={!termsAccepted}
               onClick={goToNextStep}
             >
-              Agree and continue
+              {t.agreeContinue}
               <ChevronRightIcon />
             </Button>
           </div>
@@ -1610,23 +1614,19 @@ export default function ClientPage() {
       {step === "payment" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {effectivePaymentOption === "full"
-              ? "Pay in full"
-              : "Choose how to pay"}
+            {effectivePaymentOption === "full" ? t.payInFull : t.choosePayment}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
             {mustPayFull
-              ? `Your session is within ${balanceDueBeforeDays} day${
-                  balanceDueBeforeDays === 1 ? "" : "s"
-                }, so full payment is required.`
-              : "Pay a deposit now, or settle the full amount upfront. Secure card payment through Stripe."}
+              ? format(t.sessionWithinDays, { days: balanceDueBeforeDays })
+              : t.paymentSecure}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
             {!mustPayFull && quotation.depositRm > 0 && (
               <div
                 className="flex w-full flex-col gap-2"
                 role="radiogroup"
-                aria-label="Payment option"
+                aria-label={t.paymentOptionLabel}
               >
                 <button
                   type="button"
@@ -1641,7 +1641,9 @@ export default function ClientPage() {
                   )}
                 >
                   <span className="font-medium">
-                    Pay in full — {formatRm(quotation.totalRm)}
+                    {format(t.payFullOption, {
+                      amount: formatRm(quotation.totalRm),
+                    })}
                   </span>
                   <span
                     className={cn(
@@ -1651,7 +1653,7 @@ export default function ClientPage() {
                         : "text-muted-foreground"
                     )}
                   >
-                    Nothing left to pay later.
+                    {t.noBalanceLater}
                   </span>
                 </button>
                 <button
@@ -1667,7 +1669,9 @@ export default function ClientPage() {
                   )}
                 >
                   <span className="font-medium">
-                    Pay deposit — {formatRm(quotation.depositRm)}
+                    {format(t.payDepositOption, {
+                      amount: formatRm(quotation.depositRm),
+                    })}
                   </span>
                   <span
                     className={cn(
@@ -1677,9 +1681,10 @@ export default function ClientPage() {
                         : "text-muted-foreground"
                     )}
                   >
-                    Balance of {formatRm(quotation.balanceRm)} due{" "}
-                    {balanceDueBeforeDays} day
-                    {balanceDueBeforeDays === 1 ? "" : "s"} before your session.
+                    {format(t.balanceDue, {
+                      amount: formatRm(quotation.balanceRm),
+                      days: balanceDueBeforeDays,
+                    })}
                   </span>
                 </button>
               </div>
@@ -1703,10 +1708,14 @@ export default function ClientPage() {
               onClick={() => void handlePay()}
             >
               {isPaying
-                ? "Redirecting to Stripe…"
+                ? t.redirectingStripe
                 : effectivePaymentOption === "full"
-                  ? `Pay ${formatRm(payableQuotation.totalRm)} now`
-                  : `Pay ${formatRm(payableQuotation.depositRm)} deposit`}
+                  ? format(t.payNow, {
+                      amount: formatRm(payableQuotation.totalRm),
+                    })
+                  : format(t.payDepositNow, {
+                      amount: formatRm(payableQuotation.depositRm),
+                    })}
             </Button>
           </div>
         </div>

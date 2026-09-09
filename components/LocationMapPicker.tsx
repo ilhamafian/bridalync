@@ -19,17 +19,26 @@ const PINNED_PLACE_ID = "map-pinned"
 type LocationMapPickerProps = {
   value: Address | null
   onChange: (address: Address) => void
+  hint?: string
+  pinnedLabel?: string
+  selectedLabel?: string
 }
 
 type PlaceAutocompleteInputProps = {
   onPlaceSelect: (address: Address) => void
 }
 
-function withLocation(base: Address | null, lat: number, lng: number): Address {
+function withLocation(
+  base: Address | null,
+  lat: number,
+  lng: number,
+  pinnedLabel = "Pinned on map",
+  selectedLabel = "Selected location"
+): Address {
   return {
     placeId: base?.placeId ?? PINNED_PLACE_ID,
-    formattedAddress: base?.formattedAddress ?? "Pinned on map",
-    displayName: base?.displayName ?? "Selected location",
+    formattedAddress: base?.formattedAddress ?? pinnedLabel,
+    displayName: base?.displayName ?? selectedLabel,
     location: { lat, lng },
     ...(base?.addressComponents && {
       addressComponents: base.addressComponents,
@@ -104,7 +113,13 @@ function PlaceAutocompleteInput({ onPlaceSelect }: PlaceAutocompleteInputProps) 
   return <div ref={containerRef} className="w-full" />
 }
 
-export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
+export function LocationMapPicker({
+  value,
+  onChange,
+  hint = "Search for a venue, then drag the pin or tap the map to refine the exact spot.",
+  pinnedLabel = "Pinned on map",
+  selectedLabel = "Selected location",
+}: LocationMapPickerProps) {
   const [center, setCenter] = React.useState(DEFAULT_CENTER)
   const [zoom, setZoom] = React.useState(DEFAULT_ZOOM)
   const [marker, setMarker] = React.useState<google.maps.LatLngLiteral | null>(
@@ -132,14 +147,24 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
     const latLng = event.detail.latLng
     if (!latLng) return
 
-    applyAddress(withLocation(value, latLng.lat, latLng.lng))
+    applyAddress(
+      withLocation(value, latLng.lat, latLng.lng, pinnedLabel, selectedLabel)
+    )
   }
 
   function handleMarkerDragEnd(event: google.maps.MapMouseEvent) {
     const latLng = event.latLng
     if (!latLng) return
 
-    applyAddress(withLocation(value, latLng.lat(), latLng.lng()))
+    applyAddress(
+      withLocation(
+        value,
+        latLng.lat(),
+        latLng.lng(),
+        pinnedLabel,
+        selectedLabel
+      )
+    )
   }
 
   return (
@@ -165,10 +190,7 @@ export function LocationMapPicker({ value, onChange }: LocationMapPickerProps) {
         </Map>
       </div>
 
-      <p className="text-xs text-muted-foreground">
-        Search for a venue, then drag the pin or tap the map to refine the exact
-        spot.
-      </p>
+      <p className="text-xs text-muted-foreground">{hint}</p>
 
       {value && (
         <div className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm">

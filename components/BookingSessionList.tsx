@@ -2,6 +2,7 @@
 
 import { XIcon } from "lucide-react"
 
+import { useLocale } from "@/components/LocaleProvider"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { formatLocationAddress, formatSessionSummary } from "@/utils/session"
@@ -29,13 +30,17 @@ export function BookingSessionList({
   sessions,
   onRemove,
   showLocation = false,
-  emptyMessage = "No sessions yet — pick an event, date, and time.",
+  emptyMessage,
   frosted = false,
 }: BookingSessionListProps) {
+  const { t, format, intlLocale } = useLocale()
+
   if (sessions.length === 0) {
     return (
       <div className={cn(frosted && frostedPanelClassName)}>
-        <p className="text-center text-sm text-muted-foreground">{emptyMessage}</p>
+        <p className="text-center text-sm text-muted-foreground">
+          {emptyMessage ?? t.noSessionsPickEvent}
+        </p>
       </div>
     )
   }
@@ -64,7 +69,7 @@ export function BookingSessionList({
         >
           <div className="min-w-0 text-left">
             <p className="font-medium text-foreground">
-              {formatSessionSummary(session)}
+              {formatSessionSummary(session, intlLocale)}
             </p>
             {showLocation && session.location && (
               <p className="mt-0.5 text-xs text-muted-foreground">
@@ -79,7 +84,7 @@ export function BookingSessionList({
               size="icon-sm"
               className="shrink-0 text-muted-foreground"
               onClick={() => onRemove(clientKey)}
-              aria-label={`Remove ${session.name} session`}
+              aria-label={format(t.removeSession, { sessionName: session.name })}
             >
               <XIcon />
             </Button>

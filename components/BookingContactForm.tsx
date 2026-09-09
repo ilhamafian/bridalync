@@ -1,6 +1,7 @@
 "use client"
 
 import { Card, CardContent } from "@/components/ui/card"
+import { useLocale } from "@/components/LocaleProvider"
 import { PhoneNumberInput } from "@/components/PhoneNumberInput"
 import type { Client } from "@/schemas/clientSchema"
 import { cn } from "@/lib/utils"
@@ -18,6 +19,8 @@ const inputClassName = cn(
 )
 
 export function BookingContactForm({ value, onChange }: BookingContactFormProps) {
+  const { t } = useLocale()
+
   function updateField<K extends keyof Client>(
     field: K,
     fieldValue: Client[K]
@@ -30,7 +33,7 @@ export function BookingContactForm({ value, onChange }: BookingContactFormProps)
       <CardContent className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">
-            Phone number
+            {t.phoneNumber}
           </span>
           <PhoneNumberInput
             countryCode={value.country_code ?? ""}
@@ -38,15 +41,18 @@ export function BookingContactForm({ value, onChange }: BookingContactFormProps)
             onCountryCodeChange={(code) => updateField("country_code", code)}
             onMobileChange={(mobile) => updateField("mobile", mobile)}
             inputClassName={inputClassName}
+            placeholder={t.phonePlaceholder}
+            countryCodeAriaLabel={t.countryCode}
+            mobileAriaLabel={t.phoneNumber}
           />
         </label>
 
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-foreground">Email</span>
+          <span className="text-sm font-medium text-foreground">{t.email}</span>
           <input
             type="email"
             autoComplete="email"
-            placeholder="your@email.com"
+            placeholder={t.emailPlaceholder}
             value={value.email}
             onChange={(event) => updateField("email", event.target.value)}
             className={inputClassName}
