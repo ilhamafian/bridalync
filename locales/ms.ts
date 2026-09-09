@@ -29,20 +29,20 @@ export const ms = {
   stepPayment: "Bayaran",
 
   // Name
-  nameQuestion: "Sebelum itu,\nApakah nama anda?",
+  nameQuestion: "Sebelum tu,\nBoleh kami tahu nama anda?",
   namePlaceholder: "Nama anda",
   phonePlaceholder: "cth. 123456789",
   countryCode: "Kod negara",
 
   // Events / packages
   eventQuestion: "Majlis apa yang anda ingin tempah?",
-  eventHelper: "Pilih pakej yang sepadan dengan majlis anda.",
+  eventHelper: "Pilih pakej yang sepadan dengan majlis awak.",
   loadingPackages: "Memuatkan pakej...",
   noPackagesAvailable: "Tiada pakej tersedia.",
   sessionCount: "{count} sesi",
 
   // Date & time
-  bookSession: "Bila anda ingin tempah sesi {sessionName} anda?",
+  bookSession: "Pilih tarikh dan sesi {sessionName}",
   allSessionsScheduled: "Semua sesi dijadualkan",
   sessionsScheduledCount: "{scheduled} daripada {total} sesi dijadualkan",
   schedulingSession: "Menjadualkan sesi {current} daripada {total}:",
@@ -55,9 +55,9 @@ export const ms = {
   removeSession: "Buang sesi {sessionName}",
 
   // Location
-  bookingLocation: "Di mana anda ingin tempah sesi anda?",
+  bookingLocation: "Lokasi persiapan anda",
   locationNotDecided:
-    "Jika anda belum memutuskan lokasi lagi, anda boleh masukkan kawasan anda berada.",
+    "Belum tahu lokasi nak bersiap? Masukkan sahaja kawasan anda sekarang.",
   mapHint:
     "Cari lokasi, kemudian seret pin atau ketik peta untuk tetapkan kedudukan tepat.",
   pinnedOnMap: "Ditanda pada peta",
@@ -81,7 +81,7 @@ export const ms = {
 
   // Add-ons
   addOnsTitle: "Ada tambahan?",
-  addOnsHelper: "Tambahan pilihan — pilih yang berkenaan, atau langkau.",
+  addOnsHelper: "Pilih yang berkenaan, atau teruskan.",
   noAddOnsAvailable: "Tiada tambahan tersedia.",
 
   // Contact
