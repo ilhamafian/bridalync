@@ -1504,14 +1504,16 @@ export default function ClientPage() {
             Optional extras — pick any that apply, or skip.
           </p>
           <div className="flex w-full flex-col items-end gap-4">
-            <BookingAddOnPicker
-              addOns={addOnOptions}
-              selectedAddOnIds={selectedAddOnIds}
-              onSelectionChange={setSelectedAddOnIds}
-            />
+            <div className="mx-auto w-full max-w-xs px-2">
+              <BookingAddOnPicker
+                addOns={addOnOptions}
+                selectedAddOnIds={selectedAddOnIds}
+                onSelectionChange={setSelectedAddOnIds}
+              />
+            </div>
             <Button
               size="lg"
-              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              className="mt-4 bg-chart-4 text-white hover:bg-chart-4/90"
               onClick={goToNextStep}
             >
               Next

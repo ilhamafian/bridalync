@@ -1,7 +1,6 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { formatRm } from "@/utils/booking/pricing"
 import { cn } from "@/lib/utils"
 
@@ -32,37 +31,37 @@ export function BookingAddOnPicker({
 
   if (addOns.length === 0) {
     return (
-      <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
-        <CardContent className="pt-(--card-spacing) text-center text-sm text-muted-foreground">
-          No add-ons available.
-        </CardContent>
-      </Card>
+      <p className="mx-auto w-full max-w-xs px-4 text-center text-sm text-muted-foreground">
+        No add-ons available.
+      </p>
     )
   }
 
   return (
-    <Card className="mx-auto w-full min-w-72 [--card-spacing:--spacing(6)] sm:min-w-80">
-      <CardContent className="flex flex-col gap-2 pt-(--card-spacing)">
-        {addOns.map((addOn) => (
+    <div className="flex w-full flex-col gap-2">
+      {addOns.map((addOn) => {
+        const isSelected = selectedAddOnIds.includes(addOn.id)
+        return (
           <Button
             key={addOn.id}
             type="button"
-            variant={
-              selectedAddOnIds.includes(addOn.id) ? "default" : "outline"
-            }
+            variant="ghost"
             size="lg"
             className={cn(
-              "h-auto min-h-10 w-full justify-between px-4 py-3 text-left whitespace-normal"
+              "h-auto min-h-10 w-full justify-between px-4 py-3 text-left whitespace-normal",
+              isSelected
+                ? "rounded-lg bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white"
+                : "rounded-lg border-transparent bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 hover:text-foreground dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
             )}
             onClick={() => toggleAddOn(addOn.id)}
           >
-            <span>{addOn.name}</span>
+            <span className="min-w-0 flex-1 font-medium">{addOn.name}</span>
             <span className="shrink-0 pl-3 font-medium">
               {formatRm(addOn.price)}
             </span>
           </Button>
-        ))}
-      </CardContent>
-    </Card>
+        )
+      })}
+    </div>
   )
 }
