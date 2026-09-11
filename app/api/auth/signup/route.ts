@@ -9,11 +9,22 @@ import {
   createPartialAccount,
 } from "@/utils/auth/user-auth";
 import { setAuthSession } from "@/utils/auth/session";
+import { SIGNUP_ENABLED } from "@/utils/auth/signup";
 import { signupRequestSchema } from "@/schemas/auth";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function POST(req: NextRequest) {
   try {
+    if (!SIGNUP_ENABLED) {
+      return createResponse(
+        {
+          error:
+            "Signup is invite-only during closed beta. Join the waitlist and we'll reach out.",
+        },
+        403
+      );
+    }
+
     const body = await req.json();
     const parsed = signupRequestSchema.safeParse(body);
 

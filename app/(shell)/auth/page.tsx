@@ -1,6 +1,7 @@
 "use client";
 
 import { EyeIcon, EyeOffIcon } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -11,6 +12,7 @@ import {
   isOnboardingComplete,
   type OnboardingProgress,
 } from "@/schemas/onboardingSchema";
+import { SIGNUP_ENABLED } from "@/utils/auth/signup";
 
 type AuthTab = "login" | "signup";
 type SignupStep = "credentials" | "verify-email";
@@ -153,9 +155,11 @@ export default function AuthPage() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isVerifyStep = tab === "signup" && signupStep === "verify-email";
-  const isForgotEmailStep = tab === "login" && loginStep === "forgot-email";
-  const isForgotResetStep = tab === "login" && loginStep === "forgot-reset";
+  const activeTab: AuthTab = SIGNUP_ENABLED ? tab : "login";
+  const isVerifyStep =
+    SIGNUP_ENABLED && activeTab === "signup" && signupStep === "verify-email";
+  const isForgotEmailStep = activeTab === "login" && loginStep === "forgot-email";
+  const isForgotResetStep = activeTab === "login" && loginStep === "forgot-reset";
   const isAlternateStep = isVerifyStep || isForgotEmailStep || isForgotResetStep;
 
   async function handleSendPasswordResetCode() {
@@ -202,12 +206,12 @@ export default function AuthPage() {
     setError(null);
 
     try {
-      if (tab === "login" && loginStep === "forgot-email") {
+      if (activeTab === "login" && loginStep === "forgot-email") {
         await handleSendPasswordResetCode();
         return;
       }
 
-      if (tab === "login" && loginStep === "forgot-reset") {
+      if (activeTab === "login" && loginStep === "forgot-reset") {
         const passwordResult = signupPasswordSchema.safeParse(password);
         if (!passwordResult.success) {
           setError(
@@ -237,7 +241,14 @@ export default function AuthPage() {
         return;
       }
 
-      if (tab === "signup" && signupStep === "credentials") {
+      if (activeTab === "signup" && signupStep === "credentials") {
+        if (!SIGNUP_ENABLED) {
+          setError(
+            "Signup is invite-only during closed beta. Join the waitlist instead."
+          );
+          return;
+        }
+
         const passwordResult = signupPasswordSchema.safeParse(password);
         if (!passwordResult.success) {
           setError(
@@ -251,9 +262,17 @@ export default function AuthPage() {
         return;
       }
 
-      const endpoint = tab === "login" ? "/api/auth/login" : "/api/auth/signup";
+      if (activeTab === "signup" && !SIGNUP_ENABLED) {
+        setError(
+          "Signup is invite-only during closed beta. Join the waitlist instead."
+        );
+        return;
+      }
+
+      const endpoint =
+        activeTab === "login" ? "/api/auth/login" : "/api/auth/signup";
       const body =
-        tab === "login"
+        activeTab === "login"
           ? { email, password }
           : { email, password, code: verificationCode };
 
@@ -269,7 +288,7 @@ export default function AuthPage() {
         return;
       }
 
-      router.push(getRedirectPath(tab, payload as AuthSuccessPayload));
+      router.push(getRedirectPath(activeTab, payload as AuthSuccessPayload));
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -350,7 +369,7 @@ export default function AuthPage() {
               ? "Reset your password"
               : isForgotResetStep
                 ? "Choose a new password"
-                : tab === "login"
+                : activeTab === "login"
                   ? "Welcome back"
                   : "Create your account"}
         </h1>
@@ -361,12 +380,25 @@ export default function AuthPage() {
               ? "Enter your email and we'll send you a 6-digit reset code."
               : isForgotResetStep
                 ? `We sent a 6-digit code to ${email}. Enter it below with your new password.`
-                : tab === "login"
+                : activeTab === "login"
                   ? "Log in to manage your bookings and clients."
                   : "Sign up to share your booking link and grow your business."}
         </p>
 
-        {!isAlternateStep && (
+        {!SIGNUP_ENABLED && !isAlternateStep ? (
+          <p className="mb-8 rounded-xl border border-border bg-background px-4 py-3 text-center text-sm text-zinc-600 dark:text-zinc-400">
+            Signup is invite-only during closed beta.{" "}
+            <Link
+              href="/#waitlist"
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              Join the waitlist
+            </Link>{" "}
+            and we&apos;ll reach out.
+          </p>
+        ) : null}
+
+        {!isAlternateStep && SIGNUP_ENABLED && (
         <div
           role="tablist"
           aria-label="Authentication mode"
@@ -377,10 +409,10 @@ export default function AuthPage() {
               key={value}
               type="button"
               role="tab"
-              aria-selected={tab === value}
+              aria-selected={activeTab === value}
               className={cn(
                 "flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors",
-                tab === value
+                activeTab === value
                   ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
                   : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
               )}
@@ -439,7 +471,7 @@ export default function AuthPage() {
                 ? "Forgot password form"
                 : isForgotResetStep
                   ? "Reset password form"
-                  : tab === "login"
+                  : activeTab === "login"
                     ? "Log in form"
                     : "Sign up form"
           }
@@ -501,18 +533,18 @@ export default function AuthPage() {
             value={password}
             onChange={setPassword}
             autoComplete={
-              tab === "login" ? "current-password" : "new-password"
+              activeTab === "login" ? "current-password" : "new-password"
             }
-            minLength={tab === "signup" ? 8 : 1}
+            minLength={activeTab === "signup" ? 8 : 1}
             hint={
-              tab === "signup"
+              activeTab === "signup"
                 ? "At least 8 characters with uppercase, lowercase, a number, and a symbol."
                 : undefined
             }
           />
           ) : null}
 
-          {tab === "login" && loginStep === "credentials" ? (
+          {activeTab === "login" && loginStep === "credentials" ? (
             <div className="-mt-2 flex justify-end">
               <button
                 type="button"
@@ -546,7 +578,7 @@ export default function AuthPage() {
                   ? "Sending code..."
                   : isForgotResetStep
                     ? "Resetting..."
-                    : tab === "login"
+                    : activeTab === "login"
                       ? "Logging in..."
                       : "Sending code..."
               : isVerifyStep
@@ -555,7 +587,7 @@ export default function AuthPage() {
                   ? "Send reset code"
                   : isForgotResetStep
                     ? "Reset password"
-                    : tab === "login"
+                    : activeTab === "login"
                       ? "Log in"
                       : "Continue"}
           </Button>

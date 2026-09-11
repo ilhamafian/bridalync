@@ -5,10 +5,21 @@ import {
   EmailVerificationError,
   sendVerificationCode,
 } from "@/utils/auth/email-verification";
+import { SIGNUP_ENABLED } from "@/utils/auth/signup";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function POST(req: NextRequest) {
   try {
+    if (!SIGNUP_ENABLED) {
+      return createResponse(
+        {
+          error:
+            "Signup is invite-only during closed beta. Join the waitlist and we'll reach out.",
+        },
+        403
+      );
+    }
+
     const body = await req.json();
     const parsed = sendVerificationCodeRequestSchema.safeParse(body);
 
