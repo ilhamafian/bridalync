@@ -10,6 +10,7 @@ import {
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile } from "@/components/booking/ClientProfile";
+import { BookingLoadingState } from "@/components/booking/BookingLoadingState";
 import { AnimatedFlow } from "@/components/animated-flow";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useLocale } from "@/components/LocaleProvider";
@@ -1231,7 +1232,7 @@ export default function ClientPage() {
         )}
       >
       {step === "intro" && loading && (
-        <p className="text-sm text-muted-foreground">{t.loadingProfile}</p>
+        <BookingLoadingState message={t.loadingProfile} />
       )}
       {step === "intro" && user && (
         <ClientProfile user={user} reviews={reviews} onBookNow={goToNextStep} />
@@ -1294,9 +1295,10 @@ export default function ClientPage() {
 
           <div className="flex w-full flex-col items-end gap-4">
             {loading ? (
-              <p className="mx-auto w-full max-w-xs px-4 text-center text-sm text-muted-foreground">
-                {t.loadingPackages}
-              </p>
+              <BookingLoadingState
+                message={t.loadingPackages}
+                className="w-full py-10"
+              />
             ) : (
               <div className="mx-auto w-full max-w-xs px-2">
                 <BookingPackagePicker
