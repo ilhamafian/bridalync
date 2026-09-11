@@ -49,7 +49,6 @@ export const en: Locale = {
   allSessionsScheduled: "All sessions scheduled",
   sessionsScheduledCount:
     "{scheduled} of {total} {total, session, sessions} scheduled",
-  schedulingSession: "Scheduling session {current} of {total}:",
   availableSlots: "Available slots",
   allSlotsBooked: "All time slots are booked on this date.",
   yourBookings: "Your bookings",

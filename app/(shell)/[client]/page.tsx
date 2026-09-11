@@ -1316,16 +1316,7 @@ export default function ClientPage() {
           <div className="flex w-full flex-col items-end gap-4">
             {nextSessionTemplate && (
               <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
-                <CardContent className="flex flex-col items-center gap-4 pt-(--card-spacing)">
-                  <p className="text-center text-sm text-muted-foreground">
-                    {format(t.schedulingSession, {
-                      current: nextSessionTemplate.order + 1,
-                      total: sessionTemplates.length,
-                    })}{" "}
-                    <span className="font-medium text-foreground">
-                      {nextSessionTemplate.name}
-                    </span>
-                  </p>
+                <CardContent className="flex flex-col items-center gap-4 pt-1">
                   <Calendar
                     mode="single"
                     locale={dateFnsLocale}
@@ -1340,6 +1331,10 @@ export default function ClientPage() {
                     ]}
                     captionLayout="dropdown"
                     className="mx-auto p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)] [&_button[data-selected-single=true]]:bg-rose-800 [&_button[data-selected-single=true]]:text-white [&_button[data-selected-single=true]]:hover:bg-rose-800/90 [&_button[data-selected-single=true]]:hover:text-white"
+                    classNames={{
+                      today:
+                        "rounded-(--cell-radius) bg-transparent data-[selected=true]:rounded-none [&_button]:bg-zinc-700 [&_button]:text-white [&_button]:hover:bg-zinc-700/90 [&_button]:hover:text-white",
+                    }}
                   />
                 </CardContent>
                 <CardFooter className="w-full flex-col items-stretch gap-3 border-t border-white/40 bg-transparent dark:border-white/15">

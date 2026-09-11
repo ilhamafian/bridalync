@@ -46,7 +46,6 @@ export const ms = {
   bookSession: "Pilih tarikh dan sesi {sessionName}",
   allSessionsScheduled: "Semua sesi dijadualkan",
   sessionsScheduledCount: "{scheduled} daripada {total} sesi dijadualkan",
-  schedulingSession: "Menjadualkan sesi {current} daripada {total}:",
   availableSlots: "Slot tersedia",
   allSlotsBooked: "Semua slot masa telah ditempah pada tarikh ini.",
   yourBookings: "Tempahan anda",
