@@ -1,5 +1,7 @@
 # Bridalync
 
+test
+
 A web app for glam team freelancers—makeup artists, hijab stylists, hair stylists, and similar wedding-day professionals—to manage clients and schedule appointments in one place.
 
 ## What it does
