@@ -9,11 +9,11 @@ import {
   createPartialAccount,
 } from "@/utils/auth/user-auth";
 import { setAuthSession } from "@/utils/auth/session";
+import { isSignupEmailAllowed } from "@/utils/auth/signup-allowlist";
 import {
   BETA_NOT_ALLOWED_CODE,
   BETA_NOT_ALLOWED_MESSAGE,
   SIGNUP_ENABLED,
-  isSignupEmailAllowed,
 } from "@/utils/auth/signup";
 import { signupRequestSchema } from "@/schemas/auth";
 import { createResponse, handleError } from "@/utils/apiHelper";

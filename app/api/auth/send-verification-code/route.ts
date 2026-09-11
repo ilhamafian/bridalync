@@ -5,11 +5,11 @@ import {
   EmailVerificationError,
   sendVerificationCode,
 } from "@/utils/auth/email-verification";
+import { isSignupEmailAllowed } from "@/utils/auth/signup-allowlist";
 import {
   BETA_NOT_ALLOWED_CODE,
   BETA_NOT_ALLOWED_MESSAGE,
   SIGNUP_ENABLED,
-  isSignupEmailAllowed,
 } from "@/utils/auth/signup";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
