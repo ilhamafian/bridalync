@@ -22,7 +22,7 @@ import {
 } from "@/locales";
 
 const STORAGE_KEY = "bridalync-locale";
-const DEFAULT_LOCALE: LocaleKey = "ms";
+const DEFAULT_LOCALE: LocaleKey = "en";
 const DATE_FNS_LOCALES = {
   ms: msDateLocale,
   en: enGB,

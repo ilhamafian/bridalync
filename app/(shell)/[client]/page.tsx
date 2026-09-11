@@ -801,6 +801,7 @@ export default function ClientPage() {
     setSelectedDate(undefined);
     setSelectedTimeSlot(null);
     setSharedLocation(null);
+    setSameLocationForAll(true);
     setSelectedStyleCategoryId(null);
     setSelectedVariantId(null);
     setSelectedAddOnIds([]);
@@ -808,11 +809,23 @@ export default function ClientPage() {
   }, [selectedPackageId]);
 
   useEffect(() => {
-    if (!sameLocationForAll || !sharedLocation) return;
-    setSessions((current) =>
-      current.map((session) => ({ ...session, location: sharedLocation }))
-    );
-  }, [sameLocationForAll, sharedLocation]);
+    // Keep session locations in sync whenever the shared picker is in use
+    // (explicit "same for all", or a single-session booking).
+    const shareAcrossSessions =
+      sameLocationForAll || sessions.length === 1;
+    if (!shareAcrossSessions || !sharedLocation) return;
+    setSessions((current) => {
+      if (current.length === 0) return current;
+      const alreadySynced = current.every(
+        (session) => session.location === sharedLocation
+      );
+      if (alreadySynced) return current;
+      return current.map((session) => ({
+        ...session,
+        location: sharedLocation,
+      }));
+    });
+  }, [sameLocationForAll, sharedLocation, sessions.length]);
 
   useEffect(() => {
     sessionRoadDistancesRef.current = sessionRoadDistances;
@@ -980,6 +993,11 @@ export default function ClientPage() {
     ]);
     setSelectedDate(undefined);
     setSelectedTimeSlot(null);
+
+    // Single-session packages: add and continue — no separate Next click.
+    if (sessionTemplates.length === 1) {
+      goToNextStep();
+    }
   }
 
   function handleRemoveSession(clientKey: string) {
@@ -990,6 +1008,8 @@ export default function ClientPage() {
       return current.filter((session) => session.order < removed.order);
     });
   }
+
+  const isSingleSessionPackage = sessionTemplates.length === 1;
 
   const allSessionsScheduled =
     sessionTemplates.length > 0 &&
@@ -1036,7 +1056,7 @@ export default function ClientPage() {
   }, [sessions, sessionRoadDistances, travelOrigin, t, format]);
 
   const sharedLocationHelperText =
-    sameLocationForAll && sessions.length > 0
+    (sameLocationForAll || sessions.length === 1) && sessions.length > 0
       ? sessionLocationHelperTextByKey[sessions[0].client_key]
       : undefined;
 
@@ -1253,7 +1273,7 @@ export default function ClientPage() {
             </div>
             <Button
               size="lg"
-              className="mr-4 bg-chart-4 text-white hover:bg-chart-4/90"
+              className="mr-4 bg-rose-800 text-white hover:bg-rose-800/90"
               disabled={!contact.name.trim()}
               onClick={goToNextStep}
             >
@@ -1288,7 +1308,7 @@ export default function ClientPage() {
             )}
             <Button
               size="lg"
-              className="mt-4 bg-chart-4 text-white hover:bg-chart-4/90"
+              className="mt-4 bg-rose-800 text-white hover:bg-rose-800/90"
               disabled={!selectedPackageId}
               onClick={goToNextStep}
             >
@@ -1301,17 +1321,24 @@ export default function ClientPage() {
 
       {step === "datetime" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center">
-          <h1 className="mb-2 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+          <h1
+            className={cn(
+              "max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50",
+              isSingleSessionPackage ? "mb-6" : "mb-2"
+            )}
+          >
             {nextSessionTemplate
               ? format(t.bookSession, { sessionName: nextSessionTemplate.name })
               : t.allSessionsScheduled}
           </h1>
-          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {format(t.sessionsScheduledCount, {
-              scheduled: sessions.length,
-              total: sessionTemplates.length,
-            })}
-          </p>
+          {!isSingleSessionPackage && (
+            <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+              {format(t.sessionsScheduledCount, {
+                scheduled: sessions.length,
+                total: sessionTemplates.length,
+              })}
+            </p>
+          )}
 
           <div className="flex w-full flex-col items-end gap-4">
             {nextSessionTemplate && (
@@ -1388,24 +1415,31 @@ export default function ClientPage() {
               </Card>
             )}
 
-            <div className="w-full space-y-2">
-              <p className="text-sm font-medium text-foreground">
-                {t.yourBookings}
-              </p>
-              <BookingSessionList
-                sessions={sessions}
-                onRemove={handleRemoveSession}
-                emptyMessage={t.noSessionsYet}
-                frosted
-              />
-            </div>
+            {(!isSingleSessionPackage || allSessionsScheduled) && (
+              <div className="w-full space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  {t.yourBookings}
+                </p>
+                <BookingSessionList
+                  sessions={sessions}
+                  onRemove={handleRemoveSession}
+                  emptyMessage={t.noSessionsYet}
+                  frosted
+                />
+              </div>
+            )}
 
             <div className="flex w-full justify-end gap-2">
               {nextSessionTemplate && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant={isSingleSessionPackage ? "default" : "outline"}
                   size="lg"
+                  className={
+                    isSingleSessionPackage
+                      ? "bg-rose-800 text-white hover:bg-rose-800/90"
+                      : undefined
+                  }
                   disabled={
                     !selectedDate ||
                     !selectedTimeSlot ||
@@ -1423,15 +1457,17 @@ export default function ClientPage() {
                   })}
                 </Button>
               )}
-              <Button
-                size="lg"
-                className="bg-chart-4 text-white hover:bg-chart-4/90"
-                disabled={!allSessionsScheduled}
-                onClick={goToNextStep}
-              >
-                {t.next}
-                <ChevronRightIcon />
-              </Button>
+              {(!isSingleSessionPackage || allSessionsScheduled) && (
+                <Button
+                  size="lg"
+                  className="bg-rose-800 text-white hover:bg-rose-800/90"
+                  disabled={!allSessionsScheduled}
+                  onClick={goToNextStep}
+                >
+                  {t.next}
+                  <ChevronRightIcon />
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -1448,7 +1484,15 @@ export default function ClientPage() {
               sameLocationForAll={sameLocationForAll}
               onSameLocationForAllChange={setSameLocationForAll}
               sharedLocation={sharedLocation}
-              onSharedLocationChange={setSharedLocation}
+              onSharedLocationChange={(location) => {
+                setSharedLocation(location);
+                // Apply immediately so Next enables without waiting on the sync effect.
+                if (sameLocationForAll || sessions.length === 1) {
+                  setSessions((current) =>
+                    current.map((session) => ({ ...session, location }))
+                  );
+                }
+              }}
               sharedLocationHelperText={sharedLocationHelperText}
               sessionLocationHelperTextByKey={sessionLocationHelperTextByKey}
               onSessionLocationChange={(clientKey, location) =>
@@ -1469,7 +1513,7 @@ export default function ClientPage() {
 
             <Button
               size="lg"
-              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              className="bg-rose-800 text-white hover:bg-rose-800/90"
               disabled={!allLocationsSet}
               onClick={goToNextStep}
             >
@@ -1500,7 +1544,7 @@ export default function ClientPage() {
             <div className="flex w-full justify-end">
               <Button
                 size="lg"
-                className="bg-chart-4 text-white hover:bg-chart-4/90"
+                className="bg-rose-800 text-white hover:bg-rose-800/90"
                 disabled={!selectedVariantId}
                 onClick={goToNextStep}
               >
@@ -1538,7 +1582,7 @@ export default function ClientPage() {
               </Button>
               <Button
                 size="lg"
-                className="bg-chart-4 text-white hover:bg-chart-4/90"
+                className="bg-rose-800 text-white hover:bg-rose-800/90"
                 onClick={goToNextStep}
               >
                 {t.next}
@@ -1559,7 +1603,7 @@ export default function ClientPage() {
             <BookingContactForm value={contact} onChange={setContact} />
             <Button
               size="lg"
-              className="mt-2 bg-chart-4 text-white hover:bg-chart-4/90"
+              className="mt-2 bg-rose-800 text-white hover:bg-rose-800/90"
               disabled={!contactDetailsValid}
               onClick={goToNextStep}
             >
@@ -1584,7 +1628,7 @@ export default function ClientPage() {
             />
             <Button
               size="lg"
-              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              className="bg-rose-800 text-white hover:bg-rose-800/90"
               onClick={goToNextStep}
             >
               {t.next}
@@ -1620,7 +1664,7 @@ export default function ClientPage() {
             </Card>
             <Button
               size="lg"
-              className="bg-chart-4 text-white hover:bg-chart-4/90"
+              className="bg-rose-800 text-white hover:bg-rose-800/90"
               disabled={!termsAccepted}
               onClick={goToNextStep}
             >
@@ -1723,7 +1767,7 @@ export default function ClientPage() {
             )}
             <Button
               size="lg"
-              className="h-11 w-full bg-chart-4 text-white hover:bg-chart-4/90"
+              className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
               disabled={isPaying || payableQuotation.depositRm <= 0}
               onClick={() => void handlePay()}
             >

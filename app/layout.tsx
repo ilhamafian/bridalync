@@ -49,7 +49,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="ms"
+      lang="en"
       className={cn(
         "h-full antialiased",
         geistMono.variable,

@@ -57,7 +57,7 @@ export const ms = {
   // Location
   bookingLocation: "Lokasi persiapan anda",
   locationNotDecided:
-    "Belum tahu lokasi nak bersiap? Masukkan sahaja kawasan anda sekarang.",
+    "Belum tahu lokasi nak bersiap? Masukkan sahaja kawasan yang berdekatan.",
   mapHint:
     "Cari lokasi, kemudian seret pin atau ketik peta untuk tetapkan kedudukan tepat.",
   pinnedOnMap: "Ditanda pada peta",

@@ -29,30 +29,36 @@ export function SessionLocationPicker({
   sessionLocationHelperTextByKey,
 }: SessionLocationPickerProps) {
   const { t, intlLocale } = useLocale()
+  const isSingleSession = sessions.length === 1
+  const useSharedLocation = isSingleSession || sameLocationForAll
 
   return (
     <MapsProvider>
       <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
-      <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
+      <CardContent className="flex flex-col gap-4">
       <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
               {t.locationNotDecided}
             </p>
-        <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
-          <input
-            type="checkbox"
-            checked={sameLocationForAll}
-            onChange={(event) =>
-              onSameLocationForAllChange(event.target.checked)
-            }
-            className="size-4 rounded border-border accent-rose-800"
-          />
-          {t.sameLocationAll}
-        </label>
+        {!isSingleSession && (
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={sameLocationForAll}
+              onChange={(event) =>
+                onSameLocationForAllChange(event.target.checked)
+              }
+              className="size-4 rounded border-border accent-rose-800"
+            />
+            {t.sameLocationAll}
+          </label>
+        )}
 
-        {sameLocationForAll ? (
+        {useSharedLocation ? (
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium text-foreground">
-              {t.locationAllSessions}
+              {isSingleSession && sessions[0]
+                ? formatSessionSummary(sessions[0], intlLocale)
+                : t.locationAllSessions}
             </p>
             <LocationMapPicker
               value={sharedLocation}

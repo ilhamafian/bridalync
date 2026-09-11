@@ -9,7 +9,7 @@ function toSessionDate(value: SessionSummaryFields["date"] | string): Date {
 
 export function formatSessionSummary(
   session: SessionSummaryFields,
-  locale = "ms-MY"
+  locale = "en-GB"
 ): string {
   const dateStr = toSessionDate(session.date).toLocaleDateString(locale, {
     weekday: "short",
