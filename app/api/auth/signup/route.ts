@@ -9,7 +9,12 @@ import {
   createPartialAccount,
 } from "@/utils/auth/user-auth";
 import { setAuthSession } from "@/utils/auth/session";
-import { SIGNUP_ENABLED } from "@/utils/auth/signup";
+import {
+  BETA_NOT_ALLOWED_CODE,
+  BETA_NOT_ALLOWED_MESSAGE,
+  SIGNUP_ENABLED,
+  isSignupEmailAllowed,
+} from "@/utils/auth/signup";
 import { signupRequestSchema } from "@/schemas/auth";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
@@ -30,6 +35,15 @@ export async function POST(req: NextRequest) {
 
     if (!parsed.success) {
       return createResponse({ error: parsed.error.format() }, 400);
+    }
+
+    const allowed = await isSignupEmailAllowed(parsed.data.email);
+    if (!allowed) {
+      return createResponse({
+        success: false,
+        code: BETA_NOT_ALLOWED_CODE,
+        error: BETA_NOT_ALLOWED_MESSAGE,
+      });
     }
 
     await verifyEmailCode(parsed.data.email, parsed.data.code);

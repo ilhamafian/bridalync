@@ -5,7 +5,12 @@ import {
   EmailVerificationError,
   sendVerificationCode,
 } from "@/utils/auth/email-verification";
-import { SIGNUP_ENABLED } from "@/utils/auth/signup";
+import {
+  BETA_NOT_ALLOWED_CODE,
+  BETA_NOT_ALLOWED_MESSAGE,
+  SIGNUP_ENABLED,
+  isSignupEmailAllowed,
+} from "@/utils/auth/signup";
 import { createResponse, handleError } from "@/utils/apiHelper";
 
 export async function POST(req: NextRequest) {
@@ -25,6 +30,15 @@ export async function POST(req: NextRequest) {
 
     if (!parsed.success) {
       return createResponse({ error: parsed.error.format() }, 400);
+    }
+
+    const allowed = await isSignupEmailAllowed(parsed.data.email);
+    if (!allowed) {
+      return createResponse({
+        success: false,
+        code: BETA_NOT_ALLOWED_CODE,
+        error: BETA_NOT_ALLOWED_MESSAGE,
+      });
     }
 
     await sendVerificationCode(parsed.data.email);

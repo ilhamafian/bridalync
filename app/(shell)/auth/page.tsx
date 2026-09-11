@@ -6,13 +6,25 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { signupPasswordSchema } from "@/schemas/auth";
 import {
   isOnboardingComplete,
   type OnboardingProgress,
 } from "@/schemas/onboardingSchema";
-import { SIGNUP_ENABLED } from "@/utils/auth/signup";
+import {
+  BETA_NOT_ALLOWED_CODE,
+  BETA_NOT_ALLOWED_MESSAGE,
+  SIGNUP_ENABLED,
+} from "@/utils/auth/signup";
 
 type AuthTab = "login" | "signup";
 type SignupStep = "credentials" | "verify-email";
@@ -136,6 +148,15 @@ function getErrorMessage(payload: unknown) {
   return "Something went wrong. Please try again.";
 }
 
+function isBetaNotAllowed(payload: unknown) {
+  return (
+    payload !== null &&
+    typeof payload === "object" &&
+    "code" in payload &&
+    payload.code === BETA_NOT_ALLOWED_CODE
+  );
+}
+
 function getRedirectPath(tab: AuthTab, payload: AuthSuccessPayload) {
   if (payload.redirectTo) return payload.redirectTo;
   if (tab === "signup") return "/onboarding";
@@ -154,6 +175,10 @@ export default function AuthPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [betaBlockedOpen, setBetaBlockedOpen] = useState(false);
+  const [betaBlockedMessage, setBetaBlockedMessage] = useState(
+    BETA_NOT_ALLOWED_MESSAGE
+  );
 
   const activeTab: AuthTab = SIGNUP_ENABLED ? tab : "login";
   const isVerifyStep =
@@ -180,6 +205,11 @@ export default function AuthPage() {
     return true;
   }
 
+  function showBetaBlocked(payload: unknown) {
+    setBetaBlockedMessage(getErrorMessage(payload) || BETA_NOT_ALLOWED_MESSAGE);
+    setBetaBlockedOpen(true);
+  }
+
   async function handleSendVerificationCode() {
     const response = await fetch("/api/auth/send-verification-code", {
       method: "POST",
@@ -188,6 +218,10 @@ export default function AuthPage() {
     });
 
     const payload: unknown = await response.json();
+    if (isBetaNotAllowed(payload)) {
+      showBetaBlocked(payload);
+      return false;
+    }
     if (!response.ok) {
       setError(getErrorMessage(payload));
       return false;
@@ -283,6 +317,10 @@ export default function AuthPage() {
       });
 
       const payload: unknown = await response.json();
+      if (activeTab === "signup" && isBetaNotAllowed(payload)) {
+        showBetaBlocked(payload);
+        return;
+      }
       if (!response.ok) {
         setError(getErrorMessage(payload));
         return;
@@ -395,6 +433,12 @@ export default function AuthPage() {
               Join the waitlist
             </Link>{" "}
             and we&apos;ll reach out.
+          </p>
+        ) : null}
+
+        {!isAlternateStep && SIGNUP_ENABLED ? (
+          <p className="mb-6 text-center text-xs text-zinc-500 dark:text-zinc-500">
+            Closed beta — signup is limited to invited emails.
           </p>
         ) : null}
 
@@ -660,6 +704,33 @@ export default function AuthPage() {
           )}
         </form>
       </div>
+
+      <Dialog open={betaBlockedOpen} onOpenChange={setBetaBlockedOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base">
+              Not approved for closed beta
+            </DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {betaBlockedMessage}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setBetaBlockedOpen(false)}
+            >
+              Close
+            </Button>
+            <Button type="button" asChild>
+              <Link href="/#waitlist" onClick={() => setBetaBlockedOpen(false)}>
+                Join waitlist
+              </Link>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
