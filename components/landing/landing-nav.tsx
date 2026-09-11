@@ -44,7 +44,7 @@ export function LandingNav() {
             asChild
             className="h-10 rounded-full bg-landing-rose px-6 font-serif text-lg text-landing-cream-text hover:bg-landing-rose/90"
           >
-            <Link href="/auth?tab=signup">Waitlist</Link>
+            <Link href="#waitlist">Waitlist</Link>
           </Button>
         </div>
       </div>

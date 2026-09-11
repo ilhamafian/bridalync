@@ -37,6 +37,7 @@ type PhoneNumberInputProps = {
   onCountryCodeChange: (code: string) => void;
   onMobileChange: (mobile: string) => void;
   inputClassName?: string;
+  selectTriggerClassName?: string;
   mobileInputId?: string;
   placeholder?: string;
   countryCodeAriaLabel?: string;
@@ -49,6 +50,7 @@ export function PhoneNumberInput({
   onCountryCodeChange,
   onMobileChange,
   inputClassName = defaultInputClassName,
+  selectTriggerClassName,
   mobileInputId,
   placeholder = "e.g. 123456789",
   countryCodeAriaLabel = "Country code",
@@ -60,7 +62,10 @@ export function PhoneNumberInput({
     <div className="flex gap-2">
       <Select value={resolvedCountryCode} onValueChange={onCountryCodeChange}>
         <SelectTrigger
-          className="h-10 w-30 shrink-0 data-[size=default]:h-10"
+          className={cn(
+            "h-10 w-30 shrink-0 data-[size=default]:h-10",
+            selectTriggerClassName
+          )}
           aria-label={countryCodeAriaLabel}
         >
           <SelectValue />

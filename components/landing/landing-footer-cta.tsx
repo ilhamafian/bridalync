@@ -1,7 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { LandingWaitlistForm } from "@/components/landing/landing-waitlist-form";
 
 export function LandingFooterCta() {
   return (
@@ -28,18 +27,12 @@ export function LandingFooterCta() {
 
       <div className="relative mx-auto max-w-xl">
         <h2 className="font-serif text-3xl text-landing-cream-text sm:text-4xl lg:text-[2.75rem]">
-          Connect with us
+          Join the waitlist
         </h2>
         <p className="mt-4 font-serif text-lg text-landing-cream-text/85 sm:text-xl">
-        Book a personalised demo and discover how Bridalync saves you hours every week
+          Leave your number and we&apos;ll reach out with a personalised demo.
         </p>
-        <Button
-          asChild
-          size="lg"
-          className="mt-8 h-12 rounded-full border-2 border-landing-cream-text/40 bg-landing-cream-text/30 px-8 font-serif text-base font-medium text-landing-cream-text shadow-sm backdrop-blur-md hover:bg-landing-cream-text/40"
-        >
-          <Link href="/auth?tab=signup">Join Waitlist</Link>
-        </Button>
+        <LandingWaitlistForm />
       </div>
     </section>
   );
