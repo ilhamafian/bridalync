@@ -66,7 +66,7 @@ function SheetContent({
 
   React.useLayoutEffect(() => {
     if (contained) {
-      setPortalContainer(document.querySelector(".app-shell"))
+      setPortalContainer(document.querySelector<HTMLElement>(".app-shell"))
     }
   }, [contained])
 
