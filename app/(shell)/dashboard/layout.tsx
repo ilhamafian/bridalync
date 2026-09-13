@@ -1,15 +1,28 @@
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 import { BottomNav } from "@/components/bottom-nav";
+import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { ProfilePreviewAside } from "@/components/dashboard/ProfilePreviewAside";
 import { SiteHeader } from "@/components/site-header";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { isOnboardingComplete } from "@/schemas/userSchema";
+import { isOnboardingComplete, type SessionUser } from "@/schemas/userSchema";
 import { buildProfileUrl, getAppUrl } from "@/utils/appUrl";
 import { getSessionUser } from "@/utils/auth/session";
+import { loadDashboardData } from "@/utils/loadDashboardData";
+
+async function DashboardContent({ user }: { user: SessionUser }) {
+  const data = await loadDashboardData(user);
+  if (!data) {
+    redirect("/onboarding");
+  }
+
+  return <DashboardShell data={data} />;
+}
 
 export default async function DashboardLayout({
-  children,
+  children: _children,
 }: {
   children: React.ReactNode;
 }) {
@@ -40,7 +53,9 @@ export default async function DashboardLayout({
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              {children}
+              <Suspense fallback={<DashboardSkeleton />}>
+                <DashboardContent user={user} />
+              </Suspense>
             </div>
           </div>
         </main>

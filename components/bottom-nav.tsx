@@ -77,6 +77,8 @@ export function BottomNav() {
               >
                 <Link
                   href={item.href}
+                  scroll={false}
+                  prefetch
                   className={cn(
                     "absolute z-10 flex size-16 items-center justify-center rounded-full shadow-md transition-colors",
                     isActive
@@ -95,6 +97,8 @@ export function BottomNav() {
             <Link
               key={item.href}
               href={item.href}
+              scroll={false}
+              prefetch
               className={cn(
                 "flex size-11 items-center justify-center rounded-full transition-colors",
                 isActive

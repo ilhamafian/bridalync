@@ -99,6 +99,7 @@ function BookingCard({
       {clickable ? (
         <Link
           href="/dashboard/bookings"
+          scroll={false}
           className="absolute inset-0 z-0 rounded-xl"
           aria-label={`View booking for ${item.clientName}`}
         />
@@ -129,7 +130,7 @@ function BookingCard({
       </CardHeader>
       <CardContent className="relative z-10 flex flex-col gap-2 pt-0 sm:flex-row">
         <Button asChild variant="outline" size="lg" className="min-h-11 flex-1">
-          <Link href="/dashboard/bookings">View Details</Link>
+          <Link href="/dashboard/bookings" scroll={false}>View Details</Link>
         </Button>
         <NavigateButton
           lat={item.location?.lat ?? 0}
@@ -271,7 +272,7 @@ export function DashboardHome({
               </p>
             </div>
             <Button asChild variant="outline" className="w-full sm:w-fit">
-              <Link href="/dashboard/bookings">View pending payments</Link>
+              <Link href="/dashboard/bookings" scroll={false}>View pending payments</Link>
             </Button>
           </CardContent>
         </Card>
@@ -281,7 +282,7 @@ export function DashboardHome({
         <h3 className="text-sm font-medium">Quick actions</h3>
         <div className="grid grid-cols-2 gap-3">
           <Button asChild size="lg" className="h-auto min-h-14 flex-col gap-1 py-3">
-            <Link href="/dashboard/bookings">
+            <Link href="/dashboard/bookings" scroll={false}>
               <IconCalendarPlus className="size-5" />
               <span>New Booking</span>
             </Link>
@@ -292,7 +293,7 @@ export function DashboardHome({
             size="lg"
             className="h-auto min-h-14 flex-col gap-1 py-3"
           >
-            <Link href="/dashboard/bookings">
+            <Link href="/dashboard/bookings" scroll={false}>
               <IconCalendar className="size-5" />
               <span>View Bookings</span>
             </Link>
@@ -303,7 +304,7 @@ export function DashboardHome({
             size="lg"
             className="h-auto min-h-14 flex-col gap-1 py-3"
           >
-            <Link href="/dashboard/packages">
+            <Link href="/dashboard/packages" scroll={false}>
               <IconBoxMultiple className="size-5" />
               <span>Manage Packages</span>
             </Link>
@@ -362,6 +363,7 @@ export function DashboardHome({
                 <Link
                   key={item.id}
                   href={item.href}
+                  scroll={false}
                   className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors hover:bg-muted/60"
                 >
                   {item.done ? (
