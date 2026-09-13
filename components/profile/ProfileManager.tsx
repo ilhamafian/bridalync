@@ -39,8 +39,6 @@ export type ProfileItem = {
   role: "hijabstylist" | "makeupartist" | null;
   profile_photo_url: string;
   social_links: ProfileSocialLinks;
-  profileUrl: string;
-  profileDisplayUrl: string;
 };
 
 const EMPTY_SOCIALS: ProfileSocialLinks = {
@@ -316,23 +314,7 @@ export function ProfileManager({
         <CardHeader>
           <CardTitle>Public profile</CardTitle>
           <CardDescription>
-            These details appear on your booking page
-            {profile.profileDisplayUrl ? (
-              <>
-                {" "}
-                (
-                <a
-                  href={profile.profileUrl || `/${profile.username}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline underline-offset-2"
-                >
-                  {profile.profileDisplayUrl}
-                </a>
-                )
-              </>
-            ) : null}
-            .
+            These details appear on your booking page.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">

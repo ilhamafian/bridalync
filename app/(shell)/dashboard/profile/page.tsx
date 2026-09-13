@@ -10,11 +10,6 @@ import { toIdString } from "@/schemas/objectId";
 import { toDashboardReview } from "@/schemas/reviewSchema";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { getSessionUser } from "@/utils/auth/session";
-import {
-  buildProfileDisplayUrl,
-  buildProfileUrl,
-  getAppUrl,
-} from "@/utils/appUrl";
 
 export default async function ProfilePage() {
   const user = await getSessionUser();
@@ -29,21 +24,6 @@ export default async function ProfilePage() {
 
   const userId = toIdString(user._id);
   const username = user.username ?? "";
-  let profileUrl = "";
-  let profileDisplayUrl = "";
-
-  try {
-    const appUrl = getAppUrl();
-    if (username) {
-      profileUrl = buildProfileUrl(appUrl, username);
-      profileDisplayUrl = buildProfileDisplayUrl(appUrl, username);
-    }
-  } catch {
-    if (username) {
-      profileUrl = `/${username}`;
-      profileDisplayUrl = username;
-    }
-  }
 
   const initialProfile: ProfileItem = {
     _id: userId,
@@ -58,8 +38,6 @@ export default async function ProfilePage() {
       instagram: user.social_links?.instagram ?? "",
       tiktok: user.social_links?.tiktok ?? "",
     },
-    profileUrl,
-    profileDisplayUrl,
   };
 
   const reviewDocs = userId
