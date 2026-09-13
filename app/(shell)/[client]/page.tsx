@@ -44,8 +44,10 @@ import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
 import {
+  Suspense,
   useEffect,
   useMemo,
   useRef,
@@ -507,6 +509,40 @@ function getNextSessionTemplate(
 
 function formatTimeSlot(slot: TimeSlot): string {
   return `${slot.startTime} – ${slot.endTime}`;
+}
+
+function ProfilePreviewBanner() {
+  const searchParams = useSearchParams();
+  if (searchParams.get("preview") !== "1") return null;
+
+  return (
+    <div className="relative z-30 flex shrink-0 items-center gap-3 border-b border-zinc-900/10 bg-white/75 px-4 py-2.5 backdrop-blur-md dark:border-white/15 dark:bg-zinc-950/75">
+      <Button asChild size="sm" variant="outline" className="shrink-0">
+        <Link href="/dashboard">Back to Dashboard</Link>
+      </Button>
+      <p className="min-w-0 flex-1 truncate text-sm text-zinc-700 dark:text-zinc-200">
+        Previewing your profile
+      </p>
+    </div>
+  );
+}
+
+function ClientPageLanguageSelector() {
+  const searchParams = useSearchParams();
+  const isPreview = searchParams.get("preview") === "1";
+
+  return (
+    <div
+      className={cn(
+        "pointer-events-none fixed right-6 z-50",
+        isPreview ? "top-16" : "top-4"
+      )}
+    >
+      <div className="pointer-events-auto">
+        <LanguageSelector />
+      </div>
+    </div>
+  );
 }
 
 export default function ClientPage() {
@@ -1159,6 +1195,9 @@ export default function ClientPage() {
 
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <Suspense fallback={null}>
+        <ProfilePreviewBanner />
+      </Suspense>
       <AnimatedFlow
         variant="blush"
         flowSpeed={0.9}
@@ -1167,11 +1206,9 @@ export default function ClientPage() {
         rotationAngle={120}
         className="pointer-events-none absolute inset-0 min-h-0"
       />
-      <div className="pointer-events-none fixed top-4 right-6 z-50">
-        <div className="pointer-events-auto">
-          <LanguageSelector />
-        </div>
-      </div>
+      <Suspense fallback={null}>
+        <ClientPageLanguageSelector />
+      </Suspense>
       {step !== "intro" && (
         <div className="relative z-10 flex w-full shrink-0 flex-col items-center gap-3 px-6 pt-4">
           <div className="relative flex w-full max-w-md items-center">

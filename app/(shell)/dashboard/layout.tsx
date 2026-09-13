@@ -8,7 +8,7 @@ import { ProfilePreviewAside } from "@/components/dashboard/ProfilePreviewAside"
 import { SiteHeader } from "@/components/site-header";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { isOnboardingComplete, type SessionUser } from "@/schemas/userSchema";
-import { buildProfileUrl, getAppUrl } from "@/utils/appUrl";
+import { buildProfilePreviewUrl, buildProfileUrl, getAppUrl } from "@/utils/appUrl";
 import { getSessionUser } from "@/utils/auth/session";
 import { loadDashboardData } from "@/utils/loadDashboardData";
 
@@ -40,9 +40,11 @@ export default async function DashboardLayout({
   let profilePreviewUrl: string | null = null;
   if (username) {
     try {
-      profilePreviewUrl = buildProfileUrl(getAppUrl(), username);
+      profilePreviewUrl = buildProfilePreviewUrl(
+        buildProfileUrl(getAppUrl(), username)
+      );
     } catch {
-      profilePreviewUrl = `/${username}`;
+      profilePreviewUrl = buildProfilePreviewUrl(`/${username}`);
     }
   }
 
