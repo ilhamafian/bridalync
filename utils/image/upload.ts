@@ -1,5 +1,3 @@
-import sharp from "sharp";
-
 import {
   UPLOAD_IMAGE_ALLOWED_TYPES,
   UPLOAD_IMAGE_MAX_BYTES,
@@ -12,6 +10,8 @@ type CompressedImage = {
   contentType: string;
   extension: string;
 };
+
+type Sharp = typeof import("sharp").default;
 
 function extensionForContentType(contentType: string): string {
   switch (contentType) {
@@ -44,7 +44,13 @@ function outputFormatForMime(mimeType: string): {
   return { format: "webp", contentType: "image/webp" };
 }
 
+async function loadSharp(): Promise<Sharp> {
+  const mod = await import("sharp");
+  return mod.default;
+}
+
 async function encodeImage(
+  sharp: Sharp,
   input: Buffer,
   mimeType: string,
   dimension: number,
@@ -53,10 +59,12 @@ async function encodeImage(
   const isGif = mimeType === "image/gif";
   const { format } = outputFormatForMime(mimeType);
 
-  let pipeline = sharp(input, { animated: isGif }).rotate().resize(dimension, dimension, {
-    fit: "inside",
-    withoutEnlargement: true,
-  });
+  const pipeline = sharp(input, { animated: isGif })
+    .rotate()
+    .resize(dimension, dimension, {
+      fit: "inside",
+      withoutEnlargement: true,
+    });
 
   if (format === "jpeg") {
     return pipeline.jpeg({ quality, mozjpeg: true }).toBuffer();
@@ -78,6 +86,7 @@ export async function compressImageForUpload(
     };
   }
 
+  const sharp = await loadSharp();
   const isGif = mimeType === "image/gif";
   const metadata = await sharp(input, { animated: isGif }).metadata();
   const longestEdge = Math.max(metadata.width ?? 4096, metadata.height ?? 4096);
@@ -98,7 +107,13 @@ export async function compressImageForUpload(
   let quality = 85;
 
   for (let attempt = 0; attempt < 24; attempt += 1) {
-    const buffer = await encodeImage(input, mimeType, dimension, quality);
+    const buffer = await encodeImage(
+      sharp,
+      input,
+      mimeType,
+      dimension,
+      quality
+    );
 
     if (buffer.length <= maxBytes) {
       return {
@@ -128,7 +143,7 @@ export async function compressImageForUpload(
     quality = 60;
   }
 
-  const buffer = await encodeImage(input, mimeType, 256, 20);
+  const buffer = await encodeImage(sharp, input, mimeType, 256, 20);
 
   return {
     buffer,
@@ -142,11 +157,25 @@ export async function prepareFileForUpload(
   maxBytes = UPLOAD_IMAGE_MAX_BYTES
 ): Promise<{ data: Buffer; contentType: string; fileName: string }> {
   const input = Buffer.from(await file.arrayBuffer());
-  const compressed = await compressImageForUpload(input, file.type, maxBytes);
 
-  return {
-    data: compressed.buffer,
-    contentType: compressed.contentType,
-    fileName: replaceFileExtension(file.name, compressed.extension),
-  };
+  try {
+    const compressed = await compressImageForUpload(input, file.type, maxBytes);
+    return {
+      data: compressed.buffer,
+      contentType: compressed.contentType,
+      fileName: replaceFileExtension(file.name, compressed.extension),
+    };
+  } catch (error) {
+    // Client should already have compressed below the host body limit.
+    // If server-side sharp fails, still store the file when it fits.
+    if (input.length <= maxBytes) {
+      console.error("Image compress skipped after sharp failure:", error);
+      return {
+        data: input,
+        contentType: file.type || "application/octet-stream",
+        fileName: file.name,
+      };
+    }
+    throw error;
+  }
 }

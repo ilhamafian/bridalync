@@ -57,5 +57,5 @@ export const createResponse = (data: any, status: number = 200) => {
 
 export const handleError = (error: unknown) => {
   console.error("API Error:", error);
-  return createResponse({ message: "Internal server error" }, 500);
+  return createResponse({ error: "Internal server error" }, 500);
 };
