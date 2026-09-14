@@ -360,7 +360,6 @@ export function getRecentActivity(
 export function getSetupChecklist(input: {
   packageCount: number;
   timeSlotCount: number;
-  isStripeConnected: boolean;
   hasUsername: boolean;
 }): ChecklistItem[] {
   return [
@@ -374,12 +373,6 @@ export function getSetupChecklist(input: {
       id: "availability",
       label: "Set availability",
       done: input.timeSlotCount > 0,
-      href: "/dashboard/settings",
-    },
-    {
-      id: "stripe",
-      label: "Connect Stripe",
-      done: input.isStripeConnected,
       href: "/dashboard/settings",
     },
     {

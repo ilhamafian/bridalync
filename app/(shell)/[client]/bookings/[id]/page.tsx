@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 
 import { AnimatedFlow } from "@/components/animated-flow";
+import { ManualPaymentStep } from "@/components/booking/ManualPaymentStep";
 import { BookingInvoice } from "@/components/BookingQuotation";
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -78,6 +79,7 @@ function BookingResultPageContent() {
   const paymentState = searchParams.get("payment");
   const returnedFromDepositCheckout = paymentState === "success";
   const returnedFromBalanceCheckout = paymentState === "balance-success";
+  const manualSubmitted = paymentState === "manual-submitted";
 
   const [booking, setBooking] = useState<PublicBooking | null>(null);
   const [loading, setLoading] = useState(true);
@@ -85,6 +87,7 @@ function BookingResultPageContent() {
   const [confirmingTooLong, setConfirmingTooLong] = useState(false);
   const [payingBalance, setPayingBalance] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [showManualBalance, setShowManualBalance] = useState(false);
 
   useEffect(() => {
     const waitingOnDeposit =
@@ -228,6 +231,49 @@ function BookingResultPageContent() {
     }
   }
 
+  async function handleManualBalanceReceipt(receipt: File) {
+    if (payingBalance || !booking) return;
+
+    setPayingBalance(true);
+    setPayError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("receipt", receipt);
+      const response = await fetch(`/api/bookings/${bookingId}/manual-balance`, {
+        method: "POST",
+        body: formData,
+      });
+      const payload: unknown = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          payload &&
+            typeof payload === "object" &&
+            "error" in payload &&
+            typeof payload.error === "string"
+            ? payload.error
+            : t.couldNotStartBalancePayment
+        );
+      }
+
+      const refresh = await fetch(
+        `/api/bookings/${bookingId}?client=${encodeURIComponent(client)}`
+      );
+      const refreshed = (await refresh.json()) as PublicBooking;
+      setBooking(refreshed);
+      setShowManualBalance(false);
+    } catch (manualError) {
+      setPayError(
+        manualError instanceof Error
+          ? manualError.message
+          : t.couldNotStartBalancePayment
+      );
+    } finally {
+      setPayingBalance(false);
+    }
+  }
+
   if (loading) {
     return (
       <BookingResultLayout>
@@ -252,13 +298,20 @@ function BookingResultPageContent() {
   const isCompleted = booking.status === "completed";
   const isFailure = booking.status === "failed";
   const isPending = booking.status === "pending";
+  const awaitingManualVerification =
+    isPending &&
+    booking.paymentChannel === "manual_transfer" &&
+    booking.depositVerificationStatus === "pending";
   const outstandingBalance = hasOutstandingBalance(booking);
+  const balanceReceiptPending = booking.balanceVerificationStatus === "pending";
   const isConfirmingDeposit = isPending && returnedFromDepositCheckout;
   const isConfirmingBalance =
     returnedFromBalanceCheckout && outstandingBalance;
   const isFullyPaid =
     isSuccess &&
     (booking.paymentOption === "full" || booking.invoice.balanceRm === 0);
+  const usesManualBalance =
+    (booking.stylistPaymentMethod ?? "manual_transfer") === "manual_transfer";
   const whatsAppUrl =
     booking.freelancer?.mobile && booking.freelancer.country_code
       ? buildWhatsAppUrl(
@@ -278,11 +331,14 @@ function BookingResultPageContent() {
           {isSuccess && outstandingBalance && !isConfirmingBalance && (
             <CheckCircle2Icon className="size-12 text-rose-900 dark:text-rose-400" />
           )}
+          {awaitingManualVerification && (
+            <CheckCircle2Icon className="size-12 text-rose-900 dark:text-rose-400" />
+          )}
           {isFailure && <XCircleIcon className="size-12 text-rose-900 dark:text-rose-400" />}
           {(isConfirmingDeposit || isConfirmingBalance) && (
             <div className="size-12 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-rose-900 dark:border-t-rose-400" />
           )}
-          {isPending && !isConfirmingDeposit && (
+          {isPending && !isConfirmingDeposit && !awaitingManualVerification && (
             <div className="size-12 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-rose-900 dark:border-t-rose-400" />
           )}
 
@@ -305,7 +361,11 @@ function BookingResultPageContent() {
               outstandingBalance &&
               t.bookingConfirmed}
             {isFailure && t.paymentFailed}
-            {isPending && !isConfirmingDeposit && t.bookingPending}
+            {awaitingManualVerification && t.bookingPending}
+            {isPending &&
+              !isConfirmingDeposit &&
+              !awaitingManualVerification &&
+              t.bookingPending}
           </h1>
 
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -338,7 +398,14 @@ function BookingResultPageContent() {
                 .
               </span>
             )}
-            {isPending && !isConfirmingDeposit && t.bookingAwaitingPayment}
+            {(awaitingManualVerification || manualSubmitted) &&
+              t.bookingAwaitingVerification}
+            {isPending &&
+              !isConfirmingDeposit &&
+              !awaitingManualVerification &&
+              !manualSubmitted &&
+              t.bookingAwaitingPayment}
+            {balanceReceiptPending && t.balanceReceiptPending}
           </p>
         </div>
 
@@ -375,22 +442,46 @@ function BookingResultPageContent() {
           paymentOption={booking.paymentOption}
         />
 
-        {outstandingBalance && !isConfirmingBalance && (
-          <div className="flex w-full flex-col gap-2">
-            <Button
-              size="lg"
-              className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={payingBalance}
-              onClick={() => void handlePayBalance()}
-            >
-              {payingBalance
-                ? "Starting checkout…"
-                : `Pay remaining balance (${formatRm(booking.invoice.balanceRm)})`}
-            </Button>
-            {payError && (
-              <p className="text-center text-sm text-destructive">{payError}</p>
-            )}
-          </div>
+        {outstandingBalance &&
+          !isConfirmingBalance &&
+          !balanceReceiptPending &&
+          !showManualBalance && (
+            <div className="flex w-full flex-col gap-2">
+              <Button
+                size="lg"
+                className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
+                disabled={payingBalance}
+                onClick={() => {
+                  if (usesManualBalance) {
+                    setShowManualBalance(true);
+                    return;
+                  }
+                  void handlePayBalance();
+                }}
+              >
+                {payingBalance
+                  ? t.startingCheckout
+                  : format(t.payRemainingBalance, {
+                      amount: formatRm(booking.invoice.balanceRm),
+                    })}
+              </Button>
+              {payError && (
+                <p className="text-center text-sm text-destructive">{payError}</p>
+              )}
+            </div>
+          )}
+
+        {outstandingBalance && showManualBalance && (
+          <ManualPaymentStep
+            amountLabel={format(t.transferAmountDue, {
+              amount: formatRm(booking.invoice.balanceRm),
+            })}
+            submitLabel={t.submitBalanceReceipt}
+            submittingLabel={t.submittingReceipt}
+            isSubmitting={payingBalance}
+            error={payError}
+            onSubmit={(file) => void handleManualBalanceReceipt(file)}
+          />
         )}
 
         {whatsAppUrl && (

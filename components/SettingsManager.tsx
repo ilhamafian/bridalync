@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
 import {
   getDefaultTimeSlots,
+  type PaymentMethod,
   type TimeSlot,
 } from "@/schemas/settingSchema";
 
@@ -38,6 +39,7 @@ export type SettingsItem = {
   };
   payment: {
     balance_due_before: number;
+    method: PaymentMethod;
   };
   invoice: {
     company_name: string;
@@ -113,6 +115,9 @@ export function SettingsManager({
   const [balanceDueBefore, setBalanceDueBefore] = useState(
     String(initialSettings.payment.balance_due_before)
   );
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    initialSettings.payment.method ?? "manual_transfer"
+  );
   const [companyName, setCompanyName] = useState(
     initialSettings.invoice.company_name
   );
@@ -148,6 +153,7 @@ export function SettingsManager({
     setRatePerKm(String(next.travel.rate_per_km || ""));
     setTravelLocation(next.travel.enabled ? next.travel.location : null);
     setBalanceDueBefore(String(next.payment.balance_due_before));
+    setPaymentMethod(next.payment.method ?? "manual_transfer");
     setCompanyName(next.invoice.company_name);
     setCompanyReg(next.invoice.company_registration_number ?? "");
     setCompanyLogo(next.invoice.company_logo ?? "");
@@ -249,7 +255,10 @@ export function SettingsManager({
     }
 
     await patchSettings("payment", {
-      payment: { balance_due_before: days },
+      payment: {
+        balance_due_before: days,
+        method: paymentMethod,
+      },
     });
   }
 
@@ -511,10 +520,84 @@ export function SettingsManager({
         <CardHeader>
           <CardTitle>Payment</CardTitle>
           <CardDescription>
-            Require full payment when the session is within this many days.
+            How clients pay you, and when full payment is required.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label>Payment method</Label>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(value) =>
+                setPaymentMethod(value as PaymentMethod)
+              }
+              className="gap-3"
+            >
+              <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border px-3 py-2">
+                <RadioGroupItem
+                  value="manual_transfer"
+                  id="payment-manual"
+                  className="mt-1"
+                />
+                <span className="text-sm">
+                  <span className="font-medium">Manual Transfer</span>
+                  <span className="block text-muted-foreground">
+                    Clients pay Bridalync via Maybank QR or bank transfer and
+                    upload a receipt. An admin verifies before the booking is
+                    confirmed.
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border px-3 py-2">
+                <RadioGroupItem
+                  value="payment_gateway"
+                  id="payment-gateway"
+                  className="mt-1"
+                />
+                <span className="text-sm">
+                  <span className="font-medium">Payment Gateway</span>
+                  <span className="block text-muted-foreground">
+                    Clients pay online with Stripe (card / FPX). Requires a
+                    connected Stripe account.
+                  </span>
+                </span>
+              </label>
+            </RadioGroup>
+          </div>
+
+          {paymentMethod === "payment_gateway" ? (
+            <div className="flex flex-col gap-3 rounded-md border border-border p-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Stripe status
+                </span>
+                <Badge variant={stripeConnected ? "default" : "secondary"}>
+                  {stripeConnected
+                    ? "Connected"
+                    : hasStripeAccount
+                      ? "Setup incomplete"
+                      : "Not connected"}
+                </Badge>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-fit"
+                onClick={handleStripeConnect}
+                disabled={connectingStripe}
+              >
+                {connectingStripe
+                  ? "Opening Stripe…"
+                  : stripeConnected
+                    ? "Manage Stripe account"
+                    : "Set up Stripe"}
+              </Button>
+              {sectionError.payouts ? (
+                <p className="text-sm text-destructive">{sectionError.payouts}</p>
+              ) : null}
+            </div>
+          ) : null}
+
           <Field label="Balance due before (days)">
             <Input
               className={inputClassName}
@@ -682,43 +765,6 @@ export function SettingsManager({
             disabled={savingSection === "time_slots"}
           >
             {savingSection === "time_slots" ? "Saving…" : "Save"}
-          </Button>
-        </CardFooter>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Payouts</CardTitle>
-          <CardDescription>
-            Connect Stripe to receive booking deposits.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-muted-foreground">Status</span>
-            <Badge variant={stripeConnected ? "default" : "secondary"}>
-              {stripeConnected
-                ? "Connected"
-                : hasStripeAccount
-                  ? "Setup incomplete"
-                  : "Not connected"}
-            </Badge>
-          </div>
-          {sectionError.payouts ? (
-            <p className="text-sm text-destructive">{sectionError.payouts}</p>
-          ) : null}
-        </CardContent>
-        <CardFooter>
-          <Button
-            type="button"
-            onClick={handleStripeConnect}
-            disabled={connectingStripe}
-          >
-            {connectingStripe
-              ? "Opening Stripe…"
-              : stripeConnected
-                ? "Manage payouts in Stripe"
-                : "Set up payouts"}
           </Button>
         </CardFooter>
       </Card>

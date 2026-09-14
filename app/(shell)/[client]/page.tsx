@@ -10,6 +10,7 @@ import {
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile } from "@/components/booking/ClientProfile";
+import { ManualPaymentStep } from "@/components/booking/ManualPaymentStep";
 import { BookingLoadingState } from "@/components/booking/BookingLoadingState";
 import { AnimatedFlow } from "@/components/animated-flow";
 import { LanguageSelector } from "@/components/LanguageSelector";
@@ -1111,36 +1112,57 @@ export default function ClientPage() {
     }
   }
 
-  async function handlePay() {
+  async function handlePay(receipt?: File | null) {
     if (isPaying || !selectedPackageId || sessions.length === 0) return;
+
+    const paymentMethod = settings?.payment.method ?? "manual_transfer";
+    const isManual = paymentMethod === "manual_transfer";
+
+    if (isManual && !receipt) {
+      setPaymentError(t.receiptRequired);
+      return;
+    }
 
     setIsPaying(true);
     setPaymentError(null);
 
     try {
-      const bookingResponse = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          freelancerUsername: client,
-          intent: "booking",
-          contact,
-          packageId: selectedPackageId,
-          style: selectedStyle
-            ? {
-                id: selectedStyle.id,
-                name: selectedStyle.name,
-                price: selectedStyle.price,
-                deposit: selectedStyle.deposit,
-                categoryName: selectedStyle.categoryName,
-              }
-            : undefined,
-          addOns: selectedAddOnItems,
-          sessions,
-          distanceKmBySessionKey,
-          paymentOption: effectivePaymentOption,
-        }),
-      });
+      const bookingPayloadBody = {
+        freelancerUsername: client,
+        intent: "booking",
+        contact,
+        packageId: selectedPackageId,
+        style: selectedStyle
+          ? {
+              id: selectedStyle.id,
+              name: selectedStyle.name,
+              price: selectedStyle.price,
+              deposit: selectedStyle.deposit,
+              categoryName: selectedStyle.categoryName,
+            }
+          : undefined,
+        addOns: selectedAddOnItems,
+        sessions,
+        distanceKmBySessionKey,
+        paymentOption: effectivePaymentOption,
+      };
+
+      let bookingResponse: Response;
+      if (isManual && receipt) {
+        const formData = new FormData();
+        formData.append("payload", JSON.stringify(bookingPayloadBody));
+        formData.append("receipt", receipt);
+        bookingResponse = await fetch("/api/bookings", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        bookingResponse = await fetch("/api/bookings", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(bookingPayloadBody),
+        });
+      }
 
       const bookingPayload: unknown = await bookingResponse.json();
       if (!bookingResponse.ok) {
@@ -1157,6 +1179,17 @@ export default function ClientPage() {
 
       if (!bookingId) {
         throw new Error(t.couldNotCreateBooking);
+      }
+
+      const requiresCheckout =
+        bookingPayload &&
+        typeof bookingPayload === "object" &&
+        "requiresCheckout" in bookingPayload &&
+        bookingPayload.requiresCheckout === true;
+
+      if (!requiresCheckout) {
+        window.location.href = `/${client}/bookings/${bookingId}?payment=manual-submitted`;
+        return;
       }
 
       const checkoutResponse = await fetch("/api/stripe/checkout", {
@@ -1722,7 +1755,10 @@ export default function ClientPage() {
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
             {mustPayFull
               ? format(t.sessionWithinDays, { days: balanceDueBeforeDays })
-              : t.paymentSecure}
+              : (settings?.payment.method ?? "manual_transfer") ===
+                  "manual_transfer"
+                ? t.paymentManualSecure
+                : t.paymentSecure}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
             {!mustPayFull && quotation.depositRm > 0 && (
@@ -1799,27 +1835,47 @@ export default function ClientPage() {
               balanceDueBeforeDays={balanceDueBeforeDays}
               paymentOption={effectivePaymentOption}
             />
-            {paymentError && (
-              <p className="w-full text-sm text-destructive" role="alert">
-                {paymentError}
-              </p>
+            {(settings?.payment.method ?? "manual_transfer") ===
+            "manual_transfer" ? (
+              <ManualPaymentStep
+                amountLabel={format(t.transferAmountDue, {
+                  amount: formatRm(
+                    effectivePaymentOption === "full"
+                      ? payableQuotation.totalRm
+                      : payableQuotation.depositRm
+                  ),
+                })}
+                submitLabel={t.submitReceipt}
+                submittingLabel={t.submittingReceipt}
+                isSubmitting={isPaying}
+                error={paymentError}
+                onSubmit={(file) => void handlePay(file)}
+              />
+            ) : (
+              <>
+                {paymentError && (
+                  <p className="w-full text-sm text-destructive" role="alert">
+                    {paymentError}
+                  </p>
+                )}
+                <Button
+                  size="lg"
+                  className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
+                  disabled={isPaying || payableQuotation.depositRm <= 0}
+                  onClick={() => void handlePay()}
+                >
+                  {isPaying
+                    ? t.redirectingStripe
+                    : effectivePaymentOption === "full"
+                      ? format(t.payNow, {
+                          amount: formatRm(payableQuotation.totalRm),
+                        })
+                      : format(t.payDepositNow, {
+                          amount: formatRm(payableQuotation.depositRm),
+                        })}
+                </Button>
+              </>
             )}
-            <Button
-              size="lg"
-              className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={isPaying || payableQuotation.depositRm <= 0}
-              onClick={() => void handlePay()}
-            >
-              {isPaying
-                ? t.redirectingStripe
-                : effectivePaymentOption === "full"
-                  ? format(t.payNow, {
-                      amount: formatRm(payableQuotation.totalRm),
-                    })
-                  : format(t.payDepositNow, {
-                      amount: formatRm(payableQuotation.depositRm),
-                    })}
-            </Button>
           </div>
         </div>
       )}

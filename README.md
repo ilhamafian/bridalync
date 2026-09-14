@@ -59,7 +59,9 @@ Early development. The app currently includes a calendar date picker as the firs
 | `DB_NAME` | Yes | Database name |
 | `APP_URL` | Yes | Public app URL (e.g. `http://localhost:3000`) |
 | `AUTH_SECRET` | Yes | Session signing secret |
-| `STRIPE_SECRET_KEY` | Yes | Stripe secret key (`sk_test_...` or `sk_live_...`) |
+| `ADMIN_EMAIL` | Yes (admin) | Bootstrap admin email for `/admin` receipt verification |
+| `ADMIN_PASSWORD` | Yes (admin) | Bootstrap admin password (creates admin on first login if missing) |
+| `STRIPE_SECRET_KEY` | Yes (gateway) | Stripe secret key (`sk_test_...` or `sk_live_...`) |
 | `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key for client-side Stripe.js |
 | `STRIPE_WEBHOOK_SECRET` | Yes (Connect) | Webhook signing secret from the Stripe Dashboard |
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Yes (PWA push) | Web Push VAPID public key |
@@ -77,15 +79,19 @@ npx web-push generate-vapid-keys
 
 Bridalync can be installed as a PWA. Freelancers enable notifications under **Settings → App & notifications**.
 
-- **New booking / enquiry** — push when a client submits via the public booking flow
-- **Booking confirmed** — push when Stripe payment confirms
+- **New booking / enquiry** — push when a client submits via the public booking flow (manual transfers notify as payment pending)
+- **Booking confirmed** — push when Stripe payment confirms or an admin approves a manual receipt
 - **Upcoming session** — hourly cron (`vercel.json`) notifies for confirmed sessions starting within 24 hours
 
 On iOS, install via Share → **Add to Home Screen**, then open the home-screen app before enabling notifications.
 
+### Manual payments (default)
+
+Clients pay Bridalync’s Maybank account (`public/payment-qr.jpeg` / account `5647 6237 5673`) and upload a receipt. Admins verify at `/admin` (separate login from stylist accounts). Stylists can switch to Stripe Payment Gateway under **Settings → Payment**.
+
 ### Stripe Connect setup
 
-Malaysia-based platforms use **Stripe Standard** connected accounts (Accounts v1) with hosted Account Link onboarding. Express and marketplace-style configs make the platform loss-liable, which Stripe blocks for MY platforms. See `utils/stripe/connect.ts`.
+Optional for stylists who choose **Payment Gateway**. Malaysia-based platforms use **Stripe Standard** connected accounts (Accounts v1) with hosted Account Link onboarding. Express and marketplace-style configs make the platform loss-liable, which Stripe blocks for MY platforms. See `utils/stripe/connect.ts`.
 
 1. Complete [Connect platform setup](https://dashboard.stripe.com/connect) in your Stripe Dashboard.
 2. Enable **Accounts v2** under [Account previews](https://dashboard.stripe.com/settings/previews).

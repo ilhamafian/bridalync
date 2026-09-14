@@ -1,11 +1,67 @@
+import type Stripe from "stripe";
+
 import { getStripe } from "@/lib/stripe";
 import { getAppUrl } from "@/utils/appUrl";
 import type { PersistedBooking } from "@/schemas/bookingSchema";
-import { ensurePaymentCapabilities } from "@/utils/stripe/connect";
+import {
+  ensurePaymentCapabilities,
+  isAccountReadyForClientCharges,
+} from "@/utils/stripe/connect";
 import { buildBookingCheckoutMetadata } from "@/utils/stripe/metadata";
 
 function toStripeAmount(rm: number) {
   return Math.round(rm * 100);
+}
+
+function isFpxAvailable(account: Awaited<ReturnType<typeof ensurePaymentCapabilities>>) {
+  const status = account.capabilities?.fpx_payments;
+  return status === "active" || status === "pending";
+}
+
+function checkoutPaymentMethodTypes(
+  account: Awaited<ReturnType<typeof ensurePaymentCapabilities>>
+): Stripe.Checkout.SessionCreateParams.PaymentMethodType[] {
+  return isFpxAvailable(account) ? ["card", "fpx"] : ["card"];
+}
+
+async function prepareConnectedAccountForCheckout(stripeAccountId: string) {
+  const account = await ensurePaymentCapabilities(stripeAccountId);
+  if (!isAccountReadyForClientCharges(account)) {
+    throw new Error("This stylist cannot accept payments yet.");
+  }
+  return account;
+}
+
+async function createConnectedCheckoutSession(
+  params: Stripe.Checkout.SessionCreateParams,
+  stripeAccountId: string,
+  account: Awaited<ReturnType<typeof ensurePaymentCapabilities>>
+) {
+  const stripe = getStripe();
+  const paymentMethodTypes = checkoutPaymentMethodTypes(account);
+
+  try {
+    return await stripe.checkout.sessions.create(
+      {
+        ...params,
+        // Deferred Standard accounts have no Dashboard payment-method settings,
+        // so dynamic methods resolve to none. Cards and FPX are valid for MYR.
+        payment_method_types: paymentMethodTypes,
+      },
+      { stripeAccount: stripeAccountId }
+    );
+  } catch (error) {
+    if (paymentMethodTypes.includes("fpx")) {
+      return stripe.checkout.sessions.create(
+        {
+          ...params,
+          payment_method_types: ["card"],
+        },
+        { stripeAccount: stripeAccountId }
+      );
+    }
+    throw error;
+  }
 }
 
 export async function createDepositCheckoutSession(input: {
@@ -13,7 +69,6 @@ export async function createDepositCheckoutSession(input: {
   freelancerUsername: string;
   stripeAccountId: string;
 }) {
-  const stripe = getStripe();
   const appUrl = getAppUrl();
   const bookingId = String(input.booking._id);
   const amountDueRm = input.booking.invoice.depositRm;
@@ -25,9 +80,7 @@ export async function createDepositCheckoutSession(input: {
     throw new Error("This booking does not require a payment.");
   }
 
-  // Deferred accounts can accept client payments. Full Stripe onboarding is only
-  // required later when the freelancer withdraws to their bank account.
-  await ensurePaymentCapabilities(input.stripeAccountId);
+  const account = await prepareConnectedAccountForCheckout(input.stripeAccountId);
 
   const metadata = buildBookingCheckoutMetadata({
     booking: input.booking,
@@ -44,7 +97,7 @@ export async function createDepositCheckoutSession(input: {
     ? `Bridalync full payment — ${input.booking.packageName} (${input.freelancerUsername})`
     : `Bridalync deposit — ${input.booking.packageName} (${input.freelancerUsername})`;
 
-  const session = await stripe.checkout.sessions.create(
+  const session = await createConnectedCheckoutSession(
     {
       mode: "payment",
       customer_email: input.booking.contact.email,
@@ -73,9 +126,8 @@ export async function createDepositCheckoutSession(input: {
       success_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=success`,
       cancel_url: `${appUrl}/${input.freelancerUsername}?payment=cancelled`,
     },
-    {
-      stripeAccount: input.stripeAccountId,
-    }
+    input.stripeAccountId,
+    account
   );
 
   if (!session.url) {
@@ -90,7 +142,6 @@ export async function createBalanceCheckoutSession(input: {
   freelancerUsername: string;
   stripeAccountId: string;
 }) {
-  const stripe = getStripe();
   const appUrl = getAppUrl();
   const bookingId = String(input.booking._id);
   const amountDueRm = input.booking.invoice.balanceRm;
@@ -99,7 +150,7 @@ export async function createBalanceCheckoutSession(input: {
     throw new Error("This booking has no remaining balance.");
   }
 
-  await ensurePaymentCapabilities(input.stripeAccountId);
+  const account = await prepareConnectedAccountForCheckout(input.stripeAccountId);
 
   const metadata = buildBookingCheckoutMetadata({
     booking: input.booking,
@@ -111,7 +162,7 @@ export async function createBalanceCheckoutSession(input: {
   const productDescription = `Remaining booking balance with ${input.freelancerUsername} on Bridalync`;
   const paymentDescription = `Bridalync balance — ${input.booking.packageName} (${input.freelancerUsername})`;
 
-  const session = await stripe.checkout.sessions.create(
+  const session = await createConnectedCheckoutSession(
     {
       mode: "payment",
       customer_email: input.booking.contact.email,
@@ -140,9 +191,8 @@ export async function createBalanceCheckoutSession(input: {
       success_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=balance-success`,
       cancel_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=cancelled`,
     },
-    {
-      stripeAccount: input.stripeAccountId,
-    }
+    input.stripeAccountId,
+    account
   );
 
   if (!session.url) {

@@ -176,8 +176,22 @@ function toDashboardStatus(status: Booking["status"]): DashboardStatus {
   return "confirmed";
 }
 
-function statusLabel(status: Booking["status"]) {
-  switch (status) {
+function statusLabel(booking: SerializedBooking) {
+  if (
+    booking.paymentChannel === "manual_transfer" &&
+    booking.depositVerificationStatus === "pending" &&
+    booking.status === "pending"
+  ) {
+    return "Awaiting payment verification";
+  }
+  if (booking.depositVerificationStatus === "rejected") {
+    return "Receipt rejected";
+  }
+  if (booking.balanceVerificationStatus === "pending") {
+    return "Balance receipt pending";
+  }
+
+  switch (booking.status) {
     case "confirmed":
       return "Confirmed";
     case "completed":
@@ -191,11 +205,20 @@ function statusLabel(status: Booking["status"]) {
     case "failed":
       return "Payment failed";
     default:
-      return status;
+      return booking.status;
   }
 }
 
 function paymentLabel(booking: SerializedBooking) {
+  if (
+    booking.status === "pending" &&
+    booking.depositVerificationStatus === "pending"
+  ) {
+    return "Payment submitted";
+  }
+  if (booking.balanceVerificationStatus === "pending") {
+    return "Balance submitted";
+  }
   return isFullyPaid(booking) ? "Fully paid" : "Deposit paid";
 }
 
@@ -655,7 +678,7 @@ export function BookingsManager({
                           {booking.contact.name}
                         </CardTitle>
                         <Badge variant={statusBadgeVariant(booking.status)}>
-                          {statusLabel(booking.status)}
+                          {statusLabel(booking)}
                         </Badge>
                         {booking.status !== "cancelled" &&
                         booking.status !== "failed" &&
@@ -663,6 +686,9 @@ export function BookingsManager({
                           <Badge variant="outline">
                             {paymentLabel(booking)}
                           </Badge>
+                        ) : null}
+                        {booking.paymentChannel === "manual_transfer" ? (
+                          <Badge variant="outline">Manual transfer</Badge>
                         ) : null}
                       </div>
                       <CardDescription className="mt-1">
@@ -676,6 +702,34 @@ export function BookingsManager({
                         {" · "}
                         {formatRm(booking.invoice.totalRm)}
                       </p>
+                      {booking.depositReceiptUrl || booking.balanceReceiptUrl ? (
+                        <p className="mt-2 text-sm">
+                          {booking.depositReceiptUrl ? (
+                            <a
+                              href={booking.depositReceiptUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-rose-800 underline-offset-2 hover:underline dark:text-rose-400"
+                            >
+                              View deposit receipt
+                            </a>
+                          ) : null}
+                          {booking.depositReceiptUrl &&
+                          booking.balanceReceiptUrl
+                            ? " · "
+                            : null}
+                          {booking.balanceReceiptUrl ? (
+                            <a
+                              href={booking.balanceReceiptUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-rose-800 underline-offset-2 hover:underline dark:text-rose-400"
+                            >
+                              View balance receipt
+                            </a>
+                          ) : null}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex shrink-0 gap-1">
                       <Button

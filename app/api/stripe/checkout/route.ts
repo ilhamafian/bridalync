@@ -3,6 +3,9 @@ import Stripe from "stripe";
 import { z } from "zod";
 
 import { bookingModel } from "@/models/Booking";
+import { SettingModel } from "@/models/Setting";
+import { toIdString } from "@/schemas/objectId";
+import { paymentSettingSchema } from "@/schemas/settingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getBookingById, markBookingPaymentFailed } from "@/utils/bookings";
 import {
@@ -66,6 +69,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const freelancerId = toIdString(freelancer._id as never);
+    const settings = freelancerId
+      ? await new SettingModel().findSettingsByUserId(freelancerId)
+      : null;
+    const paymentMethod = paymentSettingSchema.parse(
+      settings?.payment ?? {}
+    ).method;
+
+    if (paymentMethod !== "payment_gateway") {
+      return createResponse(
+        {
+          error:
+            "This stylist accepts manual bank transfer. Refresh and try again.",
+        },
+        409
+      );
+    }
+
     const session =
       purpose === "balance"
         ? await createBalanceCheckoutSession({
@@ -83,8 +104,14 @@ export async function POST(req: NextRequest) {
 
     await bookingModel.update(
       bookingId,
-      { stripeCheckoutSessionId: session.id },
-      z.object({ stripeCheckoutSessionId: z.string() })
+      {
+        stripeCheckoutSessionId: session.id,
+        paymentChannel: "payment_gateway",
+      },
+      z.object({
+        stripeCheckoutSessionId: z.string(),
+        paymentChannel: z.literal("payment_gateway"),
+      })
     );
 
     return createResponse({ url: session.url }, 200);

@@ -26,6 +26,14 @@ const bookingStatusUpdateSchema = bookingSchema.pick({ status: true });
 const bookingPaymentUpdateSchema = bookingSchema.pick({
   status: true,
   stripePaymentIntentId: true,
+  depositVerificationStatus: true,
+});
+
+const bookingBalanceUpdateSchema = bookingSchema.pick({
+  paymentOption: true,
+  invoice: true,
+  stripePaymentIntentId: true,
+  balanceVerificationStatus: true,
 });
 
 export async function updateBookingStatus(
@@ -52,6 +60,9 @@ export async function confirmBookingPayment(
     bookingId,
     {
       status: "confirmed",
+      ...(existing.paymentChannel === "manual_transfer"
+        ? { depositVerificationStatus: "approved" as const }
+        : {}),
       ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
     },
     bookingPaymentUpdateSchema
@@ -115,13 +126,12 @@ export async function confirmBookingBalancePayment(
     {
       paymentOption: "full",
       invoice: settledInvoice,
+      ...(existing.balanceVerificationStatus === "pending"
+        ? { balanceVerificationStatus: "approved" as const }
+        : {}),
       ...(paymentIntentId ? { stripePaymentIntentId: paymentIntentId } : {}),
     },
-    bookingSchema.pick({
-      paymentOption: true,
-      invoice: true,
-      stripePaymentIntentId: true,
-    })
+    bookingBalanceUpdateSchema
   );
 
   const booking = await getBookingById(bookingId);
@@ -144,6 +154,61 @@ export async function confirmBookingBalancePayment(
   }
 
   return booking;
+}
+
+export async function rejectManualDepositPayment(bookingId: string) {
+  if (!ObjectId.isValid(bookingId)) return null;
+
+  await bookingModel.update(
+    bookingId,
+    {
+      status: "failed",
+      depositVerificationStatus: "rejected",
+    },
+    bookingSchema.pick({
+      status: true,
+      depositVerificationStatus: true,
+    })
+  );
+
+  return getBookingById(bookingId);
+}
+
+export async function rejectManualBalancePayment(bookingId: string) {
+  if (!ObjectId.isValid(bookingId)) return null;
+
+  await bookingModel.update(
+    bookingId,
+    {
+      balanceVerificationStatus: "rejected",
+    },
+    bookingSchema.pick({
+      balanceVerificationStatus: true,
+    })
+  );
+
+  return getBookingById(bookingId);
+}
+
+export async function attachManualBalanceReceipt(
+  bookingId: string,
+  receiptUrl: string
+) {
+  if (!ObjectId.isValid(bookingId)) return null;
+
+  await bookingModel.update(
+    bookingId,
+    {
+      balanceReceiptUrl: receiptUrl,
+      balanceVerificationStatus: "pending",
+    },
+    bookingSchema.pick({
+      balanceReceiptUrl: true,
+      balanceVerificationStatus: true,
+    })
+  );
+
+  return getBookingById(bookingId);
 }
 
 export async function markBookingPaymentFailed(bookingId: string) {

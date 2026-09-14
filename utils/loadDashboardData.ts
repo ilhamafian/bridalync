@@ -110,7 +110,6 @@ export async function loadDashboardData(
       checklist: getSetupChecklist({
         packageCount: packages.length,
         timeSlotCount: timeSlots.length,
-        isStripeConnected: Boolean(user.is_stripe_connected),
         hasUsername: Boolean(user.username?.trim()),
       }),
       bookingLink,

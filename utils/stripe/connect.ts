@@ -227,26 +227,74 @@ export async function ensureStripeAccountId(
   return accountId;
 }
 
-/** Request card payment capabilities on a deferred account when a client pays. */
+export function isAccountReadyForClientCharges(
+  account: Stripe.Account | StripeRecord
+): boolean {
+  const record = account as StripeRecord;
+  if (record.charges_enabled === true) {
+    return true;
+  }
+
+  const requirements = record.requirements as StripeRecord | undefined;
+  const pastDue = requirements?.past_due;
+  if (Array.isArray(pastDue) && pastDue.length > 0) {
+    return false;
+  }
+
+  const capabilities = record.capabilities as StripeRecord | undefined;
+  const cardPayments = capabilities?.card_payments;
+  return cardPayments === "active" || cardPayments === "pending";
+}
+
+function isRequestedCapability(status: string | null | undefined) {
+  return status === "active" || status === "pending";
+}
+
+/** Request card and FPX capabilities on a deferred account when a client pays. */
 export async function ensurePaymentCapabilities(accountId: string) {
   const account = await retrieveConnectedAccount(accountId);
-  const cardPayments = account.capabilities?.card_payments;
+  const needsCard = !isRequestedCapability(account.capabilities?.card_payments);
+  const needsFpx = !isRequestedCapability(account.capabilities?.fpx_payments);
 
-  if (cardPayments === "active" || cardPayments === "pending") {
+  if (!needsCard && !needsFpx) {
     return account;
   }
 
   const stripe = getStripe();
+  const capabilities: Stripe.AccountUpdateParams.Capabilities = {};
+  if (needsCard) {
+    capabilities.card_payments = { requested: true };
+    capabilities.transfers = { requested: true };
+  }
+  if (needsFpx) {
+    capabilities.fpx_payments = { requested: true };
+  }
+
   try {
     // Do not send business_profile here. Standard connected accounts reject
     // platform updates to that field after onboarding has started (live mode).
-    return await stripe.accounts.update(accountId, {
-      capabilities: {
-        card_payments: { requested: true },
-        transfers: { requested: true },
-      },
-    });
+    return await stripe.accounts.update(accountId, { capabilities });
   } catch (error) {
+    if (needsFpx && (needsCard || isRestrictedConnectedAccountUpdate(error))) {
+      delete capabilities.fpx_payments;
+      if (Object.keys(capabilities).length > 0) {
+        try {
+          return await stripe.accounts.update(accountId, { capabilities });
+        } catch (cardOnlyError) {
+          if (isRestrictedConnectedAccountUpdate(cardOnlyError)) {
+            console.warn(
+              `[stripe] skipped capability request for ${accountId}:`,
+              cardOnlyError instanceof Error
+                ? cardOnlyError.message
+                : cardOnlyError
+            );
+            return account;
+          }
+          throw cardOnlyError;
+        }
+      }
+    }
+
     if (isRestrictedConnectedAccountUpdate(error)) {
       console.warn(
         `[stripe] skipped capability request for ${accountId}:`,

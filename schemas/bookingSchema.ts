@@ -27,6 +27,17 @@ export const bookingSessionSchema = sessionSchema.extend({
   client_key: z.string().optional(),
 });
 
+export const paymentChannelSchema = z.enum([
+  "manual_transfer",
+  "payment_gateway",
+]);
+
+export const paymentVerificationStatusSchema = z.enum([
+  "pending",
+  "approved",
+  "rejected",
+]);
+
 export const bookingSchema = z.object({
   _id: z.unknown().optional(),
   freelancerUsername: z.string(),
@@ -48,6 +59,11 @@ export const bookingSchema = z.object({
     "enquiry",
     "cancelled",
   ]),
+  paymentChannel: paymentChannelSchema.optional(),
+  depositReceiptUrl: z.string().optional(),
+  depositVerificationStatus: paymentVerificationStatusSchema.optional(),
+  balanceReceiptUrl: z.string().optional(),
+  balanceVerificationStatus: paymentVerificationStatusSchema.optional(),
   stripeCheckoutSessionId: z.string().optional(),
   stripePaymentIntentId: z.string().optional(),
   /** Keys of sessions that already received an upcoming-session push. */
@@ -112,6 +128,7 @@ export const publicBookingSchema = bookingSchema
   .extend({
     _id: z.string(),
     freelancer: publicBookingFreelancerSchema.optional(),
+    stylistPaymentMethod: paymentChannelSchema.optional(),
   });
 
 export type PublicBookingFreelancer = z.infer<typeof publicBookingFreelancerSchema>;
@@ -119,7 +136,8 @@ export type PublicBooking = z.infer<typeof publicBookingSchema>;
 
 export function toPublicBooking(
   booking: PersistedBooking,
-  freelancer?: PublicBookingFreelancer | null
+  freelancer?: PublicBookingFreelancer | null,
+  stylistPaymentMethod?: z.infer<typeof paymentChannelSchema> | null
 ): PublicBooking {
   const {
     freelancerUserId,
@@ -139,6 +157,9 @@ export function toPublicBooking(
     ...rest,
     _id: id,
     ...(freelancer ? { freelancer } : {}),
+    ...(stylistPaymentMethod
+      ? { stylistPaymentMethod }
+      : {}),
   });
 }
 

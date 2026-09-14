@@ -110,6 +110,8 @@ export const en: Locale = {
     "Your session is within {days} {days, day, days}, so full payment is required.",
   paymentSecure:
     "Pay a deposit now, or settle the full amount upfront. Secure card payment through Stripe.",
+  paymentManualSecure:
+    "Pay a deposit now, or settle the full amount first. Transfer to Bridalync and upload your receipt.",
   payFullOption: "Pay in full — {amount}",
   payDepositOption: "Pay deposit — {amount}",
   noBalanceLater: "Nothing left to pay later.",
@@ -118,6 +120,12 @@ export const en: Locale = {
   payNow: "Pay {amount} now",
   payDepositNow: "Pay {amount} deposit",
   redirectingStripe: "Redirecting to Stripe…",
+  submittingReceipt: "Submitting receipt…",
+  submitReceipt: "Submit receipt & book",
+  transferAmountDue: "Amount due: {amount}",
+  receiptRequired: "Upload your payment receipt to continue.",
+  bookingPendingVerification:
+    "Thanks! Your booking is held while we verify your payment receipt.",
   couldNotCreateBooking: "Could not create booking.",
   couldNotStartCheckout: "Could not start Stripe Checkout.",
   paymentCouldNotStart: "Payment could not be started.",
@@ -151,9 +159,14 @@ export const en: Locale = {
     "If this takes longer than a minute, the payment webhook may not be reaching your app. For local dev, run",
   bookingAwaitingPayment:
     "Your booking is awaiting payment. Complete checkout to secure your slot.",
+  bookingAwaitingVerification:
+    "Your booking is held while we verify your payment receipt. You'll get a confirmation once it's approved.",
   payRemainingBalance: "Pay remaining balance ({amount})",
+  submitBalanceReceipt: "Submit balance receipt",
   startingCheckout: "Starting checkout…",
   couldNotStartBalancePayment: "Could not start balance payment.",
+  balanceReceiptPending:
+    "Your balance receipt is pending verification.",
   bookingDetails: "Booking details",
   styleLabel: "Style",
 

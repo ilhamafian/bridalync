@@ -13,6 +13,7 @@ import {
   type CreateBookingRequest,
 } from "@/schemas/bookingSchema";
 import { toIdString } from "@/schemas/objectId";
+import { paymentSettingSchema } from "@/schemas/settingSchema";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
@@ -21,6 +22,7 @@ import {
   resolveBookingQuotation,
 } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
+import { SettingModel } from "@/models/Setting";
 import { getFreelancerByUsername } from "@/utils/users";
 
 function toPublicBookingFreelancer(
@@ -64,9 +66,22 @@ export async function GET(
     }
 
     const freelancer = await getFreelancerByUsername(freelancerUsername);
+    const freelancerId = freelancer?._id
+      ? toIdString(freelancer._id as never)
+      : null;
+    const settings = freelancerId
+      ? await new SettingModel().findSettingsByUserId(freelancerId)
+      : null;
+    const paymentMethod = paymentSettingSchema.parse(
+      settings?.payment ?? {}
+    ).method;
 
     return createResponse(
-      toPublicBooking(booking, freelancer ? toPublicBookingFreelancer(freelancer) : null)
+      toPublicBooking(
+        booking,
+        freelancer ? toPublicBookingFreelancer(freelancer) : null,
+        paymentMethod
+      )
     );
   } catch (error) {
     return handleError(error);

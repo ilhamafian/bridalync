@@ -21,8 +21,16 @@ export async function notifyNewClientBooking(booking: PersistedBooking) {
   if (!booking.freelancerUserId) return;
 
   const isEnquiry = booking.status === "enquiry";
+  const awaitingVerification =
+    booking.paymentChannel === "manual_transfer" &&
+    booking.depositVerificationStatus === "pending";
+
   await sendPushToUser(booking.freelancerUserId, {
-    title: isEnquiry ? "New enquiry" : "New booking",
+    title: isEnquiry
+      ? "New enquiry"
+      : awaitingVerification
+        ? "New booking — payment pending"
+        : "New booking",
     body: `${booking.contact.name} — ${formatSessionSummary(booking)}`,
     url: "/dashboard/bookings",
   });

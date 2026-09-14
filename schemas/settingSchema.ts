@@ -10,9 +10,17 @@ export const travelSettingSchema = z.object({
   location: addressSchema,
 });
 
+export const paymentMethodSchema = z.enum([
+  "manual_transfer",
+  "payment_gateway",
+]);
+
 export const paymentSettingSchema = z.object({
   balance_due_before: z.number().default(3),
+  method: paymentMethodSchema.default("manual_transfer"),
 });
+
+export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
 
 export const DEFAULT_TERMS_AND_CONDITIONS = `Booking deposit:
 A non-refundable booking deposit is required to secure slot.

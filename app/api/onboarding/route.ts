@@ -27,10 +27,6 @@ import {
   refreshSession,
   updateOnboardingProgress,
 } from "@/utils/onboarding/progress";
-import {
-  buildStripeOwner,
-  provisionDeferredStripeAccount,
-} from "@/utils/stripe/connect";
 
 const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
   placeId: "travel-disabled",
@@ -323,14 +319,8 @@ export async function GET() {
     if (
       userId &&
       user.onboarding?.configuredInvoice &&
-      !user.onboarding.configureBankAccount &&
-      user.email
+      !user.onboarding.configureBankAccount
     ) {
-      await provisionDeferredStripeAccount(
-        userId,
-        buildStripeOwner(user),
-        user.stripe_account_id
-      );
       await updateOnboardingProgress(userId, {
         configureBankAccount: true,
       });
@@ -436,12 +426,6 @@ export async function POST(req: NextRequest) {
         if (!user.email) {
           return createResponse({ error: "Unauthorized" }, 401);
         }
-
-        await provisionDeferredStripeAccount(
-          userId,
-          buildStripeOwner(user),
-          user.stripe_account_id
-        );
 
         await updateOnboardingProgress(userId, {
           configuredInvoice: true,
