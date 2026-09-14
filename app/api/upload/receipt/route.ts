@@ -2,10 +2,8 @@ import { put } from "@vercel/blob";
 import { NextRequest } from "next/server";
 
 import { createResponse, handleError } from "@/utils/apiHelper";
-import {
-  RECEIPT_ALLOWED_TYPES,
-  RECEIPT_MAX_SIZE_BYTES,
-} from "@/utils/payment/manualTransfer";
+import { prepareFileForUpload } from "@/utils/image/upload";
+import { RECEIPT_ALLOWED_TYPES } from "@/utils/payment/manualTransfer";
 
 export async function POST(req: NextRequest) {
   try {
@@ -24,18 +22,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (file.size > RECEIPT_MAX_SIZE_BYTES) {
-      return createResponse({ error: "Image must be 4 MB or smaller." }, 400);
-    }
+    const prepared = await prepareFileForUpload(file);
 
     const folder =
       typeof bookingId === "string" && bookingId.trim().length > 0
         ? `payment-receipts/${bookingId.trim()}`
         : "payment-receipts/pending";
 
-    const blob = await put(`${folder}/${file.name}`, file, {
+    const blob = await put(`${folder}/${prepared.fileName}`, prepared.data, {
       access: "public",
       addRandomSuffix: true,
+      contentType: prepared.contentType,
     });
 
     return createResponse({ url: blob.url }, 200);

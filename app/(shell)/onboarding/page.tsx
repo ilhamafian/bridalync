@@ -554,7 +554,7 @@ function OnboardingPageContent() {
                   uploadFolder={null}
                   onUploadingChange={setIsUploadingLogo}
                   label="Company logo (optional)"
-                  hint="JPEG, PNG, WebP, or GIF. Max 4 MB. Cropped to 16:9."
+                  hint="JPEG, PNG, WebP, or GIF. Large images are compressed automatically. Cropped to 16:9."
                 />
 
                 <label className="flex flex-col gap-1.5">

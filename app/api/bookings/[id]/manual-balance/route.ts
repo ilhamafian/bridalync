@@ -8,10 +8,8 @@ import {
   attachManualBalanceReceipt,
   getBookingById,
 } from "@/utils/bookings";
-import {
-  RECEIPT_ALLOWED_TYPES,
-  RECEIPT_MAX_SIZE_BYTES,
-} from "@/utils/payment/manualTransfer";
+import { prepareFileForUpload } from "@/utils/image/upload";
+import { RECEIPT_ALLOWED_TYPES } from "@/utils/payment/manualTransfer";
 
 export async function POST(
   req: NextRequest,
@@ -71,19 +69,15 @@ export async function POST(
       );
     }
 
-    if (receipt.size > RECEIPT_MAX_SIZE_BYTES) {
-      return createResponse(
-        { error: "Receipt image must be 4 MB or smaller." },
-        400
-      );
-    }
+    const prepared = await prepareFileForUpload(receipt);
 
     const blob = await put(
-      `payment-receipts/${id}/balance-${receipt.name}`,
-      receipt,
+      `payment-receipts/${id}/balance-${prepared.fileName}`,
+      prepared.data,
       {
         access: "public",
         addRandomSuffix: true,
+        contentType: prepared.contentType,
       }
     );
 

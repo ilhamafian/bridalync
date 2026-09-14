@@ -5,15 +5,10 @@ import { toIdString } from "@/schemas/objectId";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
-
-const ALLOWED_IMAGE_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
-
-const MAX_LOGO_SIZE_BYTES = 4 * 1024 * 1024;
+import {
+  prepareFileForUpload,
+  UPLOAD_IMAGE_ALLOWED_TYPES,
+} from "@/utils/image/upload";
 
 export async function POST(req: NextRequest) {
   try {
@@ -34,21 +29,24 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: "No file provided." }, 400);
     }
 
-    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+    if (!UPLOAD_IMAGE_ALLOWED_TYPES.has(file.type)) {
       return createResponse(
         { error: "Upload a JPEG, PNG, WebP, or GIF image." },
         400
       );
     }
 
-    if (file.size > MAX_LOGO_SIZE_BYTES) {
-      return createResponse({ error: "Image must be 4 MB or smaller." }, 400);
-    }
+    const prepared = await prepareFileForUpload(file);
 
-    const blob = await put(`company-logos/${userId}/${file.name}`, file, {
-      access: "public",
-      addRandomSuffix: true,
-    });
+    const blob = await put(
+      `company-logos/${userId}/${prepared.fileName}`,
+      prepared.data,
+      {
+        access: "public",
+        addRandomSuffix: true,
+        contentType: prepared.contentType,
+      }
+    );
 
     return createResponse({ url: blob.url }, 200);
   } catch (error) {

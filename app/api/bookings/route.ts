@@ -14,10 +14,8 @@ import {
   resolveFreelancerForBooking,
 } from "@/utils/booking/createBooking";
 import { getBookingById, markBookingPaymentFailed } from "@/utils/bookings";
-import {
-  RECEIPT_ALLOWED_TYPES,
-  RECEIPT_MAX_SIZE_BYTES,
-} from "@/utils/payment/manualTransfer";
+import { prepareFileForUpload } from "@/utils/image/upload";
+import { RECEIPT_ALLOWED_TYPES } from "@/utils/payment/manualTransfer";
 import { notifyNewClientBooking } from "@/utils/push/bookingNotifications";
 import {
   isAccountReadyForClientCharges,
@@ -123,12 +121,6 @@ export async function POST(req: NextRequest) {
           400
         );
       }
-      if (receipt.size > RECEIPT_MAX_SIZE_BYTES) {
-        return createResponse(
-          { error: "Receipt image must be 4 MB or smaller." },
-          400
-        );
-      }
     }
 
     try {
@@ -171,12 +163,14 @@ export async function POST(req: NextRequest) {
     createdBookingId = booking._id.toString();
 
     if (isManualBooking && receipt) {
+      const prepared = await prepareFileForUpload(receipt);
       const blob = await put(
-        `payment-receipts/${createdBookingId}/${receipt.name}`,
-        receipt,
+        `payment-receipts/${createdBookingId}/${prepared.fileName}`,
+        prepared.data,
         {
           access: "public",
           addRandomSuffix: true,
+          contentType: prepared.contentType,
         }
       );
 

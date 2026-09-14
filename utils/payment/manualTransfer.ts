@@ -6,11 +6,7 @@ export const MANUAL_TRANSFER = {
   payeeName: "Bridalync Services",
 } as const;
 
-export const RECEIPT_ALLOWED_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
-
-export const RECEIPT_MAX_SIZE_BYTES = 4 * 1024 * 1024;
+export {
+  UPLOAD_IMAGE_ALLOWED_TYPES as RECEIPT_ALLOWED_TYPES,
+  UPLOAD_IMAGE_MAX_BYTES as RECEIPT_MAX_SIZE_BYTES,
+} from "@/utils/image/upload";

@@ -162,11 +162,6 @@ export function CompanyLogoUpload({
       return;
     }
 
-    if (file.size > 4 * 1024 * 1024) {
-      reportError("Image must be 4 MB or smaller.");
-      return;
-    }
-
     reportError(null);
     setCrop({ x: 0, y: 0 });
     setZoom(1);

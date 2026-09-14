@@ -336,7 +336,7 @@ export function ReviewsManager({
               </div>
               <p className="text-xs text-muted-foreground">
                 Up to {MAX_REVIEW_IMAGES} images. JPEG, PNG, WebP, or GIF up to
-                4 MB each.
+                Large images are compressed automatically.
               </p>
             </div>
           </Field>

@@ -361,7 +361,7 @@ export function ProfileManager({
                   ) : null}
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  JPEG, PNG, WebP, or GIF up to 4 MB. Saves automatically.
+                  JPEG, PNG, WebP, or GIF. Large images are compressed automatically. Saves automatically.
                 </p>
               </div>
               <input

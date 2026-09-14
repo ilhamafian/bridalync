@@ -662,7 +662,7 @@ export function SettingsManager({
             }}
             disabled={savingSection === "invoice"}
             onUploadingChange={setUploadingLogo}
-            hint="JPEG, PNG, WebP, or GIF. Max 4 MB. Cropped to 16:9. Saves automatically."
+            hint="JPEG, PNG, WebP, or GIF. Large images are compressed automatically. Cropped to 16:9. Saves automatically."
           />
           <Field label="Terms and conditions">
             <Textarea
