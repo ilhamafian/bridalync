@@ -9,4 +9,4 @@ export const MANUAL_TRANSFER = {
 export {
   UPLOAD_IMAGE_ALLOWED_TYPES as RECEIPT_ALLOWED_TYPES,
   UPLOAD_IMAGE_MAX_BYTES as RECEIPT_MAX_SIZE_BYTES,
-} from "@/utils/image/upload";
+} from "@/utils/image/constants";

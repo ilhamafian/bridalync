@@ -1,13 +1,11 @@
 import sharp from "sharp";
 
-export const UPLOAD_IMAGE_MAX_BYTES = 4 * 1024 * 1024;
+import {
+  UPLOAD_IMAGE_ALLOWED_TYPES,
+  UPLOAD_IMAGE_MAX_BYTES,
+} from "@/utils/image/constants";
 
-export const UPLOAD_IMAGE_ALLOWED_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/webp",
-  "image/gif",
-]);
+export { UPLOAD_IMAGE_ALLOWED_TYPES, UPLOAD_IMAGE_MAX_BYTES };
 
 type CompressedImage = {
   buffer: Buffer;
