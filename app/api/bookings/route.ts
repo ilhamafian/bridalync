@@ -68,10 +68,12 @@ export async function POST(req: NextRequest) {
       status: data.intent === "booking" ? "pending" : "enquiry",
     });
 
-    try {
-      await notifyNewClientBooking(booking);
-    } catch (error) {
-      console.error("Failed to send new booking push:", error);
+    if (booking.status === "enquiry") {
+      try {
+        await notifyNewClientBooking(booking);
+      } catch (error) {
+        console.error("Failed to send new booking push:", error);
+      }
     }
 
     return createResponse(

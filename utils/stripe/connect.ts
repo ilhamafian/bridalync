@@ -111,6 +111,13 @@ function buildIndividualPrefill(owner: ConnectedAccountOwner) {
   return individual;
 }
 
+function isRestrictedConnectedAccountUpdate(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message.includes("does not have the required permissions")
+  );
+}
+
 export function isAccountPayoutReady(account: Stripe.Account | StripeRecord): boolean {
   const record = account as StripeRecord;
   const payoutsEnabled = record.payouts_enabled === true;
@@ -185,11 +192,24 @@ async function prepareAccountForPayoutOnboarding(
   }
 
   const stripe = getStripe();
-  await stripe.accounts.update(accountId, {
-    business_type: "individual",
-    individual: buildIndividualPrefill(owner),
-    business_profile: buildBusinessProfilePrefill(owner),
-  });
+  try {
+    await stripe.accounts.update(accountId, {
+      business_type: "individual",
+      individual: buildIndividualPrefill(owner),
+      business_profile: buildBusinessProfilePrefill(owner),
+    });
+  } catch (error) {
+    // Standard accounts own KYC fields after Account Link/onboarding starts.
+    // Prefill is best-effort — never block hosted onboarding on this.
+    if (isRestrictedConnectedAccountUpdate(error)) {
+      console.warn(
+        `[stripe] skipped Standard account prefill for ${accountId}:`,
+        error instanceof Error ? error.message : error
+      );
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function ensureStripeAccountId(
@@ -208,10 +228,7 @@ export async function ensureStripeAccountId(
 }
 
 /** Request card payment capabilities on a deferred account when a client pays. */
-export async function ensurePaymentCapabilities(
-  accountId: string,
-  owner: ConnectedAccountOwner
-) {
+export async function ensurePaymentCapabilities(accountId: string) {
   const account = await retrieveConnectedAccount(accountId);
   const cardPayments = account.capabilities?.card_payments;
 
@@ -220,13 +237,25 @@ export async function ensurePaymentCapabilities(
   }
 
   const stripe = getStripe();
-  return stripe.accounts.update(accountId, {
-    capabilities: {
-      card_payments: { requested: true },
-      transfers: { requested: true },
-    },
-    business_profile: buildBusinessProfilePrefill(owner),
-  });
+  try {
+    // Do not send business_profile here. Standard connected accounts reject
+    // platform updates to that field after onboarding has started (live mode).
+    return await stripe.accounts.update(accountId, {
+      capabilities: {
+        card_payments: { requested: true },
+        transfers: { requested: true },
+      },
+    });
+  } catch (error) {
+    if (isRestrictedConnectedAccountUpdate(error)) {
+      console.warn(
+        `[stripe] skipped capability request for ${accountId}:`,
+        error instanceof Error ? error.message : error
+      );
+      return account;
+    }
+    throw error;
+  }
 }
 
 /** @deprecated Use ensurePaymentCapabilities */

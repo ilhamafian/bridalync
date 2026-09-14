@@ -4,12 +4,11 @@ import { z } from "zod";
 
 import { bookingModel } from "@/models/Booking";
 import { createResponse, handleError } from "@/utils/apiHelper";
-import { getBookingById } from "@/utils/bookings";
+import { getBookingById, markBookingPaymentFailed } from "@/utils/bookings";
 import {
   createBalanceCheckoutSession,
   createDepositCheckoutSession,
 } from "@/utils/stripe/checkout";
-import { buildStripeOwner } from "@/utils/stripe/connect";
 import { getFreelancerByUsername } from "@/utils/users";
 
 const checkoutRequestSchema = z.object({
@@ -19,6 +18,8 @@ const checkoutRequestSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  let pendingBookingIdToFail: string | null = null;
+
   try {
     const body = await req.json();
     const parsed = checkoutRequestSchema.safeParse(body);
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
       if (booking.status !== "pending") {
         return createResponse({ error: "Booking can no longer be paid." }, 409);
       }
+      pendingBookingIdToFail = bookingId;
     } else {
       if (booking.status !== "confirmed") {
         return createResponse(
@@ -70,14 +72,14 @@ export async function POST(req: NextRequest) {
             booking,
             freelancerUsername: freelancerUsername.toLowerCase(),
             stripeAccountId: freelancer.stripe_account_id,
-            owner: buildStripeOwner(freelancer),
           })
         : await createDepositCheckoutSession({
             booking,
             freelancerUsername: freelancerUsername.toLowerCase(),
             stripeAccountId: freelancer.stripe_account_id,
-            owner: buildStripeOwner(freelancer),
           });
+
+    pendingBookingIdToFail = null;
 
     await bookingModel.update(
       bookingId,
@@ -87,6 +89,17 @@ export async function POST(req: NextRequest) {
 
     return createResponse({ url: session.url }, 200);
   } catch (error) {
+    if (pendingBookingIdToFail) {
+      try {
+        await markBookingPaymentFailed(pendingBookingIdToFail);
+      } catch (cleanupError) {
+        console.error(
+          "Failed to roll back unpaid booking after checkout error:",
+          cleanupError
+        );
+      }
+    }
+
     if (error instanceof Stripe.errors.StripeError) {
       return createResponse(
         { error: error.message || "Stripe request failed." },

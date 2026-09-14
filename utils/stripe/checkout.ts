@@ -1,10 +1,7 @@
 import { getStripe } from "@/lib/stripe";
 import { getAppUrl } from "@/utils/appUrl";
 import type { PersistedBooking } from "@/schemas/bookingSchema";
-import {
-  buildStripeOwner,
-  ensurePaymentCapabilities,
-} from "@/utils/stripe/connect";
+import { ensurePaymentCapabilities } from "@/utils/stripe/connect";
 import { buildBookingCheckoutMetadata } from "@/utils/stripe/metadata";
 
 function toStripeAmount(rm: number) {
@@ -15,7 +12,6 @@ export async function createDepositCheckoutSession(input: {
   booking: PersistedBooking;
   freelancerUsername: string;
   stripeAccountId: string;
-  owner: ReturnType<typeof buildStripeOwner>;
 }) {
   const stripe = getStripe();
   const appUrl = getAppUrl();
@@ -31,7 +27,7 @@ export async function createDepositCheckoutSession(input: {
 
   // Deferred accounts can accept client payments. Full Stripe onboarding is only
   // required later when the freelancer withdraws to their bank account.
-  await ensurePaymentCapabilities(input.stripeAccountId, input.owner);
+  await ensurePaymentCapabilities(input.stripeAccountId);
 
   const metadata = buildBookingCheckoutMetadata({
     booking: input.booking,
@@ -93,7 +89,6 @@ export async function createBalanceCheckoutSession(input: {
   booking: PersistedBooking;
   freelancerUsername: string;
   stripeAccountId: string;
-  owner: ReturnType<typeof buildStripeOwner>;
 }) {
   const stripe = getStripe();
   const appUrl = getAppUrl();
@@ -104,7 +99,7 @@ export async function createBalanceCheckoutSession(input: {
     throw new Error("This booking has no remaining balance.");
   }
 
-  await ensurePaymentCapabilities(input.stripeAccountId, input.owner);
+  await ensurePaymentCapabilities(input.stripeAccountId);
 
   const metadata = buildBookingCheckoutMetadata({
     booking: input.booking,
