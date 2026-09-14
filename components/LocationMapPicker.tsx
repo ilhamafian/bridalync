@@ -16,6 +16,19 @@ const DEFAULT_ZOOM = 11
 const SELECTED_ZOOM = 17
 const PINNED_PLACE_ID = "map-pinned"
 
+function readPlaceDisplayName(
+  displayName: google.maps.places.Place["displayName"]
+): string | undefined {
+  if (!displayName) return undefined
+
+  const text =
+    typeof displayName === "string"
+      ? displayName
+      : (displayName as { text?: string }).text?.trim()
+
+  return text || undefined
+}
+
 type LocationMapPickerProps = {
   value: Address | null
   onChange: (address: Address) => void
@@ -92,7 +105,7 @@ function PlaceAutocompleteInput({ onPlaceSelect }: PlaceAutocompleteInputProps) 
       onPlaceSelect({
         placeId: place.id,
         formattedAddress,
-        displayName: place.displayName ?? undefined,
+        displayName: readPlaceDisplayName(place.displayName),
         location: {
           lat: location.lat(),
           lng: location.lng(),

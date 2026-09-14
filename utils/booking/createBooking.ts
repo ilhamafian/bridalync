@@ -2,6 +2,7 @@ import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
 import { StyleModel } from "@/models/Style";
 import type { CreateBookingRequest } from "@/schemas/bookingSchema";
+import type { Package } from "@/schemas/packageSchema";
 import { toIdString } from "@/schemas/objectId";
 import { toDbSession } from "@/schemas/sessionSchema";
 import { getFreelancerByUsername } from "@/utils/users";
@@ -27,90 +28,170 @@ function parseStyleVariantId(id: string): {
   return { styleDocId, variantOrder };
 }
 
+type ResolvedSessionStyle = {
+  styleId: string;
+  styleName: string;
+  lineItemName: string;
+  price: number;
+  deposit: number;
+};
+
+async function resolveSessionStyle(
+  styleModel: StyleModel,
+  freelancerUserId: string,
+  sessionName: string,
+  styleInput: NonNullable<CreateBookingRequest["sessions"][number]["style"]>
+): Promise<ResolvedSessionStyle> {
+  const parsed = parseStyleVariantId(styleInput.id);
+  if (!parsed) {
+    throw new Error("Invalid style selection");
+  }
+
+  const styleDoc = await styleModel.findById(parsed.styleDocId);
+  if (!styleDoc || toIdString(styleDoc.user_id as never) !== freelancerUserId) {
+    throw new Error("Style not found");
+  }
+
+  const variant = styleDoc.variants.find(
+    (item) => item.order === parsed.variantOrder
+  );
+  if (!variant) {
+    throw new Error("Style variant not found");
+  }
+
+  if (
+    variant.price !== styleInput.price ||
+    variant.deposit !== (styleInput.deposit ?? variant.deposit)
+  ) {
+    throw new Error("Style pricing mismatch");
+  }
+
+  const styleName = `${styleDoc.name} — ${variant.name}`;
+
+  return {
+    styleId: styleInput.id,
+    styleName,
+    lineItemName: `${sessionName} — ${styleName}`,
+    price: variant.price,
+    deposit: variant.deposit,
+  };
+}
+
+function validatePackageSelection(
+  input: CreateBookingRequest,
+  packagesById: Map<string, Package>
+) {
+  if (input.packageIds.length === 0) {
+    throw new Error("At least one package is required");
+  }
+
+  const uniquePackageIds = new Set(input.packageIds);
+  if (uniquePackageIds.size !== input.packageIds.length) {
+    throw new Error("Duplicate package selection");
+  }
+
+  for (const packageId of input.packageIds) {
+    const pkg = packagesById.get(packageId);
+    if (!pkg) {
+      throw new Error("Package not found");
+    }
+  }
+
+  if (input.sessions.length !== input.packageIds.length) {
+    throw new Error("Each selected package needs one scheduled session");
+  }
+
+  const packageIdSet = new Set(input.packageIds);
+  const scheduledPackageIds = new Set<string>();
+
+  for (const session of input.sessions) {
+    if (!packageIdSet.has(session.packageId)) {
+      throw new Error("Session package mismatch");
+    }
+    if (scheduledPackageIds.has(session.packageId)) {
+      throw new Error("Each selected package can only have one session");
+    }
+    scheduledPackageIds.add(session.packageId);
+  }
+}
+
 export async function resolveBookingQuotation(
   freelancerUserId: string,
   input: CreateBookingRequest,
   options?: { relaxPaymentDeadline?: boolean }
 ): Promise<{
   invoice: BookingQuotationSummary;
-  packageName: string;
-  styleId: string | null;
-  styleName: string | null;
+  packageNames: string;
+  resolvedSessionStyles: Map<string, ResolvedSessionStyle>;
   paymentOption: "deposit" | "full";
 }> {
   const packageModel = new PackageModel();
   const settingsModel = new SettingModel();
   const styleModel = new StyleModel();
 
-  const [pkg, settings] = await Promise.all([
-    packageModel.findById(input.packageId),
+  const [loadedPackages, settings] = await Promise.all([
+    Promise.all(input.packageIds.map((id) => packageModel.findById(id))),
     settingsModel.findSettingsByUserId(freelancerUserId),
   ]);
-
-  if (!pkg || toIdString(pkg.user_id as never) !== freelancerUserId) {
-    throw new Error("Package not found");
-  }
 
   if (!settings) {
     throw new Error("Freelancer settings not found");
   }
 
-  const chargeBy = settings.charge_by ?? "package";
-
-  if (chargeBy === "style" && !input.style) {
-    throw new Error("Style is required");
+  const packagesById = new Map<string, Package>();
+  for (const pkg of loadedPackages) {
+    if (!pkg || toIdString(pkg.user_id as never) !== freelancerUserId) {
+      throw new Error("Package not found");
+    }
+    const id = toIdString(pkg._id as never);
+    if (!id) {
+      throw new Error("Package not found");
+    }
+    packagesById.set(id, pkg);
   }
 
-  let selectedStyle: {
-    name: string;
-    price: number;
-    deposit: number;
-  } | null = null;
-  let styleId: string | null = null;
-  let styleName: string | null = null;
+  validatePackageSelection(input, packagesById);
 
-  if (chargeBy === "style" && input.style) {
-    const parsed = parseStyleVariantId(input.style.id);
-    if (!parsed) {
-      throw new Error("Invalid style selection");
-    }
-
-    const styleDoc = await styleModel.findById(parsed.styleDocId);
-    if (!styleDoc || toIdString(styleDoc.user_id as never) !== freelancerUserId) {
-      throw new Error("Style not found");
-    }
-
-    const variant = styleDoc.variants.find(
-      (item) => item.order === parsed.variantOrder
-    );
-    if (!variant) {
-      throw new Error("Style variant not found");
-    }
-
-    if (
-      variant.price !== input.style.price ||
-      variant.deposit !== (input.style.deposit ?? variant.deposit)
-    ) {
-      throw new Error("Style pricing mismatch");
-    }
-
-    selectedStyle = {
-      name: variant.name,
-      price: variant.price,
-      deposit: variant.deposit,
+  const chargeBy = settings.charge_by ?? "package";
+  const selectedPackages = input.packageIds.map((packageId) => {
+    const pkg = packagesById.get(packageId)!;
+    return {
+      name: pkg.name,
+      price: pkg.price ?? 0,
+      deposit: chargeBy === "style" ? 0 : (pkg.deposit ?? 0),
     };
-    styleId = input.style.id;
-    styleName = `${styleDoc.name} — ${variant.name}`;
+  });
+
+  const resolvedSessionStyles = new Map<string, ResolvedSessionStyle>();
+  let selectedSessionStyles:
+    | Array<{ name: string; price: number; deposit: number }>
+    | undefined;
+
+  if (chargeBy === "style") {
+    selectedSessionStyles = [];
+    for (const session of input.sessions) {
+      if (!session.style) {
+        throw new Error("Style is required for each session");
+      }
+      const resolved = await resolveSessionStyle(
+        styleModel,
+        freelancerUserId,
+        session.name,
+        session.style
+      );
+      resolvedSessionStyles.set(session.client_key, resolved);
+      selectedSessionStyles.push({
+        name: resolved.lineItemName,
+        price: resolved.price,
+        deposit: resolved.deposit,
+      });
+    }
   }
 
   const quotation = calculateBookingQuotation({
     chargeBy,
-    selectedPackage: {
-      name: pkg.name,
-      price: pkg.price ?? 0,
-      deposit: chargeBy === "style" ? 0 : (pkg.deposit ?? 0),
-    },
-    selectedStyle,
+    selectedPackages,
+    selectedSessionStyles,
     selectedAddOns: input.addOns.map((addOn) => ({
       name: addOn.name,
       price: addOn.price,
@@ -148,9 +229,8 @@ export async function resolveBookingQuotation(
 
   return {
     invoice: applyPaymentOption(quotation, paymentOption),
-    packageName: pkg.name,
-    styleId,
-    styleName,
+    packageNames: selectedPackages.map((pkg) => pkg.name).join(", "),
+    resolvedSessionStyles,
     paymentOption,
   };
 }
@@ -169,12 +249,31 @@ export async function resolveFreelancerForBooking(username: string) {
   return { user, userId };
 }
 
-export function mapSessionsForStorage(input: CreateBookingRequest) {
-  return input.sessions.map((session) => ({
-    ...toDbSession({
-      ...session,
-      date: normalizeSessionDate(session.date),
-    }),
-    client_key: session.client_key,
-  }));
+export function mapSessionsForStorage(
+  input: CreateBookingRequest,
+  resolvedSessionStyles: Map<
+    string,
+    {
+      styleId: string;
+      styleName: string;
+    }
+  > = new Map()
+) {
+  return input.sessions.map((session) => {
+    const resolvedStyle = resolvedSessionStyles.get(session.client_key);
+
+    return {
+      ...toDbSession({
+        ...session,
+        date: normalizeSessionDate(session.date),
+        ...(resolvedStyle
+          ? {
+              styleId: resolvedStyle.styleId,
+              styleName: resolvedStyle.styleName,
+            }
+          : {}),
+      }),
+      client_key: session.client_key,
+    };
+  });
 }

@@ -41,7 +41,6 @@ function serializePackage(pkg: WithId<Package>): PackageItem {
     price: pkg.price,
     deposit: pkg.deposit,
     order: pkg.order,
-    session_templates: pkg.session_templates,
   };
 }
 
@@ -121,7 +120,6 @@ export async function loadDashboardData(
         name: pkg.name,
         price: pkg.price ?? 0,
         deposit: pkg.deposit ?? 0,
-        session_templates: pkg.session_templates,
       })),
       styles: styles.map((style) => ({
         _id: toIdString(style._id),

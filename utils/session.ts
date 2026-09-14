@@ -20,6 +20,28 @@ export function formatSessionSummary(
   return `${session.name} — ${dateStr}, ${session.time_slot.startTime} – ${session.time_slot.endTime}`;
 }
 
-export function formatLocationAddress(location: Address): string {
-  return location.formattedAddress;
+const PLACEHOLDER_LOCATION_NAMES = new Set([
+  "Pinned on map",
+  "Selected location",
+  "Travel not enabled",
+]);
+
+function getVenueName(
+  location: Pick<Address, "displayName">
+): string | null {
+  const name = location.displayName?.trim();
+  if (!name || PLACEHOLDER_LOCATION_NAMES.has(name)) return null;
+  return name;
+}
+
+export function formatLocationAddress(
+  location: Pick<Address, "formattedAddress" | "displayName">
+): string {
+  const venue = getVenueName(location);
+  const address = location.formattedAddress.trim();
+
+  if (!venue) return address;
+  if (address === venue || address.startsWith(`${venue},`)) return address;
+
+  return `${venue}, ${address}`;
 }

@@ -3,7 +3,7 @@ import { sendPushToUser } from "@/utils/push/webPush";
 
 function formatSessionSummary(booking: Booking): string {
   const first = booking.sessions[0];
-  if (!first) return booking.packageName;
+  if (!first) return booking.packageNames;
 
   const date = new Date(first.date);
   const dateLabel = date.toLocaleDateString("en-MY", {
@@ -13,8 +13,8 @@ function formatSessionSummary(booking: Booking): string {
   });
   const time = first.time_slot?.startTime;
   return time
-    ? `${booking.packageName} · ${dateLabel} ${time}`
-    : `${booking.packageName} · ${dateLabel}`;
+    ? `${booking.packageNames} · ${dateLabel} ${time}`
+    : `${booking.packageNames} · ${dateLabel}`;
 }
 
 export async function notifyNewClientBooking(booking: PersistedBooking) {

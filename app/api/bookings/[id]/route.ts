@@ -115,8 +115,7 @@ export async function PATCH(
 
       const data = parsed.data;
       const needsQuotation =
-        data.packageId !== undefined ||
-        data.style !== undefined ||
+        data.packageIds !== undefined ||
         data.addOns !== undefined ||
         data.sessions !== undefined ||
         data.paymentOption !== undefined;
@@ -131,7 +130,7 @@ export async function PATCH(
       }
 
       if (needsQuotation) {
-        const packageId = data.packageId ?? existing.packageId;
+        const packageIds = data.packageIds ?? existing.packageIds;
         const sessions = data.sessions;
         if (!sessions || sessions.length === 0) {
           return createResponse(
@@ -144,30 +143,27 @@ export async function PATCH(
           freelancerUsername: existing.freelancerUsername,
           intent: "booking",
           contact: data.contact ?? existing.contact,
-          packageId,
-          style: data.style,
+          packageIds,
           addOns: data.addOns ?? [],
           sessions,
           distanceKmBySessionKey: data.distanceKmBySessionKey,
           paymentOption: data.paymentOption ?? existing.paymentOption,
         };
 
-        // When style was not sent but booking had one and charge is style-based,
-        // resolveBookingQuotation will require style if charge_by is style.
-        // Client should always send style when charge_by is style.
-        const { invoice, packageName, styleId, styleName, paymentOption } =
+        const { invoice, packageNames, resolvedSessionStyles, paymentOption } =
           await resolveBookingQuotation(userId, quotationInput, {
             relaxPaymentDeadline: true,
           });
 
         updatePayload = {
           ...updatePayload,
-          packageId,
-          packageName,
-          styleId,
-          styleName,
+          packageIds,
+          packageNames,
           addOnIds: (data.addOns ?? []).map((addOn) => addOn.id),
-          sessions: mapSessionsForStorage(quotationInput),
+          sessions: mapSessionsForStorage(
+            quotationInput,
+            resolvedSessionStyles
+          ),
           invoice,
           paymentOption,
         };

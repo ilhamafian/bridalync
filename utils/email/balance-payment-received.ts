@@ -34,7 +34,7 @@ export async function sendBalancePaymentReceivedEmail(
     `We've received your remaining balance payment. Your booking with ${displayName} is fully paid.`,
     "",
     `Booking ref: ${bookingRef}`,
-    `Package: ${booking.packageName}`,
+    `Package: ${booking.packageNames}`,
     `Total paid: ${formatRm(booking.invoice.totalRm)}`,
     "",
     `View your booking: ${bookingUrl}`,
@@ -48,7 +48,7 @@ export async function sendBalancePaymentReceivedEmail(
       <p>We've received your remaining balance payment. Your booking with <strong>${escapeHtml(displayName)}</strong> is fully paid.</p>
       <p style="margin: 24px 0 8px; font-size: 14px; color: #666;">Booking ref</p>
       <p style="margin: 0 0 16px; font-family: monospace;">${escapeHtml(bookingRef)}</p>
-      <p style="margin: 0 0 4px;"><strong>Package:</strong> ${escapeHtml(booking.packageName)}</p>
+      <p style="margin: 0 0 4px;"><strong>Package:</strong> ${escapeHtml(booking.packageNames)}</p>
       <p style="margin: 0 0 24px;"><strong>Total paid:</strong> ${escapeHtml(formatRm(booking.invoice.totalRm))}</p>
       <p>
         <a href="${escapeHtml(bookingUrl)}" style="display: inline-block; background: #111; color: #fff; text-decoration: none; padding: 10px 16px; border-radius: 8px;">
@@ -61,7 +61,7 @@ export async function sendBalancePaymentReceivedEmail(
 
   await sendEmail({
     to: email,
-    subject: `Balance paid — ${booking.packageName}`,
+    subject: `Balance paid — ${booking.packageNames}`,
     html,
     text,
   });

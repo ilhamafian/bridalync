@@ -492,6 +492,11 @@ function OnboardingPageContent() {
                         className={inputClassName}
                         required
                       />
+                      <p className="text-xs text-muted-foreground">
+                        Travel is charged as a round trip — to the client and
+                        back to your base. For example, 10 km away at RM 1/km
+                        adds RM 20 to the booking.
+                      </p>
                     </label>
 
                     <div className="flex flex-col gap-2">

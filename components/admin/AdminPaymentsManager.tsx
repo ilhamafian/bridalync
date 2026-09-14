@@ -189,7 +189,7 @@ export function AdminPaymentsManager() {
                   </Badge>
                 </div>
                 <CardDescription>
-                  {item.booking.freelancerUsername} · {item.booking.packageName} ·{" "}
+                  {item.booking.freelancerUsername} · {item.booking.packageNames} ·{" "}
                   {formatRm(item.amountRm)}
                 </CardDescription>
               </CardHeader>

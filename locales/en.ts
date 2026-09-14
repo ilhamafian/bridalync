@@ -39,7 +39,7 @@ export const en: Locale = {
 
   // Events / packages
   eventQuestion: "What event are you booking for?",
-  eventHelper: "Choose the package that matches your event.",
+  eventHelper: "Choose one or more packages for your booking.",
   loadingPackages: "Loading packages...",
   noPackagesAvailable: "No packages available.",
   sessionCount: "{count} {count, session, sessions}",
@@ -74,7 +74,8 @@ export const en: Locale = {
 
   // Style
   chooseStyle: "Choose your hijab style",
-  chooseStyleHelper: "Pick a look, then choose a variant.",
+  chooseStyleHelper: "Pick a look for each session.",
+  chooseStyleForSession: "Choose style for {sessionName}",
   noStylesAvailable: "No styles available.",
   noVariantsAvailable: "No variants available.",
   noImage: "No image",

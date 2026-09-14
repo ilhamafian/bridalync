@@ -52,10 +52,13 @@ export function buildBookingResultMessage(
   const sessionLines = booking.sessions
     .map((session) => {
       const line = `• ${formatSessionSummary(session)}`;
+      const styleLine = session.styleName
+        ? `\n  Style: ${session.styleName}`
+        : "";
       if (session.location) {
-        return `${line}\n  Location: ${formatLocationAddress(session.location)}`;
+        return `${line}${styleLine}\n  Location: ${formatLocationAddress(session.location)}`;
       }
-      return line;
+      return `${line}${styleLine}`;
     })
     .join("\n");
 
@@ -70,8 +73,7 @@ export function buildBookingResultMessage(
     `Phone: ${formatClientPhone(booking.contact)}`,
     `Email: ${booking.contact.email}`,
     "",
-    `Package: ${booking.packageName}`,
-    ...(booking.styleName ? [`Style: ${booking.styleName}`] : []),
+    `Packages: ${booking.packageNames}`,
     `Add-ons: ${addOnSummary}`,
     "",
     "Sessions:",

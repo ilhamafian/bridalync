@@ -7,6 +7,7 @@ export type ScheduleStatus = "upcoming" | "in_progress" | "completed";
 
 export type ScheduleLocation = {
   formattedAddress: string;
+  displayName?: string;
   lat: number;
   lng: number;
   placeId: string;
@@ -126,6 +127,7 @@ function toScheduleLocation(
   if (!location) return null;
   return {
     formattedAddress: location.formattedAddress,
+    ...(location.displayName ? { displayName: location.displayName } : {}),
     lat: location.location.lat,
     lng: location.location.lng,
     placeId: location.placeId,
@@ -175,7 +177,7 @@ export function flattenScheduleItems(
       items.push({
         bookingId: booking._id,
         clientName: booking.contact.name,
-        packageName: booking.packageName,
+        packageName: booking.packageNames,
         sessionName: session.name,
         date: session.date,
         startTime: session.time_slot.startTime,
@@ -314,7 +316,7 @@ export function getRecentActivity(
 
   return sorted.slice(0, limit).map((booking) => {
     const at = booking.updated_at ?? booking.created_at ?? new Date().toISOString();
-    const detail = `${booking.contact.name} · ${booking.packageName}`;
+    const detail = `${booking.contact.name} · ${booking.packageNames}`;
 
     if (booking.status === "cancelled") {
       return {

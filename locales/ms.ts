@@ -37,7 +37,7 @@ export const ms = {
 
   // Events / packages
   eventQuestion: "Majlis apa yang anda ingin tempah?",
-  eventHelper: "Pilih pakej yang sepadan dengan majlis awak.",
+  eventHelper: "Pilih satu atau lebih pakej untuk tempahan awak.",
   loadingPackages: "Memuatkan pakej...",
   noPackagesAvailable: "Tiada pakej tersedia.",
   sessionCount: "{count} sesi",
@@ -71,7 +71,8 @@ export const ms = {
 
   // Style
   chooseStyle: "Pilih gaya hijab anda",
-  chooseStyleHelper: "Pilih jenis gaya, kemudian pilih variasi.",
+  chooseStyleHelper: "Pilih gaya untuk setiap sesi.",
+  chooseStyleForSession: "Pilih gaya untuk {sessionName}",
   noStylesAvailable: "Tiada gaya tersedia.",
   noVariantsAvailable: "Tiada variasi tersedia.",
   noImage: "Tiada gambar",

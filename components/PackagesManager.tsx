@@ -47,7 +47,6 @@ export type PackageItem = {
   price?: number;
   deposit?: number;
   order: number;
-  session_templates: { name: string; order: number }[];
 };
 
 export type StyleItem = {
@@ -65,11 +64,6 @@ export type StyleItem = {
 
 type Tab = "packages" | "styles";
 
-type SessionRow = {
-  id: string;
-  name: string;
-};
-
 type VariantRow = {
   id: string;
   name: string;
@@ -82,7 +76,6 @@ type PackageFormState = {
   name: string;
   price: string;
   deposit: string;
-  session_templates: SessionRow[];
 };
 
 type StyleFormState = {
@@ -123,7 +116,6 @@ function emptyPackageForm(): PackageFormState {
     name: "",
     price: "",
     deposit: "",
-    session_templates: [{ id: createRowId(), name: "" }],
   };
 }
 
@@ -132,13 +124,6 @@ function packageToForm(pkg: PackageItem): PackageFormState {
     name: pkg.name,
     price: pkg.price?.toString() ?? "",
     deposit: pkg.deposit?.toString() ?? "",
-    session_templates:
-      pkg.session_templates.length > 0
-        ? pkg.session_templates.map((session) => ({
-            id: createRowId(),
-            name: session.name,
-          }))
-        : [{ id: createRowId(), name: "" }],
   };
 }
 
@@ -343,20 +328,8 @@ export function PackagesManager({
   }
 
   async function handleSavePackage() {
-    const session_templates = packageForm.session_templates
-      .map((session, index) => ({
-        name: session.name.trim(),
-        order: index,
-      }))
-      .filter((session) => session.name.length > 0);
-
     if (!packageForm.name.trim()) {
       setError("Package name is required.");
-      return;
-    }
-
-    if (session_templates.length === 0) {
-      setError("Add at least one session.");
       return;
     }
 
@@ -367,7 +340,6 @@ export function PackagesManager({
       order: editingPackageId
         ? packages.find((pkg) => pkg._id === editingPackageId)?.order ?? packages.length
         : packages.length,
-      session_templates,
     };
 
     setSaving(true);
@@ -522,9 +494,7 @@ export function PackagesManager({
                       <div className="min-w-0">
                         <CardTitle className="text-base">{pkg.name}</CardTitle>
                         <CardDescription>
-                          {pkg.session_templates.length} session
-                          {pkg.session_templates.length === 1 ? "" : "s"}
-                          {pkg.price != null ? ` · ${formatRm(pkg.price)}` : ""}
+                          {pkg.price != null ? formatRm(pkg.price) : "No price set"}
                           {pkg.deposit != null
                             ? ` · ${formatRm(pkg.deposit)} deposit`
                             : ""}
@@ -556,9 +526,6 @@ export function PackagesManager({
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="text-sm text-muted-foreground">
-                    {pkg.session_templates.map((session) => session.name).join(", ")}
-                  </CardContent>
                 </Card>
               )}
             />
@@ -711,78 +678,6 @@ export function PackagesManager({
                     placeholder="400"
                   />
                 </Field>
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <Label>Sessions</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setPackageForm((current) => ({
-                        ...current,
-                        session_templates: [
-                          ...current.session_templates,
-                          { id: createRowId(), name: "" },
-                        ],
-                      }))
-                    }
-                  >
-                    <IconPlus />
-                    Add session
-                  </Button>
-                </div>
-
-                <SortableList
-                  items={packageForm.session_templates}
-                  getItemId={(session) => session.id}
-                  onReorder={(nextSessions) =>
-                    setPackageForm((current) => ({
-                      ...current,
-                      session_templates: nextSessions,
-                    }))
-                  }
-                  className="gap-2"
-                  renderItem={(session, index) => (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        className={inputClassName}
-                        value={session.name}
-                        onChange={(event) =>
-                          setPackageForm((current) => ({
-                            ...current,
-                            session_templates: current.session_templates.map(
-                              (item) =>
-                                item.id === session.id
-                                  ? { ...item, name: event.target.value }
-                                  : item
-                            ),
-                          }))
-                        }
-                        placeholder={`Session ${index + 1}`}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={packageForm.session_templates.length === 1}
-                        onClick={() =>
-                          setPackageForm((current) => ({
-                            ...current,
-                            session_templates: current.session_templates.filter(
-                              (item) => item.id !== session.id
-                            ),
-                          }))
-                        }
-                        aria-label="Remove session"
-                      >
-                        <IconTrash />
-                      </Button>
-                    </div>
-                  )}
-                />
               </div>
             </div>
           ) : (

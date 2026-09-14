@@ -88,14 +88,14 @@ export async function createDepositCheckoutSession(input: {
   });
 
   const productName = isFullPayment
-    ? `Full payment — ${input.booking.packageName}`
-    : `Deposit — ${input.booking.packageName}`;
+    ? `Full payment — ${input.booking.packageNames}`
+    : `Deposit — ${input.booking.packageNames}`;
   const productDescription = isFullPayment
     ? `Full booking payment with ${input.freelancerUsername} on Bridalync`
     : `Booking deposit with ${input.freelancerUsername} on Bridalync`;
   const paymentDescription = isFullPayment
-    ? `Bridalync full payment — ${input.booking.packageName} (${input.freelancerUsername})`
-    : `Bridalync deposit — ${input.booking.packageName} (${input.freelancerUsername})`;
+    ? `Bridalync full payment — ${input.booking.packageNames} (${input.freelancerUsername})`
+    : `Bridalync deposit — ${input.booking.packageNames} (${input.freelancerUsername})`;
 
   const session = await createConnectedCheckoutSession(
     {
@@ -111,7 +111,7 @@ export async function createDepositCheckoutSession(input: {
               description: productDescription,
               metadata: {
                 bookingId: metadata.bookingId,
-                packageName: metadata.packageName,
+                packageName: metadata.packageNames,
               },
             },
           },
@@ -158,9 +158,9 @@ export async function createBalanceCheckoutSession(input: {
     purpose: "balance",
   });
 
-  const productName = `Balance — ${input.booking.packageName}`;
+  const productName = `Balance — ${input.booking.packageNames}`;
   const productDescription = `Remaining booking balance with ${input.freelancerUsername} on Bridalync`;
-  const paymentDescription = `Bridalync balance — ${input.booking.packageName} (${input.freelancerUsername})`;
+  const paymentDescription = `Bridalync balance — ${input.booking.packageNames} (${input.freelancerUsername})`;
 
   const session = await createConnectedCheckoutSession(
     {
@@ -176,7 +176,7 @@ export async function createBalanceCheckoutSession(input: {
               description: productDescription,
               metadata: {
                 bookingId: metadata.bookingId,
-                packageName: metadata.packageName,
+                packageName: metadata.packageNames,
               },
             },
           },

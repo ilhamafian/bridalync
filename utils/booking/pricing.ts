@@ -35,8 +35,8 @@ export type TravelQuotationInput = {
 
 export type CalculateQuotationInput = {
   chargeBy: "package" | "style";
-  selectedPackage: QuotationPackageInput | null;
-  selectedStyle: QuotationLineItemInput | null;
+  selectedPackages: QuotationPackageInput[];
+  selectedSessionStyles?: QuotationPackageInput[];
   selectedAddOns: QuotationLineItemInput[];
   travel?: TravelQuotationInput;
 };
@@ -121,17 +121,21 @@ export function calculateBookingQuotation(
         })
       : 0;
 
-  if (input.chargeBy === "package" && input.selectedPackage) {
-    lineItems.push({
-      label: input.selectedPackage.name,
-      amountRm: roundRm(input.selectedPackage.price + travelFeeRm),
+  if (input.chargeBy === "package") {
+    input.selectedPackages.forEach((pkg, index) => {
+      lineItems.push({
+        label: pkg.name,
+        amountRm: roundRm(pkg.price + (index === 0 ? travelFeeRm : 0)),
+      });
     });
   }
 
-  if (input.chargeBy === "style" && input.selectedStyle) {
-    lineItems.push({
-      label: input.selectedStyle.name,
-      amountRm: roundRm(input.selectedStyle.price + travelFeeRm),
+  if (input.chargeBy === "style" && input.selectedSessionStyles) {
+    input.selectedSessionStyles.forEach((style, index) => {
+      lineItems.push({
+        label: style.name,
+        amountRm: roundRm(style.price + (index === 0 ? travelFeeRm : 0)),
+      });
     });
   }
 
@@ -145,8 +149,11 @@ export function calculateBookingQuotation(
   const totalRm = lineItems.reduce((sum, item) => sum + item.amountRm, 0);
   const depositRm = roundRm(
     input.chargeBy === "style"
-      ? (input.selectedStyle?.deposit ?? 0)
-      : (input.selectedPackage?.deposit ?? 0)
+      ? (input.selectedSessionStyles ?? []).reduce(
+          (sum, style) => sum + style.deposit,
+          0
+        )
+      : input.selectedPackages.reduce((sum, pkg) => sum + pkg.deposit, 0)
   );
   const cappedDepositRm = Math.min(depositRm, totalRm);
   const balanceRm = Math.max(totalRm - cappedDepositRm, 0);
@@ -169,8 +176,7 @@ export function calculateBookingInvoice(
 ): BookingQuotationSummary {
   return calculateBookingQuotation({
     chargeBy: "package",
-    selectedPackage: { name: packageId, price: 0, deposit: 0 },
-    selectedStyle: null,
+    selectedPackages: [{ name: packageId, price: 0, deposit: 0 }],
     selectedAddOns: addOnIds.map((id) => ({ name: id, price: 0 })),
   });
 }

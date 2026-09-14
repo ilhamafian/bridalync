@@ -8,16 +8,15 @@ export type SerializedBooking = {
   freelancerUsername: string;
   freelancerUserId: string;
   contact: Booking["contact"];
-  packageId: string;
-  packageName: string;
-  styleId: string | null;
-  styleName: string | null;
+  packageIds: string[];
+  packageNames: string;
   addOnIds: string[];
   sessions: Array<{
     status: Booking["sessions"][number]["status"];
     name: string;
-    style?: string;
-    style_variation?: string;
+    packageId: string;
+    styleId?: string;
+    styleName?: string;
     order: number;
     date: string;
     time_slot: Booking["sessions"][number]["time_slot"];
@@ -51,10 +50,8 @@ export function serializeBooking(
     freelancerUsername: booking.freelancerUsername,
     freelancerUserId: booking.freelancerUserId,
     contact: booking.contact,
-    packageId: booking.packageId,
-    packageName: booking.packageName,
-    styleId: booking.styleId ?? null,
-    styleName: booking.styleName ?? null,
+    packageIds: booking.packageIds,
+    packageNames: booking.packageNames,
     addOnIds: booking.addOnIds,
     sessions: booking.sessions.map((session) => ({
       ...session,

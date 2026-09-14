@@ -414,12 +414,7 @@ function BookingResultPageContent() {
             {t.bookingDetails}
           </p>
           <div className={frostedPanelClassName}>
-            <p className="font-medium text-foreground">{booking.packageName}</p>
-            {booking.styleName && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t.styleLabel}: {booking.styleName}
-              </p>
-            )}
+            <p className="font-medium text-foreground">{booking.packageNames}</p>
             <p className="mt-1 text-xs text-muted-foreground">
               {booking.contact.name} · {booking.contact.email}
             </p>

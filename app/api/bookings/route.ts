@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: message }, 409);
     }
 
-    const { invoice, packageName, styleId, styleName, paymentOption } =
+    const { invoice, packageNames, resolvedSessionStyles, paymentOption } =
       await resolveBookingQuotation(freelancer.userId, data);
 
     const isManualBooking =
@@ -151,12 +151,10 @@ export async function POST(req: NextRequest) {
       freelancerUsername: data.freelancerUsername.toLowerCase(),
       freelancerUserId: freelancer.userId,
       contact: data.contact,
-      packageId: data.packageId,
-      packageName,
-      styleId,
-      styleName,
+      packageIds: data.packageIds,
+      packageNames,
       addOnIds: data.addOns.map((addOn) => addOn.id),
-      sessions: mapSessionsForStorage(data),
+      sessions: mapSessionsForStorage(data, resolvedSessionStyles),
       invoice,
       paymentOption,
       status: data.intent === "booking" ? "pending" : "enquiry",

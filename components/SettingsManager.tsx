@@ -486,6 +486,11 @@ export function SettingsManager({
                   onChange={(event) => setRatePerKm(event.target.value)}
                   placeholder="1.00"
                 />
+                <p className="text-sm text-muted-foreground">
+                  Travel is charged as a round trip — to the client and back to
+                  your base. For example, 10 km away at RM 1/km adds RM 20 to
+                  the booking.
+                </p>
               </Field>
               <Field label="Base location">
                 <LocationMapPicker

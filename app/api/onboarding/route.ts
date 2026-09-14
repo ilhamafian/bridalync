@@ -36,94 +36,20 @@ const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
 };
 
 const MUA_PACKAGES = [
-  {
-    name: "Nikah",
-    price: 800,
-    deposit: 250,
-    order: 0,
-    session_templates: [{ name: "Nikah", order: 0 }],
-  },
-  {
-    name: "Sanding",
-    price: 800,
-    deposit: 250,
-    order: 1,
-    session_templates: [{ name: "Sanding", order: 0 }],
-  },
-  {
-    name: "Nikah & Sanding",
-    price: 1500,
-    deposit: 400, 
-    order: 2,
-    session_templates: [
-      { name: "Nikah", order: 0 },
-      { name: "Sanding", order: 1 },
-    ],
-  },
-  {
-    name: "Tunang",
-    price: 450,
-    deposit: 150,
-    order: 3,
-    session_templates: [{ name: "Tunang", order: 0 }],
-  },
-  {
-    name: "Konvo",
-    price: 450,
-    deposit: 150,
-    order: 4,
-    session_templates: [{ name: "Konvo", order: 0 }],
-  },
-  {
-    name: "Photoshoot",
-    price: 450,
-    deposit: 150,
-    order: 5,
-    session_templates: [{ name: "Photoshoot", order: 0 }],
-  },
-  {
-    name: "Trial Makeup",
-    price: 600,
-    deposit: 200,
-    order: 6,
-    session_templates: [{ name: "Trial Makeup", order: 0 }],
-  },
+  { name: "Nikah", price: 800, deposit: 250, order: 0 },
+  { name: "Sanding", price: 800, deposit: 250, order: 1 },
+  { name: "Tunang", price: 450, deposit: 150, order: 2 },
+  { name: "Konvo", price: 450, deposit: 150, order: 3 },
+  { name: "Photoshoot", price: 450, deposit: 150, order: 4 },
+  { name: "Trial Makeup", price: 600, deposit: 200, order: 5 },
 ] as const;
 
 const HS_PACKAGES = [
-  {
-    name: "Nikah",
-    order: 0,
-    session_templates: [{ name: "Nikah", order: 0 }],
-  },
-  {
-    name: "Sanding",
-    order: 1,
-    session_templates: [{ name: "Sanding", order: 0 }],
-  },
-  {
-    name: "Nikah & Sanding",
-    order: 2,
-    session_templates: [
-      { name: "Nikah", order: 0 },
-      { name: "Sanding", order: 1 },
-    ],
-  },
-  {
-    name: "Tunang",
-    order: 3,
-    session_templates: [{ name: "Tunang", order: 0 }],
-  },
-  {
-    name: "Event",
-    order: 4,
-    session_templates: [{ name: "Event", order: 0 }],
-  },
-  {
-    name: "Trial Hijab",
-    order: 6,
-    session_templates: [{ name: "Trial Hijab", order: 0 }],
-  },
+  { name: "Nikah", order: 0 },
+  { name: "Sanding", order: 1 },
+  { name: "Tunang", order: 2 },
+  { name: "Event", order: 3 },
+  { name: "Trial Hijab", order: 4 },
 ] as const;
 
 const STYLES = [

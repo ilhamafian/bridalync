@@ -6,8 +6,9 @@ import { timeSlotSchema } from "./settingSchema";
 export const sessionSchema = z.object({
     status: z.enum(["scheduled", "completed", "cancelled", "rescheduled"]),
     name: z.string(),
-    style: z.string().optional(),
-    style_variation: z.string().optional(),
+    packageId: z.string().min(1),
+    styleId: z.string().optional(),
+    styleName: z.string().optional(),
     order: z.number(),
     date: z.coerce.date(),
     time_slot: timeSlotSchema,

@@ -343,18 +343,20 @@ function DraggableWhatsAppButton({ href }: { href: string }) {
   );
 }
 
-type SessionTemplate = {
-  name: string;
-  order: number;
-};
-
 type ClientPackage = {
   _id?: unknown;
   name: string;
   price?: number;
   deposit?: number;
   order: number;
-  session_templates: SessionTemplate[];
+};
+
+type SelectedPackage = {
+  id: string;
+  name: string;
+  order: number;
+  price: number;
+  deposit: number;
 };
 
 type StyleVariant = {
@@ -487,25 +489,62 @@ function toPackageOptions(packages: ClientPackage[]): PackageOption[] {
       id: normalizePackageId(pkg._id),
       name: pkg.name,
       price: pkg.price ?? 0,
-      sessionCount: pkg.session_templates.length,
     }))
     .filter((pkg) => pkg.id.length > 0);
 }
 
-function sortSessionTemplates(templates: SessionTemplate[]): SessionTemplate[] {
-  return [...templates].sort((a, b) => a.order - b.order);
+function toSelectedPackages(
+  packages: ClientPackage[],
+  selectedPackageIds: string[]
+): SelectedPackage[] {
+  const selectedSet = new Set(selectedPackageIds);
+
+  return sortPackages(packages)
+    .map((pkg) => ({
+      id: normalizePackageId(pkg._id),
+      name: pkg.name,
+      order: pkg.order,
+      price: pkg.price ?? 0,
+      deposit: pkg.deposit ?? 0,
+    }))
+    .filter((pkg) => pkg.id.length > 0 && selectedSet.has(pkg.id))
+    .map((pkg, index) => ({ ...pkg, order: index }));
 }
 
-function getNextSessionTemplate(
-  templates: SessionTemplate[],
+function getNextPackageToSchedule(
+  packages: SelectedPackage[],
   scheduled: SessionForm[]
-): SessionTemplate | null {
-  const scheduledOrders = new Set(scheduled.map((session) => session.order));
-  return (
-    sortSessionTemplates(templates).find(
-      (template) => !scheduledOrders.has(template.order)
-    ) ?? null
+): SelectedPackage | null {
+  const scheduledPackageIds = new Set(scheduled.map((session) => session.packageId));
+  return packages.find((pkg) => !scheduledPackageIds.has(pkg.id)) ?? null;
+}
+
+function resolveStyleVariant(
+  variantId: string,
+  styleCategories: ClientStyleCategory[]
+): SelectedStyleForBooking | null {
+  const separatorIndex = variantId.lastIndexOf(":");
+  if (separatorIndex === -1) return null;
+
+  const styleDocId = variantId.slice(0, separatorIndex);
+  const variantOrder = Number.parseInt(variantId.slice(separatorIndex + 1), 10);
+  if (!styleDocId || Number.isNaN(variantOrder)) return null;
+
+  const category = styleCategories.find(
+    (style) => normalizePackageId(style._id) === styleDocId
   );
+  if (!category) return null;
+
+  const variant = category.variants.find((item) => item.order === variantOrder);
+  if (!variant) return null;
+
+  return {
+    id: variantId,
+    name: variant.name,
+    price: variant.price,
+    deposit: variant.deposit,
+    categoryName: category.name,
+  };
 }
 
 function formatTimeSlot(slot: TimeSlot): string {
@@ -557,7 +596,7 @@ export default function ClientPage() {
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [settings, setSettings] = useState<PublicSetting | null>(null);
   const [bookedSlots, setBookedSlots] = useState<PublicBookedSlot[]>([]);
-  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(null);
+  const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
   const [user, setUser] = useState<PublicProfile | null>(null);
   const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
@@ -571,10 +610,12 @@ export default function ClientPage() {
     null
   );
   const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
-  const [selectedStyleCategoryId, setSelectedStyleCategoryId] = useState<
-    string | null
-  >(null);
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [styleCategoryBySessionKey, setStyleCategoryBySessionKey] = useState<
+    Record<string, string | null>
+  >({});
+  const [styleVariantBySessionKey, setStyleVariantBySessionKey] = useState<
+    Record<string, string | null>
+  >({});
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
@@ -588,22 +629,14 @@ export default function ClientPage() {
     [clientPackages]
   );
 
-  const selectedPackage = useMemo(
-    () =>
-      clientPackages.find(
-        (pkg) => normalizePackageId(pkg._id) === selectedPackageId
-      ) ?? null,
-    [clientPackages, selectedPackageId]
+  const selectedPackages = useMemo(
+    () => toSelectedPackages(clientPackages, selectedPackageIds),
+    [clientPackages, selectedPackageIds]
   );
 
-  const sessionTemplates = useMemo(
-    () => sortSessionTemplates(selectedPackage?.session_templates ?? []),
-    [selectedPackage]
-  );
-
-  const nextSessionTemplate = useMemo(
-    () => getNextSessionTemplate(sessionTemplates, sessions),
-    [sessionTemplates, sessions]
+  const nextPackageToSchedule = useMemo(
+    () => getNextPackageToSchedule(selectedPackages, sessions),
+    [selectedPackages, sessions]
   );
 
   const timeSlots = settings?.time_slots ?? [];
@@ -669,37 +702,30 @@ export default function ClientPage() {
     [styles]
   );
 
-  const selectedStyle = useMemo((): SelectedStyleForBooking | null => {
-    if (!selectedVariantId) return null;
+  const chargeBy = settings?.charge_by ?? "package";
 
-    const separatorIndex = selectedVariantId.lastIndexOf(":");
-    if (separatorIndex === -1) return null;
+  const selectedSessionStyles = useMemo(() => {
+    return sessions
+      .map((session) => {
+        const variantId = styleVariantBySessionKey[session.client_key];
+        if (!variantId) return null;
 
-    const styleDocId = selectedVariantId.slice(0, separatorIndex);
-    const variantOrder = Number.parseInt(
-      selectedVariantId.slice(separatorIndex + 1),
-      10
-    );
-    if (!styleDocId || Number.isNaN(variantOrder)) return null;
+        const variant = resolveStyleVariant(variantId, styles);
+        if (!variant) return null;
 
-    const category = styles.find(
-      (style) => normalizePackageId(style._id) === styleDocId
-    );
-    if (!category) return null;
+        return {
+          name: `${session.name} — ${variant.categoryName} — ${variant.name}`,
+          price: variant.price,
+          deposit: variant.deposit,
+        };
+      })
+      .filter((style): style is NonNullable<typeof style> => style !== null);
+  }, [sessions, styleVariantBySessionKey, styles]);
 
-    const variant = category.variants.find(
-      (item) => item.order === variantOrder
-    );
-    if (!variant) return null;
-
-    return {
-      id: selectedVariantId,
-      name: variant.name,
-      price: variant.price,
-      deposit: variant.deposit,
-      categoryName: category.name,
-    };
-  }, [selectedVariantId, styles]);
+  const allSessionsStyled =
+    chargeBy !== "style" ||
+    (sessions.length > 0 &&
+      sessions.every((session) => styleVariantBySessionKey[session.client_key]));
 
   const addOnOptions = useMemo(
     () =>
@@ -713,8 +739,6 @@ export default function ClientPage() {
       }),
     [addOns]
   );
-
-  const chargeBy = settings?.charge_by ?? "package";
 
   const selectedAddOnItems = useMemo(
     () =>
@@ -741,21 +765,13 @@ export default function ClientPage() {
     () =>
       calculateBookingQuotation({
         chargeBy,
-        selectedPackage: selectedPackage
-          ? {
-              name: selectedPackage.name,
-              price: selectedPackage.price ?? 0,
-              deposit:
-                chargeBy === "style" ? 0 : (selectedPackage.deposit ?? 0),
-            }
-          : null,
-        selectedStyle: selectedStyle
-          ? {
-              name: selectedStyle.name,
-              price: selectedStyle.price,
-              deposit: selectedStyle.deposit,
-            }
-          : null,
+        selectedPackages: selectedPackages.map((pkg) => ({
+          name: pkg.name,
+          price: pkg.price,
+          deposit: chargeBy === "style" ? 0 : pkg.deposit,
+        })),
+        selectedSessionStyles:
+          chargeBy === "style" ? selectedSessionStyles : undefined,
         selectedAddOns: selectedAddOnItems.map((addOn) => ({
           name: addOn.name,
           price: addOn.price,
@@ -774,8 +790,8 @@ export default function ClientPage() {
     [
       settings,
       chargeBy,
-      selectedPackage,
-      selectedStyle,
+      selectedPackages,
+      selectedSessionStyles,
       selectedAddOnItems,
       sessions,
       distanceKmBySessionKey,
@@ -818,9 +834,11 @@ export default function ClientPage() {
       setBookedSlots(
         (data.booked_slots as PublicBookedSlot[] | undefined) ?? []
       );
-      setSelectedPackageId((current) => current ?? packageOptions[0]?.id ?? null);
-      setSelectedStyleCategoryId(null);
-      setSelectedVariantId(null);
+      setSelectedPackageIds((current) =>
+        current.length > 0 ? current : packageOptions[0]?.id ? [packageOptions[0].id] : []
+      );
+      setStyleCategoryBySessionKey({});
+      setStyleVariantBySessionKey({});
       setSelectedAddOnIds([]);
       setTermsAccepted(false);
     } catch (error) {
@@ -835,16 +853,19 @@ export default function ClientPage() {
   }, [client]);
 
   useEffect(() => {
-    setSessions([]);
+    const selectedSet = new Set(selectedPackageIds);
+    setSessions((current) =>
+      current.filter((session) => selectedSet.has(session.packageId))
+    );
     setSelectedDate(undefined);
     setSelectedTimeSlot(null);
     setSharedLocation(null);
     setSameLocationForAll(true);
-    setSelectedStyleCategoryId(null);
-    setSelectedVariantId(null);
+    setStyleCategoryBySessionKey({});
+    setStyleVariantBySessionKey({});
     setSelectedAddOnIds([]);
     setTermsAccepted(false);
-  }, [selectedPackageId]);
+  }, [selectedPackageIds]);
 
   useEffect(() => {
     // Keep session locations in sync whenever the shared picker is in use
@@ -1013,7 +1034,7 @@ export default function ClientPage() {
   }, [sessions, travelOrigin?.lat, travelOrigin?.lng]);
 
   function handleAddSession() {
-    if (!nextSessionTemplate || !selectedDate || !selectedTimeSlot) return;
+    if (!nextPackageToSchedule || !selectedDate || !selectedTimeSlot) return;
     if (isSlotTaken(selectedDate, selectedTimeSlot, bookedSlots, sessions)) {
       return;
     }
@@ -1023,8 +1044,9 @@ export default function ClientPage() {
       {
         client_key: crypto.randomUUID(),
         status: "scheduled",
-        order: nextSessionTemplate.order,
-        name: nextSessionTemplate.name,
+        order: nextPackageToSchedule.order,
+        name: nextPackageToSchedule.name,
+        packageId: nextPackageToSchedule.id,
         date: normalizeSessionDate(selectedDate),
         time_slot: selectedTimeSlot,
       },
@@ -1032,26 +1054,32 @@ export default function ClientPage() {
     setSelectedDate(undefined);
     setSelectedTimeSlot(null);
 
-    // Single-session packages: add and continue — no separate Next click.
-    if (sessionTemplates.length === 1) {
+    if (selectedPackageIds.length === 1) {
       goToNextStep();
     }
   }
 
   function handleRemoveSession(clientKey: string) {
-    setSessions((current) => {
-      const removed = current.find((session) => session.client_key === clientKey);
-      if (!removed) return current;
-
-      return current.filter((session) => session.order < removed.order);
+    setSessions((current) =>
+      current.filter((session) => session.client_key !== clientKey)
+    );
+    setStyleCategoryBySessionKey((current) => {
+      const next = { ...current };
+      delete next[clientKey];
+      return next;
+    });
+    setStyleVariantBySessionKey((current) => {
+      const next = { ...current };
+      delete next[clientKey];
+      return next;
     });
   }
 
-  const isSingleSessionPackage = sessionTemplates.length === 1;
+  const isSinglePackageSelection = selectedPackageIds.length === 1;
 
   const allSessionsScheduled =
-    sessionTemplates.length > 0 &&
-    sessions.length === sessionTemplates.length;
+    selectedPackageIds.length > 0 &&
+    sessions.length === selectedPackageIds.length;
 
   const allLocationsSet =
     sessions.length > 0 && sessions.every((session) => session.location);
@@ -1113,7 +1141,9 @@ export default function ClientPage() {
   }
 
   async function handlePay(receipt?: File | null) {
-    if (isPaying || !selectedPackageId || sessions.length === 0) return;
+    if (isPaying || selectedPackageIds.length === 0 || sessions.length === 0) {
+      return;
+    }
 
     const paymentMethod = settings?.payment.method ?? "manual_transfer";
     const isManual = paymentMethod === "manual_transfer";
@@ -1131,18 +1161,28 @@ export default function ClientPage() {
         freelancerUsername: client,
         intent: "booking",
         contact,
-        packageId: selectedPackageId,
-        style: selectedStyle
-          ? {
-              id: selectedStyle.id,
-              name: selectedStyle.name,
-              price: selectedStyle.price,
-              deposit: selectedStyle.deposit,
-              categoryName: selectedStyle.categoryName,
-            }
-          : undefined,
+        packageIds: selectedPackageIds,
         addOns: selectedAddOnItems,
-        sessions,
+        sessions: sessions.map((session) => {
+          const variantId = styleVariantBySessionKey[session.client_key];
+          const styleSelection =
+            chargeBy === "style" && variantId
+              ? resolveStyleVariant(variantId, styles)
+              : null;
+
+          return {
+            ...session,
+            style: styleSelection
+              ? {
+                  id: styleSelection.id,
+                  name: styleSelection.name,
+                  price: styleSelection.price,
+                  deposit: styleSelection.deposit,
+                  categoryName: styleSelection.categoryName,
+                }
+              : undefined,
+          };
+        }),
         distanceKmBySessionKey,
         paymentOption: effectivePaymentOption,
       };
@@ -1373,15 +1413,16 @@ export default function ClientPage() {
               <div className="mx-auto w-full max-w-xs px-2">
                 <BookingPackagePicker
                   packages={packages}
-                  selectedPackageId={selectedPackageId}
-                  onPackageChange={setSelectedPackageId}
+                  selectedPackageIds={selectedPackageIds}
+                  onPackageChange={setSelectedPackageIds}
+                  showPrice={chargeBy === "package"}
                 />
               </div>
             )}
             <Button
               size="lg"
               className="mt-4 bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={!selectedPackageId}
+              disabled={selectedPackageIds.length === 0}
               onClick={goToNextStep}
             >
               {t.next}
@@ -1396,24 +1437,24 @@ export default function ClientPage() {
           <h1
             className={cn(
               "max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50",
-              isSingleSessionPackage ? "mb-6" : "mb-2"
+              isSinglePackageSelection ? "mb-6" : "mb-2"
             )}
           >
-            {nextSessionTemplate
-              ? format(t.bookSession, { sessionName: nextSessionTemplate.name })
+            {nextPackageToSchedule
+              ? format(t.bookSession, { sessionName: nextPackageToSchedule.name })
               : t.allSessionsScheduled}
           </h1>
-          {!isSingleSessionPackage && (
+          {!isSinglePackageSelection && (
             <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
               {format(t.sessionsScheduledCount, {
                 scheduled: sessions.length,
-                total: sessionTemplates.length,
+                total: selectedPackageIds.length,
               })}
             </p>
           )}
 
           <div className="flex w-full flex-col items-end gap-4">
-            {nextSessionTemplate && (
+            {nextPackageToSchedule && (
               <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
                 <CardContent className="flex flex-col items-center gap-4 pt-1">
                   <Calendar
@@ -1487,7 +1528,7 @@ export default function ClientPage() {
               </Card>
             )}
 
-            {(!isSingleSessionPackage || allSessionsScheduled) && (
+            {(!isSinglePackageSelection || allSessionsScheduled) && (
               <div className="w-full space-y-2">
                 <p className="text-sm font-medium text-foreground">
                   {t.yourBookings}
@@ -1502,13 +1543,13 @@ export default function ClientPage() {
             )}
 
             <div className="flex w-full justify-end gap-2">
-              {nextSessionTemplate && (
+              {nextPackageToSchedule && (
                 <Button
                   type="button"
-                  variant={isSingleSessionPackage ? "default" : "outline"}
+                  variant={isSinglePackageSelection ? "default" : "outline"}
                   size="lg"
                   className={
-                    isSingleSessionPackage
+                    isSinglePackageSelection
                       ? "bg-rose-800 text-white hover:bg-rose-800/90"
                       : undefined
                   }
@@ -1525,11 +1566,11 @@ export default function ClientPage() {
                   onClick={handleAddSession}
                 >
                   {format(t.addSession, {
-                    sessionName: nextSessionTemplate.name,
+                    sessionName: nextPackageToSchedule.name,
                   })}
                 </Button>
               )}
-              {(!isSingleSessionPackage || allSessionsScheduled) && (
+              {(!isSinglePackageSelection || allSessionsScheduled) && (
                 <Button
                   size="lg"
                   className="bg-rose-800 text-white hover:bg-rose-800/90"
@@ -1604,20 +1645,41 @@ export default function ClientPage() {
             {t.chooseStyleHelper}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
-            <div className="mx-auto w-full max-w-sm px-2">
-              <BookingStylePicker
-                categories={styleCategories}
-                selectedCategoryId={selectedStyleCategoryId}
-                selectedVariantId={selectedVariantId}
-                onCategoryChange={setSelectedStyleCategoryId}
-                onVariantChange={setSelectedVariantId}
-              />
-            </div>
+            <ul className="mx-auto flex w-full max-w-sm flex-col gap-6 px-2">
+              {sessions.map((session) => (
+                <li key={session.client_key} className="flex flex-col gap-3">
+                  <p className="text-sm font-medium text-foreground">
+                    {format(t.chooseStyleForSession, { sessionName: session.name })}
+                  </p>
+                  <BookingStylePicker
+                    categories={styleCategories}
+                    selectedCategoryId={
+                      styleCategoryBySessionKey[session.client_key] ?? null
+                    }
+                    selectedVariantId={
+                      styleVariantBySessionKey[session.client_key] ?? null
+                    }
+                    onCategoryChange={(categoryId) =>
+                      setStyleCategoryBySessionKey((current) => ({
+                        ...current,
+                        [session.client_key]: categoryId,
+                      }))
+                    }
+                    onVariantChange={(variantId) =>
+                      setStyleVariantBySessionKey((current) => ({
+                        ...current,
+                        [session.client_key]: variantId,
+                      }))
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
             <div className="flex w-full justify-end">
               <Button
                 size="lg"
                 className="bg-rose-800 text-white hover:bg-rose-800/90"
-                disabled={!selectedVariantId}
+                disabled={!allSessionsStyled}
                 onClick={goToNextStep}
               >
                 {t.next}

@@ -15,8 +15,11 @@ function escapeHtml(value: string) {
 function buildSessionLines(booking: PersistedBooking) {
   return booking.sessions.map((session) => {
     const summary = formatSessionSummary(session);
-    if (!session.location) return summary;
-    return `${summary}\n  Location: ${formatLocationAddress(session.location)}`;
+    const styleLine = session.styleName
+      ? `\n  Style: ${session.styleName}`
+      : "";
+    if (!session.location) return `${summary}${styleLine}`;
+    return `${summary}${styleLine}\n  Location: ${formatLocationAddress(session.location)}`;
   });
 }
 
@@ -59,8 +62,7 @@ export async function sendBalanceDueReminderEmail(input: {
     `Deposit already paid: ${formatRm(booking.invoice.depositRm)}`,
     "",
     `Booking ref: ${bookingRef}`,
-    `Package: ${booking.packageName}`,
-    ...(booking.styleName ? [`Style: ${booking.styleName}`] : []),
+    `Packages: ${booking.packageNames}`,
     "",
     "Sessions:",
     ...sessionLines.map((line) => `• ${line}`),
@@ -109,12 +111,7 @@ export async function sendBalanceDueReminderEmail(input: {
       </table>
       <p style="margin: 24px 0 8px; font-size: 14px; color: #666;">Booking ref</p>
       <p style="margin: 0 0 16px; font-family: monospace;">${escapeHtml(bookingRef)}</p>
-      <p style="margin: 0 0 4px;"><strong>Package:</strong> ${escapeHtml(booking.packageName)}</p>
-      ${
-        booking.styleName
-          ? `<p style="margin: 0 0 16px;"><strong>Style:</strong> ${escapeHtml(booking.styleName)}</p>`
-          : `<p style="margin: 0 0 16px;"></p>`
-      }
+      <p style="margin: 0 0 16px;"><strong>Packages:</strong> ${escapeHtml(booking.packageNames)}</p>
       <p style="margin: 0 0 8px;"><strong>Sessions</strong></p>
       <ul style="padding-left: 18px; margin: 0 0 20px;">
         ${sessionHtml}
@@ -133,7 +130,7 @@ export async function sendBalanceDueReminderEmail(input: {
 
   await sendEmail({
     to: email,
-    subject: `Balance ${dueLabel} — ${booking.packageName}`,
+    subject: `Balance ${dueLabel} — ${booking.packageNames}`,
     html,
     text,
   });

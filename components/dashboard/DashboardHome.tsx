@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { formatRm } from "@/utils/booking/pricing";
+import { formatLocationAddress } from "@/utils/session";
 import {
   scheduleStatusLabel,
   type ActivityItem,
@@ -124,7 +125,9 @@ function BookingCard({
         {item.location ? (
           <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
             <IconMapPin className="mt-0.5 size-4 shrink-0" />
-            <span className="line-clamp-2">{item.location.formattedAddress}</span>
+            <span className="line-clamp-2">
+              {formatLocationAddress(item.location)}
+            </span>
           </p>
         ) : null}
       </CardHeader>

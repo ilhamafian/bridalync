@@ -61,7 +61,6 @@ export type PackageCatalogItem = {
   name: string;
   price: number;
   deposit: number;
-  session_templates: { name: string; order: number }[];
 };
 
 export type StyleCatalogItem = {
@@ -95,6 +94,8 @@ type DashboardStatus = "confirmed" | "completed" | "cancelled";
 type SessionFormRow = {
   client_key: string;
   name: string;
+  packageId: string;
+  styleId: string;
   order: number;
   date: string;
   time_slot_key: string;
@@ -106,8 +107,7 @@ type BookingFormState = {
   contact_email: string;
   contact_mobile: string;
   contact_country_code: string;
-  packageId: string;
-  styleId: string;
+  packageIds: string[];
   addOnIds: string[];
   sessions: SessionFormRow[];
   status: DashboardStatus;
@@ -280,24 +280,33 @@ function statusBadgeVariant(
   }
 }
 
-function sessionsFromPackage(
-  pkg: PackageCatalogItem | undefined,
+function sessionsFromPackages(
+  packageIds: string[],
+  packageCatalog: PackageCatalogItem[],
+  existingSessions: SessionFormRow[],
   timeSlots: TimeSlot[]
 ): SessionFormRow[] {
   const defaultSlot = timeSlots[0];
-  const templates =
-    pkg?.session_templates?.length
-      ? pkg.session_templates
-      : [{ name: "Session 1", order: 0 }];
+  const existingByPackageId = new Map(
+    existingSessions.map((session) => [session.packageId, session])
+  );
 
-  return templates.map((template, index) => ({
-    client_key: createRowId(),
-    name: template.name,
-    order: template.order ?? index,
-    date: "",
-    time_slot_key: defaultSlot ? timeSlotKey(defaultSlot) : "",
-    location: null,
-  }));
+  return packageIds.map((packageId, index) => {
+    const existing = existingByPackageId.get(packageId);
+    if (existing) return existing;
+
+    const pkg = packageCatalog.find((item) => item._id === packageId);
+    return {
+      client_key: createRowId(),
+      name: pkg?.name ?? `Session ${index + 1}`,
+      packageId,
+      styleId: "",
+      order: index,
+      date: "",
+      time_slot_key: defaultSlot ? timeSlotKey(defaultSlot) : "",
+      location: null,
+    };
+  });
 }
 
 function emptyForm(timeSlots: TimeSlot[]): BookingFormState {
@@ -306,10 +315,9 @@ function emptyForm(timeSlots: TimeSlot[]): BookingFormState {
     contact_email: "",
     contact_mobile: "",
     contact_country_code: DEFAULT_COUNTRY_CODE,
-    packageId: "",
-    styleId: "",
+    packageIds: [],
     addOnIds: [],
-    sessions: sessionsFromPackage(undefined, timeSlots),
+    sessions: [],
     status: "confirmed",
     paymentOption: "deposit",
   };
@@ -326,12 +334,13 @@ function bookingToForm(
     contact_email: booking.contact.email,
     contact_mobile: booking.contact.mobile ?? "",
     contact_country_code: booking.contact.country_code ?? DEFAULT_COUNTRY_CODE,
-    packageId: booking.packageId,
-    styleId: booking.styleId ?? "",
+    packageIds: booking.packageIds,
     addOnIds: booking.addOnIds,
     sessions: booking.sessions.map((session, index) => ({
       client_key: session.client_key ?? createRowId(),
       name: session.name,
+      packageId: session.packageId,
+      styleId: session.styleId ?? "",
       order: session.order ?? index,
       date: toDateInputValue(session.date),
       time_slot_key: session.time_slot
@@ -436,13 +445,23 @@ export function BookingsManager({
     setSheetOpen(true);
   }
 
-  function handlePackageChange(packageId: string) {
-    const pkg = packages.find((item) => item._id === packageId);
-    setForm((current) => ({
-      ...current,
-      packageId,
-      sessions: sessionsFromPackage(pkg, timeSlots),
-    }));
+  function togglePackageId(packageId: string, checked: boolean) {
+    setForm((current) => {
+      const packageIds = checked
+        ? [...current.packageIds, packageId]
+        : current.packageIds.filter((id) => id !== packageId);
+
+      return {
+        ...current,
+        packageIds,
+        sessions: sessionsFromPackages(
+          packageIds,
+          packages,
+          current.sessions,
+          timeSlots
+        ),
+      };
+    });
   }
 
   function toggleAddOn(addOnId: string, checked: boolean) {
@@ -467,9 +486,8 @@ export function BookingsManager({
   }
 
   function buildPayload() {
-    const selectedPackage = packages.find((pkg) => pkg._id === form.packageId);
-    if (!selectedPackage) {
-      return { error: "Select a package." };
+    if (form.packageIds.length === 0) {
+      return { error: "Select at least one package." };
     }
 
     if (!form.contact_name.trim()) {
@@ -480,17 +498,23 @@ export function BookingsManager({
       return { error: "Client email is required." };
     }
 
-    if (chargeBy === "style" && !form.styleId) {
-      return { error: "Select a style." };
-    }
-
     if (form.sessions.length === 0) {
       return { error: "Add at least one session." };
+    }
+
+    if (form.sessions.length !== form.packageIds.length) {
+      return { error: "Each selected package needs one session." };
     }
 
     for (const session of form.sessions) {
       if (!session.name.trim()) {
         return { error: "Each session needs a name." };
+      }
+      if (!session.packageId) {
+        return { error: "Each session needs a package." };
+      }
+      if (chargeBy === "style" && !session.styleId) {
+        return { error: "Each session needs a style." };
       }
       if (!session.date) {
         return { error: "Each session needs a date." };
@@ -503,9 +527,6 @@ export function BookingsManager({
       }
     }
 
-    const selectedStyle = styleOptions.find(
-      (option) => option.id === form.styleId
-    );
     const selectedAddOns = addOns
       .filter((addOn) => form.addOnIds.includes(addOn._id))
       .map((addOn) => ({
@@ -522,26 +543,33 @@ export function BookingsManager({
           mobile: form.contact_mobile.trim() || undefined,
           country_code: form.contact_country_code || undefined,
         },
-        packageId: form.packageId,
-        style: selectedStyle
-          ? {
-              id: selectedStyle.id,
-              name: selectedStyle.name,
-              price: selectedStyle.price,
-              deposit: selectedStyle.deposit,
-              categoryName: selectedStyle.categoryName,
-            }
-          : undefined,
+        packageIds: form.packageIds,
         addOns: selectedAddOns,
-        sessions: form.sessions.map((session, index) => ({
-          client_key: session.client_key,
-          status: "scheduled" as const,
-          name: session.name.trim(),
-          order: index,
-          date: new Date(`${session.date}T12:00:00`),
-          time_slot: parseTimeSlotKey(session.time_slot_key)!,
-          location: session.location!,
-        })),
+        sessions: form.sessions.map((session, index) => {
+          const selectedStyle = styleOptions.find(
+            (option) => option.id === session.styleId
+          );
+
+          return {
+            client_key: session.client_key,
+            status: "scheduled" as const,
+            name: session.name.trim(),
+            packageId: session.packageId,
+            order: index,
+            date: new Date(`${session.date}T12:00:00`),
+            time_slot: parseTimeSlotKey(session.time_slot_key)!,
+            location: session.location!,
+            style: selectedStyle
+              ? {
+                  id: selectedStyle.id,
+                  name: selectedStyle.name,
+                  price: selectedStyle.price,
+                  deposit: selectedStyle.deposit,
+                  categoryName: selectedStyle.categoryName,
+                }
+              : undefined,
+          };
+        }),
         paymentOption: form.paymentOption,
         status: form.status,
       },
@@ -692,8 +720,7 @@ export function BookingsManager({
                         ) : null}
                       </div>
                       <CardDescription className="mt-1">
-                        {booking.packageName}
-                        {booking.styleName ? ` · ${booking.styleName}` : ""}
+                        {booking.packageNames}
                       </CardDescription>
                       <p className="mt-2 text-sm text-muted-foreground">
                         {earliest
@@ -829,45 +856,39 @@ export function BookingsManager({
 
               <Separator />
 
-              <Field label="Package">
-                <Select
-                  value={form.packageId || undefined}
-                  onValueChange={handlePackageChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select package" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {packages.map((pkg) => (
-                      <SelectItem key={pkg._id} value={pkg._id}>
-                        {pkg.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-
-              {(chargeBy === "style" || styleOptions.length > 0) && (
-                <Field label={chargeBy === "style" ? "Style" : "Style (optional)"}>
-                  <Select
-                    value={form.styleId || undefined}
-                    onValueChange={(value) =>
-                      setForm((current) => ({ ...current, styleId: value }))
-                    }
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select style" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {styleOptions.map((option) => (
-                        <SelectItem key={option.id} value={option.id}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
+              <div className="flex flex-col gap-2">
+                <Label>Packages</Label>
+                <ul className="flex flex-col gap-2">
+                  {packages.map((pkg) => {
+                    const checked = form.packageIds.includes(pkg._id);
+                    return (
+                      <li
+                        key={pkg._id}
+                        className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) =>
+                            togglePackageId(pkg._id, value === true)
+                          }
+                          id={`package-${pkg._id}`}
+                        />
+                        <label
+                          htmlFor={`package-${pkg._id}`}
+                          className="flex flex-1 cursor-pointer items-center justify-between gap-2 text-sm"
+                        >
+                          <span>{pkg.name}</span>
+                          {chargeBy === "package" ? (
+                            <span className="text-muted-foreground">
+                              {formatRm(pkg.price)}
+                            </span>
+                          ) : null}
+                        </label>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
 
               {addOns.length > 0 ? (
                 <div className="flex flex-col gap-2">
@@ -924,6 +945,29 @@ export function BookingsManager({
                         }
                       />
                     </Field>
+                    {chargeBy === "style" ? (
+                      <Field label="Style">
+                        <Select
+                          value={session.styleId || undefined}
+                          onValueChange={(value) =>
+                            updateSession(session.client_key, {
+                              styleId: value,
+                            })
+                          }
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select style" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {styleOptions.map((option) => (
+                              <SelectItem key={option.id} value={option.id}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                    ) : null}
                     <Field label="Date">
                       <Input
                         className={inputClassName}

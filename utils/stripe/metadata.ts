@@ -7,8 +7,8 @@ export type BookingCheckoutMetadata = {
   platform: string;
   bookingId: string;
   freelancerUsername: string;
-  packageId: string;
-  packageName: string;
+  packageIds: string;
+  packageNames: string;
   clientName: string;
   clientEmail: string;
   paymentOption: string;
@@ -39,8 +39,8 @@ export function buildBookingCheckoutMetadata(input: {
     platform: "bridalync",
     bookingId,
     freelancerUsername: input.freelancerUsername,
-    packageId: input.booking.packageId,
-    packageName: input.booking.packageName,
+    packageIds: input.booking.packageIds.join(","),
+    packageNames: input.booking.packageNames,
     clientName: input.booking.contact.name,
     clientEmail: input.booking.contact.email,
     paymentOption: input.purpose === "balance" ? "balance" : paymentOption,

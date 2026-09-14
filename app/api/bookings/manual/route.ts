@@ -43,15 +43,14 @@ export async function POST(req: NextRequest) {
       freelancerUsername: username,
       intent: "booking",
       contact: data.contact,
-      packageId: data.packageId,
-      style: data.style,
+      packageIds: data.packageIds,
       addOns: data.addOns,
       sessions: data.sessions,
       distanceKmBySessionKey: data.distanceKmBySessionKey,
       paymentOption: data.paymentOption,
     };
 
-    const { invoice, packageName, styleId, styleName, paymentOption } =
+    const { invoice, packageNames, resolvedSessionStyles, paymentOption } =
       await resolveBookingQuotation(userId, quotationInput, {
         relaxPaymentDeadline: true,
       });
@@ -60,12 +59,10 @@ export async function POST(req: NextRequest) {
       freelancerUsername: username,
       freelancerUserId: userId,
       contact: data.contact,
-      packageId: data.packageId,
-      packageName,
-      styleId,
-      styleName,
+      packageIds: data.packageIds,
+      packageNames,
       addOnIds: data.addOns.map((addOn) => addOn.id),
-      sessions: mapSessionsForStorage(quotationInput),
+      sessions: mapSessionsForStorage(quotationInput, resolvedSessionStyles),
       invoice,
       paymentOption,
       status: data.status,

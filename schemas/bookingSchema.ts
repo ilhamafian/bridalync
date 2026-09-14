@@ -43,10 +43,8 @@ export const bookingSchema = z.object({
   freelancerUsername: z.string(),
   freelancerUserId: z.string(),
   contact: bookingContactSchema,
-  packageId: z.string(),
-  packageName: z.string(),
-  styleId: z.string().nullish(),
-  styleName: z.string().nullish(),
+  packageIds: z.array(z.string()).min(1),
+  packageNames: z.string(),
   addOnIds: z.array(z.string()),
   sessions: z.array(bookingSessionSchema),
   invoice: quotationSummarySchema,
@@ -79,7 +77,7 @@ export type Booking = z.infer<typeof bookingSchema>;
 /** Booking loaded from the database — always has an `_id`. */
 export type PersistedBooking = Booking & { _id: unknown };
 
-const bookingLineItemInputSchema = z.object({
+export const bookingLineItemInputSchema = z.object({
   id: z.string(),
   name: z.string(),
   price: z.number(),
@@ -91,18 +89,19 @@ const bookingSessionInputSchema = z.object({
   client_key: z.string(),
   status: z.literal("scheduled"),
   name: z.string(),
+  packageId: z.string().min(1),
   order: z.number(),
   date: z.coerce.date(),
   time_slot: timeSlotSchema,
   location: addressSchema,
+  style: bookingLineItemInputSchema.optional(),
 });
 
 export const createBookingRequestSchema = z.object({
   freelancerUsername: z.string().min(1),
   intent: z.enum(["booking", "enquiry"]).default("booking"),
   contact: bookingContactSchema,
-  packageId: z.string().min(1),
-  style: bookingLineItemInputSchema.optional(),
+  packageIds: z.array(z.string()).min(1),
   addOns: z.array(bookingLineItemInputSchema).default([]),
   sessions: z.array(bookingSessionInputSchema).min(1),
   distanceKmBySessionKey: z.record(z.string(), z.number()).optional(),
@@ -172,8 +171,7 @@ export const bookingStatusSchema = bookingSchema.shape.status;
 
 export const manualBookingInputSchema = z.object({
   contact: bookingContactSchema,
-  packageId: z.string().min(1),
-  style: bookingLineItemInputSchema.optional(),
+  packageIds: z.array(z.string()).min(1),
   addOns: z.array(bookingLineItemInputSchema).default([]),
   sessions: z.array(bookingSessionInputSchema).min(1),
   distanceKmBySessionKey: z.record(z.string(), z.number()).optional(),
