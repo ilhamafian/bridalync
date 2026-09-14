@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { compressImageFile } from "@/utils/image/compressClient";
 import { cn } from "@/lib/utils";
 import { formatWhatsAppDisplay } from "@/utils/socialLinks";
 
@@ -143,8 +144,10 @@ export function ProfileManager({
     setSuccess(null);
 
     try {
+      const prepared = await compressImageFile(file);
+
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", prepared);
       formData.append("folder", "profile-photos");
 
       const response = await fetch("/api/upload/image", {

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { compressImageFile } from "@/utils/image/compressClient";
 
 const LOGO_ASPECT = 16 / 9;
 
@@ -191,9 +192,10 @@ export function CompanyLogoUpload({
         croppedAreaPixels,
         cropSession.fileName
       );
+      const prepared = await compressImageFile(croppedFile);
 
       const formData = new FormData();
-      formData.append("file", croppedFile);
+      formData.append("file", prepared);
       if (uploadFolder != null && uploadFolder.length > 0) {
         formData.append("folder", uploadFolder);
       }

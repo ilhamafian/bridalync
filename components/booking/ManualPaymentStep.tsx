@@ -6,6 +6,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { compressImageFile } from "@/utils/image/compressClient";
 import { MANUAL_TRANSFER } from "@/utils/payment/manualTransfer";
 
 type ManualPaymentStepProps = {
@@ -49,7 +50,12 @@ export function ManualPaymentStep({
       setLocalError("Upload your payment receipt to continue.");
       return;
     }
-    await onSubmit(receipt);
+    try {
+      const compressed = await compressImageFile(receipt);
+      await onSubmit(compressed);
+    } catch {
+      setLocalError("Could not prepare receipt image. Try another photo.");
+    }
   }
 
   const displayError = localError || error;

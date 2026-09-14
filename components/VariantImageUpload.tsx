@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { compressImageFile } from "@/utils/image/compressClient";
 
 type VariantImageUploadProps = {
   value: string;
@@ -153,9 +154,10 @@ export function VariantImageUpload({
         croppedAreaPixels,
         cropSession.fileName
       );
+      const prepared = await compressImageFile(croppedFile);
 
       const formData = new FormData();
-      formData.append("file", croppedFile);
+      formData.append("file", prepared);
       formData.append("folder", "style-images");
 
       const response = await fetch("/api/upload/image", {

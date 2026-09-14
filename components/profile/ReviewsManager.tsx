@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { compressImageFile } from "@/utils/image/compressClient";
 import {
   Popover,
   PopoverContent,
@@ -102,8 +103,9 @@ export function ReviewsManager({
     try {
       const uploaded: string[] = [];
       for (const file of toUpload) {
+        const prepared = await compressImageFile(file);
         const formData = new FormData();
-        formData.append("file", file);
+        formData.append("file", prepared);
         formData.append("folder", "review-images");
 
         const response = await fetch("/api/upload/image", {
