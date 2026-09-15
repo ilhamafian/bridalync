@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { AddOnModel } from "@/models/AddOn";
+import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { StyleModel } from "@/models/Style";
 import { UserModel } from "@/models/User";
@@ -11,7 +12,11 @@ import { toPublicProfile } from "@/schemas/userSchema";
 import { toPublicReview } from "@/schemas/reviewSchema";
 import { publicSettingSchema } from "@/schemas/settingSchema";
 import { bookingModel } from "@/models/Booking";
-import { getOccupiedSlotsFromBookings } from "@/utils/booking/availability";
+import {
+  getOccupiedSlotsFromBookings,
+  toDateKey,
+} from "@/utils/booking/availability";
+import { toHotDateLookup } from "@/utils/booking/hotDates";
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,6 +57,12 @@ export async function GET(request: NextRequest) {
     const reviewDocs = await reviewModel.findByFreelancerUserId(user_id, 20);
     const reviews = reviewDocs.map(toPublicReview);
 
+    const todayKey = toDateKey(new Date());
+    const hotDateDocs = await hotDateModel.findByUserId(user_id, {
+      from: todayKey || undefined,
+    });
+    const hot_dates = hotDateDocs.map((doc) => toHotDateLookup(doc));
+
     const response = {
       user: publicUser,
       packages,
@@ -60,6 +71,7 @@ export async function GET(request: NextRequest) {
       settings: publicSettings,
       booked_slots,
       reviews,
+      hot_dates,
     };
     return createResponse(response);
   } catch (error) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
@@ -49,6 +49,12 @@ import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
 import type { Booking } from "@/schemas/bookingSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
+import {
+  buildHotDatePriceMap,
+  getStyleHotDatePrice,
+  resolveEffectivePrice,
+  type HotDateLookup,
+} from "@/utils/booking/hotDates";
 import {
   formatRm,
   getEarliestSessionDate,
@@ -395,6 +401,30 @@ export function BookingsManager({
   const [deleteTarget, setDeleteTarget] = useState<SerializedBooking | null>(
     null
   );
+  const [hotDates, setHotDates] = useState<HotDateLookup[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadHotDates() {
+      try {
+        const response = await fetch("/api/hot-dates");
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || cancelled) return;
+        setHotDates((data.hot_dates as HotDateLookup[] | undefined) ?? []);
+      } catch {
+        // Manual bookings still work with catalog prices if this fails.
+      }
+    }
+    void loadHotDates();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const hotDatePriceMap = useMemo(
+    () => buildHotDatePriceMap(hotDates),
+    [hotDates]
+  );
 
   const styleOptions = useMemo(
     () =>
@@ -550,6 +580,47 @@ export function BookingsManager({
             (option) => option.id === session.styleId
           );
 
+          let stylePayload:
+            | {
+                id: string;
+                name: string;
+                price: number;
+                deposit: number;
+                categoryName: string;
+              }
+            | undefined;
+
+          if (selectedStyle) {
+            const separatorIndex = selectedStyle.id.lastIndexOf(":");
+            const styleDocId = selectedStyle.id.slice(0, separatorIndex);
+            const variantOrder = Number.parseInt(
+              selectedStyle.id.slice(separatorIndex + 1),
+              10
+            );
+            const overridePrice =
+              session.date &&
+              styleDocId &&
+              !Number.isNaN(variantOrder)
+                ? getStyleHotDatePrice(
+                    hotDatePriceMap,
+                    session.date,
+                    styleDocId,
+                    variantOrder
+                  )
+                : undefined;
+
+            stylePayload = {
+              id: selectedStyle.id,
+              name: selectedStyle.name,
+              price: resolveEffectivePrice(
+                selectedStyle.price,
+                overridePrice
+              ),
+              deposit: selectedStyle.deposit,
+              categoryName: selectedStyle.categoryName,
+            };
+          }
+
           return {
             client_key: session.client_key,
             status: "scheduled" as const,
@@ -559,15 +630,7 @@ export function BookingsManager({
             date: new Date(`${session.date}T12:00:00`),
             time_slot: parseTimeSlotKey(session.time_slot_key)!,
             location: session.location!,
-            style: selectedStyle
-              ? {
-                  id: selectedStyle.id,
-                  name: selectedStyle.name,
-                  price: selectedStyle.price,
-                  deposit: selectedStyle.deposit,
-                  categoryName: selectedStyle.categoryName,
-                }
-              : undefined,
+            style: stylePayload,
           };
         }),
         paymentOption: form.paymentOption,

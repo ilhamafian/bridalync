@@ -37,6 +37,13 @@ import {
   toDateKey,
   type PublicBookedSlot,
 } from "@/utils/booking/availability";
+import {
+  buildHotDatePriceMap,
+  getPackageHotDatePrice,
+  getStyleHotDatePrice,
+  resolveEffectivePrice,
+  type HotDateLookup,
+} from "@/utils/booking/hotDates";
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
 import { Client } from "@/schemas/clientSchema";
@@ -596,6 +603,7 @@ export default function ClientPage() {
   const [addOns, setAddOns] = useState<AddOn[]>([]);
   const [settings, setSettings] = useState<PublicSetting | null>(null);
   const [bookedSlots, setBookedSlots] = useState<PublicBookedSlot[]>([]);
+  const [hotDates, setHotDates] = useState<HotDateLookup[]>([]);
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
   const [user, setUser] = useState<PublicProfile | null>(null);
   const [reviews, setReviews] = useState<PublicReview[]>([]);
@@ -704,6 +712,11 @@ export default function ClientPage() {
 
   const chargeBy = settings?.charge_by ?? "package";
 
+  const hotDatePriceMap = useMemo(
+    () => buildHotDatePriceMap(hotDates),
+    [hotDates]
+  );
+
   const selectedSessionStyles = useMemo(() => {
     return sessions
       .map((session) => {
@@ -713,14 +726,30 @@ export default function ClientPage() {
         const variant = resolveStyleVariant(variantId, styles);
         if (!variant) return null;
 
+        const separatorIndex = variantId.lastIndexOf(":");
+        const styleDocId = variantId.slice(0, separatorIndex);
+        const variantOrder = Number.parseInt(
+          variantId.slice(separatorIndex + 1),
+          10
+        );
+        const overridePrice =
+          styleDocId && !Number.isNaN(variantOrder)
+            ? getStyleHotDatePrice(
+                hotDatePriceMap,
+                session.date,
+                styleDocId,
+                variantOrder
+              )
+            : undefined;
+
         return {
           name: `${session.name} — ${variant.categoryName} — ${variant.name}`,
-          price: variant.price,
+          price: resolveEffectivePrice(variant.price, overridePrice),
           deposit: variant.deposit,
         };
       })
       .filter((style): style is NonNullable<typeof style> => style !== null);
-  }, [sessions, styleVariantBySessionKey, styles]);
+  }, [sessions, styleVariantBySessionKey, styles, hotDatePriceMap]);
 
   const allSessionsStyled =
     chargeBy !== "style" ||
@@ -765,11 +794,20 @@ export default function ClientPage() {
     () =>
       calculateBookingQuotation({
         chargeBy,
-        selectedPackages: selectedPackages.map((pkg) => ({
-          name: pkg.name,
-          price: pkg.price,
-          deposit: chargeBy === "style" ? 0 : pkg.deposit,
-        })),
+        selectedPackages: selectedPackages.map((pkg) => {
+          const session = sessions.find(
+            (item) => item.packageId === pkg.id
+          );
+          const overridePrice = session
+            ? getPackageHotDatePrice(hotDatePriceMap, session.date, pkg.id)
+            : undefined;
+
+          return {
+            name: pkg.name,
+            price: resolveEffectivePrice(pkg.price, overridePrice),
+            deposit: chargeBy === "style" ? 0 : pkg.deposit,
+          };
+        }),
         selectedSessionStyles:
           chargeBy === "style" ? selectedSessionStyles : undefined,
         selectedAddOns: selectedAddOnItems.map((addOn) => ({
@@ -795,6 +833,7 @@ export default function ClientPage() {
       selectedAddOnItems,
       sessions,
       distanceKmBySessionKey,
+      hotDatePriceMap,
     ]
   );
 
@@ -834,6 +873,7 @@ export default function ClientPage() {
       setBookedSlots(
         (data.booked_slots as PublicBookedSlot[] | undefined) ?? []
       );
+      setHotDates((data.hot_dates as HotDateLookup[] | undefined) ?? []);
       setSelectedPackageIds((current) =>
         current.length > 0 ? current : packageOptions[0]?.id ? [packageOptions[0].id] : []
       );
@@ -1170,17 +1210,38 @@ export default function ClientPage() {
               ? resolveStyleVariant(variantId, styles)
               : null;
 
+          if (!styleSelection) {
+            return { ...session, style: undefined };
+          }
+
+          const separatorIndex = styleSelection.id.lastIndexOf(":");
+          const styleDocId = styleSelection.id.slice(0, separatorIndex);
+          const variantOrder = Number.parseInt(
+            styleSelection.id.slice(separatorIndex + 1),
+            10
+          );
+          const overridePrice =
+            styleDocId && !Number.isNaN(variantOrder)
+              ? getStyleHotDatePrice(
+                  hotDatePriceMap,
+                  session.date,
+                  styleDocId,
+                  variantOrder
+                )
+              : undefined;
+
           return {
             ...session,
-            style: styleSelection
-              ? {
-                  id: styleSelection.id,
-                  name: styleSelection.name,
-                  price: styleSelection.price,
-                  deposit: styleSelection.deposit,
-                  categoryName: styleSelection.categoryName,
-                }
-              : undefined,
+            style: {
+              id: styleSelection.id,
+              name: styleSelection.name,
+              price: resolveEffectivePrice(
+                styleSelection.price,
+                overridePrice
+              ),
+              deposit: styleSelection.deposit,
+              categoryName: styleSelection.categoryName,
+            },
           };
         }),
         distanceKmBySessionKey,

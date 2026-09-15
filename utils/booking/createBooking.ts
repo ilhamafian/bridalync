@@ -1,3 +1,4 @@
+import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
 import { StyleModel } from "@/models/Style";
@@ -12,7 +13,14 @@ import {
   requiresFullPayment,
   type BookingQuotationSummary,
 } from "@/utils/booking/pricing";
-import { normalizeSessionDate } from "@/utils/booking/availability";
+import { normalizeSessionDate, toDateKey } from "@/utils/booking/availability";
+import {
+  buildHotDatePriceMap,
+  getPackageHotDatePrice,
+  getStyleHotDatePrice,
+  resolveEffectivePrice,
+  toHotDateLookup,
+} from "@/utils/booking/hotDates";
 
 function parseStyleVariantId(id: string): {
   styleDocId: string;
@@ -40,7 +48,9 @@ async function resolveSessionStyle(
   styleModel: StyleModel,
   freelancerUserId: string,
   sessionName: string,
-  styleInput: NonNullable<CreateBookingRequest["sessions"][number]["style"]>
+  styleInput: NonNullable<CreateBookingRequest["sessions"][number]["style"]>,
+  sessionDate: Date | string,
+  hotDatePriceMap: Map<string, number>
 ): Promise<ResolvedSessionStyle> {
   const parsed = parseStyleVariantId(styleInput.id);
   if (!parsed) {
@@ -59,8 +69,18 @@ async function resolveSessionStyle(
     throw new Error("Style variant not found");
   }
 
+  const effectivePrice = resolveEffectivePrice(
+    variant.price,
+    getStyleHotDatePrice(
+      hotDatePriceMap,
+      sessionDate,
+      parsed.styleDocId,
+      parsed.variantOrder
+    )
+  );
+
   if (
-    variant.price !== styleInput.price ||
+    effectivePrice !== styleInput.price ||
     variant.deposit !== (styleInput.deposit ?? variant.deposit)
   ) {
     throw new Error("Style pricing mismatch");
@@ -72,7 +92,7 @@ async function resolveSessionStyle(
     styleId: styleInput.id,
     styleName,
     lineItemName: `${sessionName} — ${styleName}`,
-    price: variant.price,
+    price: effectivePrice,
     deposit: variant.deposit,
   };
 }
@@ -152,12 +172,32 @@ export async function resolveBookingQuotation(
 
   validatePackageSelection(input, packagesById);
 
+  const sessionDateKeys = input.sessions
+    .map((session) => toDateKey(session.date))
+    .filter(Boolean);
+  const hotDateDocs = await hotDateModel.findByUserIdAndDates(
+    freelancerUserId,
+    sessionDateKeys
+  );
+  const hotDatePriceMap = buildHotDatePriceMap(
+    hotDateDocs.map((doc) => toHotDateLookup(doc))
+  );
+
   const chargeBy = settings.charge_by ?? "package";
+  const sessionByPackageId = new Map(
+    input.sessions.map((session) => [session.packageId, session] as const)
+  );
   const selectedPackages = input.packageIds.map((packageId) => {
     const pkg = packagesById.get(packageId)!;
+    const session = sessionByPackageId.get(packageId);
+    const catalogPrice = pkg.price ?? 0;
+    const overridePrice = session
+      ? getPackageHotDatePrice(hotDatePriceMap, session.date, packageId)
+      : undefined;
+
     return {
       name: pkg.name,
-      price: pkg.price ?? 0,
+      price: resolveEffectivePrice(catalogPrice, overridePrice),
       deposit: chargeBy === "style" ? 0 : (pkg.deposit ?? 0),
     };
   });
@@ -177,7 +217,9 @@ export async function resolveBookingQuotation(
         styleModel,
         freelancerUserId,
         session.name,
-        session.style
+        session.style,
+        session.date,
+        hotDatePriceMap
       );
       resolvedSessionStyles.set(session.client_key, resolved);
       selectedSessionStyles.push({

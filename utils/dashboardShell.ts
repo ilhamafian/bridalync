@@ -31,6 +31,7 @@ export type DashboardData = {
   packages: {
     initialPackages: PackageItem[];
     initialStyles: StyleItem[];
+    chargeBy: "package" | "style";
   };
   settings: {
     initialSettings: SettingsItem;

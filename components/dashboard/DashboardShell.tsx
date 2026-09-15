@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { BookingsManager } from "@/components/BookingsManager";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
+import { HotDatesManager } from "@/components/HotDatesManager";
 import { PackagesManager } from "@/components/PackagesManager";
 import { ProfileManager } from "@/components/profile/ProfileManager";
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
@@ -64,10 +65,19 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="packages" active={active}>
-        <PackagesManager
-          initialPackages={data.packages.initialPackages}
-          initialStyles={data.packages.initialStyles}
-        />
+        <div className="flex flex-col gap-8">
+          <PackagesManager
+            initialPackages={data.packages.initialPackages}
+            initialStyles={data.packages.initialStyles}
+          />
+          <div className="px-4 lg:px-6">
+            <HotDatesManager
+              chargeBy={data.packages.chargeBy}
+              packages={data.packages.initialPackages}
+              styles={data.packages.initialStyles}
+            />
+          </div>
+        </div>
       </Section>
 
       <Section id="settings" active={active}>

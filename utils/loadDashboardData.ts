@@ -143,6 +143,7 @@ export async function loadDashboardData(
     packages: {
       initialPackages: packages.map(serializePackage),
       initialStyles: styles.map(serializeStyle),
+      chargeBy,
     },
     settings: {
       initialSettings: {
