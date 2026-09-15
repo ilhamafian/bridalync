@@ -113,6 +113,26 @@ function BookingResultPageContent() {
     let cancelled = false;
     let pollTimer: ReturnType<typeof setTimeout> | undefined;
 
+    async function syncCheckoutIfNeeded() {
+      if (!returnedFromDepositCheckout && !returnedFromBalanceCheckout) {
+        return;
+      }
+
+      try {
+        await fetch("/api/stripe/checkout/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId,
+            freelancerUsername: client,
+            purpose: returnedFromBalanceCheckout ? "balance" : "deposit",
+          }),
+        });
+      } catch {
+        // Polling still covers confirmation if sync fails.
+      }
+    }
+
     async function loadBooking(options?: { silent?: boolean }) {
       if (!options?.silent) {
         setLoading(true);
@@ -166,7 +186,12 @@ function BookingResultPageContent() {
       }
     }
 
-    void loadBooking();
+    void (async () => {
+      await syncCheckoutIfNeeded();
+      if (!cancelled) {
+        await loadBooking();
+      }
+    })();
 
     return () => {
       cancelled = true;
@@ -390,12 +415,7 @@ function BookingResultPageContent() {
             {(isConfirmingDeposit || isConfirmingBalance) && t.paymentAccepted}
             {(isConfirmingDeposit || isConfirmingBalance) && confirmingTooLong && (
               <span className="mt-2 block text-xs text-muted-foreground">
-                {t.webhookHint}{" "}
-                <code className="rounded bg-muted px-1 py-0.5">
-                  stripe listen --forward-to localhost:3000/api/stripe/webhooks
-                  --forward-connect-to localhost:3000/api/stripe/webhooks
-                </code>
-                .
+                {t.webhookHint}
               </span>
             )}
             {(awaitingManualVerification || manualSubmitted) &&

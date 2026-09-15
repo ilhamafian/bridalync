@@ -154,7 +154,7 @@ export const ms = {
   paymentAccepted:
     "Stripe telah menerima bayaran anda. Kami sedang menunggu pengesahan — ini biasanya mengambil masa beberapa saat.",
   webhookHint:
-    "Jika ini mengambil masa lebih seminit, webhook pembayaran mungkin tidak sampai ke aplikasi anda. Untuk pembangunan setempat, jalankan",
+    "Ini mengambil masa lebih lama daripada biasa. Bayaran anda telah diterima oleh Stripe — jika tempahan tidak dikemas kini sebentar lagi, hubungi stylist atau sokongan Bridalync dengan e-mel anda.",
   bookingAwaitingPayment:
     "Tempahan anda menunggu bayaran. Lengkapkan pembayaran untuk mendapatkan slot anda.",
   bookingAwaitingVerification:

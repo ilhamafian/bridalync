@@ -157,7 +157,7 @@ export const en: Locale = {
   paymentAccepted:
     "Stripe accepted your payment. We're waiting for confirmation — this usually takes a few seconds.",
   webhookHint:
-    "If this takes longer than a minute, the payment webhook may not be reaching your app. For local dev, run",
+    "This is taking longer than usual. Your payment was received by Stripe — if the booking does not update soon, contact the stylist or Bridalync support with your email.",
   bookingAwaitingPayment:
     "Your booking is awaiting payment. Complete checkout to secure your slot.",
   bookingAwaitingVerification:
