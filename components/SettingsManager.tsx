@@ -49,6 +49,7 @@ export type SettingsItem = {
     terms_and_conditions: string;
   };
   time_slots: TimeSlot[];
+  max_booking_year?: number;
 };
 
 const DISABLED_TRAVEL_LOCATION: Address = {

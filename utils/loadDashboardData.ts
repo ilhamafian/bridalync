@@ -158,6 +158,7 @@ export async function loadDashboardData(
           terms_and_conditions: invoice.terms_and_conditions,
         },
         time_slots: timeSlots,
+        max_booking_year: settings.max_booking_year,
       },
       isStripeConnected: Boolean(user.is_stripe_connected),
       hasStripeAccount: Boolean(user.stripe_account_id),

@@ -1,5 +1,6 @@
 import { blockedDateModel } from "@/models/BlockedDate";
 import { bookingModel } from "@/models/Booking";
+import { SettingModel } from "@/models/Setting";
 import type { Booking } from "@/schemas/bookingSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
 import { formatDate } from "@/utils/utils";
@@ -13,6 +14,10 @@ import {
   buildBlockedDateSet,
   isDateBlocked,
 } from "@/utils/booking/blockedDates";
+import {
+  getEffectiveMaxBookingYear,
+  isYearBlocked,
+} from "@/utils/booking/bookingWindow";
 
 type SessionSlotInput = {
   date: Date | string;
@@ -43,15 +48,25 @@ export async function assertSessionsAvailable(
   const sessionDateKeys = sessions
     .map((session) => toDateKey(session.date))
     .filter(Boolean);
-  const [occupied, blockedDocs] = await Promise.all([
+  const [occupied, blockedDocs, settings] = await Promise.all([
     getOccupiedSlotsForFreelancer(freelancerUserId),
     blockedDateModel.findByUserIdAndDates(freelancerUserId, sessionDateKeys),
+    new SettingModel().findSettingsByUserId(freelancerUserId),
   ]);
   const blockedKeys = buildBlockedDateSet(
     blockedDocs.map((doc) => doc.date)
   );
+  const maxBookingYear = getEffectiveMaxBookingYear(
+    settings?.max_booking_year
+  );
 
   for (const session of sessions) {
+    if (isYearBlocked(session.date, maxBookingYear)) {
+      throw new Error(
+        `${formatDate(session.date)} is outside the open booking year.`
+      );
+    }
+
     if (isDateBlocked(session.date, blockedKeys)) {
       throw new Error(
         `${formatDate(session.date)} is blocked and unavailable for booking.`

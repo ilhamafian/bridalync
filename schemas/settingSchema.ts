@@ -87,6 +87,8 @@ export const settingSchema = z.object({
   payment: paymentSettingSchema.default(() => paymentSettingSchema.parse({})),
   invoice: invoiceSettingSchema.default(() => invoiceSettingSchema.parse({})),
   time_slots: timeSlotSettingSchema,
+  /** Highest calendar year clients may book. Unset = current year + 1. */
+  max_booking_year: z.number().int().optional(),
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
 });
@@ -98,6 +100,7 @@ export const settingUpdateSchema = z.object({
   payment: paymentSettingSchema.partial().optional(),
   invoice: invoiceSettingSchema.partial().optional(),
   time_slots: z.array(timeSlotSchema).optional(),
+  max_booking_year: z.number().int().optional(),
 });
 
 export const publicSettingSchema = settingSchema.extend({

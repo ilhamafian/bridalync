@@ -42,6 +42,10 @@ import {
   isDateBlocked,
 } from "@/utils/booking/blockedDates";
 import {
+  getEffectiveMaxBookingYear,
+  isYearBlocked,
+} from "@/utils/booking/bookingWindow";
+import {
   buildHotDatePriceMap,
   getPackageHotDatePrice,
   getStyleHotDatePrice,
@@ -665,6 +669,16 @@ export default function ClientPage() {
     [blockedDates]
   );
 
+  const maxBookingYear = useMemo(
+    () => getEffectiveMaxBookingYear(settings?.max_booking_year),
+    [settings?.max_booking_year]
+  );
+
+  const bookingCalendarEndMonth = useMemo(
+    () => new Date(maxBookingYear, 11, 1),
+    [maxBookingYear]
+  );
+
   const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
 
   const stepOrder = useMemo(() => {
@@ -1088,6 +1102,9 @@ export default function ClientPage() {
 
   function handleAddSession() {
     if (!nextPackageToSchedule || !selectedDate || !selectedTimeSlot) return;
+    if (isYearBlocked(selectedDate, maxBookingYear)) {
+      return;
+    }
     if (isDateBlocked(selectedDate, blockedDateKeys)) {
       return;
     }
@@ -1546,7 +1563,9 @@ export default function ClientPage() {
                       { before: new Date() },
                       (date) => isDateFullyBooked(date),
                       (date) => isDateBlocked(date, blockedDateKeys),
+                      (date) => isYearBlocked(date, maxBookingYear),
                     ]}
+                    endMonth={bookingCalendarEndMonth}
                     captionLayout="dropdown"
                     className="mx-auto p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)] [&_button[data-selected-single=true]]:bg-rose-800 [&_button[data-selected-single=true]]:text-white [&_button[data-selected-single=true]]:hover:bg-rose-800/90 [&_button[data-selected-single=true]]:hover:text-white"
                     classNames={{

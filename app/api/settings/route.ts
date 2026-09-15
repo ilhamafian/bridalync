@@ -12,6 +12,7 @@ import {
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
+import { getCurrentBookingYear } from "@/utils/booking/bookingWindow";
 
 function serializeSetting(setting: WithId<Setting>) {
   return {
@@ -22,6 +23,7 @@ function serializeSetting(setting: WithId<Setting>) {
     payment: setting.payment,
     invoice: setting.invoice,
     time_slots: setting.time_slots,
+    max_booking_year: setting.max_booking_year,
     created_at: setting.created_at,
     updated_at: setting.updated_at,
   };
@@ -61,6 +63,10 @@ function mergeSettingsUpdate(
 
   if (patch.time_slots !== undefined) {
     update.time_slots = patch.time_slots;
+  }
+
+  if (patch.max_booking_year !== undefined) {
+    update.max_booking_year = patch.max_booking_year;
   }
 
   return update;
@@ -124,6 +130,22 @@ export async function PATCH(req: NextRequest) {
             error: user?.stripe_account_id
               ? "Stripe is still verifying your account. Wait until setup is complete before enabling Payment Gateway."
               : "Set up Stripe before enabling Payment Gateway.",
+          },
+          400
+        );
+      }
+    }
+
+    if (parsed.data.max_booking_year !== undefined) {
+      const currentYear = getCurrentBookingYear();
+      const nextYear = currentYear + 1;
+      if (
+        parsed.data.max_booking_year !== currentYear &&
+        parsed.data.max_booking_year !== nextYear
+      ) {
+        return createResponse(
+          {
+            error: `max_booking_year must be ${currentYear} or ${nextYear}.`,
           },
           400
         );

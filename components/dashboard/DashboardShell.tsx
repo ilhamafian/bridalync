@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { BookingsManager } from "@/components/BookingsManager";
 import { BlockedDatesManager } from "@/components/BlockedDatesManager";
+import { BlockYearManager } from "@/components/BlockYearManager";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { HotDatesManager } from "@/components/HotDatesManager";
 import { PackagesManager } from "@/components/PackagesManager";
@@ -17,6 +18,7 @@ import {
   type DashboardData,
   type DashboardSection,
 } from "@/utils/dashboardShell";
+import { getEffectiveMaxBookingYear } from "@/utils/booking/bookingWindow";
 
 function Section({
   id,
@@ -72,6 +74,11 @@ export function DashboardShell({ data }: { data: DashboardData }) {
             initialStyles={data.packages.initialStyles}
           />
           <div className="flex flex-col gap-8 px-4 lg:px-6">
+            <BlockYearManager
+              initialMaxBookingYear={getEffectiveMaxBookingYear(
+                data.settings.initialSettings.max_booking_year
+              )}
+            />
             <HotDatesManager
               chargeBy={data.packages.chargeBy}
               packages={data.packages.initialPackages}
