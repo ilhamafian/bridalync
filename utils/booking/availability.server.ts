@@ -1,3 +1,4 @@
+import { blockedDateModel } from "@/models/BlockedDate";
 import { bookingModel } from "@/models/Booking";
 import type { Booking } from "@/schemas/bookingSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
@@ -5,8 +6,13 @@ import { formatDate } from "@/utils/utils";
 import {
   getOccupiedSlotsFromBookings,
   isSessionSlotTaken,
+  toDateKey,
   type PublicBookedSlot,
 } from "@/utils/booking/availability";
+import {
+  buildBlockedDateSet,
+  isDateBlocked,
+} from "@/utils/booking/blockedDates";
 
 type SessionSlotInput = {
   date: Date | string;
@@ -34,9 +40,24 @@ export async function assertSessionsAvailable(
   freelancerUserId: string,
   sessions: SessionSlotInput[]
 ): Promise<void> {
-  const occupied = await getOccupiedSlotsForFreelancer(freelancerUserId);
+  const sessionDateKeys = sessions
+    .map((session) => toDateKey(session.date))
+    .filter(Boolean);
+  const [occupied, blockedDocs] = await Promise.all([
+    getOccupiedSlotsForFreelancer(freelancerUserId),
+    blockedDateModel.findByUserIdAndDates(freelancerUserId, sessionDateKeys),
+  ]);
+  const blockedKeys = buildBlockedDateSet(
+    blockedDocs.map((doc) => doc.date)
+  );
 
   for (const session of sessions) {
+    if (isDateBlocked(session.date, blockedKeys)) {
+      throw new Error(
+        `${formatDate(session.date)} is blocked and unavailable for booking.`
+      );
+    }
+
     if (isSessionSlotTaken(session, occupied)) {
       throw new Error(
         `The ${session.time_slot.startTime} – ${session.time_slot.endTime} slot on ${formatDate(session.date)} is no longer available.`

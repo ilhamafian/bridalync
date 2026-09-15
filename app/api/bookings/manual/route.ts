@@ -9,6 +9,7 @@ import { toIdString } from "@/schemas/objectId";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
+import { assertSessionsAvailable } from "@/utils/booking/availability.server";
 import {
   mapSessionsForStorage,
   resolveBookingQuotation,
@@ -49,6 +50,16 @@ export async function POST(req: NextRequest) {
       distanceKmBySessionKey: data.distanceKmBySessionKey,
       paymentOption: data.paymentOption,
     };
+
+    try {
+      await assertSessionsAvailable(userId, data.sessions);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "One or more selected slots are unavailable.";
+      return createResponse({ error: message }, 409);
+    }
 
     const { invoice, packageNames, resolvedSessionStyles, paymentOption } =
       await resolveBookingQuotation(userId, quotationInput, {

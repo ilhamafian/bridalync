@@ -38,6 +38,10 @@ import {
   type PublicBookedSlot,
 } from "@/utils/booking/availability";
 import {
+  buildBlockedDateSet,
+  isDateBlocked,
+} from "@/utils/booking/blockedDates";
+import {
   buildHotDatePriceMap,
   getPackageHotDatePrice,
   getStyleHotDatePrice,
@@ -604,6 +608,7 @@ export default function ClientPage() {
   const [settings, setSettings] = useState<PublicSetting | null>(null);
   const [bookedSlots, setBookedSlots] = useState<PublicBookedSlot[]>([]);
   const [hotDates, setHotDates] = useState<HotDateLookup[]>([]);
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
   const [user, setUser] = useState<PublicProfile | null>(null);
   const [reviews, setReviews] = useState<PublicReview[]>([]);
@@ -654,6 +659,11 @@ export default function ClientPage() {
     timeSlots.every((slot) =>
       isSlotTaken(date, slot, bookedSlots, sessions)
     );
+
+  const blockedDateKeys = useMemo(
+    () => buildBlockedDateSet(blockedDates),
+    [blockedDates]
+  );
 
   const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
 
@@ -874,6 +884,9 @@ export default function ClientPage() {
         (data.booked_slots as PublicBookedSlot[] | undefined) ?? []
       );
       setHotDates((data.hot_dates as HotDateLookup[] | undefined) ?? []);
+      setBlockedDates(
+        (data.blocked_dates as string[] | undefined) ?? []
+      );
       setSelectedPackageIds((current) =>
         current.length > 0 ? current : packageOptions[0]?.id ? [packageOptions[0].id] : []
       );
@@ -1075,6 +1088,9 @@ export default function ClientPage() {
 
   function handleAddSession() {
     if (!nextPackageToSchedule || !selectedDate || !selectedTimeSlot) return;
+    if (isDateBlocked(selectedDate, blockedDateKeys)) {
+      return;
+    }
     if (isSlotTaken(selectedDate, selectedTimeSlot, bookedSlots, sessions)) {
       return;
     }
@@ -1529,6 +1545,7 @@ export default function ClientPage() {
                     disabled={[
                       { before: new Date() },
                       (date) => isDateFullyBooked(date),
+                      (date) => isDateBlocked(date, blockedDateKeys),
                     ]}
                     captionLayout="dropdown"
                     className="mx-auto p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)] [&_button[data-selected-single=true]]:bg-rose-800 [&_button[data-selected-single=true]]:text-white [&_button[data-selected-single=true]]:hover:bg-rose-800/90 [&_button[data-selected-single=true]]:hover:text-white"

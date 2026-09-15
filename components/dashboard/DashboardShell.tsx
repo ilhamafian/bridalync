@@ -4,6 +4,7 @@ import { Suspense, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 import { BookingsManager } from "@/components/BookingsManager";
+import { BlockedDatesManager } from "@/components/BlockedDatesManager";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { HotDatesManager } from "@/components/HotDatesManager";
 import { PackagesManager } from "@/components/PackagesManager";
@@ -70,12 +71,13 @@ export function DashboardShell({ data }: { data: DashboardData }) {
             initialPackages={data.packages.initialPackages}
             initialStyles={data.packages.initialStyles}
           />
-          <div className="px-4 lg:px-6">
+          <div className="flex flex-col gap-8 px-4 lg:px-6">
             <HotDatesManager
               chargeBy={data.packages.chargeBy}
               packages={data.packages.initialPackages}
               styles={data.packages.initialStyles}
             />
+            <BlockedDatesManager />
           </div>
         </div>
       </Section>

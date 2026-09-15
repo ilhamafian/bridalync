@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { AddOnModel } from "@/models/AddOn";
+import { blockedDateModel } from "@/models/BlockedDate";
 import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { StyleModel } from "@/models/Style";
@@ -58,10 +59,16 @@ export async function GET(request: NextRequest) {
     const reviews = reviewDocs.map(toPublicReview);
 
     const todayKey = toDateKey(new Date());
-    const hotDateDocs = await hotDateModel.findByUserId(user_id, {
-      from: todayKey || undefined,
-    });
+    const [hotDateDocs, blockedDateDocs] = await Promise.all([
+      hotDateModel.findByUserId(user_id, {
+        from: todayKey || undefined,
+      }),
+      blockedDateModel.findByUserId(user_id, {
+        from: todayKey || undefined,
+      }),
+    ]);
     const hot_dates = hotDateDocs.map((doc) => toHotDateLookup(doc));
+    const blocked_dates = blockedDateDocs.map((doc) => doc.date);
 
     const response = {
       user: publicUser,
@@ -72,6 +79,7 @@ export async function GET(request: NextRequest) {
       booked_slots,
       reviews,
       hot_dates,
+      blocked_dates,
     };
     return createResponse(response);
   } catch (error) {
