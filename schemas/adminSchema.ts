@@ -1,8 +1,13 @@
 import { z } from "zod";
 
+const adminEmailSchema = z.preprocess(
+  (value) => (typeof value === "string" ? value.trim().toLowerCase() : value),
+  z.email("Invalid email address")
+);
+
 export const adminSchema = z.object({
   _id: z.unknown().optional(),
-  email: z.email(),
+  email: adminEmailSchema,
   passwordHash: z.string().min(1),
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
@@ -11,7 +16,7 @@ export const adminSchema = z.object({
 export type Admin = z.infer<typeof adminSchema>;
 
 export const adminLoginCredentialsSchema = z.object({
-  email: z.email(),
+  email: adminEmailSchema,
   password: z.string().min(1),
 });
 

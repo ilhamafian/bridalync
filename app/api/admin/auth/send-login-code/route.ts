@@ -13,7 +13,9 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const parsed = adminLoginCredentialsSchema.safeParse(body);
     if (!parsed.success) {
-      return createResponse({ error: "Email and password are required." }, 400);
+      const message =
+        parsed.error.issues[0]?.message ?? "Email and password are required.";
+      return createResponse({ error: message }, 400);
     }
 
     await authenticateAdmin(parsed.data);
