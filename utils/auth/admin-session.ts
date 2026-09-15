@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { z } from "zod";
 
 import { adminModel } from "@/models/Admin";
 import type { Admin } from "@/schemas/adminSchema";
@@ -9,6 +10,19 @@ import { toIdString } from "@/schemas/objectId";
 export const ADMIN_SESSION_COOKIE_NAME = "bridalync_admin_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const PASSWORD_SALT_ROUNDS = 12;
+
+/** Strip accidental quotes/whitespace from Vercel/env values. */
+function normalizeEnvCredential(value: string | undefined) {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (
+    (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+    (trimmed.startsWith("'") && trimmed.endsWith("'"))
+  ) {
+    return trimmed.slice(1, -1).trim();
+  }
+  return trimmed;
+}
 
 type AdminSessionPayload = {
   adminId: string;
@@ -108,10 +122,18 @@ export async function getSessionAdmin(): Promise<Admin | null> {
 }
 
 async function ensureBootstrapAdmin() {
-  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-  const password = process.env.ADMIN_PASSWORD;
+  const email = normalizeEnvCredential(process.env.ADMIN_EMAIL)?.toLowerCase();
+  const password = normalizeEnvCredential(process.env.ADMIN_PASSWORD);
   if (!email || !password) {
     return null;
+  }
+
+  // Reject clearly bad env values before Zod dumps a JSON error message.
+  const emailCheck = z.email().safeParse(email);
+  if (!emailCheck.success) {
+    throw new Error(
+      "ADMIN_EMAIL is invalid. In Vercel, set it without quotes (e.g. you@domain.com)."
+    );
   }
 
   const existing = await adminModel.findByEmail(email);
