@@ -31,11 +31,15 @@ export async function GET() {
     const accountLink = await createOnboardingAccountLink(accountId);
 
     if (!accountLink.url) {
-      return NextResponse.redirect(`${appUrl}/dashboard?stripe_payout=error`);
+      return NextResponse.redirect(
+        `${appUrl}/dashboard/settings?stripe_payout=error`
+      );
     }
 
     return NextResponse.redirect(accountLink.url);
   } catch {
-    return NextResponse.redirect(`${appUrl}/dashboard?stripe_payout=error`);
+    return NextResponse.redirect(
+      `${appUrl}/dashboard/settings?stripe_payout=error`
+    );
   }
 }

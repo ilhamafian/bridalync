@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
@@ -77,6 +78,40 @@ type SectionKey =
   | "time_slots"
   | "payouts";
 
+type StripeSetupPhase = "verifying" | "incomplete" | null;
+
+const STRIPE_PAYOUT_MESSAGES: Record<
+  string,
+  { section: SectionKey; kind: "success" | "error"; message: string }
+> = {
+  ready: {
+    section: "payment",
+    kind: "success",
+    message: "Stripe is connected. You can enable Payment Gateway.",
+  },
+  pending: {
+    section: "payouts",
+    kind: "success",
+    message:
+      "Stripe is reviewing your account. Payment Gateway unlocks when verification finishes.",
+  },
+  incomplete: {
+    section: "payouts",
+    kind: "error",
+    message: "Stripe setup is incomplete. Continue setup to finish required details.",
+  },
+  missing: {
+    section: "payouts",
+    kind: "error",
+    message: "No Stripe account found. Set up Stripe to continue.",
+  },
+  error: {
+    section: "payouts",
+    kind: "error",
+    message: "Something went wrong with Stripe. Try opening setup again.",
+  },
+};
+
 function Field({
   label,
   children,
@@ -90,6 +125,17 @@ function Field({
       {children}
     </div>
   );
+}
+
+function stripeStatusLabel(
+  stripeConnected: boolean,
+  hasStripeAccount: boolean,
+  setupPhase: StripeSetupPhase
+) {
+  if (stripeConnected) return "Connected";
+  if (setupPhase === "verifying") return "Verifying";
+  if (hasStripeAccount || setupPhase === "incomplete") return "Setup incomplete";
+  return "Not connected";
 }
 
 export function SettingsManager({
@@ -137,9 +183,55 @@ export function SettingsManager({
   const [savingSection, setSavingSection] = useState<SectionKey | null>(null);
   const [sectionError, setSectionError] = useState<Partial<Record<SectionKey, string>>>({});
   const [sectionSuccess, setSectionSuccess] = useState<Partial<Record<SectionKey, string>>>({});
-  const [stripeConnected] = useState(isStripeConnected);
+  const [stripeConnected, setStripeConnected] = useState(isStripeConnected);
+  const [stripeSetupPhase, setStripeSetupPhase] = useState<StripeSetupPhase>(
+    hasStripeAccount && !isStripeConnected ? "incomplete" : null
+  );
   const [connectingStripe, setConnectingStripe] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const status = searchParams.get("stripe_payout");
+    if (!status) return;
+
+    const feedback = STRIPE_PAYOUT_MESSAGES[status];
+    if (feedback) {
+      if (feedback.kind === "success") {
+        setSectionSuccess((current) => ({
+          ...current,
+          [feedback.section]: feedback.message,
+        }));
+        setSectionError((current) => ({
+          ...current,
+          [feedback.section]: undefined,
+        }));
+      } else {
+        setSectionError((current) => ({
+          ...current,
+          [feedback.section]: feedback.message,
+        }));
+        setSectionSuccess((current) => ({
+          ...current,
+          [feedback.section]: undefined,
+        }));
+      }
+    }
+
+    if (status === "ready") {
+      setStripeConnected(true);
+      setStripeSetupPhase(null);
+    } else if (status === "pending") {
+      setStripeConnected(false);
+      setStripeSetupPhase("verifying");
+    } else if (status === "incomplete" || status === "missing") {
+      setStripeConnected(false);
+      setStripeSetupPhase(status === "missing" ? null : "incomplete");
+    }
+
+    router.replace("/dashboard/settings", { scroll: false });
+  }, [router, searchParams]);
 
   function clearSectionFeedback(section: SectionKey) {
     setSectionError((current) => ({ ...current, [section]: undefined }));
@@ -250,6 +342,16 @@ export function SettingsManager({
       setSectionError((current) => ({
         ...current,
         payment: "Enter a valid number of days.",
+      }));
+      return;
+    }
+
+    if (paymentMethod === "payment_gateway" && !stripeConnected) {
+      setSectionError((current) => ({
+        ...current,
+        payment: hasStripeAccount
+          ? "Wait for Stripe verification to finish before enabling Payment Gateway."
+          : "Set up Stripe before enabling Payment Gateway.",
       }));
       return;
     }
@@ -577,13 +679,20 @@ export function SettingsManager({
                   Stripe status
                 </span>
                 <Badge variant={stripeConnected ? "default" : "secondary"}>
-                  {stripeConnected
-                    ? "Connected"
-                    : hasStripeAccount
-                      ? "Setup incomplete"
-                      : "Not connected"}
+                  {stripeStatusLabel(
+                    stripeConnected,
+                    hasStripeAccount,
+                    stripeSetupPhase
+                  )}
                 </Badge>
               </div>
+              {!stripeConnected ? (
+                <p className="text-sm text-muted-foreground">
+                  {stripeSetupPhase === "verifying"
+                    ? "Stripe is reviewing your details. You can enable Payment Gateway once the badge shows Connected."
+                    : "Finish Stripe setup before enabling Payment Gateway. Clients cannot pay online until this is connected."}
+                </p>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
@@ -595,10 +704,17 @@ export function SettingsManager({
                   ? "Opening Stripe…"
                   : stripeConnected
                     ? "Manage Stripe account"
-                    : "Set up Stripe"}
+                    : stripeSetupPhase === "verifying"
+                      ? "Check Stripe status"
+                      : "Set up Stripe"}
               </Button>
               {sectionError.payouts ? (
                 <p className="text-sm text-destructive">{sectionError.payouts}</p>
+              ) : null}
+              {sectionSuccess.payouts ? (
+                <p className="text-sm text-muted-foreground">
+                  {sectionSuccess.payouts}
+                </p>
               ) : null}
             </div>
           ) : null}

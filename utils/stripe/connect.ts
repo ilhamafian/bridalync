@@ -131,6 +131,30 @@ export function isAccountPayoutReady(account: Stripe.Account | StripeRecord): bo
   return payoutsEnabled && detailsSubmitted && !hasCurrentlyDue;
 }
 
+/** Post-onboarding return status for dashboard Settings feedback. */
+export type StripePayoutReturnStatus = "ready" | "pending" | "incomplete";
+
+export function classifyPayoutOnboardingStatus(
+  account: Stripe.Account | StripeRecord
+): StripePayoutReturnStatus {
+  if (isAccountPayoutReady(account)) {
+    return "ready";
+  }
+
+  const record = account as StripeRecord;
+  const requirements = record.requirements as StripeRecord | undefined;
+  const currentlyDue = requirements?.currently_due;
+  const hasCurrentlyDue =
+    Array.isArray(currentlyDue) && currentlyDue.length > 0;
+
+  if (hasCurrentlyDue || record.details_submitted !== true) {
+    return "incomplete";
+  }
+
+  // Details submitted; waiting on Stripe review / payouts_enabled.
+  return "pending";
+}
+
 export function getConnectUrls() {
   const appUrl = getAppUrl();
   return {

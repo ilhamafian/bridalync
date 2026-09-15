@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { WithId } from "mongodb";
 
 import { SettingModel } from "@/models/Setting";
+import { UserModel } from "@/models/User";
 import { toIdString } from "@/schemas/objectId";
 import {
   settingUpdateSchema,
@@ -112,6 +113,21 @@ export async function PATCH(req: NextRequest) {
     const existing = await model.findSettingsByUserId(userId);
     if (!existing) {
       return createResponse({ error: "Settings not found" }, 404);
+    }
+
+    const nextPaymentMethod = parsed.data.payment?.method;
+    if (nextPaymentMethod === "payment_gateway") {
+      const user = await new UserModel().findById(userId);
+      if (!user?.is_stripe_connected) {
+        return createResponse(
+          {
+            error: user?.stripe_account_id
+              ? "Stripe is still verifying your account. Wait until setup is complete before enabling Payment Gateway."
+              : "Set up Stripe before enabling Payment Gateway.",
+          },
+          400
+        );
+      }
     }
 
     const update = mergeSettingsUpdate(existing, parsed.data);

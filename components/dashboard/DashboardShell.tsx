@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 import { BookingsManager } from "@/components/BookingsManager";
@@ -71,11 +71,13 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="settings" active={active}>
-        <SettingsManager
-          initialSettings={data.settings.initialSettings}
-          isStripeConnected={data.settings.isStripeConnected}
-          hasStripeAccount={data.settings.hasStripeAccount}
-        />
+        <Suspense fallback={null}>
+          <SettingsManager
+            initialSettings={data.settings.initialSettings}
+            isStripeConnected={data.settings.isStripeConnected}
+            hasStripeAccount={data.settings.hasStripeAccount}
+          />
+        </Suspense>
       </Section>
 
       <Section id="profile" active={active}>
