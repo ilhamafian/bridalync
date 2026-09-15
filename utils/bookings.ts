@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 
 import { bookingModel } from "@/models/Booking";
+import { SettingModel } from "@/models/Setting";
 import { UserModel } from "@/models/User";
 import {
   bookingSchema,
@@ -87,10 +88,24 @@ export async function confirmBookingPayment(
       const freelancer = booking.freelancerUserId
         ? await new UserModel().findById(booking.freelancerUserId)
         : null;
-      await sendBookingPaymentConfirmationEmail(
-        booking,
-        freelancer?.name ?? null
-      );
+      const settings = booking.freelancerUserId
+        ? await new SettingModel().findSettingsByUserId(
+            booking.freelancerUserId
+          )
+        : null;
+
+      await sendBookingPaymentConfirmationEmail(booking, {
+        freelancerName: freelancer?.name ?? null,
+        freelancer: {
+          username:
+            freelancer?.username?.trim() || booking.freelancerUsername,
+          email: freelancer?.email ?? null,
+          mobile: freelancer?.mobile ?? null,
+          country_code: freelancer?.country_code ?? null,
+        },
+        invoiceSettings: settings?.invoice ?? null,
+        paymentSettings: settings?.payment ?? null,
+      });
     } catch (error) {
       console.error("Failed to send booking confirmation email:", error);
     }

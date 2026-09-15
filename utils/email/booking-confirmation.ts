@@ -1,7 +1,13 @@
 import type { PersistedBooking } from "@/schemas/bookingSchema";
+import type { InvoiceSetting, PaymentSetting } from "@/schemas/settingSchema";
 import { getAppUrl } from "@/utils/appUrl";
 import { formatRm } from "@/utils/booking/pricing";
 import { sendEmail } from "@/utils/email/resend";
+import {
+  bookingInvoiceFilename,
+  generateBookingInvoicePdf,
+  type InvoiceFreelancer,
+} from "@/utils/invoice/generateBookingInvoicePdf";
 import { formatLocationAddress, formatSessionSummary } from "@/utils/session";
 
 function escapeHtml(value: string) {
@@ -64,6 +70,8 @@ function buildBookingConfirmationEmail(input: {
     "",
     `View your booking: ${bookingUrl}`,
     "",
+    "Your invoice is attached to this email as a PDF.",
+    "",
     "If you have any questions, reply to this email or contact your stylist directly.",
     "",
     "— Bridalync",
@@ -122,6 +130,7 @@ function buildBookingConfirmationEmail(input: {
           View your booking
         </a>
       </p>
+      <p style="color: #666; font-size: 14px;">Your invoice is attached to this email as a PDF.</p>
       <p style="color: #666; font-size: 14px;">If you have any questions, contact your stylist directly.</p>
       <p style="color: #666; font-size: 14px;">— Bridalync</p>
     </div>
@@ -132,7 +141,12 @@ function buildBookingConfirmationEmail(input: {
 
 export async function sendBookingPaymentConfirmationEmail(
   booking: PersistedBooking,
-  freelancerName?: string | null
+  options?: {
+    freelancerName?: string | null;
+    freelancer?: InvoiceFreelancer | null;
+    invoiceSettings?: Pick<InvoiceSetting, "company_registration_number"> | null;
+    paymentSettings?: Pick<PaymentSetting, "balance_due_before"> | null;
+  }
 ) {
   const email = booking.contact.email?.trim();
   if (!email) {
@@ -145,7 +159,7 @@ export async function sendBookingPaymentConfirmationEmail(
   const appUrl = getAppUrl();
   const bookingUrl = `${appUrl}/${booking.freelancerUsername}/bookings/${String(booking._id)}?payment=success`;
   const displayName =
-    freelancerName?.trim() || booking.freelancerUsername;
+    options?.freelancerName?.trim() || booking.freelancerUsername;
 
   const { text, html } = buildBookingConfirmationEmail({
     booking,
@@ -153,16 +167,46 @@ export async function sendBookingPaymentConfirmationEmail(
     bookingUrl,
   });
 
+  const freelancer: InvoiceFreelancer = options?.freelancer ?? {
+    username: booking.freelancerUsername,
+  };
+
+  let attachments:
+    | Array<{ filename: string; content: Buffer; contentType: string }>
+    | undefined;
+
+  try {
+    const pdf = await generateBookingInvoicePdf({
+      booking,
+      freelancer,
+      invoiceSettings: options?.invoiceSettings,
+      paymentSettings: options?.paymentSettings,
+    });
+    attachments = [
+      {
+        filename: bookingInvoiceFilename(booking),
+        content: pdf,
+        contentType: "application/pdf",
+      },
+    ];
+  } catch (error) {
+    console.error(
+      "[booking-email] Failed to generate invoice PDF — sending confirmation without attachment:",
+      error
+    );
+  }
+
   await sendEmail({
     to: email,
     subject: `Booking confirmed — ${booking.packageNames}`,
     html,
     text,
+    attachments,
   });
 
   if (process.env.DEV_MODE === "true") {
     console.log(
-      `[booking-email] Sent payment confirmation to ${email} for booking ${String(booking._id)}`
+      `[booking-email] Sent payment confirmation to ${email} for booking ${String(booking._id)}${attachments ? " (with invoice PDF)" : ""}`
     );
   }
 }

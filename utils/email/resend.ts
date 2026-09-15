@@ -22,11 +22,18 @@ function getFromAddress() {
   );
 }
 
+export type EmailAttachment = {
+  filename: string;
+  content: Buffer | string;
+  contentType?: string;
+};
+
 export async function sendEmail(input: {
   to: string;
   subject: string;
   html: string;
   text: string;
+  attachments?: EmailAttachment[];
 }) {
   const { data, error } = await getResendClient().emails.send({
     from: getFromAddress(),
@@ -34,6 +41,17 @@ export async function sendEmail(input: {
     subject: input.subject,
     html: input.html,
     text: input.text,
+    ...(input.attachments?.length
+      ? {
+          attachments: input.attachments.map((attachment) => ({
+            filename: attachment.filename,
+            content: attachment.content,
+            ...(attachment.contentType
+              ? { contentType: attachment.contentType }
+              : {}),
+          })),
+        }
+      : {}),
   });
 
   if (error) {

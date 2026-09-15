@@ -111,3 +111,4 @@ export type SettingUpdate = z.infer<typeof settingUpdateSchema>;
 export type PublicSetting = z.infer<typeof publicSettingSchema>;
 export type TravelSetting = z.infer<typeof travelSettingSchema>;
 export type PaymentSetting = z.infer<typeof paymentSettingSchema>;
+export type InvoiceSetting = z.infer<typeof invoiceSettingSchema>;
