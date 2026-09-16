@@ -11,8 +11,8 @@ const footerLinks = {
   ],
   Company: [
     { href: "#about", label: "About" },
-    { href: "#", label: "Careers" },
-    { href: "#", label: "Blog" },
+    { href: "/privacy", label: "Privacy" },
+    { href: "/terms", label: "Terms" },
   ],
   Socials: [
     { href: "#", label: "Instagram" },
@@ -59,7 +59,19 @@ export function LandingFooter() {
 
         <div className="mt-12 flex items-center justify-between border-t border-landing-cream-text/10 pt-8">
           <p className="font-serif text-sm text-landing-cream-text/50">
-            Privacy · Terms
+            <Link
+              href="/privacy"
+              className="transition-colors hover:text-landing-cream-text"
+            >
+              Privacy
+            </Link>
+            {" · "}
+            <Link
+              href="/terms"
+              className="transition-colors hover:text-landing-cream-text"
+            >
+              Terms
+            </Link>
           </p>
           <span className="flex size-11 items-center justify-center overflow-hidden rounded-full bg-landing-cream-text">
             <Image
