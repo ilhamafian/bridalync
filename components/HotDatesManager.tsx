@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
 import type { PackageItem, StyleItem } from "@/components/PackagesManager";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { PublicHotDate } from "@/schemas/hotDateSchema";
-import { toDateKey } from "@/utils/booking/availability";
+import {
+  dateKeysFromRange,
+  formatDateRangeLabel,
+  MAX_DATE_RANGE_DAYS,
+} from "@/utils/booking/dateRange";
 import { formatRm } from "@/utils/booking/pricing";
 
 type HotDateRow = {
@@ -110,13 +114,15 @@ export function HotDatesManager({
   packages,
   styles,
   initialHotDates = [],
+  hideHeader = false,
 }: {
   chargeBy: "package" | "style";
   packages: PackageItem[];
   styles: StyleItem[];
   initialHotDates?: PublicHotDate[];
+  hideHeader?: boolean;
 }) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+  const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [hotDates, setHotDates] = useState<HotDateRow[]>(initialHotDates);
   const [draftPrices, setDraftPrices] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -129,7 +135,11 @@ export function HotDatesManager({
     [chargeBy, packages, styles]
   );
 
-  const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
+  const selectedDateKeys = useMemo(
+    () => dateKeysFromRange(selectedRange),
+    [selectedRange]
+  );
+  const templateDateKey = selectedDateKeys[0] ?? null;
 
   const markedDates = useMemo(() => {
     const keys = new Set(hotDates.map((item) => item.date));
@@ -175,23 +185,32 @@ export function HotDatesManager({
   }, []);
 
   useEffect(() => {
-    if (!selectedDateKey) {
+    if (!templateDateKey) {
       setDraftPrices({});
       return;
     }
 
     const next: Record<string, string> = {};
     for (const row of catalogRows) {
-      const override = overrideValueForRow(row, hotDates, selectedDateKey);
-      next[row.key] = override !== undefined ? String(override) : "";
+      const values = selectedDateKeys.map((dateKey) =>
+        overrideValueForRow(row, hotDates, dateKey)
+      );
+      const first = values[0];
+      const allMatch = values.every((value) => value === first);
+      next[row.key] =
+        allMatch && first !== undefined ? String(first) : "";
     }
     setDraftPrices(next);
     setSuccess(null);
     setError(null);
-  }, [selectedDateKey, catalogRows, hotDates]);
+  }, [templateDateKey, selectedDateKeys, catalogRows, hotDates]);
 
   async function handleSave() {
-    if (!selectedDateKey) return;
+    if (selectedDateKeys.length === 0) return;
+    if (selectedDateKeys.length > MAX_DATE_RANGE_DAYS) {
+      setError(`Choose up to ${MAX_DATE_RANGE_DAYS} days at a time.`);
+      return;
+    }
 
     const overrides: Array<{
       package_id?: string;
@@ -241,7 +260,7 @@ export function HotDatesManager({
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          date: selectedDateKey,
+          dates: selectedDateKeys,
           overrides,
         }),
       });
@@ -256,12 +275,17 @@ export function HotDatesManager({
         return;
       }
 
-      const savedForDate = (data.hot_dates as HotDateRow[]) ?? [];
+      const savedForRange = (data.hot_dates as HotDateRow[]) ?? [];
+      const selected = new Set(selectedDateKeys);
       setHotDates((current) => [
-        ...current.filter((item) => item.date !== selectedDateKey),
-        ...savedForDate,
+        ...current.filter((item) => !selected.has(item.date)),
+        ...savedForRange,
       ]);
-      setSuccess("Hot date prices saved.");
+      setSuccess(
+        selectedDateKeys.length === 1
+          ? "Hot date prices saved."
+          : `Hot date prices saved for ${selectedDateKeys.length} dates.`
+      );
     } finally {
       setSaving(false);
     }
@@ -269,27 +293,30 @@ export function HotDatesManager({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-lg font-semibold">Hot Dates</h2>
-        <p className="text-sm text-muted-foreground">
-          Set a higher price for a specific date. Leave blank to keep the
-          catalog price.
-        </p>
-      </div>
+      {hideHeader ? null : (
+        <div>
+          <h2 className="text-lg font-semibold">Hot Dates</h2>
+          <p className="text-sm text-muted-foreground">
+            Set a higher price for a specific date. Leave blank to keep the
+            catalog price.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
         <Card className="w-fit">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Pick a date</CardTitle>
+            <CardTitle className="text-base">Pick dates</CardTitle>
             <CardDescription>
-              Dates with overrides are highlighted.
+              Tap a start and end date. Dates with overrides are highlighted.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
+              mode="range"
+              selected={selectedRange}
+              onSelect={setSelectedRange}
+              numberOfMonths={1}
               modifiers={{ hot: markedDates }}
               modifiersClassNames={{
                 hot: "bg-primary/15 text-primary font-medium",
@@ -301,14 +328,16 @@ export function HotDatesManager({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">
-              {selectedDate
-                ? format(selectedDate, "d MMM yyyy")
-                : "Select a date"}
+              {formatDateRangeLabel(selectedRange) ?? "Select dates"}
             </CardTitle>
             <CardDescription>
               {chargeBy === "package"
-                ? "Override package prices for this date."
-                : "Override style prices for this date."}
+                ? selectedDateKeys.length > 1
+                  ? `Override package prices for these ${selectedDateKeys.length} dates.`
+                  : "Override package prices for this date."
+                : selectedDateKeys.length > 1
+                  ? `Override style prices for these ${selectedDateKeys.length} dates.`
+                  : "Override style prices for this date."}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -324,9 +353,9 @@ export function HotDatesManager({
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : null}
 
-            {!selectedDateKey ? (
+            {selectedDateKeys.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Choose a date on the calendar to edit prices.
+                Choose a date, then tap another date to select the range.
               </p>
             ) : catalogRows.length === 0 ? (
               <p className="text-sm text-muted-foreground">
@@ -371,7 +400,11 @@ export function HotDatesManager({
 
                 <div className="flex justify-end">
                   <Button onClick={handleSave} disabled={saving}>
-                    {saving ? "Saving…" : "Save hot date"}
+                    {saving
+                      ? "Saving…"
+                      : selectedDateKeys.length === 1
+                        ? "Save hot date"
+                        : `Save ${selectedDateKeys.length} hot dates`}
                   </Button>
                 </div>
               </>

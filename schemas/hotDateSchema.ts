@@ -53,10 +53,15 @@ export const hotDateOverrideInputSchema = z
     { message: "Override must target a package or a style variant" }
   );
 
-export const hotDatesPutSchema = z.object({
-  date: hotDateKeySchema,
-  overrides: z.array(hotDateOverrideInputSchema),
-});
+export const hotDatesPutSchema = z
+  .object({
+    date: hotDateKeySchema.optional(),
+    dates: z.array(hotDateKeySchema).min(1).max(62).optional(),
+    overrides: z.array(hotDateOverrideInputSchema),
+  })
+  .refine((data) => Boolean(data.date) || Boolean(data.dates?.length), {
+    message: "Choose at least one date.",
+  });
 
 export const publicHotDateSchema = z.object({
   date: hotDateKeySchema,

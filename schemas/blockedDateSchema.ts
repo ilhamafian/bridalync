@@ -11,10 +11,15 @@ export const blockedDateSchema = z.object({
   updated_at: z.coerce.date().optional(),
 });
 
-export const blockedDatesPutSchema = z.object({
-  date: blockedDateKeySchema,
-  blocked: z.boolean(),
-});
+export const blockedDatesPutSchema = z
+  .object({
+    date: blockedDateKeySchema.optional(),
+    dates: z.array(blockedDateKeySchema).min(1).max(62).optional(),
+    blocked: z.boolean(),
+  })
+  .refine((data) => Boolean(data.date) || Boolean(data.dates?.length), {
+    message: "Choose at least one date.",
+  });
 
 export type BlockedDate = z.infer<typeof blockedDateSchema>;
 export type BlockedDatesPut = z.infer<typeof blockedDatesPutSchema>;

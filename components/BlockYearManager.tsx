@@ -20,8 +20,10 @@ import {
 
 export function BlockYearManager({
   initialMaxBookingYear,
+  hideHeader = false,
 }: {
   initialMaxBookingYear?: number;
+  hideHeader?: boolean;
 }) {
   const currentYear = useMemo(() => getCurrentBookingYear(), []);
   const nextYear = currentYear + 1;
@@ -119,12 +121,14 @@ export function BlockYearManager({
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-lg font-semibold">Booking Year</h2>
-        <p className="text-sm text-muted-foreground">
-          Close next year until you are ready to take bookings.
-        </p>
-      </div>
+      {hideHeader ? null : (
+        <div>
+          <h2 className="text-lg font-semibold">Booking Year</h2>
+          <p className="text-sm text-muted-foreground">
+            Close next year until you are ready to take bookings.
+          </p>
+        </div>
+      )}
 
       <Card>
         <CardHeader className="pb-2">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -12,33 +12,44 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Calendar } from "@/components/ui/calendar";
-import { toDateKey } from "@/utils/booking/availability";
 import {
-  buildBlockedDateSet,
-  isDateBlocked,
-} from "@/utils/booking/blockedDates";
+  dateKeysFromRange,
+  formatDateRangeLabel,
+  MAX_DATE_RANGE_DAYS,
+} from "@/utils/booking/dateRange";
 
 type BlockedDateRow = {
   _id?: string;
   date: string;
 };
 
-export function BlockedDatesManager() {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>();
+export function BlockedDatesManager({
+  hideHeader = false,
+}: {
+  hideHeader?: boolean;
+}) {
+  const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [blockedDates, setBlockedDates] = useState<BlockedDateRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
+  const selectedDateKeys = useMemo(
+    () => dateKeysFromRange(selectedRange),
+    [selectedRange]
+  );
+  const selectedKey = selectedDateKeys.join(",");
   const blockedKeys = useMemo(
-    () => buildBlockedDateSet(blockedDates.map((item) => item.date)),
+    () => new Set(blockedDates.map((item) => item.date)),
     [blockedDates]
   );
-  const selectedIsBlocked = selectedDate
-    ? isDateBlocked(selectedDate, blockedKeys)
-    : false;
+  const selectedBlockedCount = selectedDateKeys.filter((key) =>
+    blockedKeys.has(key)
+  ).length;
+  const allSelectedBlocked =
+    selectedDateKeys.length > 0 &&
+    selectedBlockedCount === selectedDateKeys.length;
 
   const markedDates = useMemo(() => {
     return [...blockedKeys]
@@ -85,12 +96,16 @@ export function BlockedDatesManager() {
   useEffect(() => {
     setSuccess(null);
     setError(null);
-  }, [selectedDateKey]);
+  }, [selectedKey]);
 
   async function handleToggle() {
-    if (!selectedDateKey) return;
+    if (selectedDateKeys.length === 0) return;
+    if (selectedDateKeys.length > MAX_DATE_RANGE_DAYS) {
+      setError(`Choose up to ${MAX_DATE_RANGE_DAYS} days at a time.`);
+      return;
+    }
 
-    const nextBlocked = !selectedIsBlocked;
+    const nextBlocked = !allSelectedBlocked;
     setSaving(true);
     setError(null);
     setSuccess(null);
@@ -100,7 +115,7 @@ export function BlockedDatesManager() {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          date: selectedDateKey,
+          dates: selectedDateKeys,
           blocked: nextBlocked,
         }),
       });
@@ -110,54 +125,64 @@ export function BlockedDatesManager() {
         setError(
           typeof data.error === "string"
             ? data.error
-            : "Failed to update blocked date."
+            : "Failed to update blocked dates."
         );
         return;
       }
 
       setBlockedDates((current) => {
-        const withoutDate = current.filter(
-          (item) => item.date !== selectedDateKey
-        );
-        if (!nextBlocked) return withoutDate;
-        const saved = (data.blocked_dates as BlockedDateRow[] | undefined) ?? [
-          { date: selectedDateKey },
-        ];
-        return [...withoutDate, ...saved];
+        const selected = new Set(selectedDateKeys);
+        const withoutRange = current.filter((item) => !selected.has(item.date));
+        if (!nextBlocked) return withoutRange;
+        const saved = (data.blocked_dates as BlockedDateRow[] | undefined) ??
+          selectedDateKeys.map((date) => ({ date }));
+        return [...withoutRange, ...saved];
       });
+
+      const count = selectedDateKeys.length;
       setSuccess(
         nextBlocked
-          ? "Date blocked. Clients cannot book this day."
-          : "Date unblocked."
+          ? count === 1
+            ? "Date blocked. Clients cannot book this day."
+            : `${count} dates blocked. Clients cannot book these days.`
+          : count === 1
+            ? "Date unblocked."
+            : `${count} dates unblocked.`
       );
     } finally {
       setSaving(false);
     }
   }
 
+  const rangeLabel = formatDateRangeLabel(selectedRange);
+  const count = selectedDateKeys.length;
+
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-lg font-semibold">Blocked Dates</h2>
-        <p className="text-sm text-muted-foreground">
-          Mark days when you are unavailable. Clients cannot book on blocked
-          dates.
-        </p>
-      </div>
+      {hideHeader ? null : (
+        <div>
+          <h2 className="text-lg font-semibold">Blocked Dates</h2>
+          <p className="text-sm text-muted-foreground">
+            Mark days when you are unavailable. Clients cannot book on blocked
+            dates.
+          </p>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-[auto_1fr]">
         <Card className="w-fit">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Pick a date</CardTitle>
+            <CardTitle className="text-base">Pick dates</CardTitle>
             <CardDescription>
-              Blocked dates are highlighted.
+              Tap a start and end date. Blocked dates are highlighted.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={setSelectedDate}
+              mode="range"
+              selected={selectedRange}
+              onSelect={setSelectedRange}
+              numberOfMonths={1}
               modifiers={{ blocked: markedDates }}
               modifiersClassNames={{
                 blocked: "bg-destructive/15 text-destructive font-medium",
@@ -169,12 +194,10 @@ export function BlockedDatesManager() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">
-              {selectedDate
-                ? format(selectedDate, "d MMM yyyy")
-                : "Select a date"}
+              {rangeLabel ?? "Select dates"}
             </CardTitle>
             <CardDescription>
-              Block a day to stop all bookings on that date.
+              Block consecutive days to stop all bookings in that range.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-4">
@@ -190,28 +213,38 @@ export function BlockedDatesManager() {
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : null}
 
-            {!selectedDateKey ? (
+            {count === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Choose a date on the calendar to block or unblock it.
+                Choose a date, then tap another date to select the range.
               </p>
             ) : (
               <>
                 <p className="text-sm text-muted-foreground">
-                  {selectedIsBlocked
-                    ? "This date is currently blocked."
-                    : "This date is currently available for booking."}
+                  {allSelectedBlocked
+                    ? count === 1
+                      ? "This date is currently blocked."
+                      : `All ${count} selected dates are currently blocked.`
+                    : selectedBlockedCount > 0
+                      ? `${selectedBlockedCount} of ${count} selected dates are already blocked.`
+                      : count === 1
+                        ? "This date is currently available for booking."
+                        : `${count} selected dates are currently available for booking.`}
                 </p>
                 <div className="flex justify-end">
                   <Button
-                    variant={selectedIsBlocked ? "outline" : "destructive"}
+                    variant={allSelectedBlocked ? "outline" : "destructive"}
                     onClick={handleToggle}
                     disabled={saving}
                   >
                     {saving
                       ? "Saving…"
-                      : selectedIsBlocked
-                        ? "Unblock date"
-                        : "Block date"}
+                      : allSelectedBlocked
+                        ? count === 1
+                          ? "Unblock date"
+                          : `Unblock ${count} dates`
+                        : count === 1
+                          ? "Block date"
+                          : `Block ${count} dates`}
                   </Button>
                 </div>
               </>

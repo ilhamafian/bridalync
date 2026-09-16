@@ -78,20 +78,26 @@ export async function PUT(req: NextRequest) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    const { date, blocked } = parsed.data;
+    const { date, dates, blocked } = parsed.data;
+    const dateKeys = [...new Set([...(dates ?? []), ...(date ? [date] : [])])];
 
     if (blocked) {
-      await blockedDateModel.blockDate(userId, date);
+      for (const dateKey of dateKeys) {
+        await blockedDateModel.blockDate(userId, dateKey);
+      }
     } else {
-      await blockedDateModel.unblockDate(userId, date);
+      for (const dateKey of dateKeys) {
+        await blockedDateModel.unblockDate(userId, dateKey);
+      }
     }
 
-    const blockedDates = await blockedDateModel.findByUserIdAndDates(userId, [
-      date,
-    ]);
+    const blockedDates = await blockedDateModel.findByUserIdAndDates(
+      userId,
+      dateKeys
+    );
 
     return createResponse({
-      date,
+      dates: dateKeys,
       blocked,
       blocked_dates: blockedDates.map(serializeBlockedDate),
     });

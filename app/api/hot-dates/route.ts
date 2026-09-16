@@ -82,24 +82,27 @@ export async function PUT(req: NextRequest) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    const { date, overrides } = parsed.data;
+    const { date, dates, overrides } = parsed.data;
+    const dateKeys = [...new Set([...(dates ?? []), ...(date ? [date] : [])])];
 
-    for (const override of overrides) {
-      if (override.price === null) {
-        await hotDateModel.deleteOverride(userId, date, override);
-        continue;
+    for (const dateKey of dateKeys) {
+      for (const override of overrides) {
+        if (override.price === null) {
+          await hotDateModel.deleteOverride(userId, dateKey, override);
+          continue;
+        }
+
+        await hotDateModel.upsertOverride(userId, dateKey, {
+          ...override,
+          price: override.price,
+        });
       }
-
-      await hotDateModel.upsertOverride(userId, date, {
-        ...override,
-        price: override.price,
-      });
     }
 
-    const hotDates = await hotDateModel.findByUserIdAndDates(userId, [date]);
+    const hotDates = await hotDateModel.findByUserIdAndDates(userId, dateKeys);
 
     return createResponse({
-      date,
+      dates: dateKeys,
       hot_dates: hotDates.map(serializeHotDate),
     });
   } catch (error) {

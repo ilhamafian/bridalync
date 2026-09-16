@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import type { PackageItem, StyleItem } from "@/components/PackagesManager";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
 import type { CalendarEvent, CalendarView } from "./calendar-types";
@@ -18,6 +19,7 @@ import {
   getDaysInView,
   shiftCursor,
 } from "./calendar-utils";
+import { CalendarToolsMenu } from "./CalendarToolsMenu";
 import { DayStrip } from "./DayStrip";
 import { EventDetailSheet } from "./EventDetailSheet";
 import { MonthView } from "./MonthView";
@@ -25,8 +27,16 @@ import { TimeGrid } from "./TimeGrid";
 
 export function CalendarManager({
   initialBookings,
+  chargeBy,
+  packages,
+  styles,
+  maxBookingYear,
 }: {
   initialBookings: SerializedBooking[];
+  chargeBy: "package" | "style";
+  packages: PackageItem[];
+  styles: StyleItem[];
+  maxBookingYear?: number;
 }) {
   const isMobile = useIsMobile();
   const [view, setView] = useState<CalendarView>("week");
@@ -51,32 +61,40 @@ export function CalendarManager({
   return (
     <div className="flex min-w-0 flex-col gap-3 overflow-x-hidden">
       <div className="flex flex-col gap-2 px-4 lg:px-6">
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Previous"
-            onClick={() =>
-              setCursor((current) => shiftCursor(current, view, -1))
-            }
-          >
-            <IconChevronLeft className="size-4" />
-          </Button>
-          <h2 className="min-w-0 flex-1 truncate text-center text-sm font-semibold tracking-tight sm:text-left sm:text-lg">
-            {formatViewTitle(cursor, view, isMobile)}
-          </h2>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Next"
-            onClick={() =>
-              setCursor((current) => shiftCursor(current, view, 1))
-            }
-          >
-            <IconChevronRight className="size-4" />
-          </Button>
+        <div className="flex items-center gap-2">
+          <CalendarToolsMenu
+            chargeBy={chargeBy}
+            packages={packages}
+            styles={styles}
+            maxBookingYear={maxBookingYear}
+          />
+          <div className="flex min-w-0 flex-1 items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Previous"
+              onClick={() =>
+                setCursor((current) => shiftCursor(current, view, -1))
+              }
+            >
+              <IconChevronLeft className="size-4" />
+            </Button>
+            <h2 className="min-w-0 flex-1 truncate text-center text-sm font-semibold tracking-tight sm:text-lg">
+              {formatViewTitle(cursor, view, isMobile)}
+            </h2>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label="Next"
+              onClick={() =>
+                setCursor((current) => shiftCursor(current, view, 1))
+              }
+            >
+              <IconChevronRight className="size-4" />
+            </Button>
+          </div>
           <Button
             type="button"
             variant="outline"
