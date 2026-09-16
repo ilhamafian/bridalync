@@ -146,7 +146,7 @@ export function BlockYearManager({
             <p className="text-sm text-destructive">{error}</p>
           ) : null}
           {success ? (
-            <p className="text-sm text-emerald-700 dark:text-emerald-400">
+            <p className="text-sm text-rose-700 dark:text-rose-400">
               {success}
             </p>
           ) : null}
