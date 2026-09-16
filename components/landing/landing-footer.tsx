@@ -1,5 +1,6 @@
 import Image from "next/image";
-import Link from "next/link";
+
+import { LEGAL_URLS, SITE_CONTACT_EMAIL } from "@/lib/site";
 
 import { LandingLogo } from "./landing-logo";
 
@@ -11,13 +12,13 @@ const footerLinks = {
   ],
   Company: [
     { href: "#about", label: "About" },
-    { href: "/privacy", label: "Privacy" },
-    { href: "/terms", label: "Terms" },
+    { href: LEGAL_URLS.privacy, label: "Privacy Policy" },
+    { href: LEGAL_URLS.terms, label: "Terms of Service" },
   ],
   Socials: [
     { href: "#", label: "Instagram" },
     { href: "#", label: "TikTok" },
-    { href: "mailto:hello@bridalync.com", label: "Email" },
+    { href: `mailto:${SITE_CONTACT_EMAIL}`, label: "Email" },
   ],
 };
 
@@ -32,6 +33,10 @@ export function LandingFooter() {
           <div>
             <LandingLogo variant="light" />
             <p className="mt-4 font-serif text-sm leading-relaxed text-landing-cream-text/70">
+              Bridalync helps bridal hair and makeup artists manage bookings,
+              availability, clients, and payments in one place.
+            </p>
+            <p className="mt-3 font-serif text-sm leading-relaxed text-landing-cream-text/70">
               © {new Date().getFullYear()} Bridalync. All rights reserved.
             </p>
           </div>
@@ -44,12 +49,12 @@ export function LandingFooter() {
               <ul className="mt-4 space-y-2.5">
                 {links.map((link) => (
                   <li key={link.label}>
-                    <Link
+                    <a
                       href={link.href}
                       className="font-serif text-base text-landing-cream-text/70 transition-colors hover:text-landing-cream-text"
                     >
                       {link.label}
-                    </Link>
+                    </a>
                   </li>
                 ))}
               </ul>
@@ -59,19 +64,19 @@ export function LandingFooter() {
 
         <div className="mt-12 flex items-center justify-between border-t border-landing-cream-text/10 pt-8">
           <p className="font-serif text-sm text-landing-cream-text/50">
-            <Link
-              href="/privacy"
+            <a
+              href={LEGAL_URLS.privacy}
               className="transition-colors hover:text-landing-cream-text"
             >
-              Privacy
-            </Link>
+              Privacy Policy
+            </a>
             {" · "}
-            <Link
-              href="/terms"
+            <a
+              href={LEGAL_URLS.terms}
               className="transition-colors hover:text-landing-cream-text"
             >
-              Terms
-            </Link>
+              Terms of Service
+            </a>
           </p>
           <span className="flex size-11 items-center justify-center overflow-hidden rounded-full bg-landing-cream-text">
             <Image

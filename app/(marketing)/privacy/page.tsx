@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { LegalPage } from "@/components/landing/legal-page";
+import { LEGAL_URLS, SITE_CONTACT_EMAIL, SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | Bridalync",
@@ -22,12 +22,12 @@ export default function PrivacyPolicyPage() {
         </p>
         <p>
           Contact:{" "}
-          <a href="mailto:pacificventures.hq@gmail.com">pacificventures.hq@gmail.com</a>
+          <a href={`mailto:${SITE_CONTACT_EMAIL}`}>{SITE_CONTACT_EMAIL}</a>
         </p>
         <p>
           Website:{" "}
-          <a href="https://bridalync.com" rel="noopener noreferrer">
-            bridalync.com
+          <a href={SITE_URL} rel="noopener noreferrer">
+            {SITE_URL.replace("https://", "")}
           </a>
         </p>
       </section>
@@ -87,10 +87,18 @@ export default function PrivacyPolicyPage() {
       <section>
         <h2>4. Google user data</h2>
         <p>
-          If you sign in with Google, Bridalync uses the information Google
-          provides only to create or authenticate your account and to display
-          your basic profile details within the Service. We access only the
-          scopes you authorize.
+          When you choose “Continue with Google,” Bridalync requests basic
+          Google account profile information (typically your name, email
+          address, and profile picture) for the sole purposes of signing you
+          in, creating or linking your Bridalync account, and showing your
+          identity inside the Service.
+        </p>
+        <p>
+          We do <strong>not</strong> use Google user data for advertising, do
+          not sell it, do not share it with data brokers, and do not use it for
+          independent AI/ML training. We store the account identifiers needed to
+          keep you signed in and to associate your Bridalync profile with your
+          Google login. We access only the scopes you authorize.
         </p>
         <p>
           Our use of information received from Google APIs will adhere to the{" "}
@@ -172,7 +180,7 @@ export default function PrivacyPolicyPage() {
         </ul>
         <p>
           To make a request, email{" "}
-          <a href="mailto:pacificventures.hq@gmail.com">pacificventures.hq@gmail.com</a>.
+          <a href={`mailto:${SITE_CONTACT_EMAIL}`}>{SITE_CONTACT_EMAIL}</a>.
         </p>
       </section>
 
@@ -208,11 +216,11 @@ export default function PrivacyPolicyPage() {
         <h2>13. Contact us</h2>
         <p>
           Questions about this Privacy Policy or your personal data:{" "}
-          <a href="mailto:pacificventures.hq@gmail.com">pacificventures.hq@gmail.com</a>.
+          <a href={`mailto:${SITE_CONTACT_EMAIL}`}>{SITE_CONTACT_EMAIL}</a>.
         </p>
         <p>
           See also our{" "}
-          <Link href="/terms">Terms of Service</Link>.
+          <a href={LEGAL_URLS.terms}>Terms of Service</a>.
         </p>
       </section>
     </LegalPage>

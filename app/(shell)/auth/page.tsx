@@ -20,6 +20,7 @@ import {
   isOnboardingComplete,
   type OnboardingProgress,
 } from "@/schemas/onboardingSchema";
+import { LEGAL_URLS } from "@/lib/site";
 import {
   BETA_NOT_ALLOWED_CODE,
   BETA_NOT_ALLOWED_MESSAGE,
@@ -496,6 +497,24 @@ export default function AuthPage() {
             Continue with Google
           </Button>
         </div>
+
+        <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
+          By continuing, you agree to our{" "}
+          <a
+            href={LEGAL_URLS.terms}
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a
+            href={LEGAL_URLS.privacy}
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
 
         <div className="my-6 flex w-full items-center gap-3">
           <div className="h-px flex-1 bg-border" />

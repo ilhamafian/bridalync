@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { LegalPage } from "@/components/landing/legal-page";
+import { LEGAL_URLS, SITE_CONTACT_EMAIL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms of Service | Bridalync",
@@ -23,8 +23,8 @@ export default function TermsOfServicePage() {
         <p>
           By creating an account, signing in (including with Google), or
           otherwise using the Service, you agree to these Terms and our{" "}
-          <Link href="/privacy">Privacy Policy</Link>. If you do not agree, do
-          not use the Service.
+          <a href={LEGAL_URLS.privacy}>Privacy Policy</a>. If you do not agree,
+          do not use the Service.
         </p>
       </section>
 
@@ -64,8 +64,8 @@ export default function TermsOfServicePage() {
         </p>
         <p>
           Notify us promptly at{" "}
-          <a href="mailto:pacificventures.hq@gmail.com">pacificventures.hq@gmail.com</a> if you
-          suspect unauthorized access to your account.
+          <a href={`mailto:${SITE_CONTACT_EMAIL}`}>{SITE_CONTACT_EMAIL}</a> if
+          you suspect unauthorized access to your account.
         </p>
       </section>
 
@@ -186,11 +186,11 @@ export default function TermsOfServicePage() {
         <h2>15. Contact</h2>
         <p>
           Questions about these Terms:{" "}
-          <a href="mailto:pacificventures.hq@gmail.com">pacificventures.hq@gmail.com</a>.
+          <a href={`mailto:${SITE_CONTACT_EMAIL}`}>{SITE_CONTACT_EMAIL}</a>.
         </p>
         <p>
           Privacy details:{" "}
-          <Link href="/privacy">Privacy Policy</Link>.
+          <a href={LEGAL_URLS.privacy}>Privacy Policy</a>.
         </p>
       </section>
     </LegalPage>
