@@ -17,6 +17,7 @@ import {
 } from "date-fns";
 
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
+import { toDateKey } from "@/utils/booking/availability";
 
 import {
   CALENDAR_DAY_END_HOUR,
@@ -181,6 +182,10 @@ export function formatHourLabel(hour: number, compact = false) {
     return format(date, "ha").replace("AM", "a").replace("PM", "p").toLowerCase();
   }
   return format(date, "h a");
+}
+
+export function isMarkedDay(day: Date, keys: Set<string>) {
+  return keys.has(toDateKey(day));
 }
 
 export { WEEK_OPTIONS };

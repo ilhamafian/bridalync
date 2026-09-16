@@ -115,12 +115,14 @@ export function HotDatesManager({
   styles,
   initialHotDates = [],
   hideHeader = false,
+  onSaved,
 }: {
   chargeBy: "package" | "style";
   packages: PackageItem[];
   styles: StyleItem[];
   initialHotDates?: PublicHotDate[];
   hideHeader?: boolean;
+  onSaved?: () => void;
 }) {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [hotDates, setHotDates] = useState<HotDateRow[]>(initialHotDates);
@@ -286,6 +288,7 @@ export function HotDatesManager({
           ? "Hot date prices saved."
           : `Hot date prices saved for ${selectedDateKeys.length} dates.`
       );
+      onSaved?.();
     } finally {
       setSaving(false);
     }

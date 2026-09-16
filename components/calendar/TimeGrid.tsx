@@ -11,16 +11,21 @@ import {
   getEventOffset,
   getHourLabels,
   getNowOffsetHours,
+  isMarkedDay,
 } from "./calendar-utils";
 
 export function TimeGrid({
   days,
   events,
+  blockedKeys,
+  hotKeys,
   onSelectDay,
   onSelectEvent,
 }: {
   days: Date[];
   events: CalendarEvent[];
+  blockedKeys: Set<string>;
+  hotKeys: Set<string>;
   onSelectDay?: (day: Date) => void;
   onSelectEvent?: (event: CalendarEvent) => void;
 }) {
@@ -34,9 +39,27 @@ export function TimeGrid({
   }, []);
 
   const nowOffset = useMemo(() => getNowOffsetHours(now), [now]);
+  const dayViewBlocked =
+    isDayView && days[0] != null && isMarkedDay(days[0], blockedKeys);
+  const dayViewHot =
+    isDayView && days[0] != null && isMarkedDay(days[0], hotKeys);
 
   return (
     <div className="min-w-0 overflow-x-hidden border-y border-border bg-background [--cal-hour-height:2.75rem] sm:mx-4 sm:rounded-xl sm:border sm:[--cal-hour-height:3.5rem]">
+      {isDayView && (dayViewBlocked || dayViewHot) ? (
+        <div className="flex flex-wrap gap-2 border-b border-border px-3 py-2">
+          {dayViewBlocked ? (
+            <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
+              Blocked
+            </span>
+          ) : null}
+          {dayViewHot ? (
+            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+              Hot date
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <div
         className={cn("grid w-full min-w-0", isDayView && "pt-3")}
         style={{
@@ -50,6 +73,8 @@ export function TimeGrid({
             <div className="sticky top-0 z-20 border-b border-border bg-background" />
             {days.map((day) => {
               const today = isToday(day);
+              const blocked = isMarkedDay(day, blockedKeys);
+              const hot = isMarkedDay(day, hotKeys);
 
               return (
                 <button
@@ -59,6 +84,8 @@ export function TimeGrid({
                   className={cn(
                     "sticky top-0 z-20 min-w-0 border-b border-l border-border bg-background px-0.5 py-1.5 text-center sm:px-2 sm:py-3",
                     today && "bg-primary/5",
+                    blocked && "bg-destructive/10",
+                    !blocked && hot && "bg-amber-500/10",
                     !onSelectDay && "pointer-events-none"
                   )}
                 >
@@ -68,11 +95,27 @@ export function TimeGrid({
                   <p
                     className={cn(
                       "mx-auto mt-0.5 flex size-6 items-center justify-center rounded-full text-xs font-semibold tabular-nums sm:mt-1 sm:size-8 sm:text-base",
-                      today && "bg-primary text-primary-foreground"
+                      today && "bg-primary text-primary-foreground",
+                      !today && blocked && "text-destructive",
+                      !today && !blocked && hot && "text-amber-700 dark:text-amber-400"
                     )}
                   >
                     {format(day, "d")}
                   </p>
+                  {blocked || hot ? (
+                    <p
+                      className={cn(
+                        "mt-0.5 truncate text-[9px] font-medium sm:text-[10px]",
+                        blocked
+                          ? "text-destructive"
+                          : "text-amber-700 dark:text-amber-400"
+                      )}
+                    >
+                      {blocked ? "Blocked" : "Hot"}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5 h-[13px] sm:h-[15px]" />
+                  )}
                 </button>
               );
             })}
@@ -96,15 +139,28 @@ export function TimeGrid({
         {days.map((day) => {
           const dayEvents = events.filter((event) => isSameDay(event.start, day));
           const showNow = isToday(day) && nowOffset != null;
+          const blocked = isMarkedDay(day, blockedKeys);
+          const hot = isMarkedDay(day, hotKeys);
 
           return (
             <div
               key={`${day.toISOString()}-grid`}
-              className="relative min-w-0 border-l border-border"
+              className={cn(
+                "relative min-w-0 border-l border-border",
+                blocked && "bg-destructive/8",
+                !blocked && hot && "bg-amber-500/8"
+              )}
               style={{
                 height: `calc(${hours.length - 1} * var(--cal-hour-height))`,
               }}
             >
+              {blocked ? (
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 bg-[repeating-linear-gradient(-45deg,transparent,transparent_6px,rgb(239_68_68/0.08)_6px,rgb(239_68_68/0.08)_12px)]"
+                />
+              ) : null}
+
               {hours.slice(0, -1).map((hour) => (
                 <div
                   key={hour}

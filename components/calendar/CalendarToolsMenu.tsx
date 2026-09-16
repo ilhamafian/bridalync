@@ -54,13 +54,20 @@ export function CalendarToolsMenu({
   packages,
   styles,
   maxBookingYear,
+  onAvailabilityChange,
 }: {
   chargeBy: "package" | "style";
   packages: PackageItem[];
   styles: StyleItem[];
   maxBookingYear?: number;
+  onAvailabilityChange?: () => void;
 }) {
   const [tool, setTool] = useState<AvailabilityTool | null>(null);
+
+  function handleSaved() {
+    onAvailabilityChange?.();
+    setTool(null);
+  }
 
   return (
     <>
@@ -111,10 +118,14 @@ export function CalendarToolsMenu({
                     chargeBy={chargeBy}
                     packages={packages}
                     styles={styles}
+                    onSaved={handleSaved}
                   />
                 ) : null}
                 {tool === "blocked" ? (
-                  <BlockedDatesManager hideHeader />
+                  <BlockedDatesManager
+                    hideHeader
+                    onSaved={handleSaved}
+                  />
                 ) : null}
                 {tool === "year" ? (
                   <BlockYearManager

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   IconChevronLeft,
   IconChevronRight,
@@ -44,6 +44,40 @@ export function CalendarManager({
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
   );
+  const [blockedKeys, setBlockedKeys] = useState<Set<string>>(
+    () => new Set()
+  );
+  const [hotKeys, setHotKeys] = useState<Set<string>>(() => new Set());
+
+  const loadAvailability = useCallback(async () => {
+    try {
+      const [blockedResponse, hotResponse] = await Promise.all([
+        fetch("/api/blocked-dates"),
+        fetch("/api/hot-dates"),
+      ]);
+      const blockedData = await blockedResponse.json().catch(() => ({}));
+      const hotData = await hotResponse.json().catch(() => ({}));
+
+      const blocked =
+        (blockedData.blocked_dates as Array<{ date?: string }> | undefined) ??
+        [];
+      const hot =
+        (hotData.hot_dates as Array<{ date?: string }> | undefined) ?? [];
+
+      setBlockedKeys(
+        new Set(blocked.map((item) => item.date).filter(Boolean) as string[])
+      );
+      setHotKeys(
+        new Set(hot.map((item) => item.date).filter(Boolean) as string[])
+      );
+    } catch {
+      // Keep the last known markers if a refresh fails.
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAvailability();
+  }, [loadAvailability]);
 
   const events = useMemo(
     () => bookingsToCalendarEvents(initialBookings),
@@ -67,6 +101,7 @@ export function CalendarManager({
             packages={packages}
             styles={styles}
             maxBookingYear={maxBookingYear}
+            onAvailabilityChange={loadAvailability}
           />
           <div className="flex min-w-0 flex-1 items-center gap-1">
             <Button
@@ -128,9 +163,22 @@ export function CalendarManager({
           <DayStrip
             days={weekDays}
             selected={cursor}
+            blockedKeys={blockedKeys}
+            hotKeys={hotKeys}
             onSelectDay={setCursor}
           />
         ) : null}
+
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-destructive" />
+            Blocked
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="size-2 rounded-full bg-amber-500" />
+            Hot date
+          </span>
+        </div>
       </div>
 
       {view === "month" ? (
@@ -139,6 +187,8 @@ export function CalendarManager({
             cursor={cursor}
             days={days}
             events={events}
+            blockedKeys={blockedKeys}
+            hotKeys={hotKeys}
             onSelectDay={handleSelectDay}
             onSelectEvent={setSelectedEvent}
           />
@@ -147,6 +197,8 @@ export function CalendarManager({
         <TimeGrid
           days={days}
           events={events}
+          blockedKeys={blockedKeys}
+          hotKeys={hotKeys}
           onSelectDay={view === "week" ? handleSelectDay : undefined}
           onSelectEvent={setSelectedEvent}
         />

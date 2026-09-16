@@ -25,8 +25,10 @@ type BlockedDateRow = {
 
 export function BlockedDatesManager({
   hideHeader = false,
+  onSaved,
 }: {
   hideHeader?: boolean;
+  onSaved?: () => void;
 }) {
   const [selectedRange, setSelectedRange] = useState<DateRange | undefined>();
   const [blockedDates, setBlockedDates] = useState<BlockedDateRow[]>([]);
@@ -149,6 +151,7 @@ export function BlockedDatesManager({
             ? "Date unblocked."
             : `${count} dates unblocked.`
       );
+      onSaved?.();
     } finally {
       setSaving(false);
     }

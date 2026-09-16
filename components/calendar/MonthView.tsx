@@ -5,7 +5,7 @@ import { format, isSameMonth, isToday } from "date-fns";
 import { cn } from "@/lib/utils";
 
 import type { CalendarEvent } from "./calendar-types";
-import { eventsForDay } from "./calendar-utils";
+import { eventsForDay, isMarkedDay } from "./calendar-utils";
 
 const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -13,12 +13,16 @@ export function MonthView({
   cursor,
   days,
   events,
+  blockedKeys,
+  hotKeys,
   onSelectDay,
   onSelectEvent,
 }: {
   cursor: Date;
   days: Date[];
   events: CalendarEvent[];
+  blockedKeys: Set<string>;
+  hotKeys: Set<string>;
   onSelectDay: (day: Date) => void;
   onSelectEvent?: (event: CalendarEvent) => void;
 }) {
@@ -40,13 +44,19 @@ export function MonthView({
           const dayEvents = eventsForDay(events, day);
           const inMonth = isSameMonth(day, cursor);
           const today = isToday(day);
+          const blocked = isMarkedDay(day, blockedKeys);
+          const hot = isMarkedDay(day, hotKeys);
+          const extraChips = [blocked, hot].filter(Boolean).length;
+          const visibleEvents = dayEvents.slice(0, Math.max(1, 3 - extraChips));
 
           return (
             <div
               key={day.toISOString()}
               className={cn(
                 "flex min-h-26 flex-col gap-1 border-b border-r border-border p-2 text-left",
-                !inMonth && "bg-muted/20 text-muted-foreground"
+                !inMonth && "bg-muted/20 text-muted-foreground",
+                blocked && "bg-destructive/8",
+                !blocked && hot && "bg-amber-500/10"
               )}
             >
               <button
@@ -54,14 +64,25 @@ export function MonthView({
                 onClick={() => onSelectDay(day)}
                 className={cn(
                   "inline-flex size-7 items-center justify-center rounded-full text-sm tabular-nums hover:bg-muted",
-                  today && "bg-primary font-semibold text-primary-foreground hover:bg-primary"
+                  today &&
+                    "bg-primary font-semibold text-primary-foreground hover:bg-primary"
                 )}
               >
                 {format(day, "d")}
               </button>
 
               <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
-                {dayEvents.slice(0, 3).map((event) => (
+                {blocked ? (
+                  <span className="truncate rounded-sm bg-destructive/15 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
+                    Blocked
+                  </span>
+                ) : null}
+                {hot ? (
+                  <span className="truncate rounded-sm bg-amber-500/20 px-1.5 py-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-300">
+                    Hot date
+                  </span>
+                ) : null}
+                {visibleEvents.map((event) => (
                   <button
                     key={event.id}
                     type="button"
@@ -75,13 +96,13 @@ export function MonthView({
                     {event.clientName}
                   </button>
                 ))}
-                {dayEvents.length > 3 ? (
+                {dayEvents.length > visibleEvents.length ? (
                   <button
                     type="button"
                     onClick={() => onSelectDay(day)}
                     className="px-1 text-left text-[11px] text-muted-foreground hover:text-foreground"
                   >
-                    +{dayEvents.length - 3} more
+                    +{dayEvents.length - visibleEvents.length} more
                   </button>
                 ) : null}
               </div>
