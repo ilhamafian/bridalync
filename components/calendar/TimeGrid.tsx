@@ -5,6 +5,7 @@ import { format, isSameDay, isToday } from "date-fns";
 
 import { cn } from "@/lib/utils";
 
+import { BlockedMarker, HotMarker } from "./CalendarMarkers";
 import type { CalendarEvent } from "./calendar-types";
 import {
   formatHourLabel,
@@ -49,13 +50,13 @@ export function TimeGrid({
       {isDayView && (dayViewBlocked || dayViewHot) ? (
         <div className="flex flex-wrap gap-2 border-b border-border px-3 py-2">
           {dayViewBlocked ? (
-            <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-medium text-destructive">
-              Blocked
+            <span className="rounded-full bg-destructive/15 px-2 py-0.5 text-xs font-medium">
+              <BlockedMarker />
             </span>
           ) : null}
           {dayViewHot ? (
-            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
-              Hot date
+            <span className="rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium">
+              <HotMarker />
             </span>
           ) : null}
         </div>
@@ -103,18 +104,16 @@ export function TimeGrid({
                     {format(day, "d")}
                   </p>
                   {blocked || hot ? (
-                    <p
-                      className={cn(
-                        "mt-0.5 truncate text-[9px] font-medium sm:text-[10px]",
-                        blocked
-                          ? "text-destructive"
-                          : "text-amber-700 dark:text-amber-400"
-                      )}
-                    >
-                      {blocked ? "Blocked" : "Hot"}
-                    </p>
+                    <span className="mt-0.5 flex h-[13px] items-center justify-center gap-0.5 sm:h-[15px]">
+                      {blocked ? (
+                        <BlockedMarker label={false} className="[&_svg]:size-3" />
+                      ) : null}
+                      {hot ? (
+                        <HotMarker label={false} className="[&_svg]:size-3" />
+                      ) : null}
+                    </span>
                   ) : (
-                    <p className="mt-0.5 h-[13px] sm:h-[15px]" />
+                    <span className="mt-0.5 h-[13px] sm:h-[15px]" />
                   )}
                 </button>
               );

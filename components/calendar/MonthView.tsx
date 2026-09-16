@@ -4,6 +4,7 @@ import { format, isSameMonth, isToday } from "date-fns";
 
 import { cn } from "@/lib/utils";
 
+import { BlockedMarker, HotMarker } from "./CalendarMarkers";
 import type { CalendarEvent } from "./calendar-types";
 import { eventsForDay, isMarkedDay } from "./calendar-utils";
 
@@ -46,8 +47,7 @@ export function MonthView({
           const today = isToday(day);
           const blocked = isMarkedDay(day, blockedKeys);
           const hot = isMarkedDay(day, hotKeys);
-          const extraChips = [blocked, hot].filter(Boolean).length;
-          const visibleEvents = dayEvents.slice(0, Math.max(1, 3 - extraChips));
+          const visibleEvents = dayEvents.slice(0, 3);
 
           return (
             <div
@@ -59,29 +59,25 @@ export function MonthView({
                 !blocked && hot && "bg-amber-500/10"
               )}
             >
-              <button
-                type="button"
-                onClick={() => onSelectDay(day)}
-                className={cn(
-                  "inline-flex size-7 items-center justify-center rounded-full text-sm tabular-nums hover:bg-muted",
-                  today &&
-                    "bg-primary font-semibold text-primary-foreground hover:bg-primary"
-                )}
-              >
-                {format(day, "d")}
-              </button>
+              <div className="flex items-center justify-between gap-1">
+                <button
+                  type="button"
+                  onClick={() => onSelectDay(day)}
+                  className={cn(
+                    "inline-flex size-7 items-center justify-center rounded-full text-sm tabular-nums hover:bg-muted",
+                    today &&
+                      "bg-primary font-semibold text-primary-foreground hover:bg-primary"
+                  )}
+                >
+                  {format(day, "d")}
+                </button>
+                <span className="flex items-center gap-0.5">
+                  {blocked ? <BlockedMarker label={false} /> : null}
+                  {hot ? <HotMarker label={false} /> : null}
+                </span>
+              </div>
 
               <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-hidden">
-                {blocked ? (
-                  <span className="truncate rounded-sm bg-destructive/15 px-1.5 py-0.5 text-[11px] font-medium text-destructive">
-                    Blocked
-                  </span>
-                ) : null}
-                {hot ? (
-                  <span className="truncate rounded-sm bg-amber-500/20 px-1.5 py-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-300">
-                    Hot date
-                  </span>
-                ) : null}
                 {visibleEvents.map((event) => (
                   <button
                     key={event.id}

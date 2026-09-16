@@ -4,6 +4,7 @@ import { format, isSameDay, isToday } from "date-fns";
 
 import { cn } from "@/lib/utils";
 
+import { BlockedMarker, HotMarker } from "./CalendarMarkers";
 import { isMarkedDay } from "./calendar-utils";
 
 export function DayStrip({
@@ -49,13 +50,9 @@ export function DayStrip({
             >
               {format(day, "d")}
             </span>
-            <span className="flex h-1.5 items-center justify-center gap-0.5">
-              {blocked ? (
-                <span className="size-1.5 rounded-full bg-destructive" />
-              ) : null}
-              {hot ? (
-                <span className="size-1.5 rounded-full bg-amber-500" />
-              ) : null}
+            <span className="flex h-3.5 items-center justify-center gap-0.5">
+              {blocked ? <BlockedMarker label={false} className="[&_svg]:size-3" /> : null}
+              {hot ? <HotMarker label={false} className="[&_svg]:size-3" /> : null}
             </span>
           </button>
         );

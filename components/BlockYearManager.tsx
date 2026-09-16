@@ -21,9 +21,11 @@ import {
 export function BlockYearManager({
   initialMaxBookingYear,
   hideHeader = false,
+  onSaved,
 }: {
   initialMaxBookingYear?: number;
   hideHeader?: boolean;
+  onSaved?: () => void;
 }) {
   const currentYear = useMemo(() => getCurrentBookingYear(), []);
   const nextYear = currentYear + 1;
@@ -112,6 +114,7 @@ export function BlockYearManager({
           ? `Bookings closed for ${nextYear}. Clients can book through ${currentYear}.`
           : `Bookings open through ${nextYear}.`
       );
+      onSaved?.();
     } finally {
       setSaving(false);
     }

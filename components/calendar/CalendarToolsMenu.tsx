@@ -3,7 +3,7 @@
 import { useState } from "react";
 import {
   IconAdjustments,
-  IconCalendarOff,
+  IconBan,
   IconCalendarStats,
   IconFlame,
 } from "@tabler/icons-react";
@@ -76,11 +76,11 @@ export function CalendarToolsMenu({
           <Button
             type="button"
             variant="outline"
-            size="icon-sm"
+            size="sm"
             className="shrink-0"
-            aria-label="Availability tools"
           >
             <IconAdjustments className="size-4" />
+            Edit
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="z-100 w-48 min-w-48">
@@ -89,7 +89,7 @@ export function CalendarToolsMenu({
             Hot dates
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setTool("blocked")}>
-            <IconCalendarOff />
+            <IconBan />
             Blocked dates
           </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setTool("year")}>
@@ -131,6 +131,7 @@ export function CalendarToolsMenu({
                   <BlockYearManager
                     hideHeader
                     initialMaxBookingYear={maxBookingYear}
+                    onSaved={handleSaved}
                   />
                 ) : null}
               </div>

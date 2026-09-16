@@ -20,6 +20,7 @@ import {
   shiftCursor,
 } from "./calendar-utils";
 import { CalendarToolsMenu } from "./CalendarToolsMenu";
+import { BlockedMarker, HotMarker } from "./CalendarMarkers";
 import { DayStrip } from "./DayStrip";
 import { EventDetailSheet } from "./EventDetailSheet";
 import { MonthView } from "./MonthView";
@@ -170,14 +171,8 @@ export function CalendarManager({
         ) : null}
 
         <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-destructive" />
-            Blocked
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span className="size-2 rounded-full bg-amber-500" />
-            Hot date
-          </span>
+          <BlockedMarker className="text-[11px]" />
+          <HotMarker className="text-[11px]" />
         </div>
       </div>
 
