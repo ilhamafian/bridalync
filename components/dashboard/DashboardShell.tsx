@@ -4,10 +4,11 @@ import { Suspense, useEffect } from "react";
 import { usePathname } from "next/navigation";
 
 import { BookingsManager } from "@/components/BookingsManager";
-import { BlockedDatesManager } from "@/components/BlockedDatesManager";
-import { BlockYearManager } from "@/components/BlockYearManager";
+import { CalendarManager } from "@/components/calendar/CalendarManager";
+// import { BlockedDatesManager } from "@/components/BlockedDatesManager";
+// import { BlockYearManager } from "@/components/BlockYearManager";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
-import { HotDatesManager } from "@/components/HotDatesManager";
+// import { HotDatesManager } from "@/components/HotDatesManager";
 import { PackagesManager } from "@/components/PackagesManager";
 import { ProfileManager } from "@/components/profile/ProfileManager";
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
@@ -18,7 +19,7 @@ import {
   type DashboardData,
   type DashboardSection,
 } from "@/utils/dashboardShell";
-import { getEffectiveMaxBookingYear } from "@/utils/booking/bookingWindow";
+// import { getEffectiveMaxBookingYear } from "@/utils/booking/bookingWindow";
 
 function Section({
   id,
@@ -68,25 +69,29 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="packages" active={active}>
-        <div className="flex flex-col gap-8">
-          <PackagesManager
-            initialPackages={data.packages.initialPackages}
-            initialStyles={data.packages.initialStyles}
+        <PackagesManager
+          initialPackages={data.packages.initialPackages}
+          initialStyles={data.packages.initialStyles}
+        />
+      </Section>
+
+      <Section id="calendar" active={active}>
+        <CalendarManager initialBookings={data.bookings.initialBookings} />
+        {/* Temporary: hide until calendar UI is ready
+        <div className="flex flex-col gap-8 px-4 lg:px-6">
+          <BlockYearManager
+            initialMaxBookingYear={getEffectiveMaxBookingYear(
+              data.settings.initialSettings.max_booking_year
+            )}
           />
-          <div className="flex flex-col gap-8 px-4 lg:px-6">
-            <BlockYearManager
-              initialMaxBookingYear={getEffectiveMaxBookingYear(
-                data.settings.initialSettings.max_booking_year
-              )}
-            />
-            <HotDatesManager
-              chargeBy={data.packages.chargeBy}
-              packages={data.packages.initialPackages}
-              styles={data.packages.initialStyles}
-            />
-            <BlockedDatesManager />
-          </div>
+          <HotDatesManager
+            chargeBy={data.packages.chargeBy}
+            packages={data.packages.initialPackages}
+            styles={data.packages.initialStyles}
+          />
+          <BlockedDatesManager />
         </div>
+        */}
       </Section>
 
       <Section id="settings" active={active}>

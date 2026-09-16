@@ -15,6 +15,7 @@ export type DashboardSection =
   | "home"
   | "bookings"
   | "packages"
+  | "calendar"
   | "settings"
   | "profile";
 
@@ -47,6 +48,7 @@ export type DashboardData = {
 export function getDashboardSection(pathname: string): DashboardSection {
   if (pathname.startsWith("/dashboard/bookings")) return "bookings";
   if (pathname.startsWith("/dashboard/packages")) return "packages";
+  if (pathname.startsWith("/dashboard/calendar")) return "calendar";
   if (pathname.startsWith("/dashboard/settings")) return "settings";
   if (pathname.startsWith("/dashboard/profile")) return "profile";
   return "home";

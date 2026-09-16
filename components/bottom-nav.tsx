@@ -6,8 +6,8 @@ import {
   IconBoxMultiple,
   IconCalendar,
   IconHome,
+  IconListDetails,
   IconSettings,
-  IconUser,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -21,9 +21,9 @@ const navItems: {
   match?: (pathname: string) => boolean;
 }[] = [
   {
-    title: "Bookings",  
+    title: "Bookings",
     href: "/dashboard/bookings",
-    icon: IconCalendar,
+    icon: IconListDetails,
     match: (pathname) => pathname.startsWith("/dashboard/bookings"),
   },
   {
@@ -40,16 +40,16 @@ const navItems: {
     match: (pathname) => pathname === "/dashboard",
   },
   {
+    title: "Calendar",
+    href: "/dashboard/calendar",
+    icon: IconCalendar,
+    match: (pathname) => pathname.startsWith("/dashboard/calendar"),
+  },
+  {
     title: "Settings",
     href: "/dashboard/settings",
     icon: IconSettings,
     match: (pathname) => pathname.startsWith("/dashboard/settings"),
-  },
-  {
-    title: "Profile",
-    href: "/dashboard/profile",
-    icon: IconUser,
-    match: (pathname) => pathname.startsWith("/dashboard/profile"),
   },
 ];
 

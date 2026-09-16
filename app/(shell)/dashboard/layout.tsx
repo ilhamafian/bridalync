@@ -51,7 +51,11 @@ export default async function DashboardLayout({
   return (
     <TooltipProvider>
       <div className="flex h-full min-h-0 flex-col">
-        <SiteHeader profilePreviewUrl={profilePreviewUrl} />
+        <SiteHeader
+          profilePreviewUrl={profilePreviewUrl}
+          profileName={user.name}
+          profilePhotoUrl={user.profile_photo_url}
+        />
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
