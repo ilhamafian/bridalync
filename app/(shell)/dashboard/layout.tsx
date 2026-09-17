@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 import { BottomNav } from "@/components/bottom-nav";
+import { DashboardScrollArea } from "@/components/dashboard/DashboardRefresh";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
 import { ProfilePreviewAside } from "@/components/dashboard/ProfilePreviewAside";
@@ -12,13 +13,15 @@ import { buildProfilePreviewUrl, buildProfileUrl, getAppUrl } from "@/utils/appU
 import { getSessionUser } from "@/utils/auth/session";
 import { loadDashboardData } from "@/utils/loadDashboardData";
 
+export const dynamic = "force-dynamic";
+
 async function DashboardContent({ user }: { user: SessionUser }) {
   const data = await loadDashboardData(user);
   if (!data) {
     redirect("/onboarding");
   }
 
-  return <DashboardShell data={data} />;
+  return <DashboardShell key={Date.now()} data={data} />;
 }
 
 export default async function DashboardLayout({
@@ -56,7 +59,7 @@ export default async function DashboardLayout({
           profileName={user.name}
           profilePhotoUrl={user.profile_photo_url}
         />
-        <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <DashboardScrollArea>
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <Suspense fallback={<DashboardSkeleton />}>
@@ -64,7 +67,7 @@ export default async function DashboardLayout({
               </Suspense>
             </div>
           </div>
-        </main>
+        </DashboardScrollArea>
         <BottomNav />
       </div>
       {profilePreviewUrl ? (

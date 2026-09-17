@@ -1,10 +1,11 @@
 "use client";
 
-import { Suspense, useEffect } from "react";
+import { Suspense, useEffect, Fragment } from "react";
 import { usePathname } from "next/navigation";
 
 import { BookingsManager } from "@/components/BookingsManager";
 import { CalendarManager } from "@/components/calendar/CalendarManager";
+import { useDashboardRefreshVersion } from "@/components/dashboard/DashboardRefresh";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { PackagesManager } from "@/components/PackagesManager";
 import { ProfileManager } from "@/components/profile/ProfileManager";
@@ -42,13 +43,16 @@ function Section({
 export function DashboardShell({ data }: { data: DashboardData }) {
   const pathname = usePathname();
   const active = getDashboardSection(pathname);
+  const refreshVersion = useDashboardRefreshVersion();
 
   useEffect(() => {
-    document.querySelector("main")?.scrollTo({ top: 0 });
+    document
+      .querySelector<HTMLElement>("[data-dashboard-scroll]")
+      ?.scrollTo({ top: 0 });
   }, [active]);
 
   return (
-    <>
+    <Fragment key={refreshVersion}>
       <Section id="home" active={active}>
         <DashboardHome {...data.home} />
       </Section>
@@ -99,6 +103,6 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           </div>
         </div>
       </Section>
-    </>
+    </Fragment>
   );
 }
