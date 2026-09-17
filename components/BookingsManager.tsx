@@ -101,6 +101,8 @@ type BookingFilter =
   | "completed"
   | "cancelled";
 
+type BookingSort = "upcoming" | "latest";
+
 type DashboardStatus = "confirmed" | "completed" | "cancelled";
 
 type SessionFormRow = {
@@ -133,6 +135,11 @@ const BOOKING_FILTERS: { value: BookingFilter; label: string }[] = [
   { value: "confirmed", label: "Confirmed" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
+];
+
+const BOOKING_SORTS: { value: BookingSort; label: string }[] = [
+  { value: "upcoming", label: "Upcoming" },
+  { value: "latest", label: "Latest" },
 ];
 
 const STATUS_OPTIONS: { value: DashboardStatus; label: string }[] = [
@@ -181,6 +188,52 @@ function matchesBookingFilter(
     default:
       return true;
   }
+}
+
+function startOfLocalDay(date = new Date()) {
+  const day = new Date(date);
+  day.setHours(0, 0, 0, 0);
+  return day;
+}
+
+function bookingCreatedAtMs(booking: SerializedBooking) {
+  if (!booking.created_at) return 0;
+  const time = new Date(booking.created_at).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function sortBookings(
+  bookings: SerializedBooking[],
+  sort: BookingSort
+): SerializedBooking[] {
+  const copy = [...bookings];
+
+  if (sort === "latest") {
+    return copy.sort(
+      (left, right) => bookingCreatedAtMs(right) - bookingCreatedAtMs(left)
+    );
+  }
+
+  const todayStart = startOfLocalDay().getTime();
+
+  return copy.sort((left, right) => {
+    const leftDate = getEarliestSessionDate(left.sessions)?.getTime();
+    const rightDate = getEarliestSessionDate(right.sessions)?.getTime();
+    const leftMs = leftDate ?? Number.POSITIVE_INFINITY;
+    const rightMs = rightDate ?? Number.POSITIVE_INFINITY;
+    const leftUpcoming = leftMs >= todayStart;
+    const rightUpcoming = rightMs >= todayStart;
+
+    if (leftUpcoming !== rightUpcoming) {
+      return leftUpcoming ? -1 : 1;
+    }
+
+    if (leftUpcoming) {
+      return leftMs - rightMs;
+    }
+
+    return rightMs - leftMs;
+  });
 }
 
 function toDashboardStatus(status: Booking["status"]): DashboardStatus {
@@ -399,6 +452,7 @@ export function BookingsManager({
 }) {
   const [bookings, setBookings] = useState(initialBookings);
   const [statusFilter, setStatusFilter] = useState<BookingFilter>("all");
+  const [sortOrder, setSortOrder] = useState<BookingSort>("upcoming");
   const [sheetOpen, setSheetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -516,10 +570,11 @@ export function BookingsManager({
   }, [timeSlots, form.sessions]);
 
   const filteredBookings = useMemo(() => {
-    return bookings.filter((booking) =>
+    const filtered = bookings.filter((booking) =>
       matchesBookingFilter(booking, statusFilter)
     );
-  }, [bookings, statusFilter]);
+    return sortBookings(filtered, sortOrder);
+  }, [bookings, statusFilter, sortOrder]);
 
   const activeFilterLabel =
     BOOKING_FILTERS.find((filter) => filter.value === statusFilter)?.label ??
@@ -794,25 +849,47 @@ export function BookingsManager({
         <p className="text-sm text-destructive">{error}</p>
       ) : null}
 
-      <div className="flex items-center gap-2">
-        <Label htmlFor="booking-filter" className="shrink-0 text-sm">
-          Filter
-        </Label>
-        <Select
-          value={statusFilter}
-          onValueChange={(value) => setStatusFilter(value as BookingFilter)}
-        >
-          <SelectTrigger id="booking-filter" className="w-46">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {BOOKING_FILTERS.map((filter) => (
-              <SelectItem key={filter.value} value={filter.value}>
-                {filter.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <Label htmlFor="booking-filter" className="shrink-0 text-sm">
+            Filter
+          </Label>
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as BookingFilter)}
+          >
+            <SelectTrigger id="booking-filter" className="min-w-0 flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" align="start">
+              {BOOKING_FILTERS.map((filter) => (
+                <SelectItem key={filter.value} value={filter.value}>
+                  {filter.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Label htmlFor="booking-sort" className="shrink-0 text-sm">
+            Sort
+          </Label>
+          <Select
+            value={sortOrder}
+            onValueChange={(value) => setSortOrder(value as BookingSort)}
+          >
+            <SelectTrigger id="booking-sort" className="w-28">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent position="popper" align="end">
+              {BOOKING_SORTS.map((sort) => (
+                <SelectItem key={sort.value} value={sort.value}>
+                  {sort.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {filteredBookings.length === 0 ? (
