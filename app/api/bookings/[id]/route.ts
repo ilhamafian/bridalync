@@ -13,7 +13,10 @@ import {
   type CreateBookingRequest,
 } from "@/schemas/bookingSchema";
 import { toIdString } from "@/schemas/objectId";
-import { paymentSettingSchema } from "@/schemas/settingSchema";
+import {
+  paymentSettingSchema,
+  toManualTransferDetails,
+} from "@/schemas/settingSchema";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
@@ -72,15 +75,18 @@ export async function GET(
     const settings = freelancerId
       ? await new SettingModel().findSettingsByUserId(freelancerId)
       : null;
-    const paymentMethod = paymentSettingSchema.parse(
+    const paymentSettings = paymentSettingSchema.parse(
       settings?.payment ?? {}
-    ).method;
+    );
+    const paymentMethod = paymentSettings.method;
+    const manualTransfer = toManualTransferDetails(paymentSettings);
 
     return createResponse(
       toPublicBooking(
         booking,
         freelancer ? toPublicBookingFreelancer(freelancer) : null,
-        paymentMethod
+        paymentMethod,
+        manualTransfer
       )
     );
   } catch (error) {

@@ -28,6 +28,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -402,6 +408,56 @@ export function BookingsManager({
     null
   );
   const [hotDates, setHotDates] = useState<HotDateLookup[]>([]);
+  const [verifyingKey, setVerifyingKey] = useState<string | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifyErrorBookingId, setVerifyErrorBookingId] = useState<
+    string | null
+  >(null);
+  const [receiptPreview, setReceiptPreview] = useState<{
+    url: string;
+    title: string;
+  } | null>(null);
+
+  async function verifyPayment(
+    bookingId: string,
+    type: "deposit" | "balance",
+    action: "approve" | "reject"
+  ) {
+    const key = `${bookingId}:${type}`;
+    setVerifyingKey(key);
+    setVerifyError(null);
+    setVerifyErrorBookingId(null);
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}/verify-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, type }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setVerifyErrorBookingId(bookingId);
+        setVerifyError(
+          typeof data.error === "string"
+            ? data.error
+            : "Could not update payment verification."
+        );
+        return;
+      }
+      const updated = data.booking as SerializedBooking | null;
+      if (updated) {
+        setBookings((current) =>
+          current.map((booking) =>
+            booking._id === updated._id ? updated : booking
+          )
+        );
+      }
+    } catch {
+      setVerifyErrorBookingId(bookingId);
+      setVerifyError("Could not update payment verification.");
+    } finally {
+      setVerifyingKey(null);
+    }
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -793,32 +849,141 @@ export function BookingsManager({
                         {formatRm(booking.invoice.totalRm)}
                       </p>
                       {booking.depositReceiptUrl || booking.balanceReceiptUrl ? (
-                        <p className="mt-2 text-sm">
-                          {booking.depositReceiptUrl ? (
-                            <a
-                              href={booking.depositReceiptUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-rose-800 underline-offset-2 hover:underline dark:text-rose-400"
-                            >
-                              View deposit receipt
-                            </a>
+                        <div className="mt-2 flex flex-col gap-2">
+                          <p className="text-sm">
+                            {booking.depositReceiptUrl ? (
+                              <button
+                                type="button"
+                                className="text-rose-800 underline-offset-2 hover:underline dark:text-rose-400"
+                                onClick={() =>
+                                  setReceiptPreview({
+                                    url: booking.depositReceiptUrl!,
+                                    title: "Deposit receipt",
+                                  })
+                                }
+                              >
+                                View deposit receipt
+                              </button>
+                            ) : null}
+                            {booking.depositReceiptUrl &&
+                            booking.balanceReceiptUrl
+                              ? " · "
+                              : null}
+                            {booking.balanceReceiptUrl ? (
+                              <button
+                                type="button"
+                                className="text-rose-800 underline-offset-2 hover:underline dark:text-rose-400"
+                                onClick={() =>
+                                  setReceiptPreview({
+                                    url: booking.balanceReceiptUrl!,
+                                    title: "Balance receipt",
+                                  })
+                                }
+                              >
+                                View balance receipt
+                              </button>
+                            ) : null}
+                          </p>
+                          {(booking.depositVerificationStatus === "pending" &&
+                            booking.status === "pending") ||
+                          booking.balanceVerificationStatus === "pending" ? (
+                            <div className="flex flex-wrap gap-2">
+                              {booking.depositVerificationStatus ===
+                                "pending" &&
+                              booking.status === "pending" ? (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={
+                                      verifyingKey ===
+                                      `${booking._id}:deposit`
+                                    }
+                                    onClick={() =>
+                                      void verifyPayment(
+                                        booking._id,
+                                        "deposit",
+                                        "approve"
+                                      )
+                                    }
+                                  >
+                                    {verifyingKey ===
+                                    `${booking._id}:deposit`
+                                      ? "Working…"
+                                      : "Approve deposit"}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={
+                                      verifyingKey ===
+                                      `${booking._id}:deposit`
+                                    }
+                                    onClick={() =>
+                                      void verifyPayment(
+                                        booking._id,
+                                        "deposit",
+                                        "reject"
+                                      )
+                                    }
+                                  >
+                                    Reject deposit
+                                  </Button>
+                                </>
+                              ) : null}
+                              {booking.balanceVerificationStatus ===
+                              "pending" ? (
+                                <>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    disabled={
+                                      verifyingKey ===
+                                      `${booking._id}:balance`
+                                    }
+                                    onClick={() =>
+                                      void verifyPayment(
+                                        booking._id,
+                                        "balance",
+                                        "approve"
+                                      )
+                                    }
+                                  >
+                                    {verifyingKey ===
+                                    `${booking._id}:balance`
+                                      ? "Working…"
+                                      : "Approve balance"}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    disabled={
+                                      verifyingKey ===
+                                      `${booking._id}:balance`
+                                    }
+                                    onClick={() =>
+                                      void verifyPayment(
+                                        booking._id,
+                                        "balance",
+                                        "reject"
+                                      )
+                                    }
+                                  >
+                                    Reject balance
+                                  </Button>
+                                </>
+                              ) : null}
+                            </div>
                           ) : null}
-                          {booking.depositReceiptUrl &&
-                          booking.balanceReceiptUrl
-                            ? " · "
-                            : null}
-                          {booking.balanceReceiptUrl ? (
-                            <a
-                              href={booking.balanceReceiptUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-rose-800 underline-offset-2 hover:underline dark:text-rose-400"
-                            >
-                              View balance receipt
-                            </a>
+                          {verifyError &&
+                          verifyErrorBookingId === booking._id ? (
+                            <p className="text-sm text-destructive">
+                              {verifyError}
+                            </p>
                           ) : null}
-                        </p>
+                        </div>
                       ) : null}
                     </div>
                     <div className="flex shrink-0 gap-1">
@@ -1146,6 +1311,29 @@ export function BookingsManager({
           </SheetFooter>
         </SheetContent>
       </Sheet>
+
+      <Dialog
+        open={Boolean(receiptPreview)}
+        onOpenChange={(open) => {
+          if (!open) setReceiptPreview(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{receiptPreview?.title ?? "Receipt"}</DialogTitle>
+          </DialogHeader>
+          {receiptPreview ? (
+            <div className="relative max-h-[70vh] overflow-auto rounded-md border border-border bg-muted/20">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={receiptPreview.url}
+                alt={receiptPreview.title}
+                className="mx-auto h-auto max-h-[70vh] w-full object-contain"
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog
         open={Boolean(deleteTarget)}

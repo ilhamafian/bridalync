@@ -59,8 +59,8 @@ Early development. The app currently includes a calendar date picker as the firs
 | `DB_NAME` | Yes | Database name |
 | `APP_URL` | Yes | Public app URL (e.g. `http://localhost:3000`) |
 | `AUTH_SECRET` | Yes | Session signing secret |
-| `ADMIN_EMAIL` | Yes (admin) | Bootstrap admin email for `/admin` receipt verification |
-| `ADMIN_PASSWORD` | Yes (admin) | Bootstrap admin password (creates admin on first login if missing) |
+| `ADMIN_EMAIL` | Optional | Bootstrap admin email for `/admin` (legacy receipt tools) |
+| `ADMIN_PASSWORD` | Optional | Bootstrap admin password (creates admin on first login if missing) |
 | `STRIPE_SECRET_KEY` | Yes (gateway) | Stripe secret key (`sk_test_...` or `sk_live_...`) |
 | `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key for client-side Stripe.js |
 | `STRIPE_WEBHOOK_SECRET` | Yes (Connect) | Webhook signing secret from the Stripe Dashboard |
@@ -80,14 +80,14 @@ npx web-push generate-vapid-keys
 Bridalync can be installed as a PWA. Freelancers enable notifications under **Settings → App & notifications**.
 
 - **New booking / enquiry** — push when a client submits via the public booking flow (manual transfers notify as payment pending)
-- **Booking confirmed** — push when Stripe payment confirms or an admin approves a manual receipt
+- **Booking confirmed** — push when Stripe payment confirms or you approve a manual receipt in Bookings
 - **Upcoming session** — hourly cron (`vercel.json`) notifies for confirmed sessions starting within 24 hours
 
 On iOS, install via Share → **Add to Home Screen**, then open the home-screen app before enabling notifications.
 
 ### Manual payments (default)
 
-Clients pay Bridalync’s Maybank account (`public/payment-qr.jpeg` / account `5647 6237 5673`) and upload a receipt. Admins verify at `/admin` (separate login from stylist accounts). Stylists can switch to Stripe Payment Gateway under **Settings → Payment**.
+Stylists upload their own payment QR and bank details under **Settings → Payment**. Clients transfer to the stylist and upload a receipt; the stylist approves or rejects it in **Bookings**. Stylists can switch to Stripe Payment Gateway under the same settings.
 
 ### Stripe Connect setup
 

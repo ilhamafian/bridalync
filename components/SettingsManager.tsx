@@ -6,6 +6,7 @@ import { IconPlus, IconTrash } from "@tabler/icons-react";
 
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
+import { PaymentQrUpload } from "@/components/PaymentQrUpload";
 import { PwaSettingsCard } from "@/components/PwaSettingsCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
 import {
   getDefaultTimeSlots,
+  hasManualTransferDetails,
   type PaymentMethod,
   type TimeSlot,
 } from "@/schemas/settingSchema";
@@ -41,6 +43,10 @@ export type SettingsItem = {
   payment: {
     balance_due_before: number;
     method: PaymentMethod;
+    qr_image_url?: string;
+    payee_name?: string;
+    bank_name?: string;
+    account_number?: string;
   };
   invoice: {
     company_name: string;
@@ -165,6 +171,19 @@ export function SettingsManager({
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     initialSettings.payment.method ?? "manual_transfer"
   );
+  const [qrImageUrl, setQrImageUrl] = useState(
+    initialSettings.payment.qr_image_url ?? ""
+  );
+  const [payeeName, setPayeeName] = useState(
+    initialSettings.payment.payee_name ?? ""
+  );
+  const [bankName, setBankName] = useState(
+    initialSettings.payment.bank_name ?? ""
+  );
+  const [accountNumber, setAccountNumber] = useState(
+    initialSettings.payment.account_number ?? ""
+  );
+  const [uploadingQr, setUploadingQr] = useState(false);
   const [companyName, setCompanyName] = useState(
     initialSettings.invoice.company_name
   );
@@ -247,6 +266,10 @@ export function SettingsManager({
     setTravelLocation(next.travel.enabled ? next.travel.location : null);
     setBalanceDueBefore(String(next.payment.balance_due_before));
     setPaymentMethod(next.payment.method ?? "manual_transfer");
+    setQrImageUrl(next.payment.qr_image_url ?? "");
+    setPayeeName(next.payment.payee_name ?? "");
+    setBankName(next.payment.bank_name ?? "");
+    setAccountNumber(next.payment.account_number ?? "");
     setCompanyName(next.invoice.company_name);
     setCompanyReg(next.invoice.company_registration_number ?? "");
     setCompanyLogo(next.invoice.company_logo ?? "");
@@ -357,10 +380,35 @@ export function SettingsManager({
       return;
     }
 
+    const transferDetails = {
+      qr_image_url: qrImageUrl.trim() || undefined,
+      payee_name: payeeName.trim() || undefined,
+      bank_name: bankName.trim() || undefined,
+      account_number: accountNumber.trim() || undefined,
+    };
+
+    if (
+      paymentMethod === "manual_transfer" &&
+      !hasManualTransferDetails({
+        qr_image_url: transferDetails.qr_image_url,
+        payee_name: transferDetails.payee_name,
+        bank_name: transferDetails.bank_name,
+        account_number: transferDetails.account_number,
+      })
+    ) {
+      setSectionError((current) => ({
+        ...current,
+        payment:
+          "Upload your payment QR and fill in payee name, bank, and account number.",
+      }));
+      return;
+    }
+
     await patchSettings("payment", {
       payment: {
         balance_due_before: days,
         method: paymentMethod,
+        ...transferDetails,
       },
     });
   }
@@ -650,9 +698,9 @@ export function SettingsManager({
                 <span className="text-sm">
                   <span className="font-medium">Manual Transfer</span>
                   <span className="block text-muted-foreground">
-                    Clients pay Bridalync via Maybank QR or bank transfer and
-                    upload a receipt. An admin verifies before the booking is
-                    confirmed.
+                    Clients pay you via your QR or bank transfer and upload a
+                    receipt. You verify payments in Bookings before the booking
+                    is confirmed.
                   </span>
                 </span>
               </label>
@@ -665,13 +713,55 @@ export function SettingsManager({
                 <span className="text-sm">
                   <span className="font-medium">Payment Gateway</span>
                   <span className="block text-muted-foreground">
-                    Clients pay online with Stripe (card / FPX). Requires a
-                    connected Stripe account.
+                    Clients pay online with Stripe (card / FPX). Setup takes
+                    about 3 minutes and requires your SSM and Tax Identification
+                    Number.
                   </span>
                 </span>
               </label>
             </RadioGroup>
           </div>
+
+          {paymentMethod === "manual_transfer" ? (
+            <div className="flex flex-col gap-4 rounded-md border border-border p-3">
+              <PaymentQrUpload
+                value={qrImageUrl}
+                onChange={setQrImageUrl}
+                disabled={savingSection === "payment" || uploadingQr}
+                onUploadingChange={setUploadingQr}
+                onError={(message) =>
+                  setSectionError((current) => ({
+                    ...current,
+                    payment: message ?? undefined,
+                  }))
+                }
+              />
+              <Field label="Payee / account name">
+                <Input
+                  className={inputClassName}
+                  value={payeeName}
+                  onChange={(event) => setPayeeName(event.target.value)}
+                  placeholder="e.g. Your business name"
+                />
+              </Field>
+              <Field label="Bank name">
+                <Input
+                  className={inputClassName}
+                  value={bankName}
+                  onChange={(event) => setBankName(event.target.value)}
+                  placeholder="e.g. Maybank"
+                />
+              </Field>
+              <Field label="Account number">
+                <Input
+                  className={inputClassName}
+                  value={accountNumber}
+                  onChange={(event) => setAccountNumber(event.target.value)}
+                  placeholder="e.g. 1234 5678 9012"
+                />
+              </Field>
+            </div>
+          ) : null}
 
           {paymentMethod === "payment_gateway" ? (
             <div className="flex flex-col gap-3 rounded-md border border-border p-3">
@@ -743,7 +833,7 @@ export function SettingsManager({
           <Button
             type="button"
             onClick={savePayment}
-            disabled={savingSection === "payment"}
+            disabled={savingSection === "payment" || uploadingQr}
           >
             {savingSection === "payment" ? "Saving…" : "Save"}
           </Button>

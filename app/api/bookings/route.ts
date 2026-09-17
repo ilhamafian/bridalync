@@ -5,7 +5,7 @@ import { z } from "zod";
 import { bookingModel, createBooking } from "@/models/Booking";
 import { SettingModel } from "@/models/Setting";
 import { createBookingRequestSchema } from "@/schemas/bookingSchema";
-import { paymentSettingSchema } from "@/schemas/settingSchema";
+import { paymentSettingSchema, hasManualTransferDetails } from "@/schemas/settingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { assertSessionsAvailable } from "@/utils/booking/availability.server";
 import {
@@ -106,6 +106,14 @@ export async function POST(req: NextRequest) {
             503
           );
         }
+      } else if (!hasManualTransferDetails(paymentSettings)) {
+        return createResponse(
+          {
+            error:
+              "This stylist has not set up manual transfer details yet. Try again later or contact them.",
+          },
+          503
+        );
       } else if (!receipt) {
         return createResponse(
           { error: "Payment receipt is required for manual transfer." },

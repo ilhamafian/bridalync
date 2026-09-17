@@ -58,6 +58,7 @@ import { Client } from "@/schemas/clientSchema";
 import type { PublicReview } from "@/schemas/reviewSchema";
 import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
+import { toManualTransferDetails } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -862,6 +863,9 @@ export default function ClientPage() {
   );
 
   const balanceDueBeforeDays = settings?.payment.balance_due_before ?? 3;
+  const manualTransfer = settings
+    ? toManualTransferDetails(settings.payment)
+    : null;
   const mustPayFull = useMemo(
     () => requiresFullPayment(sessions, balanceDueBeforeDays),
     [sessions, balanceDueBeforeDays]
@@ -1996,20 +2000,28 @@ export default function ClientPage() {
             />
             {(settings?.payment.method ?? "manual_transfer") ===
             "manual_transfer" ? (
-              <ManualPaymentStep
-                amountLabel={format(t.transferAmountDue, {
-                  amount: formatRm(
-                    effectivePaymentOption === "full"
-                      ? payableQuotation.totalRm
-                      : payableQuotation.depositRm
-                  ),
-                })}
-                submitLabel={t.submitReceipt}
-                submittingLabel={t.submittingReceipt}
-                isSubmitting={isPaying}
-                error={paymentError}
-                onSubmit={(file) => void handlePay(file)}
-              />
+              manualTransfer ? (
+                <ManualPaymentStep
+                  amountLabel={format(t.transferAmountDue, {
+                    amount: formatRm(
+                      effectivePaymentOption === "full"
+                        ? payableQuotation.totalRm
+                        : payableQuotation.depositRm
+                    ),
+                  })}
+                  submitLabel={t.submitReceipt}
+                  submittingLabel={t.submittingReceipt}
+                  isSubmitting={isPaying}
+                  error={paymentError}
+                  transfer={manualTransfer}
+                  onSubmit={(file) => void handlePay(file)}
+                />
+              ) : (
+                <p className="w-full text-sm text-destructive" role="alert">
+                  This stylist has not set up payment details yet. Please
+                  contact them to complete your booking.
+                </p>
+              )
             ) : (
               <>
                 {paymentError && (

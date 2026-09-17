@@ -5,6 +5,7 @@ import { SettingModel } from "@/models/Setting";
 import { UserModel } from "@/models/User";
 import { toIdString } from "@/schemas/objectId";
 import {
+  hasManualTransferDetails,
   settingUpdateSchema,
   type Setting,
   type SettingUpdate,
@@ -130,6 +131,25 @@ export async function PATCH(req: NextRequest) {
             error: user?.stripe_account_id
               ? "Stripe is still verifying your account. Wait until setup is complete before enabling Payment Gateway."
               : "Set up Stripe before enabling Payment Gateway.",
+          },
+          400
+        );
+      }
+    }
+
+    if (parsed.data.payment !== undefined) {
+      const mergedPayment = {
+        ...existing.payment,
+        ...parsed.data.payment,
+      };
+      if (
+        mergedPayment.method === "manual_transfer" &&
+        !hasManualTransferDetails(mergedPayment)
+      ) {
+        return createResponse(
+          {
+            error:
+              "Upload your payment QR and fill in payee name, bank, and account number before enabling Manual Transfer.",
           },
           400
         );

@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
 
     const formData = await req.formData();
     const file = formData.get("file");
+    const folder = formData.get("folder");
 
     if (!(file instanceof File)) {
       return createResponse({ error: "No file provided." }, 400);
@@ -37,9 +38,13 @@ export async function POST(req: NextRequest) {
     }
 
     const prepared = await prepareFileForUpload(file);
+    const uploadFolder =
+      typeof folder === "string" && folder.trim().length > 0
+        ? folder.trim()
+        : "company-logos";
 
     const blob = await put(
-      `company-logos/${userId}/${prepared.fileName}`,
+      `${uploadFolder}/${userId}/${prepared.fileName}`,
       prepared.data,
       {
         access: "public",

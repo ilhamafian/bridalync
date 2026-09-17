@@ -6,8 +6,8 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import type { ManualTransferDetails } from "@/schemas/settingSchema";
 import { compressImageFile } from "@/utils/image/compressClient";
-import { MANUAL_TRANSFER } from "@/utils/payment/manualTransfer";
 
 type ManualPaymentStepProps = {
   amountLabel: string;
@@ -15,6 +15,7 @@ type ManualPaymentStepProps = {
   submittingLabel?: string;
   isSubmitting?: boolean;
   error?: string | null;
+  transfer: ManualTransferDetails;
   onSubmit: (receipt: File) => void | Promise<void>;
   className?: string;
 };
@@ -25,6 +26,7 @@ export function ManualPaymentStep({
   submittingLabel = "Submitting…",
   isSubmitting = false,
   error = null,
+  transfer,
   onSubmit,
   className,
 }: ManualPaymentStepProps) {
@@ -69,27 +71,28 @@ export function ManualPaymentStep({
         <ol className="mb-4 list-decimal space-y-2 pl-5 text-sm text-zinc-700 dark:text-zinc-300">
           <li>
             Transfer to{" "}
-            <span className="font-medium">{MANUAL_TRANSFER.payeeName}</span>{" "}
-            via Maybank QR, or transfer to account{" "}
+            <span className="font-medium">{transfer.payeeName}</span> via QR,
+            or transfer to account{" "}
             <span className="font-mono font-medium">
-              {MANUAL_TRANSFER.accountNumber}
+              {transfer.accountNumber}
             </span>{" "}
-            ({MANUAL_TRANSFER.bankName}).
+            ({transfer.bankName}).
           </li>
           <li>Upload a clear photo or screenshot of your payment receipt.</li>
         </ol>
         <div className="mx-auto mb-2 w-full max-w-55 overflow-hidden rounded-lg bg-white p-3 shadow-sm">
           <Image
-            src={MANUAL_TRANSFER.qrImagePath}
-            alt={`${MANUAL_TRANSFER.payeeName} Maybank QR`}
+            src={transfer.qrImageUrl}
+            alt={`${transfer.payeeName} payment QR`}
             width={400}
             height={500}
             className="h-auto w-full object-contain"
             priority
+            unoptimized
           />
         </div>
         <p className="text-center text-xs text-muted-foreground">
-          {MANUAL_TRANSFER.bankName} · {MANUAL_TRANSFER.accountNumber}
+          {transfer.bankName} · {transfer.accountNumber}
         </p>
       </div>
 

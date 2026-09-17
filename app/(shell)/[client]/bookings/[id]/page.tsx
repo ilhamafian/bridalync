@@ -487,16 +487,24 @@ function BookingResultPageContent() {
           )}
 
         {outstandingBalance && showManualBalance && (
-          <ManualPaymentStep
-            amountLabel={format(t.transferAmountDue, {
-              amount: formatRm(booking.invoice.balanceRm),
-            })}
-            submitLabel={t.submitBalanceReceipt}
-            submittingLabel={t.submittingReceipt}
-            isSubmitting={payingBalance}
-            error={payError}
-            onSubmit={(file) => void handleManualBalanceReceipt(file)}
-          />
+          booking.manualTransfer ? (
+            <ManualPaymentStep
+              amountLabel={format(t.transferAmountDue, {
+                amount: formatRm(booking.invoice.balanceRm),
+              })}
+              submitLabel={t.submitBalanceReceipt}
+              submittingLabel={t.submittingReceipt}
+              isSubmitting={payingBalance}
+              error={payError}
+              transfer={booking.manualTransfer}
+              onSubmit={(file) => void handleManualBalanceReceipt(file)}
+            />
+          ) : (
+            <p className="text-center text-sm text-destructive" role="alert">
+              This stylist has not set up payment details yet. Please contact
+              them to pay the balance.
+            </p>
+          )
         )}
 
         {whatsAppUrl && (

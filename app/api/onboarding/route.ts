@@ -242,29 +242,6 @@ export async function GET() {
       }
     }
 
-    if (
-      userId &&
-      user.onboarding?.configuredInvoice &&
-      !user.onboarding.configureBankAccount
-    ) {
-      await updateOnboardingProgress(userId, {
-        configureBankAccount: true,
-      });
-      const refreshedUser = await refreshSession(userId);
-      if (refreshedUser) {
-        return createResponse(
-          {
-            roles: UserModel.userRoles,
-            user: refreshedUser,
-            resumeStep: getOnboardingResumeStep(refreshedUser.onboarding),
-            appUrl: getAppUrl(),
-            stripeConnect: buildStripeConnectStatus(refreshedUser),
-          },
-          200
-        );
-      }
-    }
-
     return createResponse(
       {
         roles: UserModel.userRoles,
@@ -355,6 +332,57 @@ export async function POST(req: NextRequest) {
 
         await updateOnboardingProgress(userId, {
           configuredInvoice: true,
+        });
+        await refreshSession(userId);
+        return createResponse({ ok: true }, 200);
+      }
+
+      case "payment": {
+        const settingsModel = new SettingModel();
+        const existing = await settingsModel.findSettingsByUserId(userId);
+        if (!existing) {
+          return createResponse(
+            { error: "Complete travel settings before choosing payment." },
+            400
+          );
+        }
+
+        if (stepData.method === "manual_transfer") {
+          const qrImageUrl = stepData.qr_image_url?.trim();
+          const payeeName = stepData.payee_name?.trim();
+          const bankName = stepData.bank_name?.trim();
+          const accountNumber = stepData.account_number?.trim();
+
+          if (!qrImageUrl || !payeeName || !bankName || !accountNumber) {
+            return createResponse(
+              {
+                error:
+                  "Upload your payment QR and fill in payee name, bank, and account number.",
+              },
+              400
+            );
+          }
+
+          await settingsModel.updateSettingsByUserId(userId, {
+            payment: {
+              ...existing.payment,
+              method: "manual_transfer",
+              qr_image_url: qrImageUrl,
+              payee_name: payeeName,
+              bank_name: bankName,
+              account_number: accountNumber,
+            },
+          });
+        } else {
+          await settingsModel.updateSettingsByUserId(userId, {
+            payment: {
+              ...existing.payment,
+              method: "payment_gateway",
+            },
+          });
+        }
+
+        await updateOnboardingProgress(userId, {
           configureBankAccount: true,
         });
         await refreshSession(userId);

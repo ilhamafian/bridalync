@@ -112,7 +112,7 @@ export const en: Locale = {
   paymentSecure:
     "Pay a deposit now, or settle the full amount upfront. Secure card payment through Stripe.",
   paymentManualSecure:
-    "Pay a deposit now, or settle the full amount first. Transfer to Bridalync and upload your receipt.",
+    "Pay a deposit now, or settle the full amount first. Transfer to the stylist and upload your receipt.",
   payFullOption: "Pay in full — {amount}",
   payDepositOption: "Pay deposit — {amount}",
   noBalanceLater: "Nothing left to pay later.",
@@ -126,7 +126,7 @@ export const en: Locale = {
   transferAmountDue: "Amount due: {amount}",
   receiptRequired: "Upload your payment receipt to continue.",
   bookingPendingVerification:
-    "Thanks! Your booking is held while we verify your payment receipt.",
+    "Thanks! Your booking is held while the stylist verifies your payment receipt.",
   couldNotCreateBooking: "Could not create booking.",
   couldNotStartCheckout: "Could not start Stripe Checkout.",
   paymentCouldNotStart: "Payment could not be started.",
@@ -161,13 +161,13 @@ export const en: Locale = {
   bookingAwaitingPayment:
     "Your booking is awaiting payment. Complete checkout to secure your slot.",
   bookingAwaitingVerification:
-    "Your booking is held while we verify your payment receipt. You'll get a confirmation once it's approved.",
+    "Your booking is held while the stylist verifies your payment receipt. You'll get a confirmation once it's approved.",
   payRemainingBalance: "Pay remaining balance ({amount})",
   submitBalanceReceipt: "Submit balance receipt",
   startingCheckout: "Starting checkout…",
   couldNotStartBalancePayment: "Could not start balance payment.",
   balanceReceiptPending:
-    "Your balance receipt is pending verification.",
+    "Your balance receipt is pending verification by the stylist.",
   bookingDetails: "Booking details",
   styleLabel: "Style",
 

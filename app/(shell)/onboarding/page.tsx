@@ -5,11 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
+import { PaymentQrUpload } from "@/components/PaymentQrUpload";
 import { PhoneNumberInput, isValidPhoneNumber, DEFAULT_COUNTRY_CODE } from "@/components/PhoneNumberInput";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
-import { DEFAULT_TERMS_AND_CONDITIONS } from "@/schemas/settingSchema";
+import {
+  DEFAULT_TERMS_AND_CONDITIONS,
+  type PaymentMethod,
+} from "@/schemas/settingSchema";
 import {
   buildProfileDisplayUrl,
   buildProfileUrl,
@@ -43,6 +47,10 @@ const STEP_CONFIG: Record<
   invoice: {
     title: "Invoice details",
     description: "These details appear on invoices sent to clients.",
+  },
+  payment: {
+    title: "How will clients pay you?",
+    description: "Choose how you want to collect payments for bookings.",
   },
   username: {
     title: "Choose a username",
@@ -171,6 +179,13 @@ function OnboardingPageContent() {
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
   const [companyLogo, setCompanyLogo] = useState("");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>("manual_transfer");
+  const [qrImageUrl, setQrImageUrl] = useState("");
+  const [payeeName, setPayeeName] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [isUploadingQr, setIsUploadingQr] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
@@ -332,6 +347,48 @@ function OnboardingPageContent() {
         terms_and_conditions: termsAndConditions.trim(),
         company_registration_number: companyRegistrationNumber.trim() || undefined,
         company_logo: companyLogo || undefined,
+      },
+      "payment"
+    );
+  }
+
+  async function handleContinueFromPayment() {
+    if (isUploadingQr) {
+      setError("Wait for the QR upload to finish.");
+      return;
+    }
+
+    if (paymentMethod === "manual_transfer") {
+      if (
+        !qrImageUrl.trim() ||
+        !payeeName.trim() ||
+        !bankName.trim() ||
+        !accountNumber.trim()
+      ) {
+        setError(
+          "Upload your payment QR and fill in payee name, bank, and account number."
+        );
+        return;
+      }
+
+      await runStep(
+        {
+          step: "payment",
+          method: "manual_transfer",
+          qr_image_url: qrImageUrl.trim(),
+          payee_name: payeeName.trim(),
+          bank_name: bankName.trim(),
+          account_number: accountNumber.trim(),
+        },
+        "username"
+      );
+      return;
+    }
+
+    await runStep(
+      {
+        step: "payment",
+        method: "payment_gateway",
       },
       "username"
     );
@@ -573,6 +630,116 @@ function OnboardingPageContent() {
               </>
             )}
 
+            {step === "payment" && (
+              <>
+                <div className="flex w-full flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod("manual_transfer");
+                      setError(null);
+                    }}
+                    className={cn(
+                      "rounded-xl border px-4 py-3 text-left text-sm transition-colors",
+                      paymentMethod === "manual_transfer"
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border bg-background text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <span className="font-medium">Manual Transfer</span>
+                    <span className="mt-1 block text-muted-foreground">
+                      Clients pay you via your QR or bank transfer and upload a
+                      receipt. You verify payments in Bookings.
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentMethod("payment_gateway");
+                      setError(null);
+                    }}
+                    className={cn(
+                      "rounded-xl border px-4 py-3 text-left text-sm transition-colors",
+                      paymentMethod === "payment_gateway"
+                        ? "border-primary bg-primary/5 text-foreground"
+                        : "border-border bg-background text-foreground hover:bg-muted/50"
+                    )}
+                  >
+                    <span className="font-medium">Payment Gateway</span>
+                    <span className="mt-1 block text-muted-foreground">
+                      Clients pay online with Stripe (card / FPX). Setup takes
+                      about 3 minutes and requires your SSM and Tax
+                      Identification Number.
+                    </span>
+                  </button>
+                </div>
+
+                {paymentMethod === "manual_transfer" ? (
+                  <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4">
+                    <PaymentQrUpload
+                      value={qrImageUrl}
+                      onChange={(url) => {
+                        setError(null);
+                        setQrImageUrl(url);
+                      }}
+                      disabled={isSubmitting}
+                      uploadEndpoint="/api/onboarding/upload"
+                      uploadFolder="payment-qr"
+                      onUploadingChange={setIsUploadingQr}
+                      onError={(message) => setError(message)}
+                    />
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-sm font-medium text-foreground">
+                        Payee / account name
+                      </span>
+                      <input
+                        type="text"
+                        value={payeeName}
+                        onChange={(event) => setPayeeName(event.target.value)}
+                        placeholder="e.g. Your business name"
+                        className={inputClassName}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-sm font-medium text-foreground">
+                        Bank name
+                      </span>
+                      <input
+                        type="text"
+                        value={bankName}
+                        onChange={(event) => setBankName(event.target.value)}
+                        placeholder="e.g. Maybank"
+                        className={inputClassName}
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1.5">
+                      <span className="text-sm font-medium text-foreground">
+                        Account number
+                      </span>
+                      <input
+                        type="text"
+                        value={accountNumber}
+                        onChange={(event) =>
+                          setAccountNumber(event.target.value)
+                        }
+                        placeholder="e.g. 1234 5678 9012"
+                        className={inputClassName}
+                      />
+                    </label>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+                    After onboarding, finish Stripe setup under{" "}
+                    <span className="font-medium text-foreground">
+                      Settings → Payment
+                    </span>
+                    . Have your SSM and Tax Identification Number ready — it
+                    usually takes about 3 minutes.
+                  </div>
+                )}
+              </>
+            )}
+
             {step === "username" && (
               <>
                 <div className="flex flex-col gap-1.5">
@@ -722,12 +889,14 @@ function OnboardingPageContent() {
                 disabled={
                   isSubmitting ||
                   isUploadingLogo ||
+                  isUploadingQr ||
                   (step === "role" && !selectedRole)
                 }
                 onClick={() => {
                   if (step === "role") handleContinueFromRole();
                   else if (step === "travel") void handleContinueFromTravel();
                   else if (step === "invoice") void handleContinueFromInvoice();
+                  else if (step === "payment") void handleContinueFromPayment();
                   else if (step === "username")
                     void handleContinueFromUsername();
                   else handleComplete();

@@ -109,7 +109,7 @@ export const ms = {
   paymentSecure:
     "Bayar deposit sekarang, atau selesaikan jumlah penuh terlebih dahulu. Pembayaran kad selamat melalui Stripe.",
   paymentManualSecure:
-    "Bayar deposit sekarang, atau selesaikan jumlah penuh terlebih dahulu. Pindahkan ke Bridalync dan muat naik resit anda.",
+    "Bayar deposit sekarang, atau selesaikan jumlah penuh terlebih dahulu. Pindahkan kepada stylist dan muat naik resit anda.",
   payFullOption: "Bayar sepenuhnya — {amount}",
   payDepositOption: "Bayar deposit — {amount}",
   noBalanceLater: "Tiada baki perlu dibayar kemudian.",
@@ -122,7 +122,7 @@ export const ms = {
   transferAmountDue: "Jumlah perlu dibayar: {amount}",
   receiptRequired: "Muat naik resit pembayaran anda untuk meneruskan.",
   bookingPendingVerification:
-    "Terima kasih! Tempahan anda ditahan sementara kami mengesahkan resit pembayaran anda.",
+    "Terima kasih! Tempahan anda ditahan sementara stylist mengesahkan resit pembayaran anda.",
   couldNotCreateBooking: "Tempahan tidak dapat dibuat.",
   couldNotStartCheckout: "Tidak dapat memulakan Stripe Checkout.",
   paymentCouldNotStart: "Pembayaran tidak dapat dimulakan.",
@@ -158,13 +158,13 @@ export const ms = {
   bookingAwaitingPayment:
     "Tempahan anda menunggu bayaran. Lengkapkan pembayaran untuk mendapatkan slot anda.",
   bookingAwaitingVerification:
-    "Tempahan anda ditahan sementara kami mengesahkan resit pembayaran anda. Anda akan menerima pengesahan selepas ia diluluskan.",
+    "Tempahan anda ditahan sementara stylist mengesahkan resit pembayaran anda. Anda akan menerima pengesahan selepas ia diluluskan.",
   payRemainingBalance: "Bayar baki ({amount})",
   submitBalanceReceipt: "Hantar resit baki",
   startingCheckout: "Memulakan pembayaran…",
   couldNotStartBalancePayment: "Tidak dapat memulakan bayaran baki.",
   balanceReceiptPending:
-    "Resit baki anda sedang menunggu pengesahan.",
+    "Resit baki anda sedang menunggu pengesahan stylist.",
   bookingDetails: "Butiran tempahan",
   styleLabel: "Gaya",
 

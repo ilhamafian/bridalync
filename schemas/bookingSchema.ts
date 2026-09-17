@@ -2,7 +2,10 @@ import { z } from "zod";
 
 import { addressSchema } from "@/schemas/addressSchema";
 import { sessionSchema } from "@/schemas/sessionSchema";
-import { timeSlotSchema } from "@/schemas/settingSchema";
+import {
+  type ManualTransferDetails,
+  timeSlotSchema,
+} from "@/schemas/settingSchema";
 
 export const bookingContactSchema = z.object({
   name: z.string().min(1),
@@ -128,6 +131,14 @@ export const publicBookingSchema = bookingSchema
     _id: z.string(),
     freelancer: publicBookingFreelancerSchema.optional(),
     stylistPaymentMethod: paymentChannelSchema.optional(),
+    manualTransfer: z
+      .object({
+        qrImageUrl: z.string(),
+        payeeName: z.string(),
+        bankName: z.string(),
+        accountNumber: z.string(),
+      })
+      .optional(),
   });
 
 export type PublicBookingFreelancer = z.infer<typeof publicBookingFreelancerSchema>;
@@ -136,7 +147,8 @@ export type PublicBooking = z.infer<typeof publicBookingSchema>;
 export function toPublicBooking(
   booking: PersistedBooking,
   freelancer?: PublicBookingFreelancer | null,
-  stylistPaymentMethod?: z.infer<typeof paymentChannelSchema> | null
+  stylistPaymentMethod?: z.infer<typeof paymentChannelSchema> | null,
+  manualTransfer?: ManualTransferDetails | null
 ): PublicBooking {
   const {
     freelancerUserId,
@@ -159,6 +171,7 @@ export function toPublicBooking(
     ...(stylistPaymentMethod
       ? { stylistPaymentMethod }
       : {}),
+    ...(manualTransfer ? { manualTransfer } : {}),
   });
 }
 

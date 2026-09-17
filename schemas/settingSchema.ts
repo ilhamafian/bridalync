@@ -18,7 +18,47 @@ export const paymentMethodSchema = z.enum([
 export const paymentSettingSchema = z.object({
   balance_due_before: z.number().default(3),
   method: paymentMethodSchema.default("manual_transfer"),
+  qr_image_url: z.string().optional(),
+  payee_name: z.string().optional(),
+  bank_name: z.string().optional(),
+  account_number: z.string().optional(),
 });
+
+export function hasManualTransferDetails(
+  payment: Pick<
+    z.infer<typeof paymentSettingSchema>,
+    "qr_image_url" | "payee_name" | "bank_name" | "account_number"
+  >
+): boolean {
+  return Boolean(
+    payment.qr_image_url?.trim() &&
+      payment.payee_name?.trim() &&
+      payment.bank_name?.trim() &&
+      payment.account_number?.trim()
+  );
+}
+
+export type ManualTransferDetails = {
+  qrImageUrl: string;
+  payeeName: string;
+  bankName: string;
+  accountNumber: string;
+};
+
+export function toManualTransferDetails(
+  payment: Pick<
+    z.infer<typeof paymentSettingSchema>,
+    "qr_image_url" | "payee_name" | "bank_name" | "account_number"
+  >
+): ManualTransferDetails | null {
+  if (!hasManualTransferDetails(payment)) return null;
+  return {
+    qrImageUrl: payment.qr_image_url!.trim(),
+    payeeName: payment.payee_name!.trim(),
+    bankName: payment.bank_name!.trim(),
+    accountNumber: payment.account_number!.trim(),
+  };
+}
 
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
 
