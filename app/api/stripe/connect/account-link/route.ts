@@ -1,4 +1,6 @@
 import Stripe from "stripe";
+import { NextRequest } from "next/server";
+import { z } from "zod";
 
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
@@ -7,9 +9,16 @@ import {
   buildStripeOwner,
   createOnboardingAccountLink,
   ensureStripeAccountId,
+  type ConnectFlow,
 } from "@/utils/stripe/connect";
 
-export async function POST() {
+const bodySchema = z
+  .object({
+    flow: z.enum(["settings", "onboarding"]).optional(),
+  })
+  .optional();
+
+export async function POST(req: NextRequest) {
   try {
     const user = await getSessionUser();
     if (!user?.email) {
@@ -21,12 +30,23 @@ export async function POST() {
       return createResponse({ error: "Unauthorized" }, 401);
     }
 
+    let flow: ConnectFlow = "settings";
+    try {
+      const json: unknown = await req.json();
+      const parsed = bodySchema.safeParse(json);
+      if (parsed.success && parsed.data?.flow) {
+        flow = parsed.data.flow;
+      }
+    } catch {
+      // Empty body is fine — defaults to settings flow.
+    }
+
     const accountId = await ensureStripeAccountId(
       userId,
       buildStripeOwner(user),
       user.stripe_account_id
     );
-    const accountLink = await createOnboardingAccountLink(accountId);
+    const accountLink = await createOnboardingAccountLink(accountId, flow);
 
     if (!accountLink.url) {
       return createResponse({ error: "Could not create Stripe onboarding link." }, 500);

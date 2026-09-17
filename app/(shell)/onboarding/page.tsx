@@ -195,6 +195,7 @@ function OnboardingPageContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const stepFromUrl = searchParams.get("step");
+  const stripeStatus = searchParams.get("stripe");
 
   useEffect(() => {
     fetch("/api/onboarding")
@@ -224,10 +225,22 @@ function OnboardingPageContent() {
           setStep(data.resumeStep);
         }
         if (typeof data?.appUrl === "string") setAppUrl(data.appUrl);
+
+        if (stripeStatus === "incomplete" || stripeStatus === "missing") {
+          setPaymentMethod("payment_gateway");
+          setError(
+            "Stripe setup is incomplete. Continue to finish setup — it takes about 3 minutes and requires your SSM and Tax Identification Number."
+          );
+        } else if (stripeStatus === "error") {
+          setPaymentMethod("payment_gateway");
+          setError("Something went wrong with Stripe. Continue to try again.");
+        } else if (stripeStatus === "pending" || stripeStatus === "ready") {
+          setPaymentMethod("payment_gateway");
+        }
       })
       .catch(() => setError("Could not load onboarding data."))
       .finally(() => setIsLoading(false));
-  }, [router, stepFromUrl]);
+  }, [router, stepFromUrl, stripeStatus]);
 
   async function submitStep(body: OnboardingStepRequest) {
     const response = await fetch("/api/onboarding", {
@@ -255,6 +268,16 @@ function OnboardingPageContent() {
 
     try {
       const payload = await submitStep(body);
+
+      if (
+        payload &&
+        typeof payload === "object" &&
+        "stripeUrl" in payload &&
+        typeof payload.stripeUrl === "string"
+      ) {
+        window.location.href = payload.stripeUrl;
+        return;
+      }
 
       if (nextStep === "dashboard") {
         router.push(
@@ -390,7 +413,7 @@ function OnboardingPageContent() {
         step: "payment",
         method: "payment_gateway",
       },
-      "username"
+      null
     );
   }
 
@@ -464,9 +487,13 @@ function OnboardingPageContent() {
   const continueLabel =
     step === "preview_profile"
       ? "Go to dashboard"
-      : isSubmitting
-        ? "Saving…"
-        : "Continue";
+      : step === "payment" && paymentMethod === "payment_gateway"
+        ? isSubmitting
+          ? "Opening Stripe…"
+          : "Continue to Stripe"
+        : isSubmitting
+          ? "Saving…"
+          : "Continue";
 
   return (
     <div className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto bg-zinc-50 px-6 pb-16 pt-10 dark:bg-zinc-950">
@@ -729,12 +756,9 @@ function OnboardingPageContent() {
                   </div>
                 ) : (
                   <div className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-                    After onboarding, finish Stripe setup under{" "}
-                    <span className="font-medium text-foreground">
-                      Settings → Payment
-                    </span>
-                    . Have your SSM and Tax Identification Number ready — it
-                    usually takes about 3 minutes.
+                    Continue opens Stripe setup in about 3 minutes. Have your
+                    SSM and Tax Identification Number ready. When you finish,
+                    you&apos;ll return here to complete your profile.
                   </div>
                 )}
               </>

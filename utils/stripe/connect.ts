@@ -2,7 +2,7 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { UserModel } from "@/models/User";
-import { buildProfileUrl, getAppUrl } from "@/utils/appUrl";
+import { getAppUrl } from "@/utils/appUrl";
 import { refreshSession } from "@/utils/onboarding/progress";
 import { toIdString } from "@/schemas/objectId";
 
@@ -16,71 +16,6 @@ export type ConnectedAccountOwner = {
 };
 
 const BEAUTY_SERVICES_MCC = "7298";
-
-function getServiceDescription(role?: string | null) {
-  if (role === "makeupartist") {
-    return "Bridal and event makeup services for clients booked through Bridalync.";
-  }
-  if (role === "hijabstylist") {
-    return "Bridal hijab styling services for clients booked through Bridalync.";
-  }
-  return "Bridal beauty and styling services for clients booked through Bridalync.";
-}
-
-function isStripeAcceptableBusinessUrl(url: string) {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.toLowerCase();
-
-    if (
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host.endsWith(".local")
-    ) {
-      return false;
-    }
-
-    return parsed.protocol === "http:" || parsed.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function getBusinessProfileUrl(owner: ConnectedAccountOwner) {
-  const appUrl = getAppUrl();
-  const candidate = owner.username
-    ? buildProfileUrl(appUrl, owner.username)
-    : appUrl;
-
-  if (isStripeAcceptableBusinessUrl(candidate)) {
-    return candidate;
-  }
-
-  const fallback = process.env.STRIPE_BUSINESS_URL?.trim();
-  if (fallback && isStripeAcceptableBusinessUrl(fallback)) {
-    return fallback;
-  }
-
-  return undefined;
-}
-
-function buildBusinessProfilePrefill(owner: ConnectedAccountOwner) {
-  const profile: Stripe.AccountUpdateParams.BusinessProfile = {
-    mcc: BEAUTY_SERVICES_MCC,
-    product_description: getServiceDescription(owner.role),
-  };
-
-  if (owner.name?.trim()) {
-    profile.name = owner.name.trim();
-  }
-
-  const url = getBusinessProfileUrl(owner);
-  if (url) {
-    profile.url = url;
-  }
-
-  return profile;
-}
 
 function splitFullName(name: string) {
   const trimmed = name.trim();
@@ -99,18 +34,6 @@ function splitFullName(name: string) {
   };
 }
 
-function buildIndividualPrefill(owner: ConnectedAccountOwner) {
-  const individual: Stripe.AccountUpdateParams.Individual = {
-    email: owner.email,
-  };
-
-  if (owner.name) {
-    Object.assign(individual, splitFullName(owner.name));
-  }
-
-  return individual;
-}
-
 function isRestrictedConnectedAccountUpdate(error: unknown) {
   return (
     error instanceof Error &&
@@ -120,6 +43,20 @@ function isRestrictedConnectedAccountUpdate(error: unknown) {
 
 export function isAccountPayoutReady(account: Stripe.Account | StripeRecord): boolean {
   const record = account as StripeRecord;
+
+  const merchantCaps = (
+    record.configuration as StripeRecord | undefined
+  )?.merchant as StripeRecord | undefined;
+  const merchantCapabilities = merchantCaps?.capabilities as
+    | StripeRecord
+    | undefined;
+  const payouts = (
+    merchantCapabilities?.stripe_balance as StripeRecord | undefined
+  )?.payouts as StripeRecord | undefined;
+  if (payouts?.status === "active") {
+    return true;
+  }
+
   const payoutsEnabled = record.payouts_enabled === true;
   const detailsSubmitted = record.details_submitted === true;
 
@@ -133,6 +70,8 @@ export function isAccountPayoutReady(account: Stripe.Account | StripeRecord): bo
 
 /** Post-onboarding return status for dashboard Settings feedback. */
 export type StripePayoutReturnStatus = "ready" | "pending" | "incomplete";
+
+export type ConnectFlow = "settings" | "onboarding";
 
 export function classifyPayoutOnboardingStatus(
   account: Stripe.Account | StripeRecord
@@ -155,8 +94,14 @@ export function classifyPayoutOnboardingStatus(
   return "pending";
 }
 
-export function getConnectUrls() {
+export function getConnectUrls(flow: ConnectFlow = "settings") {
   const appUrl = getAppUrl();
+  if (flow === "onboarding") {
+    return {
+      returnUrl: `${appUrl}/api/stripe/connect/return?flow=onboarding`,
+      refreshUrl: `${appUrl}/api/stripe/connect/refresh?flow=onboarding`,
+    };
+  }
   return {
     returnUrl: `${appUrl}/api/stripe/connect/return`,
     refreshUrl: `${appUrl}/api/stripe/connect/refresh`,
@@ -177,15 +122,66 @@ export function buildStripeOwner(user: {
   };
 }
 
-/** Minimal Standard account — no KYC onboarding until the user needs payouts. */
+/** SaaS merchant account (Accounts v2) — KYC completes via Account Link. */
 export async function createDeferredConnectedAccount(owner: ConnectedAccountOwner) {
   const stripe = getStripe();
-  return stripe.accounts.create({
-    type: "standard",
-    country: "MY",
-    email: owner.email,
-    business_type: "individual",
-  });
+  const displayName =
+    owner.name?.trim() || owner.email.split("@")[0] || "Bridalync stylist";
+
+  const baseParams = {
+    contact_email: owner.email,
+    display_name: displayName,
+    dashboard: "full" as const,
+    identity: {
+      country: "my",
+      entity_type: "individual" as const,
+    },
+    configuration: {
+      merchant: {
+        mcc: BEAUTY_SERVICES_MCC,
+        capabilities: {
+          card_payments: { requested: true },
+          fpx_payments: { requested: true },
+        },
+      },
+    },
+    defaults: {
+      currency: "myr",
+      responsibilities: {
+        fees_collector: "stripe" as const,
+        losses_collector: "stripe" as const,
+      },
+    },
+    include: [
+      "configuration.merchant",
+      "identity",
+      "requirements",
+    ] as Array<
+      | "configuration.merchant"
+      | "identity"
+      | "requirements"
+    >,
+  };
+
+  try {
+    return await stripe.v2.core.accounts.create(baseParams);
+  } catch (error) {
+    // FPX may be unavailable for some platform/test configs — retry with cards only.
+    if (error instanceof Error && /fpx/i.test(error.message)) {
+      return stripe.v2.core.accounts.create({
+        ...baseParams,
+        configuration: {
+          merchant: {
+            mcc: BEAUTY_SERVICES_MCC,
+            capabilities: {
+              card_payments: { requested: true },
+            },
+          },
+        },
+      });
+    }
+    throw error;
+  }
 }
 
 export async function provisionDeferredStripeAccount(
@@ -210,29 +206,29 @@ async function prepareAccountForPayoutOnboarding(
   accountId: string,
   owner: ConnectedAccountOwner
 ) {
-  const account = await retrieveConnectedAccount(accountId);
-  if (account.details_submitted) {
-    return;
-  }
-
+  // Accounts v2 collects KYC via Account Link. Prefill is best-effort only.
   const stripe = getStripe();
+  const nameParts = owner.name ? splitFullName(owner.name) : {};
+
   try {
-    await stripe.accounts.update(accountId, {
-      business_type: "individual",
-      individual: buildIndividualPrefill(owner),
-      business_profile: buildBusinessProfilePrefill(owner),
+    await stripe.v2.core.accounts.update(accountId, {
+      contact_email: owner.email,
+      ...(owner.name?.trim() ? { display_name: owner.name.trim() } : {}),
+      identity: {
+        individual: {
+          ...(nameParts.first_name
+            ? { given_name: nameParts.first_name }
+            : {}),
+          ...(nameParts.last_name ? { surname: nameParts.last_name } : {}),
+          email: owner.email,
+        },
+      },
     });
   } catch (error) {
-    // Standard accounts own KYC fields after Account Link/onboarding starts.
-    // Prefill is best-effort — never block hosted onboarding on this.
-    if (isRestrictedConnectedAccountUpdate(error)) {
-      console.warn(
-        `[stripe] skipped Standard account prefill for ${accountId}:`,
-        error instanceof Error ? error.message : error
-      );
-      return;
-    }
-    throw error;
+    console.warn(
+      `[stripe] skipped Accounts v2 prefill for ${accountId}:`,
+      error instanceof Error ? error.message : error
+    );
   }
 }
 
@@ -255,6 +251,23 @@ export function isAccountReadyForClientCharges(
   account: Stripe.Account | StripeRecord
 ): boolean {
   const record = account as StripeRecord;
+
+  const merchantCaps = (
+    record.configuration as StripeRecord | undefined
+  )?.merchant as StripeRecord | undefined;
+  const merchantCapabilities = merchantCaps?.capabilities as
+    | StripeRecord
+    | undefined;
+  const cardPaymentsV2 = merchantCapabilities?.card_payments as
+    | StripeRecord
+    | undefined;
+  if (cardPaymentsV2?.status === "active") {
+    return true;
+  }
+  if (cardPaymentsV2?.status === "pending") {
+    return true;
+  }
+
   if (record.charges_enabled === true) {
     return true;
   }
@@ -338,15 +351,26 @@ export async function retrieveConnectedAccount(accountId: string) {
   return stripe.accounts.retrieve(accountId);
 }
 
-export async function createOnboardingAccountLink(accountId: string) {
+export async function createOnboardingAccountLink(
+  accountId: string,
+  flow: ConnectFlow = "settings"
+) {
   const stripe = getStripe();
-  const { returnUrl, refreshUrl } = getConnectUrls();
+  const { returnUrl, refreshUrl } = getConnectUrls(flow);
 
-  return stripe.accountLinks.create({
+  return stripe.v2.core.accountLinks.create({
     account: accountId,
-    refresh_url: refreshUrl,
-    return_url: returnUrl,
-    type: "account_onboarding",
+    use_case: {
+      type: "account_onboarding",
+      account_onboarding: {
+        configurations: ["merchant"],
+        refresh_url: refreshUrl,
+        return_url: returnUrl,
+        collection_options: {
+          fields: "eventually_due",
+        },
+      },
+    },
   });
 }
 

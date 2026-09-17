@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { ZodSchema } from "zod";
+import Stripe from "stripe";
 
 import { AddOnModel } from "@/models/AddOn";
 import { PackageModel } from "@/models/Package";
@@ -27,6 +28,11 @@ import {
   refreshSession,
   updateOnboardingProgress,
 } from "@/utils/onboarding/progress";
+import {
+  buildStripeOwner,
+  createOnboardingAccountLink,
+  ensureStripeAccountId,
+} from "@/utils/stripe/connect";
 
 const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
   placeId: "travel-disabled",
@@ -373,20 +379,54 @@ export async function POST(req: NextRequest) {
               account_number: accountNumber,
             },
           });
-        } else {
-          await settingsModel.updateSettingsByUserId(userId, {
-            payment: {
-              ...existing.payment,
-              method: "payment_gateway",
-            },
+
+          await updateOnboardingProgress(userId, {
+            configureBankAccount: true,
           });
+          await refreshSession(userId);
+          return createResponse({ ok: true }, 200);
         }
 
-        await updateOnboardingProgress(userId, {
-          configureBankAccount: true,
+        await settingsModel.updateSettingsByUserId(userId, {
+          payment: {
+            ...existing.payment,
+            method: "payment_gateway",
+          },
         });
-        await refreshSession(userId);
-        return createResponse({ ok: true }, 200);
+
+        try {
+          const accountId = await ensureStripeAccountId(
+            userId,
+            buildStripeOwner(user),
+            user.stripe_account_id
+          );
+          const accountLink = await createOnboardingAccountLink(
+            accountId,
+            "onboarding"
+          );
+
+          if (!accountLink.url) {
+            return createResponse(
+              { error: "Could not start Stripe setup. Please try again." },
+              500
+            );
+          }
+
+          await refreshSession(userId);
+          return createResponse({ ok: true, stripeUrl: accountLink.url }, 200);
+        } catch (error) {
+          if (error instanceof Stripe.errors.StripeError) {
+            return createResponse(
+              {
+                error:
+                  error.message ||
+                  "Could not start Stripe setup. Please try again.",
+              },
+              error.statusCode ?? 400
+            );
+          }
+          throw error;
+        }
       }
 
       case "username": {

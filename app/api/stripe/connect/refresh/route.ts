@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { getSessionUser } from "@/utils/auth/session";
 import { getAppUrl } from "@/utils/appUrl";
@@ -7,10 +7,18 @@ import {
   buildStripeOwner,
   createOnboardingAccountLink,
   ensureStripeAccountId,
+  type ConnectFlow,
 } from "@/utils/stripe/connect";
 
-export async function GET() {
+function parseFlow(req: NextRequest): ConnectFlow {
+  return req.nextUrl.searchParams.get("flow") === "onboarding"
+    ? "onboarding"
+    : "settings";
+}
+
+export async function GET(req: NextRequest) {
   const appUrl = getAppUrl();
+  const flow = parseFlow(req);
   const user = await getSessionUser();
 
   if (!user?.email) {
@@ -28,9 +36,14 @@ export async function GET() {
       buildStripeOwner(user),
       user.stripe_account_id
     );
-    const accountLink = await createOnboardingAccountLink(accountId);
+    const accountLink = await createOnboardingAccountLink(accountId, flow);
 
     if (!accountLink.url) {
+      if (flow === "onboarding") {
+        return NextResponse.redirect(
+          `${appUrl}/onboarding?step=payment&stripe=error`
+        );
+      }
       return NextResponse.redirect(
         `${appUrl}/dashboard/settings?stripe_payout=error`
       );
@@ -38,6 +51,11 @@ export async function GET() {
 
     return NextResponse.redirect(accountLink.url);
   } catch {
+    if (flow === "onboarding") {
+      return NextResponse.redirect(
+        `${appUrl}/onboarding?step=payment&stripe=error`
+      );
+    }
     return NextResponse.redirect(
       `${appUrl}/dashboard/settings?stripe_payout=error`
     );

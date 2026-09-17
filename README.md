@@ -91,13 +91,13 @@ Stylists upload their own payment QR and bank details under **Settings → Payme
 
 ### Stripe Connect setup
 
-Optional for stylists who choose **Payment Gateway**. Malaysia-based platforms use **Stripe Standard** connected accounts (Accounts v1) with hosted Account Link onboarding. Express and marketplace-style configs make the platform loss-liable, which Stripe blocks for MY platforms. See `utils/stripe/connect.ts`.
+Optional for stylists who choose **Payment Gateway**. Malaysia-based platforms use **Accounts v2** connected accounts with SaaS merchant configuration (`dashboard: full`, Stripe-owned fees/losses) and hosted Account Link onboarding. Marketplace Express-style configs make the platform loss-liable, which Stripe blocks for MY platforms. See `utils/stripe/connect.ts`.
 
 1. Complete [Connect platform setup](https://dashboard.stripe.com/connect) in your Stripe Dashboard.
-2. Enable **Accounts v2** under [Account previews](https://dashboard.stripe.com/settings/previews).
+2. Enable **Accounts v2** under [Account previews](https://dashboard.stripe.com/settings/previews) (required for connected account creation).
 3. Configure Connect branding (name, color, icon) under Connect settings.
 4. Add a webhook endpoint pointing to `{APP_URL}/api/stripe/webhooks`.
-   - Enable **Listen to events on Connected accounts** (required for direct charges on Standard accounts).
+   - Enable **Listen to events on Connected accounts** (required for direct charges on connected accounts).
    - Subscribe to:
      - `checkout.session.completed`
      - `checkout.session.expired`
