@@ -46,6 +46,30 @@ export function timeSlotsMatch(left: TimeSlot, right: TimeSlot): boolean {
   );
 }
 
+function hhmmToMinutes(hhmm: string) {
+  const [hours, minutes] = hhmm.split(":").map(Number);
+  if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+  return hours * 60 + minutes;
+}
+
+/** Half-open ranges: 10:00–12:00 and 12:00–14:00 do not overlap. */
+export function timeRangesOverlap(left: TimeSlot, right: TimeSlot) {
+  const leftStart = hhmmToMinutes(left.startTime);
+  const leftEnd = hhmmToMinutes(left.endTime);
+  const rightStart = hhmmToMinutes(right.startTime);
+  const rightEnd = hhmmToMinutes(right.endTime);
+  if (
+    leftStart == null ||
+    leftEnd == null ||
+    rightStart == null ||
+    rightEnd == null
+  ) {
+    return false;
+  }
+
+  return leftStart < rightEnd && rightStart < leftEnd;
+}
+
 export function getOccupiedSlotsFromBookings(
   bookings: Pick<Booking, "status" | "sessions">[]
 ): PublicBookedSlot[] {
@@ -80,7 +104,7 @@ export function isSessionSlotTaken(
 
   return occupiedSlots.some(
     (slot) =>
-      slot.date === dateKey && timeSlotsMatch(slot, session.time_slot)
+      slot.date === dateKey && timeRangesOverlap(slot, session.time_slot)
   );
 }
 
