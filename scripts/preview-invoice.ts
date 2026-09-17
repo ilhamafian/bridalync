@@ -52,6 +52,7 @@ async function main() {
     },
     paymentOption: "deposit" as const,
     status: "confirmed" as const,
+    source: "bridalync" as const,
   } satisfies PersistedBooking;
 
   const pdf = await generateBookingInvoicePdf({

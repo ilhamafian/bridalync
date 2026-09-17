@@ -63,6 +63,7 @@ export function bookingsToCalendarEvents(
         location: session.location ?? null,
         invoice: booking.invoice,
         paymentOption: booking.paymentOption,
+        source: booking.source ?? "bridalync",
       });
     });
   }

@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 
 import { UserModel } from "@/models/User";
 import {
@@ -8,6 +9,10 @@ import {
   type SessionUser,
 } from "@/schemas/userSchema";
 import { toIdString } from "@/schemas/objectId";
+import {
+  clearCalendarTokenCookie,
+  clearGoogleConnectCookies,
+} from "@/utils/google/oauth";
 
 export const SESSION_COOKIE_NAME = "bridalync_session";
 const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
@@ -82,22 +87,44 @@ export function verifySessionToken(token: string): SessionPayload | null {
 }
 
 export async function setAuthSession(user: SessionUser) {
-  const userId = toIdString(user._id);
-  const token = createSessionToken({
-    onboarding_completed: isOnboardingComplete(user.onboarding),
-    userId,
-  });
-  if (!userId) {
-    throw new Error("User ID is required");
-  }
-
   const cookieStore = await cookies();
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
+  cookieStore.set(SESSION_COOKIE_NAME, createAuthSessionCookieValue(user), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_MAX_AGE_SECONDS,
+  });
+  await clearGoogleConnectCookies();
+}
+
+export function applyAuthSessionCookie(
+  response: NextResponse,
+  user: SessionUser
+) {
+  response.cookies.set(
+    SESSION_COOKIE_NAME,
+    createAuthSessionCookieValue(user),
+    {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: SESSION_MAX_AGE_SECONDS,
+    }
+  );
+  clearCalendarTokenCookie(response);
+}
+
+function createAuthSessionCookieValue(user: SessionUser) {
+  const userId = toIdString(user._id);
+  if (!userId) {
+    throw new Error("User ID is required");
+  }
+
+  return createSessionToken({
+    onboarding_completed: isOnboardingComplete(user.onboarding),
+    userId,
   });
 }
 
@@ -119,4 +146,5 @@ export async function getSessionUser(): Promise<SessionUser | null> {
 export async function clearAuthSession() {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE_NAME);
+  await clearGoogleConnectCookies();
 }

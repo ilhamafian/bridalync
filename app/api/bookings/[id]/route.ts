@@ -25,6 +25,8 @@ import {
   resolveBookingQuotation,
 } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
+import { normalizeSessionDate } from "@/utils/booking/availability";
+import { GOOGLE_IMPORT_PACKAGE_ID } from "@/utils/google/calendar";
 import { SettingModel } from "@/models/Setting";
 import { getFreelancerByUsername } from "@/utils/users";
 
@@ -120,11 +122,15 @@ export async function PATCH(
       }
 
       const data = parsed.data;
+      const packageIds = data.packageIds ?? existing.packageIds;
+      const isGoogleImportWithoutPackages =
+        existing.source === "google_calendar" && packageIds.length === 0;
       const needsQuotation =
-        data.packageIds !== undefined ||
-        data.addOns !== undefined ||
-        data.sessions !== undefined ||
-        data.paymentOption !== undefined;
+        !isGoogleImportWithoutPackages &&
+        (data.packageIds !== undefined ||
+          data.addOns !== undefined ||
+          data.sessions !== undefined ||
+          data.paymentOption !== undefined);
 
       let updatePayload: Parameters<typeof updateDashboardBooking>[1] = {};
 
@@ -135,8 +141,23 @@ export async function PATCH(
         updatePayload.status = data.status;
       }
 
+      if (isGoogleImportWithoutPackages && data.sessions) {
+        updatePayload.sessions = data.sessions.map((session, index) => ({
+          status: "scheduled" as const,
+          name: session.name,
+          packageId: session.packageId || GOOGLE_IMPORT_PACKAGE_ID,
+          order: session.order ?? index,
+          date: normalizeSessionDate(session.date),
+          time_slot: session.time_slot,
+          location: session.location,
+          client_key: session.client_key,
+        }));
+        if (data.contact?.name) {
+          updatePayload.packageNames = data.contact.name;
+        }
+      }
+
       if (needsQuotation) {
-        const packageIds = data.packageIds ?? existing.packageIds;
         const sessions = data.sessions;
         if (!sessions || sessions.length === 0) {
           return createResponse(

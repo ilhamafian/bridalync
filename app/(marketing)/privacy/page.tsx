@@ -48,6 +48,12 @@ export default function PrivacyPolicyPage() {
             subject to your Google account settings and consent.
           </li>
           <li>
+            <strong>Google Calendar information</strong> — if you connect Google
+            Calendar to import bookings, we read event titles and start/end
+            times. We do not import public holidays, repeating events, or
+            write back to Google Calendar.
+          </li>
+          <li>
             <strong>Booking and client information</strong> — details needed to
             create and manage bookings (for example client name, contact
             details, event dates, locations, and package selections).
@@ -72,6 +78,7 @@ export default function PrivacyPolicyPage() {
         <ul>
           <li>Create and manage your Bridalync account</li>
           <li>Authenticate you, including via Google Sign-In when enabled</li>
+          <li>Import selected Google Calendar events as bookings when you request it</li>
           <li>Provide booking, scheduling, invoicing, and related features</li>
           <li>Process payments and verify payment receipts</li>
           <li>Send transactional emails (verification codes, booking updates, reminders)</li>
@@ -94,11 +101,20 @@ export default function PrivacyPolicyPage() {
           identity inside the Service.
         </p>
         <p>
+          If you later connect Google Calendar from the dashboard, we request
+          read-only access to your calendars so we can import one-off event
+          titles and times as Bridalync bookings. We skip public holiday
+          calendars and repeating events. We do not write to your Google
+          Calendar. Event locations are not imported; you can add them later
+          in Bridalync.
+        </p>
+        <p>
           We do <strong>not</strong> use Google user data for advertising, do
           not sell it, do not share it with data brokers, and do not use it for
           independent AI/ML training. We store the account identifiers needed to
           keep you signed in and to associate your Bridalync profile with your
-          Google login. We access only the scopes you authorize.
+          Google login. Imported calendar events are stored as bookings you
+          control in Bridalync. We access only the scopes you authorize.
         </p>
         <p>
           Our use of information received from Google APIs will adhere to the{" "}

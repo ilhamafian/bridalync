@@ -20,12 +20,14 @@ export type SerializedBooking = {
     order: number;
     date: string;
     time_slot: Booking["sessions"][number]["time_slot"];
-    location: Booking["sessions"][number]["location"];
+    location?: Booking["sessions"][number]["location"];
     client_key?: string;
   }>;
   invoice: Booking["invoice"];
   paymentOption: Booking["paymentOption"];
   status: Booking["status"];
+  source?: Booking["source"];
+  googleEventId?: string;
   paymentChannel?: Booking["paymentChannel"];
   depositReceiptUrl?: string;
   depositVerificationStatus?: Booking["depositVerificationStatus"];
@@ -60,6 +62,8 @@ export function serializeBooking(
     invoice: booking.invoice,
     paymentOption: booking.paymentOption,
     status: booking.status,
+    source: booking.source ?? "bridalync",
+    googleEventId: booking.googleEventId,
     paymentChannel: booking.paymentChannel,
     depositReceiptUrl: booking.depositReceiptUrl,
     depositVerificationStatus: booking.depositVerificationStatus,

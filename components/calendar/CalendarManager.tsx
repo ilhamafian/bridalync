@@ -5,6 +5,7 @@ import {
   IconChevronLeft,
   IconChevronRight,
 } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,15 +41,41 @@ export function CalendarManager({
   maxBookingYear?: number;
 }) {
   const isMobile = useIsMobile();
+  const router = useRouter();
   const [view, setView] = useState<CalendarView>("week");
   const [cursor, setCursor] = useState(() => new Date());
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(
     null
   );
+  const [bookings, setBookings] = useState(initialBookings);
+  const [openGoogleImport, setOpenGoogleImport] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const [blockedKeys, setBlockedKeys] = useState<Set<string>>(
     () => new Set()
   );
   const [hotKeys, setHotKeys] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google") === "connected") {
+      setOpenGoogleImport(true);
+    }
+    const googleErr = params.get("google_error");
+    if (googleErr === "denied") {
+      setGoogleError("Google Calendar access was not granted.");
+    } else if (googleErr === "config") {
+      setGoogleError("Google Calendar is not configured yet.");
+    } else if (googleErr) {
+      setGoogleError("Could not connect Google Calendar. Try again.");
+    }
+    if (params.has("google") || params.has("google_error")) {
+      window.history.replaceState({}, "", "/dashboard/calendar");
+    }
+  }, []);
 
   const loadAvailability = useCallback(async () => {
     try {
@@ -81,8 +108,8 @@ export function CalendarManager({
   }, [loadAvailability]);
 
   const events = useMemo(
-    () => bookingsToCalendarEvents(initialBookings),
-    [initialBookings]
+    () => bookingsToCalendarEvents(bookings),
+    [bookings]
   );
 
   const days = useMemo(() => getDaysInView(cursor, view), [cursor, view]);
@@ -102,7 +129,19 @@ export function CalendarManager({
             packages={packages}
             styles={styles}
             maxBookingYear={maxBookingYear}
+            openGoogleImport={openGoogleImport}
             onAvailabilityChange={loadAvailability}
+            onImported={(imported) => {
+              if (imported.length === 0) return;
+              setBookings((current) => {
+                const existing = new Set(current.map((booking) => booking._id));
+                return [
+                  ...imported.filter((booking) => !existing.has(booking._id)),
+                  ...current,
+                ];
+              });
+              router.refresh();
+            }}
           />
           <div className="flex min-w-0 flex-1 items-center gap-1">
             <Button
@@ -170,9 +209,14 @@ export function CalendarManager({
           />
         ) : null}
 
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-          <BlockedMarker className="text-[11px]" />
-          <HotMarker className="text-[11px]" />
+        <div className="flex flex-col gap-1 text-[11px] text-muted-foreground">
+          <div className="flex items-center gap-3">
+            <BlockedMarker className="text-[11px]" />
+            <HotMarker className="text-[11px]" />
+          </div>
+          {googleError ? (
+            <p className="text-destructive">{googleError}</p>
+          ) : null}
         </div>
       </div>
 

@@ -17,6 +17,7 @@ export type CalendarEvent = {
   location: SerializedBooking["sessions"][number]["location"] | null;
   invoice: SerializedBooking["invoice"];
   paymentOption: SerializedBooking["paymentOption"];
+  source?: SerializedBooking["source"];
 };
 
 export const CALENDAR_DAY_START_HOUR = 6;

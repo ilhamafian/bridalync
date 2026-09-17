@@ -403,6 +403,9 @@ export function BookingsManager({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingSource, setEditingSource] = useState<
+    SerializedBooking["source"] | null
+  >(null);
   const [form, setForm] = useState<BookingFormState>(() => emptyForm(timeSlots));
   const [deleteTarget, setDeleteTarget] = useState<SerializedBooking | null>(
     null
@@ -417,6 +420,10 @@ export function BookingsManager({
     url: string;
     title: string;
   } | null>(null);
+
+  useEffect(() => {
+    setBookings(initialBookings);
+  }, [initialBookings]);
 
   async function verifyPayment(
     bookingId: string,
@@ -517,8 +524,11 @@ export function BookingsManager({
   const activeFilterLabel =
     BOOKING_FILTERS.find((filter) => filter.value === statusFilter)?.label ??
     statusFilter;
+  const isGoogleImport = editingSource === "google_calendar";
+
   function openCreate() {
     setEditingId(null);
+    setEditingSource(null);
     setForm(emptyForm(timeSlots));
     setError(null);
     setSheetOpen(true);
@@ -526,6 +536,7 @@ export function BookingsManager({
 
   function openEdit(booking: SerializedBooking) {
     setEditingId(booking._id);
+    setEditingSource(booking.source ?? "bridalync");
     setForm(bookingToForm(booking, timeSlots));
     setError(null);
     setSheetOpen(true);
@@ -572,7 +583,7 @@ export function BookingsManager({
   }
 
   function buildPayload() {
-    if (form.packageIds.length === 0) {
+    if (!isGoogleImport && form.packageIds.length === 0) {
       return { error: "Select at least one package." };
     }
 
@@ -588,7 +599,7 @@ export function BookingsManager({
       return { error: "Add at least one session." };
     }
 
-    if (form.sessions.length !== form.packageIds.length) {
+    if (!isGoogleImport && form.sessions.length !== form.packageIds.length) {
       return { error: "Each selected package needs one session." };
     }
 
@@ -599,7 +610,7 @@ export function BookingsManager({
       if (!session.packageId) {
         return { error: "Each session needs a package." };
       }
-      if (chargeBy === "style" && !session.styleId) {
+      if (!isGoogleImport && chargeBy === "style" && !session.styleId) {
         return { error: "Each session needs a style." };
       }
       if (!session.date) {
@@ -629,8 +640,6 @@ export function BookingsManager({
           mobile: form.contact_mobile.trim() || undefined,
           country_code: form.contact_country_code || undefined,
         },
-        packageIds: form.packageIds,
-        addOns: selectedAddOns,
         sessions: form.sessions.map((session, index) => {
           const selectedStyle = styleOptions.find(
             (option) => option.id === session.styleId
@@ -689,8 +698,14 @@ export function BookingsManager({
             style: stylePayload,
           };
         }),
-        paymentOption: form.paymentOption,
         status: form.status,
+        ...(isGoogleImport
+          ? {}
+          : {
+              packageIds: form.packageIds,
+              addOns: selectedAddOns,
+              paymentOption: form.paymentOption,
+            }),
       },
     };
   }
@@ -827,9 +842,13 @@ export function BookingsManager({
                         <Badge variant={statusBadgeVariant(booking.status)}>
                           {statusLabel(booking)}
                         </Badge>
+                        {booking.source === "google_calendar" ? (
+                          <Badge variant="outline">Google import</Badge>
+                        ) : null}
                         {booking.status !== "cancelled" &&
                         booking.status !== "failed" &&
-                        booking.status !== "enquiry" ? (
+                        booking.status !== "enquiry" &&
+                        booking.source !== "google_calendar" ? (
                           <Badge variant="outline">
                             {paymentLabel(booking)}
                           </Badge>
@@ -1026,8 +1045,12 @@ export function BookingsManager({
           className="max-h-[85dvh] overflow-y-auto rounded-t-2xl"
         >
           <SheetHeader>
-            <SheetTitle>
-              {editingId ? "Edit booking" : "New booking"}
+              <SheetTitle>
+              {editingId
+                ? isGoogleImport
+                  ? "Edit imported booking"
+                  : "Edit booking"
+                : "New booking"}
             </SheetTitle>
           </SheetHeader>
 
@@ -1084,6 +1107,13 @@ export function BookingsManager({
 
               <Separator />
 
+              {isGoogleImport ? (
+                <p className="text-sm text-muted-foreground">
+                  This booking was imported from Google Calendar. Add the
+                  session location below. Packages and invoices are not attached.
+                </p>
+              ) : (
+                <>
               <div className="flex flex-col gap-2">
                 <Label>Packages</Label>
                 <ul className="flex flex-col gap-2">
@@ -1151,6 +1181,8 @@ export function BookingsManager({
                   </ul>
                 </div>
               ) : null}
+                </>
+              )}
 
               <Separator />
 
@@ -1173,7 +1205,7 @@ export function BookingsManager({
                         }
                       />
                     </Field>
-                    {chargeBy === "style" ? (
+                    {chargeBy === "style" && !isGoogleImport ? (
                       <Field label="Style">
                         <Select
                           value={session.styleId || undefined}
@@ -1238,6 +1270,11 @@ export function BookingsManager({
                         onChange={(location) =>
                           updateSession(session.client_key, { location })
                         }
+                        hint={
+                          isGoogleImport
+                            ? "Imported events have no location. Search or pin the venue."
+                            : undefined
+                        }
                       />
                     </Field>
                   </div>
@@ -1269,6 +1306,7 @@ export function BookingsManager({
                     </SelectContent>
                   </Select>
                 </Field>
+                {isGoogleImport ? null : (
                 <Field label="Payment">
                   <Select
                     value={form.paymentOption}
@@ -1288,6 +1326,7 @@ export function BookingsManager({
                     </SelectContent>
                   </Select>
                 </Field>
+                )}
               </div>
 
               {error ? (

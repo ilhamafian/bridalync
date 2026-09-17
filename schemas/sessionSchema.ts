@@ -12,7 +12,8 @@ export const sessionSchema = z.object({
     order: z.number(),
     date: z.coerce.date(),
     time_slot: timeSlotSchema,
-    location: addressSchema,
+    /** Optional for Google Calendar imports; stylists add it later from the dashboard. */
+    location: addressSchema.optional(),
 });
 
 export type Session = z.infer<typeof sessionSchema>;

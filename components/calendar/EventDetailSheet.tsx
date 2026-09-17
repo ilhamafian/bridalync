@@ -21,6 +21,7 @@ import { formatLocationAddress } from "@/utils/session";
 import { formatWhatsAppDisplay } from "@/utils/socialLinks";
 
 import type { CalendarEvent } from "./calendar-types";
+import { GOOGLE_IMPORT_CONTACT_EMAIL } from "@/utils/google/calendar";
 
 function bookingStatusLabel(status: CalendarEvent["status"]) {
   switch (status) {
@@ -97,6 +98,11 @@ export function EventDetailSheet({
                   {bookingStatusLabel(event.status)}
                 </Badge>
               </div>
+              {event.source === "google_calendar" ? (
+                <p className="text-xs text-muted-foreground">
+                  Imported from Google Calendar
+                </p>
+              ) : null}
             </SheetHeader>
 
             <div className="flex flex-col gap-4 px-6 pb-2 text-sm">
@@ -109,12 +115,14 @@ export function EventDetailSheet({
                 </p>
               </div>
 
+              {event.source === "google_calendar" ? null : (
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Package
                 </p>
                 <p className="mt-0.5">{event.packageName}</p>
               </div>
+              )}
 
               {location ? (
                 <div>
@@ -126,7 +134,16 @@ export function EventDetailSheet({
                     <span>{formatLocationAddress(location)}</span>
                   </p>
                 </div>
-              ) : null}
+              ) : (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Location
+                  </p>
+                  <p className="mt-0.5 text-muted-foreground">
+                    No location yet. Add it from Bookings.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -144,7 +161,8 @@ export function EventDetailSheet({
                   ) : (
                     <span>No phone number</span>
                   )}
-                  {event.contact.email ? (
+                  {event.contact.email &&
+                  event.contact.email !== GOOGLE_IMPORT_CONTACT_EMAIL ? (
                     <a
                       href={`mailto:${event.contact.email}`}
                       className="inline-flex items-center gap-1.5 hover:text-foreground"
@@ -156,6 +174,17 @@ export function EventDetailSheet({
                 </div>
               </div>
 
+              {event.source === "google_calendar" ? (
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Payment
+                  </p>
+                  <p className="mt-0.5 text-muted-foreground">
+                    Imported bookings have no Bridalync invoice. Update details
+                    in Bookings if needed.
+                  </p>
+                </div>
+              ) : (
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Payment
@@ -173,6 +202,7 @@ export function EventDetailSheet({
                   </p>
                 ) : null}
               </div>
+              )}
             </div>
 
             <SheetFooter className="gap-2 sm:flex-row">

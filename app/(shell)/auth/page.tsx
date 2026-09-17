@@ -3,7 +3,7 @@
 import { EyeIcon, EyeOffIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -180,6 +180,32 @@ export default function AuthPage() {
   const [betaBlockedMessage, setBetaBlockedMessage] = useState(
     BETA_NOT_ALLOWED_MESSAGE
   );
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const googleError = params.get("error");
+    if (!googleError) return;
+
+    const messages: Record<string, string> = {
+      google_denied: "Google sign-in was cancelled.",
+      google_failed: "Google sign-in failed. Try again.",
+      google_config: "Google sign-in is not configured yet.",
+      google_email: "Google did not provide a verified email address.",
+      google_conflict: "This email is already linked to a different Google account.",
+      google_signup:
+        "No Bridalync account exists for this Google email. Join the waitlist and we'll reach out.",
+      google_beta: BETA_NOT_ALLOWED_MESSAGE,
+    };
+
+    if (googleError === "google_beta") {
+      setBetaBlockedMessage(BETA_NOT_ALLOWED_MESSAGE);
+      setBetaBlockedOpen(true);
+    } else if (messages[googleError]) {
+      setError(messages[googleError]);
+    }
+
+    window.history.replaceState({}, "", "/auth");
+  }, []);
 
   const activeTab: AuthTab = SIGNUP_ENABLED ? tab : "login";
   const isVerifyStep =
@@ -492,6 +518,12 @@ export default function AuthPage() {
             variant="outline"
             size="lg"
             className="h-11 w-full rounded-xl bg-background text-sm font-medium"
+            disabled={isSubmitting}
+            onClick={() => {
+              window.location.href = `/api/auth/google/start?intent=${
+                activeTab === "signup" ? "signup" : "login"
+              }`;
+            }}
           >
             <GoogleIcon />
             Continue with Google

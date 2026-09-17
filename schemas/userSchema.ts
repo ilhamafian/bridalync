@@ -48,7 +48,9 @@ export type SocialLinks = z.infer<typeof socialLinksSchema>;
 export const userSchema = z.object({
   _id: objectIdSchema.optional(),
   email: z.email(),
-  password: z.string().min(1),
+  /** Omitted for Google-only accounts; set later if they create a password. */
+  password: z.string().min(1).optional(),
+  google_id: z.string().min(1).optional(),
   // filled in later during onboarding
   username: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
@@ -84,7 +86,11 @@ export const updateUserSchema = userSchema
   })
   .partial();
 
-export const publicUserSchema = userSchema.omit({ password: true, onboarding: true });
+export const publicUserSchema = userSchema.omit({
+  password: true,
+  onboarding: true,
+  google_id: true,
+});
 
 /** Safe fields exposed on the public booking / profile page. */
 export const publicProfileSchema = z.object({

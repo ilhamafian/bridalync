@@ -88,6 +88,13 @@ export async function authenticateUser(input: {
     throw new AuthError("INVALID_CREDENTIALS", "Invalid email or password.");
   }
 
+  if (!user.password) {
+    throw new AuthError(
+      "INVALID_CREDENTIALS",
+      "This account uses Google sign-in. Continue with Google instead."
+    );
+  }
+
   const passwordMatches = await bcrypt.compare(
     input.password,
     user.password

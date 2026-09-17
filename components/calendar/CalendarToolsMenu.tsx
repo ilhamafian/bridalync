@@ -1,15 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   IconAdjustments,
   IconBan,
+  IconBrandGoogle,
   IconCalendarStats,
   IconFlame,
 } from "@tabler/icons-react";
 
 import { BlockedDatesManager } from "@/components/BlockedDatesManager";
 import { BlockYearManager } from "@/components/BlockYearManager";
+import { GoogleCalendarImport } from "@/components/calendar/GoogleCalendarImport";
 import { HotDatesManager } from "@/components/HotDatesManager";
 import type { PackageItem, StyleItem } from "@/components/PackagesManager";
 import { Button } from "@/components/ui/button";
@@ -26,13 +28,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
-type AvailabilityTool = "hot" | "blocked" | "year";
+type CalendarTool = "hot" | "blocked" | "year" | "google";
 
-const TOOLS: Record<
-  AvailabilityTool,
-  { title: string; description: string }
-> = {
+const TOOLS: Record<CalendarTool, { title: string; description: string }> = {
   hot: {
     title: "Hot dates",
     description:
@@ -47,6 +47,11 @@ const TOOLS: Record<
     title: "Booking year",
     description: "Close next year until you are ready to take bookings.",
   },
+  google: {
+    title: "Import Google Calendar",
+    description:
+      "Bring one-off Google Calendar events into Bridalync as bookings. Holidays and repeating events are left out.",
+  },
 };
 
 export function CalendarToolsMenu({
@@ -54,15 +59,25 @@ export function CalendarToolsMenu({
   packages,
   styles,
   maxBookingYear,
+  initialTool = null,
+  openGoogleImport = false,
   onAvailabilityChange,
+  onImported,
 }: {
   chargeBy: "package" | "style";
   packages: PackageItem[];
   styles: StyleItem[];
   maxBookingYear?: number;
+  initialTool?: CalendarTool | null;
+  openGoogleImport?: boolean;
   onAvailabilityChange?: () => void;
+  onImported?: (bookings: SerializedBooking[]) => void;
 }) {
-  const [tool, setTool] = useState<AvailabilityTool | null>(null);
+  const [tool, setTool] = useState<CalendarTool | null>(initialTool);
+
+  useEffect(() => {
+    if (openGoogleImport) setTool("google");
+  }, [openGoogleImport]);
 
   function handleSaved() {
     onAvailabilityChange?.();
@@ -83,7 +98,11 @@ export function CalendarToolsMenu({
             Edit
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="z-100 w-48 min-w-48">
+        <DropdownMenuContent align="start" className="z-100 w-56 min-w-56">
+          <DropdownMenuItem onSelect={() => setTool("google")}>
+            <IconBrandGoogle />
+            Import Google Calendar
+          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setTool("hot")}>
             <IconFlame />
             Hot dates
@@ -132,6 +151,16 @@ export function CalendarToolsMenu({
                     hideHeader
                     initialMaxBookingYear={maxBookingYear}
                     onSaved={handleSaved}
+                  />
+                ) : null}
+                {tool === "google" ? (
+                  <GoogleCalendarImport
+                    onImported={(bookings) => {
+                      onImported?.(bookings);
+                      if (bookings.length > 0) {
+                        setTool(null);
+                      }
+                    }}
                   />
                 ) : null}
               </div>

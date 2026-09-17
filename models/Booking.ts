@@ -11,11 +11,14 @@ class BookingModel extends ModelBase<Booking> {
 
 export const bookingModel = new BookingModel();
 
-export type CreateBookingInput = Omit<Booking, "_id">;
+export type CreateBookingInput = Omit<Booking, "_id" | "source"> & {
+  source?: Booking["source"];
+};
 
 export async function createBooking(data: CreateBookingInput) {
   return bookingModel.create({
     _id: new ObjectId(),
+    source: "bridalync",
     ...data,
   } as Booking);
 }
