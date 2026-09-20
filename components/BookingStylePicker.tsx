@@ -205,8 +205,6 @@ function VariantCard({
   dimmed?: boolean
   onSelect: () => void
 }) {
-  const { t } = useLocale()
-
   return (
     <Button
       type="button"
@@ -233,11 +231,7 @@ function VariantCard({
               sizes="(max-width: 448px) 82vw, 360px"
             />
           </span>
-        ) : (
-          <span className="flex aspect-square w-full items-center justify-center bg-muted/60 text-sm text-muted-foreground">
-            {t.noImage}
-          </span>
-        )}
+        ) : null}
         <span className="px-3 py-2.5 font-medium">{variant.name}</span>
       </span>
     </Button>
