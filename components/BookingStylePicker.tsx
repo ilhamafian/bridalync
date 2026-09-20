@@ -33,6 +33,7 @@ type BookingStylePickerProps = {
 
 const CARD_WIDTH_RATIO = 0.82
 const CARD_GAP_PX = 12
+const SWIPE_THRESHOLD_RATIO = 0.2
 
 function VariantCarousel({
   variants,
@@ -52,6 +53,7 @@ function VariantCarousel({
   )
   const viewportRef = useRef<HTMLDivElement>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
+  const suppressClickRef = useRef(false)
 
   useEffect(() => {
     if (selectedIndex >= 0) {
@@ -87,10 +89,22 @@ function VariantCarousel({
     viewportWidth > 0
       ? activeIndex * (viewportWidth * CARD_WIDTH_RATIO + CARD_GAP_PX)
       : 0
+  const swipeThreshold =
+    (cardWidth ?? (viewportWidth * CARD_WIDTH_RATIO || 120)) *
+    SWIPE_THRESHOLD_RATIO
 
   function goToIndex(index: number) {
     if (index < 0 || index >= variants.length) return
     setActiveIndex(index)
+  }
+
+  function handleCardSelect(index: number, isActive: boolean) {
+    if (suppressClickRef.current) return
+    if (!isActive) {
+      goToIndex(index)
+      return
+    }
+    onVariantChange(variants[index]!.id)
   }
 
   if (variants.length === 1) {
@@ -107,10 +121,36 @@ function VariantCarousel({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="relative">
-        <div ref={viewportRef} className="overflow-hidden">
+        <div ref={viewportRef} className="overflow-hidden touch-pan-y">
           <motion.div
-            className="flex"
+            className="flex cursor-grab active:cursor-grabbing"
             style={{ gap: CARD_GAP_PX }}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.18}
+            onDragEnd={(_, info) => {
+              const dragged =
+                Math.abs(info.offset.x) > 8 || Math.abs(info.velocity.x) > 200
+              if (dragged) {
+                suppressClickRef.current = true
+                window.setTimeout(() => {
+                  suppressClickRef.current = false
+                }, 50)
+              }
+              if (
+                (info.offset.x < -swipeThreshold || info.velocity.x < -500) &&
+                canGoNext
+              ) {
+                goToIndex(activeIndex + 1)
+                return
+              }
+              if (
+                (info.offset.x > swipeThreshold || info.velocity.x > 500) &&
+                canGoPrev
+              ) {
+                goToIndex(activeIndex - 1)
+              }
+            }}
             animate={{ x: -slideOffset }}
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
           >
@@ -127,13 +167,7 @@ function VariantCarousel({
                     isSelected={selectedVariantId === variant.id}
                     isActive={isActive}
                     dimmed={!isActive}
-                    onSelect={() => {
-                      if (!isActive) {
-                        goToIndex(index)
-                        return
-                      }
-                      onVariantChange(variant.id)
-                    }}
+                    onSelect={() => handleCardSelect(index, isActive)}
                   />
                 </div>
               )
@@ -142,7 +176,7 @@ function VariantCarousel({
         </div>
 
         <div
-          className="pointer-events-none absolute top-0 left-0 aspect-square"
+          className="pointer-events-none absolute inset-y-0 left-0"
           style={{ width: cardWidth ?? `${CARD_WIDTH_RATIO * 100}%` }}
         >
           <Button
