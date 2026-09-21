@@ -3,12 +3,14 @@
 import Image from "next/image";
 import { XIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType } from "react";
+import { createPortal } from "react-dom";
 
 import { useLocale } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -143,10 +145,15 @@ export function ClientProfile({
   );
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
   const [imageAspectRatio, setImageAspectRatio] = useState(DEFAULT_PHOTO_RATIO);
+  const [lightboxMounted, setLightboxMounted] = useState(false);
   const lightboxClosedAtRef = useRef(0);
   const displayName = user.name?.trim() || user.username || "Stylist";
   const role = user.role ? roleLabel(user.role, t) : null;
   const socialEntries = buildSocialEntries(user);
+
+  useEffect(() => {
+    setLightboxMounted(true);
+  }, []);
 
   function openLightbox(url: string) {
     setImageAspectRatio(DEFAULT_PHOTO_RATIO);
@@ -156,6 +163,11 @@ export function ClientProfile({
   function closeLightbox() {
     lightboxClosedAtRef.current = Date.now();
     setSelectedImageUrl(null);
+  }
+
+  function closeReview() {
+    setSelectedImageUrl(null);
+    setSelectedReview(null);
   }
 
   /**
@@ -318,12 +330,13 @@ export function ClientProfile({
         onOpenChange={(open) => {
           if (!open) {
             if (shouldKeepReviewOpen()) return;
-            setSelectedReview(null);
+            closeReview();
           }
         }}
       >
         <DialogContent
           className="max-h-[90vh] overflow-y-auto sm:max-w-lg"
+          showCloseButton={false}
           onPointerDownOutside={(event) => {
             if (shouldKeepReviewOpen()) event.preventDefault();
           }}
@@ -336,7 +349,7 @@ export function ClientProfile({
         >
           {selectedReview ? (
             <>
-              <DialogHeader className="pr-8">
+              <DialogHeader className="pr-10">
                 <DialogTitle className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
                   {selectedReview.clientName}
                 </DialogTitle>
@@ -382,56 +395,71 @@ export function ClientProfile({
                   ))}
                 </div>
               ) : null}
+
+              <DialogClose asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="absolute top-2 right-2 rounded-full bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white"
+                >
+                  <XIcon />
+                  <span className="sr-only">Close</span>
+                </Button>
+              </DialogClose>
             </>
           ) : null}
         </DialogContent>
       </Dialog>
 
-      {selectedImageUrl ? (
-        <div
-          className="pointer-events-auto fixed inset-0 z-60 flex cursor-zoom-out items-center justify-center bg-black/90 p-4 sm:p-8"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t.fullSizeReviewPhoto}
-          onClick={closeLightbox}
-        >
-          <div
-            className="relative cursor-default overflow-hidden rounded-2xl"
-            style={{
-              width: `min(90vw, calc(80vh * ${imageAspectRatio}))`,
-              aspectRatio: imageAspectRatio,
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
-            <Image
-              src={selectedImageUrl}
-              alt={format(t.reviewPhotoAlt, {
-                name: selectedReview?.clientName ?? "",
-              })}
-              fill
-              className="object-cover"
-              sizes="90vw"
-              priority
-              onLoad={(event) => {
-                const { naturalWidth, naturalHeight } = event.currentTarget;
-                if (naturalWidth > 0 && naturalHeight > 0) {
-                  setImageAspectRatio(naturalWidth / naturalHeight);
-                }
-              }}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              aria-label={t.closePhoto}
-              className="absolute top-2 right-2 rounded-full bg-black/60 text-zinc-50 hover:bg-black/80 hover:text-zinc-50"
+      {lightboxMounted && selectedImageUrl
+        ? createPortal(
+            <div
+              className="pointer-events-auto fixed inset-0 z-100 flex cursor-zoom-out items-center justify-center bg-black/90 p-4 sm:p-8"
+              role="dialog"
+              aria-modal="true"
+              aria-label={t.fullSizeReviewPhoto}
               onClick={closeLightbox}
             >
-              <XIcon />
-            </Button>
-          </div>
-        </div>
-      ) : null}
+              <div
+                className="relative cursor-default overflow-hidden rounded-2xl"
+                style={{
+                  width: `min(90vw, calc(80vh * ${imageAspectRatio}))`,
+                  aspectRatio: imageAspectRatio,
+                }}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <Image
+                  src={selectedImageUrl}
+                  alt={format(t.reviewPhotoAlt, {
+                    name: selectedReview?.clientName ?? "",
+                  })}
+                  fill
+                  className="object-cover"
+                  sizes="90vw"
+                  priority
+                  onLoad={(event) => {
+                    const { naturalWidth, naturalHeight } = event.currentTarget;
+                    if (naturalWidth > 0 && naturalHeight > 0) {
+                      setImageAspectRatio(naturalWidth / naturalHeight);
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={t.closePhoto}
+                  className="absolute top-2 right-2 rounded-full bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white"
+                  onClick={closeLightbox}
+                >
+                  <XIcon />
+                </Button>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }
