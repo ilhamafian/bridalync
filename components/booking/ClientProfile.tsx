@@ -267,17 +267,17 @@ export function ClientProfile({
               {t.noReviews}
             </p>
           ) : (
-            <ul className="flex flex-col gap-3">
+            <ul className="grid h-fit w-full grid-cols-1 content-start gap-3">
               {reviews.map((review) => (
-                <li key={review._id}>
+                <li key={review._id} className="min-h-0 min-w-0">
                   <button
                     type="button"
-                    className="w-full rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="block h-fit w-full overflow-hidden rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => setSelectedReview(review)}
                   >
                     <Card
                       size="sm"
-                      className="bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm transition-colors hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
+                      className="h-fit bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm transition-colors hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
                     >
                       <CardContent className="flex flex-col gap-2">
                         <div>
@@ -291,28 +291,27 @@ export function ClientProfile({
                           ) : null}
                         </div>
                         {review.comment ? (
-                          <p className="line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                          <p className="line-clamp-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                             {review.comment}
                           </p>
                         ) : null}
                         {(review.image_urls?.length ?? 0) > 0 ? (
-                          <div className="no-scrollbar flex gap-2 overflow-x-auto overflow-y-hidden">
-                            {review.image_urls.map((url) => (
-                              <div
-                                key={url}
-                                className="relative size-36 shrink-0 overflow-hidden rounded-md bg-zinc-100 dark:bg-zinc-800"
-                              >
+                          <div className="no-scrollbar h-36 min-h-36 w-full min-w-0 shrink-0 overflow-x-auto overflow-y-hidden">
+                            <div className="flex h-36 w-max gap-2">
+                              {review.image_urls.map((url) => (
                                 <Image
+                                  key={url}
                                   src={url}
                                   alt={format(t.reviewPhotoAlt, {
                                     name: review.clientName,
                                   })}
-                                  fill
-                                  className="object-cover"
+                                  width={144}
+                                  height={144}
+                                  className="pointer-events-none h-36 w-36 shrink-0 rounded-md bg-zinc-100 object-cover dark:bg-zinc-800"
                                   sizes="144px"
                                 />
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         ) : null}
                       </CardContent>
