@@ -4,6 +4,8 @@ import { getStripe } from "@/lib/stripe";
 import { createResponse } from "@/utils/apiHelper";
 import {
   handleAccountUpdated,
+  handleCheckoutSessionAsyncPaymentFailed,
+  handleCheckoutSessionAsyncPaymentSucceeded,
   handleCheckoutSessionCompleted,
   handleCheckoutSessionExpired,
   handlePaymentIntentSucceeded,
@@ -48,7 +50,31 @@ export async function POST(req: NextRequest) {
       case "checkout.session.completed":
         await handleCheckoutSessionCompleted(
           event.data.object as {
+            id?: string;
             metadata?: Record<string, string>;
+            payment_status?: string | null;
+            payment_intent?: string | { id?: string } | null;
+          }
+        );
+        break;
+
+      case "checkout.session.async_payment_succeeded":
+        await handleCheckoutSessionAsyncPaymentSucceeded(
+          event.data.object as {
+            id?: string;
+            metadata?: Record<string, string>;
+            payment_status?: string | null;
+            payment_intent?: string | { id?: string } | null;
+          }
+        );
+        break;
+
+      case "checkout.session.async_payment_failed":
+        await handleCheckoutSessionAsyncPaymentFailed(
+          event.data.object as {
+            id?: string;
+            metadata?: Record<string, string>;
+            payment_status?: string | null;
             payment_intent?: string | { id?: string } | null;
           }
         );

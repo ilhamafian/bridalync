@@ -152,9 +152,9 @@ export const ms = {
   paymentNotProcessed:
     "Kami tidak dapat memproses bayaran anda. Anda boleh cuba tempah lagi atau hubungi stylist.",
   paymentAccepted:
-    "Stripe telah menerima bayaran anda. Kami sedang menunggu pengesahan — ini biasanya mengambil masa beberapa saat.",
+    "Kami sedang mengesahkan bayaran anda dengan Stripe — ini biasanya mengambil masa beberapa saat. Tempahan anda belum disahkan sehingga bayaran berjaya.",
   webhookHint:
-    "Ini mengambil masa lebih lama daripada biasa. Bayaran anda telah diterima oleh Stripe — jika tempahan tidak dikemas kini sebentar lagi, hubungi stylist atau sokongan Bridalync dengan e-mel anda.",
+    "Ini mengambil masa lebih lama daripada biasa. Jika bayaran bank anda masih diproses, sila tunggu. Jika ia gagal atau tempahan tidak dikemas kini sebentar lagi, hubungi stylist atau sokongan Bridalync dengan e-mel anda.",
   bookingAwaitingPayment:
     "Tempahan anda menunggu bayaran. Lengkapkan pembayaran untuk mendapatkan slot anda.",
   bookingAwaitingVerification:

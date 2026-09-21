@@ -155,9 +155,9 @@ export const en: Locale = {
   paymentNotProcessed:
     "We couldn't process your payment. You can try booking again or contact the stylist.",
   paymentAccepted:
-    "Stripe accepted your payment. We're waiting for confirmation — this usually takes a few seconds.",
+    "We're confirming your payment with Stripe — this usually takes a few seconds. Your booking is not confirmed until payment succeeds.",
   webhookHint:
-    "This is taking longer than usual. Your payment was received by Stripe — if the booking does not update soon, contact the stylist or Bridalync support with your email.",
+    "This is taking longer than usual. If your bank payment is still processing, hang tight. If it failed or the booking does not update soon, contact the stylist or Bridalync support with your email.",
   bookingAwaitingPayment:
     "Your booking is awaiting payment. Complete checkout to secure your slot.",
   bookingAwaitingVerification:

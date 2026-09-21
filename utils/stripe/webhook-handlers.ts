@@ -12,6 +12,13 @@ import { syncPayoutOnboardingStatus } from "@/utils/stripe/connect";
 
 type StripeMetadata = Record<string, string> | undefined | null;
 
+type CheckoutSessionLike = {
+  id?: string;
+  metadata?: StripeMetadata;
+  payment_status?: string | null;
+  payment_intent?: string | { id?: string } | null;
+};
+
 function getPaymentIntentId(
   paymentIntent: string | { id?: string } | null | undefined
 ) {
@@ -52,14 +59,45 @@ export async function handleBookingPaymentFailed(metadata: StripeMetadata) {
   await markBookingPaymentFailed(bookingId);
 }
 
-export async function handleCheckoutSessionCompleted(session: {
-  metadata?: StripeMetadata;
-  payment_intent?: string | { id?: string } | null;
-}) {
+/**
+ * Confirm only when Checkout reports the session as paid.
+ * Delayed methods (e.g. FPX) can emit checkout.session.completed while still
+ * unpaid — wait for async_payment_succeeded / payment_intent.succeeded instead.
+ */
+export async function handleCheckoutSessionCompleted(
+  session: CheckoutSessionLike
+) {
+  if (session.payment_status !== "paid") {
+    console.info(
+      "[stripe webhook] checkout.session.completed not paid yet — skipping confirm",
+      {
+        sessionId: session.id,
+        paymentStatus: session.payment_status ?? null,
+        bookingId: getBookingIdFromMetadata(session.metadata),
+      }
+    );
+    return;
+  }
+
   await handleBookingPaymentConfirmed(
     session.metadata,
     getPaymentIntentId(session.payment_intent)
   );
+}
+
+export async function handleCheckoutSessionAsyncPaymentSucceeded(
+  session: CheckoutSessionLike
+) {
+  await handleBookingPaymentConfirmed(
+    session.metadata,
+    getPaymentIntentId(session.payment_intent)
+  );
+}
+
+export async function handleCheckoutSessionAsyncPaymentFailed(
+  session: CheckoutSessionLike
+) {
+  await handleBookingPaymentFailed(session.metadata);
 }
 
 export async function handleCheckoutSessionExpired(session: {

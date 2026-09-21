@@ -100,6 +100,8 @@ Optional for stylists who choose **Payment Gateway**. Malaysia-based platforms u
    - Enable **Listen to events on Connected accounts** (required for direct charges on connected accounts).
    - Subscribe to:
      - `checkout.session.completed`
+     - `checkout.session.async_payment_succeeded`
+     - `checkout.session.async_payment_failed`
      - `checkout.session.expired`
      - `payment_intent.succeeded`
      - `account.updated`

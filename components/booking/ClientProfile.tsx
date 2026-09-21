@@ -296,7 +296,7 @@ export function ClientProfile({
                           </p>
                         ) : null}
                         {(review.image_urls?.length ?? 0) > 0 ? (
-                          <div className="flex gap-2 overflow-x-auto pb-1">
+                          <div className="no-scrollbar flex gap-2 overflow-x-auto overflow-y-hidden">
                             {review.image_urls.map((url) => (
                               <div
                                 key={url}
@@ -371,7 +371,7 @@ export function ClientProfile({
               ) : null}
 
               {(selectedReview.image_urls?.length ?? 0) > 0 ? (
-                <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+                <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto overflow-y-hidden px-4">
                   {selectedReview.image_urls.map((url) => (
                     <button
                       key={url}

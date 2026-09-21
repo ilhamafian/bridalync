@@ -138,6 +138,19 @@
   }
 }
 
+@layer utilities {
+  /* Hide scrollbars without disabling overflow scrolling (mobile classic scrollbars
+     otherwise reserve a visible gutter — desktop device emulation often does not). */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer components {
   .app-shell {
     --app-max-width: 390px;
