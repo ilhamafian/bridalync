@@ -284,6 +284,17 @@ export function DashboardHome({
       <section className="flex flex-col gap-3">
         <h3 className="text-sm font-medium">Quick actions</h3>
         <div className="grid grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="h-auto min-h-14 flex-col gap-1 py-3"
+            onClick={handleShareLink}
+            disabled={!bookingLink}
+          >
+            <IconLink className="size-5" />
+            <span>Share Booking Link</span>
+          </Button>
           <Button asChild size="lg" className="h-auto min-h-14 flex-col gap-1 py-3">
             <Link href="/dashboard/bookings" scroll={false}>
               <IconCalendarPlus className="size-5" />
@@ -311,17 +322,6 @@ export function DashboardHome({
               <IconBoxMultiple className="size-5" />
               <span>Manage Packages</span>
             </Link>
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="h-auto min-h-14 flex-col gap-1 py-3"
-            onClick={handleShareLink}
-            disabled={!bookingLink}
-          >
-            <IconLink className="size-5" />
-            <span>Share Booking Link</span>
           </Button>
         </div>
         {shareMessage ? (
