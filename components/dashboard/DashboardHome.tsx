@@ -197,6 +197,54 @@ export function DashboardHome({
       </section>
 
       <section className="flex flex-col gap-3">
+        <h3 className="text-sm font-medium">Quick actions</h3>
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="lg"
+            className="h-auto min-h-14 flex-col gap-1 py-3"
+            onClick={handleShareLink}
+            disabled={!bookingLink}
+          >
+            <IconLink className="size-5" />
+            <span>Share Booking Link</span>
+          </Button>
+          <Button asChild size="lg" className="h-auto min-h-14 flex-col gap-1 py-3">
+            <Link href="/dashboard/bookings" scroll={false}>
+              <IconCalendarPlus className="size-5" />
+              <span>New Booking</span>
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="h-auto min-h-14 flex-col gap-1 py-3"
+          >
+            <Link href="/dashboard/bookings" scroll={false}>
+              <IconCalendar className="size-5" />
+              <span>View Bookings</span>
+            </Link>
+          </Button>
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="h-auto min-h-14 flex-col gap-1 py-3"
+          >
+            <Link href="/dashboard/packages" scroll={false}>
+              <IconBoxMultiple className="size-5" />
+              <span>Manage Packages</span>
+            </Link>
+          </Button>
+        </div>
+        {shareMessage ? (
+          <p className="text-sm text-muted-foreground">{shareMessage}</p>
+        ) : null}
+      </section>
+
+      <section className="flex flex-col gap-3">
         <div>
           <h3 className="text-sm font-medium">Today&apos;s schedule</h3>
           <p className="text-sm text-muted-foreground">
@@ -279,54 +327,6 @@ export function DashboardHome({
             </Button>
           </CardContent>
         </Card>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">Quick actions</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="lg"
-            className="h-auto min-h-14 flex-col gap-1 py-3"
-            onClick={handleShareLink}
-            disabled={!bookingLink}
-          >
-            <IconLink className="size-5" />
-            <span>Share Booking Link</span>
-          </Button>
-          <Button asChild size="lg" className="h-auto min-h-14 flex-col gap-1 py-3">
-            <Link href="/dashboard/bookings" scroll={false}>
-              <IconCalendarPlus className="size-5" />
-              <span>New Booking</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="h-auto min-h-14 flex-col gap-1 py-3"
-          >
-            <Link href="/dashboard/bookings" scroll={false}>
-              <IconCalendar className="size-5" />
-              <span>View Bookings</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="h-auto min-h-14 flex-col gap-1 py-3"
-          >
-            <Link href="/dashboard/packages" scroll={false}>
-              <IconBoxMultiple className="size-5" />
-              <span>Manage Packages</span>
-            </Link>
-          </Button>
-        </div>
-        {shareMessage ? (
-          <p className="text-sm text-muted-foreground">{shareMessage}</p>
-        ) : null}
       </section>
 
       <section className="flex flex-col gap-3">
