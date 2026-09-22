@@ -132,6 +132,10 @@ function PullToRefresh({
 
     const atTop = () => scrollEl.scrollTop <= 1;
 
+    const shouldIgnoreTarget = (target: EventTarget | null) =>
+      target instanceof Element &&
+      Boolean(target.closest("[data-no-pull-refresh]"));
+
     const reset = () => {
       trackingRef.current = false;
       pullingRef.current = false;
@@ -179,6 +183,11 @@ function PullToRefresh({
 
     const onTouchStart = (event: TouchEvent) => {
       if (refreshingRef.current || event.touches.length !== 1) return;
+      if (shouldIgnoreTarget(event.target)) {
+        trackingRef.current = false;
+        pullingRef.current = false;
+        return;
+      }
       trackingRef.current = atTop();
       pullingRef.current = false;
       startYRef.current = event.touches[0]?.clientY ?? 0;
@@ -196,6 +205,12 @@ function PullToRefresh({
       if (event.pointerType === "touch") return;
       if (event.pointerType === "mouse" && event.button !== 0) return;
       if (refreshingRef.current) return;
+      if (shouldIgnoreTarget(event.target)) {
+        trackingRef.current = false;
+        pullingRef.current = false;
+        pointerIdRef.current = null;
+        return;
+      }
       trackingRef.current = atTop();
       pullingRef.current = false;
       startYRef.current = event.clientY;

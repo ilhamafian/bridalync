@@ -202,3 +202,11 @@ export const dashboardBookingUpdateSchema = manualBookingInputSchema.partial().e
 });
 
 export type DashboardBookingUpdate = z.infer<typeof dashboardBookingUpdateSchema>;
+
+export const rescheduleSessionSchema = z.object({
+  client_key: z.string().min(1),
+  date: z.coerce.date(),
+  time_slot: timeSlotSchema,
+});
+
+export type RescheduleSessionInput = z.infer<typeof rescheduleSessionSchema>;

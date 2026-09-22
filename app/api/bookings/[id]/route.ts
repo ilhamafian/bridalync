@@ -8,6 +8,7 @@ import {
 } from "@/utils/bookings";
 import {
   dashboardBookingUpdateSchema,
+  rescheduleSessionSchema,
   toPublicBooking,
   updateBookingStatusSchema,
   type CreateBookingRequest,
@@ -111,14 +112,54 @@ export async function PATCH(
         return createResponse({ error: "Unauthorized" }, 401);
       }
 
-      const parsed = dashboardBookingUpdateSchema.safeParse(body);
-      if (!parsed.success) {
-        return createResponse({ error: parsed.error.format() }, 400);
-      }
-
       const existing = await getBookingById(id);
       if (!existing || existing.freelancerUserId !== userId) {
         return createResponse({ error: "Booking not found" }, 404);
+      }
+
+      // Lightweight calendar drag reschedule: update one session's date + time only
+      if (
+        "client_key" in body &&
+        "time_slot" in body &&
+        !("sessions" in body)
+      ) {
+        const rescheduleParsed = rescheduleSessionSchema.safeParse(body);
+        if (!rescheduleParsed.success) {
+          return createResponse(
+            { error: rescheduleParsed.error.format() },
+            400
+          );
+        }
+
+        const { client_key, date, time_slot } = rescheduleParsed.data;
+        const sessionIndex = existing.sessions.findIndex(
+          (session, index) =>
+            (session.client_key ?? String(index)) === client_key
+        );
+        if (sessionIndex < 0) {
+          return createResponse({ error: "Session not found" }, 404);
+        }
+
+        const sessions = existing.sessions.map((session, index) => {
+          if (index !== sessionIndex) return session;
+          return {
+            ...session,
+            date: normalizeSessionDate(date),
+            time_slot,
+          };
+        });
+
+        const updated = await updateDashboardBooking(id, { sessions });
+        if (!updated) {
+          return createResponse({ error: "Booking not found" }, 404);
+        }
+
+        return createResponse({ booking: serializeBooking(updated) });
+      }
+
+      const parsed = dashboardBookingUpdateSchema.safeParse(body);
+      if (!parsed.success) {
+        return createResponse({ error: parsed.error.format() }, 400);
       }
 
       const data = parsed.data;

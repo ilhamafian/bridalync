@@ -22,6 +22,7 @@ import { toDateKey } from "@/utils/booking/availability";
 import {
   CALENDAR_DAY_END_HOUR,
   CALENDAR_DAY_START_HOUR,
+  CALENDAR_SNAP_MINUTES,
   type CalendarEvent,
   type CalendarView,
 } from "./calendar-types";
@@ -48,9 +49,12 @@ export function bookingsToCalendarEvents(
       const end = combineDateAndTime(day, session.time_slot.endTime);
       if (!start || !end) return;
 
+      const clientKey = session.client_key ?? String(index);
+
       events.push({
-        id: `${booking._id}-${session.client_key ?? index}`,
+        id: `${booking._id}-${clientKey}`,
         bookingId: booking._id,
+        clientKey,
         title: session.name || booking.packageNames || "Session",
         clientName: booking.contact.name,
         packageName: booking.packageNames,
@@ -148,7 +152,7 @@ export function getHourLabels() {
   return hours;
 }
 
-export function getEventOffset(event: CalendarEvent) {
+export function getEventOffset(event: Pick<CalendarEvent, "start" | "end">) {
   const startMinutes =
     event.start.getHours() * 60 + event.start.getMinutes();
   const endMinutes = event.end.getHours() * 60 + event.end.getMinutes();
@@ -171,6 +175,52 @@ export function getNowOffsetHours(now = new Date()) {
   const gridEnd = CALENDAR_DAY_END_HOUR * 60;
   if (minutes < gridStart || minutes > gridEnd) return null;
   return (minutes - gridStart) / 60;
+}
+
+export function snapMinutes(totalMinutes: number) {
+  return Math.round(totalMinutes / CALENDAR_SNAP_MINUTES) * CALENDAR_SNAP_MINUTES;
+}
+
+export function minutesToHhmm(totalMinutes: number) {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+export function getEventDurationMinutes(event: Pick<CalendarEvent, "start" | "end">) {
+  const startMinutes =
+    event.start.getHours() * 60 + event.start.getMinutes();
+  const endMinutes = event.end.getHours() * 60 + event.end.getMinutes();
+  return Math.max(endMinutes - startMinutes, CALENDAR_SNAP_MINUTES);
+}
+
+/** Map a Y offset within a day column to a snapped start Date, clamped so duration fits the grid. */
+export function pointerToGridStart(
+  day: Date,
+  offsetY: number,
+  hourHeightPx: number,
+  durationMinutes: number
+): Date {
+  const gridStart = CALENDAR_DAY_START_HOUR * 60;
+  const gridEnd = CALENDAR_DAY_END_HOUR * 60;
+  const maxStart = Math.max(gridStart, gridEnd - durationMinutes);
+
+  const rawMinutesFromGrid = (offsetY / hourHeightPx) * 60;
+  const snappedFromGrid = snapMinutes(rawMinutesFromGrid);
+  const absoluteMinutes = Math.min(
+    Math.max(gridStart + snappedFromGrid, gridStart),
+    maxStart
+  );
+
+  const hours = Math.floor(absoluteMinutes / 60);
+  const minutes = absoluteMinutes % 60;
+  const result = startOfDay(day);
+  result.setHours(hours, minutes, 0, 0);
+  return result;
+}
+
+export function addMinutesToDate(date: Date, minutes: number) {
+  return new Date(date.getTime() + minutes * 60_000);
 }
 
 export function formatHourLabel(hour: number, compact = false) {

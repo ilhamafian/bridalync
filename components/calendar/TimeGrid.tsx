@@ -1,19 +1,41 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { format, isSameDay, isToday } from "date-fns";
 
 import { cn } from "@/lib/utils";
 
 import { BlockedMarker, HotMarker } from "./CalendarMarkers";
-import type { CalendarEvent } from "./calendar-types";
 import {
+  CALENDAR_DAY_END_HOUR,
+  CALENDAR_DAY_START_HOUR,
+  type CalendarEvent,
+} from "./calendar-types";
+import {
+  addMinutesToDate,
   formatHourLabel,
+  getEventDurationMinutes,
   getEventOffset,
   getHourLabels,
   getNowOffsetHours,
   isMarkedDay,
+  pointerToGridStart,
 } from "./calendar-utils";
+
+const DRAG_THRESHOLD_PX = 5;
+
+type DragState = {
+  event: CalendarEvent;
+  durationMinutes: number;
+  previewStart: Date;
+  previewEnd: Date;
+  previewDayIndex: number;
+  pointerId: number;
+  originX: number;
+  originY: number;
+  grabOffsetY: number;
+  moved: boolean;
+};
 
 export function TimeGrid({
   days,
@@ -22,6 +44,7 @@ export function TimeGrid({
   hotKeys,
   onSelectDay,
   onSelectEvent,
+  onReschedule,
 }: {
   days: Date[];
   events: CalendarEvent[];
@@ -29,21 +52,189 @@ export function TimeGrid({
   hotKeys: Set<string>;
   onSelectDay?: (day: Date) => void;
   onSelectEvent?: (event: CalendarEvent) => void;
+  onReschedule?: (
+    event: CalendarEvent,
+    next: { start: Date; end: Date }
+  ) => void;
 }) {
   const hours = getHourLabels();
   const isDayView = days.length === 1;
   const [now, setNow] = useState(() => new Date());
+  const [drag, setDrag] = useState<DragState | null>(null);
+  const columnRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const dragRef = useRef<DragState | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    dragRef.current = drag;
+  }, [drag]);
+
   const nowOffset = useMemo(() => getNowOffsetHours(now), [now]);
   const dayViewBlocked =
     isDayView && days[0] != null && isMarkedDay(days[0], blockedKeys);
   const dayViewHot =
     isDayView && days[0] != null && isMarkedDay(days[0], hotKeys);
+
+  function resolveDayIndex(clientX: number): number {
+    for (let i = 0; i < columnRefs.current.length; i++) {
+      const el = columnRefs.current[i];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      if (clientX >= rect.left && clientX <= rect.right) return i;
+    }
+    // Fallback: clamp to nearest column by distance
+    let best = 0;
+    let bestDist = Infinity;
+    for (let i = 0; i < columnRefs.current.length; i++) {
+      const el = columnRefs.current[i];
+      if (!el) continue;
+      const rect = el.getBoundingClientRect();
+      const mid = (rect.left + rect.right) / 2;
+      const dist = Math.abs(clientX - mid);
+      if (dist < bestDist) {
+        bestDist = dist;
+        best = i;
+      }
+    }
+    return best;
+  }
+
+  function resolvePreview(
+    clientX: number,
+    clientY: number,
+    durationMinutes: number,
+    grabOffsetY: number
+  ): { start: Date; end: Date; dayIndex: number } | null {
+    const dayIndex = resolveDayIndex(clientX);
+    const day = days[dayIndex];
+    const column = columnRefs.current[dayIndex];
+    if (!day || !column) return null;
+
+    const rect = column.getBoundingClientRect();
+    const hourCount = CALENDAR_DAY_END_HOUR - CALENDAR_DAY_START_HOUR;
+    const hourHeightPx = rect.height / hourCount;
+    if (hourHeightPx <= 0) return null;
+
+    const offsetY = clientY - rect.top - grabOffsetY;
+    const start = pointerToGridStart(day, offsetY, hourHeightPx, durationMinutes);
+    const end = addMinutesToDate(start, durationMinutes);
+    return { start, end, dayIndex };
+  }
+
+  function handlePointerDown(
+    event: CalendarEvent,
+    dayIndex: number,
+    e: ReactPointerEvent<HTMLButtonElement>
+  ) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+
+    const target = e.currentTarget;
+    target.setPointerCapture(e.pointerId);
+
+    const column = columnRefs.current[dayIndex];
+    const columnRect = column?.getBoundingClientRect();
+    const eventRect = target.getBoundingClientRect();
+    const grabOffsetY = columnRect
+      ? e.clientY - eventRect.top
+      : 0;
+
+    const durationMinutes = getEventDurationMinutes(event);
+    const next: DragState = {
+      event,
+      durationMinutes,
+      previewStart: event.start,
+      previewEnd: event.end,
+      previewDayIndex: dayIndex,
+      pointerId: e.pointerId,
+      originX: e.clientX,
+      originY: e.clientY,
+      grabOffsetY,
+      moved: false,
+    };
+    dragRef.current = next;
+    setDrag(next);
+  }
+
+  function handlePointerMove(e: ReactPointerEvent<HTMLButtonElement>) {
+    const current = dragRef.current;
+    if (!current || e.pointerId !== current.pointerId) return;
+
+    const dx = e.clientX - current.originX;
+    const dy = e.clientY - current.originY;
+    const moved =
+      current.moved || Math.hypot(dx, dy) >= DRAG_THRESHOLD_PX;
+
+    const preview = resolvePreview(
+      e.clientX,
+      e.clientY,
+      current.durationMinutes,
+      current.grabOffsetY
+    );
+    if (!preview) return;
+
+    const next: DragState = {
+      ...current,
+      moved,
+      previewStart: preview.start,
+      previewEnd: preview.end,
+      previewDayIndex: preview.dayIndex,
+    };
+    dragRef.current = next;
+    setDrag(next);
+  }
+
+  function handlePointerUp(e: ReactPointerEvent<HTMLButtonElement>) {
+    const current = dragRef.current;
+    if (!current || e.pointerId !== current.pointerId) return;
+
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // Already released
+    }
+
+    dragRef.current = null;
+    setDrag(null);
+
+    if (!current.moved) {
+      onSelectEvent?.(current.event);
+      return;
+    }
+
+    const changed =
+      current.previewStart.getTime() !== current.event.start.getTime() ||
+      current.previewEnd.getTime() !== current.event.end.getTime();
+
+    if (changed) {
+      onReschedule?.(current.event, {
+        start: current.previewStart,
+        end: current.previewEnd,
+      });
+    }
+  }
+
+  function handlePointerCancel(e: ReactPointerEvent<HTMLButtonElement>) {
+    const current = dragRef.current;
+    if (!current || e.pointerId !== current.pointerId) return;
+    dragRef.current = null;
+    setDrag(null);
+  }
+
+  const draggingId = drag?.event.id ?? null;
+  const ghost =
+    drag?.moved
+      ? {
+          start: drag.previewStart,
+          end: drag.previewEnd,
+          dayIndex: drag.previewDayIndex,
+          event: drag.event,
+        }
+      : null;
 
   return (
     <div className="min-w-0 overflow-x-hidden border-y border-border bg-background [--cal-hour-height:2.75rem] sm:mx-4 sm:rounded-xl sm:border sm:[--cal-hour-height:3.5rem]">
@@ -135,15 +326,24 @@ export function TimeGrid({
           ))}
         </div>
 
-        {days.map((day) => {
+        {days.map((day, dayIndex) => {
           const dayEvents = events.filter((event) => isSameDay(event.start, day));
           const showNow = isToday(day) && nowOffset != null;
           const blocked = isMarkedDay(day, blockedKeys);
           const hot = isMarkedDay(day, hotKeys);
+          const showGhost =
+            ghost != null && ghost.dayIndex === dayIndex;
+          const ghostOffset = showGhost && ghost
+            ? getEventOffset({ start: ghost.start, end: ghost.end })
+            : null;
 
           return (
             <div
               key={`${day.toISOString()}-grid`}
+              ref={(el) => {
+                columnRefs.current[dayIndex] = el;
+              }}
+              data-cal-day-index={dayIndex}
               className={cn(
                 "relative min-w-0 border-l border-border",
                 blocked && "bg-destructive/8",
@@ -183,17 +383,26 @@ export function TimeGrid({
 
               {dayEvents.map((event) => {
                 const { startHours, durationHours } = getEventOffset(event);
+                const isDragging = draggingId === event.id;
 
                 return (
                   <button
                     key={event.id}
                     type="button"
-                    onClick={() => onSelectEvent?.(event)}
+                    data-no-pull-refresh=""
+                    onPointerDown={(e) => handlePointerDown(event, dayIndex, e)}
+                    onPointerMove={handlePointerMove}
+                    onPointerUp={handlePointerUp}
+                    onPointerCancel={handlePointerCancel}
                     className={cn(
-                      "absolute z-10 overflow-hidden rounded-sm border border-primary/25 bg-primary/15 text-left text-foreground",
+                      "absolute z-10 touch-none overflow-hidden rounded-sm border border-primary/25 bg-primary/15 text-left text-foreground",
                       isDayView
                         ? "inset-x-1.5 rounded-md px-2 py-1 text-xs"
-                        : "inset-x-px px-0.5 py-px text-[9px] leading-tight sm:inset-x-0.5 sm:px-1 sm:text-[11px]"
+                        : "inset-x-px px-0.5 py-px text-[9px] leading-tight sm:inset-x-0.5 sm:px-1 sm:text-[11px]",
+                      isDragging && drag?.moved
+                        ? "cursor-grabbing opacity-40"
+                        : "cursor-grab",
+                      isDragging && "z-30"
                     )}
                     style={{
                       top: `calc(${startHours} * var(--cal-hour-height))`,
@@ -213,6 +422,32 @@ export function TimeGrid({
                   </button>
                 );
               })}
+
+              {showGhost && ghost && ghostOffset ? (
+                <div
+                  aria-hidden
+                  className={cn(
+                    "pointer-events-none absolute z-40 overflow-hidden rounded-sm border-2 border-primary bg-primary/25 text-left text-foreground shadow-sm",
+                    isDayView
+                      ? "inset-x-1.5 rounded-md px-2 py-1 text-xs"
+                      : "inset-x-px px-0.5 py-px text-[9px] leading-tight sm:inset-x-0.5 sm:px-1 sm:text-[11px]"
+                  )}
+                  style={{
+                    top: `calc(${ghostOffset.startHours} * var(--cal-hour-height))`,
+                    height: `calc(${ghostOffset.durationHours} * var(--cal-hour-height))`,
+                    minHeight: isDayView ? "2rem" : "1.1rem",
+                  }}
+                >
+                  <span className="block truncate font-medium">
+                    {ghost.event.clientName}
+                  </span>
+                  {isDayView ? (
+                    <span className="block truncate text-muted-foreground">
+                      {format(ghost.start, "h:mm a")} – {ghost.event.title}
+                    </span>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           );
         })}

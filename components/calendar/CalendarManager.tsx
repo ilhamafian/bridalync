@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { toast } from "@/hooks/use-toast";
 import type { PackageItem, StyleItem } from "@/components/PackagesManager";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
@@ -18,6 +19,7 @@ import {
   bookingsToCalendarEvents,
   formatViewTitle,
   getDaysInView,
+  minutesToHhmm,
   shiftCursor,
 } from "./calendar-utils";
 import { CalendarToolsMenu } from "./CalendarToolsMenu";
@@ -118,6 +120,75 @@ export function CalendarManager({
   function handleSelectDay(day: Date) {
     setCursor(day);
     setView("day");
+  }
+
+  async function handleReschedule(
+    event: CalendarEvent,
+    next: { start: Date; end: Date }
+  ) {
+    const previousBookings = bookings;
+    const startTime = minutesToHhmm(
+      next.start.getHours() * 60 + next.start.getMinutes()
+    );
+    const endTime = minutesToHhmm(
+      next.end.getHours() * 60 + next.end.getMinutes()
+    );
+    const nextDateIso = next.start.toISOString();
+
+    setBookings((current) =>
+      current.map((booking) => {
+        if (booking._id !== event.bookingId) return booking;
+        return {
+          ...booking,
+          sessions: booking.sessions.map((session, index) => {
+            const key = session.client_key ?? String(index);
+            if (key !== event.clientKey) return session;
+            return {
+              ...session,
+              date: nextDateIso,
+              time_slot: { startTime, endTime },
+            };
+          }),
+        };
+      })
+    );
+
+    try {
+      const response = await fetch(`/api/bookings/${event.bookingId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          client_key: event.clientKey,
+          date: next.start,
+          time_slot: { startTime, endTime },
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error
+            : "Could not reschedule session."
+        );
+      }
+      const updated = data.booking as SerializedBooking | undefined;
+      if (updated) {
+        setBookings((current) =>
+          current.map((booking) =>
+            booking._id === updated._id ? updated : booking
+          )
+        );
+      }
+    } catch (error) {
+      setBookings(previousBookings);
+      toast.destructive({
+        title: "Reschedule failed",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Could not update the session time.",
+      });
+    }
   }
 
   return (
@@ -240,6 +311,7 @@ export function CalendarManager({
           hotKeys={hotKeys}
           onSelectDay={view === "week" ? handleSelectDay : undefined}
           onSelectEvent={setSelectedEvent}
+          onReschedule={handleReschedule}
         />
       )}
 

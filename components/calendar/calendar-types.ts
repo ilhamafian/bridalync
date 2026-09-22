@@ -5,6 +5,7 @@ export type CalendarView = "day" | "week" | "month";
 export type CalendarEvent = {
   id: string;
   bookingId: string;
+  clientKey: string;
   title: string;
   clientName: string;
   packageName: string;
@@ -23,3 +24,4 @@ export type CalendarEvent = {
 export const CALENDAR_DAY_START_HOUR = 6;
 export const CALENDAR_DAY_END_HOUR = 22;
 export const CALENDAR_HOUR_HEIGHT = 56;
+export const CALENDAR_SNAP_MINUTES = 15;
