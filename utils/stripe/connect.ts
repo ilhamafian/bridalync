@@ -41,6 +41,26 @@ function isRestrictedConnectedAccountUpdate(error: unknown) {
   );
 }
 
+function getErrorMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (
+    typeof error === "object" &&
+    error &&
+    "message" in error &&
+    typeof (error as { message: unknown }).message === "string"
+  ) {
+    return (error as { message: string }).message;
+  }
+  return "";
+}
+
+/** Legacy Standard/Express accounts cannot use Account Links v2 / Accounts v2 writes. */
+function isV1AccountBlockedFromV2Apis(error: unknown) {
+  return /v1 Accounts cannot be used in v2 Account APIs/i.test(
+    getErrorMessage(error)
+  );
+}
+
 export function isAccountPayoutReady(account: Stripe.Account | StripeRecord): boolean {
   const record = account as StripeRecord;
 
@@ -358,20 +378,37 @@ export async function createOnboardingAccountLink(
   const stripe = getStripe();
   const { returnUrl, refreshUrl } = getConnectUrls(flow);
 
-  return stripe.v2.core.accountLinks.create({
-    account: accountId,
-    use_case: {
-      type: "account_onboarding",
-      account_onboarding: {
-        configurations: ["merchant"],
-        refresh_url: refreshUrl,
-        return_url: returnUrl,
-        collection_options: {
-          fields: "eventually_due",
+  try {
+    return await stripe.v2.core.accountLinks.create({
+      account: accountId,
+      use_case: {
+        type: "account_onboarding",
+        account_onboarding: {
+          configurations: ["merchant"],
+          refresh_url: refreshUrl,
+          return_url: returnUrl,
+          collection_options: {
+            fields: "eventually_due",
+          },
         },
       },
-    },
-  });
+    });
+  } catch (error) {
+    if (!isV1AccountBlockedFromV2Apis(error)) {
+      throw error;
+    }
+
+    // Pre-migration Standard accounts must use Account Links v1.
+    return stripe.accountLinks.create({
+      account: accountId,
+      refresh_url: refreshUrl,
+      return_url: returnUrl,
+      type: "account_onboarding",
+      collection_options: {
+        fields: "eventually_due",
+      },
+    });
+  }
 }
 
 export async function syncPayoutOnboardingStatus(

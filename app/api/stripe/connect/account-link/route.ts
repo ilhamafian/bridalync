@@ -9,6 +9,7 @@ import {
   buildStripeOwner,
   createOnboardingAccountLink,
   ensureStripeAccountId,
+  syncPayoutOnboardingStatus,
   type ConnectFlow,
 } from "@/utils/stripe/connect";
 
@@ -46,6 +47,14 @@ export async function POST(req: NextRequest) {
       buildStripeOwner(user),
       user.stripe_account_id
     );
+
+    // Legacy v1 Standard accounts can already be payout-ready while our DB flag
+    // is still false (return/webhook sync never completed after the v2 cutover).
+    const alreadyReady = await syncPayoutOnboardingStatus(accountId);
+    if (alreadyReady) {
+      return createResponse({ ready: true }, 200);
+    }
+
     const accountLink = await createOnboardingAccountLink(accountId, flow);
 
     if (!accountLink.url) {

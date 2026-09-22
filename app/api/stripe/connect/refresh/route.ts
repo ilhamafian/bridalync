@@ -7,6 +7,7 @@ import {
   buildStripeOwner,
   createOnboardingAccountLink,
   ensureStripeAccountId,
+  syncPayoutOnboardingStatus,
   type ConnectFlow,
 } from "@/utils/stripe/connect";
 
@@ -36,6 +37,19 @@ export async function GET(req: NextRequest) {
       buildStripeOwner(user),
       user.stripe_account_id
     );
+
+    const alreadyReady = await syncPayoutOnboardingStatus(accountId);
+    if (alreadyReady) {
+      if (flow === "onboarding") {
+        return NextResponse.redirect(
+          `${appUrl}/onboarding?step=username&stripe=ready`
+        );
+      }
+      return NextResponse.redirect(
+        `${appUrl}/dashboard/settings?stripe_payout=ready`
+      );
+    }
+
     const accountLink = await createOnboardingAccountLink(accountId, flow);
 
     if (!accountLink.url) {

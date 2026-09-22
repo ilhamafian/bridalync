@@ -515,6 +515,22 @@ export function SettingsManager({
         method: "POST",
       });
       const data = await response.json().catch(() => ({}));
+      if (response.ok && data.ready === true) {
+        setStripeConnected(true);
+        setStripeSetupPhase(null);
+        setSectionSuccess((current) => ({
+          ...current,
+          payouts: STRIPE_PAYOUT_MESSAGES.ready.message,
+          payment: STRIPE_PAYOUT_MESSAGES.ready.message,
+        }));
+        setSectionError((current) => ({
+          ...current,
+          payouts: undefined,
+          payment: undefined,
+        }));
+        router.refresh();
+        return;
+      }
       if (!response.ok || typeof data.url !== "string") {
         setSectionError((current) => ({
           ...current,
