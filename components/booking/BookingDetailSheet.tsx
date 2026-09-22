@@ -26,17 +26,16 @@ import {
 
 function statusLabel(booking: SerializedBooking) {
   if (
-    booking.paymentChannel === "manual_transfer" &&
     booking.depositVerificationStatus === "pending" &&
     booking.status === "pending"
   ) {
-    return "Awaiting payment verification";
+    return "Review deposit";
   }
   if (booking.depositVerificationStatus === "rejected") {
     return "Receipt rejected";
   }
   if (booking.balanceVerificationStatus === "pending") {
-    return "Balance receipt pending";
+    return "Review balance";
   }
 
   switch (booking.status) {
@@ -71,6 +70,20 @@ function statusBadgeVariant(
     default:
       return "outline";
   }
+}
+
+function bookingBadgeVariant(
+  booking: SerializedBooking
+): "default" | "secondary" | "destructive" | "outline" {
+  if (
+    (booking.depositVerificationStatus === "pending" &&
+      booking.status === "pending") ||
+    booking.balanceVerificationStatus === "pending" ||
+    booking.depositVerificationStatus === "rejected"
+  ) {
+    return "destructive";
+  }
+  return statusBadgeVariant(booking.status);
 }
 
 function formatTimeLabel(hhmm: string): string {
@@ -131,7 +144,7 @@ export function BookingDetailSheet({
                   </SheetTitle>
                   <SheetDescription>{booking.packageNames}</SheetDescription>
                 </div>
-                <Badge variant={statusBadgeVariant(booking.status)}>
+                <Badge variant={bookingBadgeVariant(booking)}>
                   {statusLabel(booking)}
                 </Badge>
               </div>

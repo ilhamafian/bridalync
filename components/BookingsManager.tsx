@@ -100,6 +100,7 @@ export type AddOnCatalogItem = {
 
 type BookingFilter =
   | "all"
+  | "needs_verification"
   | "deposit"
   | "full"
   | "confirmed"
@@ -135,6 +136,7 @@ type BookingFormState = {
 
 const BOOKING_FILTERS: { value: BookingFilter; label: string }[] = [
   { value: "all", label: "All" },
+  { value: "needs_verification", label: "Needs verification" },
   { value: "deposit", label: "Deposit paid" },
   { value: "full", label: "Fully paid" },
   { value: "confirmed", label: "Confirmed" },
@@ -165,6 +167,48 @@ function isDepositPaid(booking: SerializedBooking) {
   );
 }
 
+function isDepositVerificationPending(booking: SerializedBooking) {
+  return (
+    booking.depositVerificationStatus === "pending" &&
+    booking.status === "pending"
+  );
+}
+
+function isBalanceVerificationPending(booking: SerializedBooking) {
+  return booking.balanceVerificationStatus === "pending";
+}
+
+function needsPaymentVerification(booking: SerializedBooking) {
+  return (
+    isDepositVerificationPending(booking) ||
+    isBalanceVerificationPending(booking)
+  );
+}
+
+function verificationAmountRm(booking: SerializedBooking): number | null {
+  if (isDepositVerificationPending(booking)) {
+    return booking.paymentOption === "full"
+      ? booking.invoice.totalRm
+      : booking.invoice.depositRm;
+  }
+  if (isBalanceVerificationPending(booking)) {
+    return booking.invoice.balanceRm;
+  }
+  return null;
+}
+
+function verificationHint(booking: SerializedBooking): string | null {
+  const amount = verificationAmountRm(booking);
+  if (amount == null) return null;
+  if (isDepositVerificationPending(booking)) {
+    return `Deposit receipt waiting · ${formatRm(amount)}`;
+  }
+  if (isBalanceVerificationPending(booking)) {
+    return `Balance receipt waiting · ${formatRm(amount)}`;
+  }
+  return null;
+}
+
 function matchesBookingFilter(
   booking: SerializedBooking,
   filter: BookingFilter
@@ -172,6 +216,8 @@ function matchesBookingFilter(
   switch (filter) {
     case "all":
       return true;
+    case "needs_verification":
+      return needsPaymentVerification(booking);
     case "deposit":
       return isDepositPaid(booking);
     case "full":
@@ -242,18 +288,14 @@ function toDashboardStatus(status: Booking["status"]): DashboardStatus {
 }
 
 function statusLabel(booking: SerializedBooking) {
-  if (
-    booking.paymentChannel === "manual_transfer" &&
-    booking.depositVerificationStatus === "pending" &&
-    booking.status === "pending"
-  ) {
-    return "Awaiting payment verification";
+  if (isDepositVerificationPending(booking)) {
+    return "Review deposit";
   }
   if (booking.depositVerificationStatus === "rejected") {
     return "Receipt rejected";
   }
-  if (booking.balanceVerificationStatus === "pending") {
-    return "Balance receipt pending";
+  if (isBalanceVerificationPending(booking)) {
+    return "Review balance";
   }
 
   switch (booking.status) {
@@ -275,14 +317,9 @@ function statusLabel(booking: SerializedBooking) {
 }
 
 function paymentLabel(booking: SerializedBooking): string | null {
-  if (
-    booking.status === "pending" &&
-    booking.depositVerificationStatus === "pending"
-  ) {
-    return "Payment submitted";
-  }
-  if (booking.balanceVerificationStatus === "pending") {
-    return "Balance submitted";
+  // Verification-needed bookings already use a strong status badge.
+  if (needsPaymentVerification(booking)) {
+    return null;
   }
   // Only show paid labels after the booking is actually confirmed/paid.
   if (booking.status !== "confirmed" && booking.status !== "completed") {
@@ -347,6 +384,14 @@ function statusBadgeVariant(
     default:
       return "outline";
   }
+}
+
+function bookingBadgeVariant(
+  booking: SerializedBooking
+): "default" | "secondary" | "destructive" | "outline" {
+  if (needsPaymentVerification(booking)) return "destructive";
+  if (booking.depositVerificationStatus === "rejected") return "destructive";
+  return statusBadgeVariant(booking.status);
 }
 
 function sessionsFromPackages(
@@ -575,11 +620,24 @@ export function BookingsManager({
     return Array.from(byKey.values());
   }, [timeSlots, form.sessions]);
 
+  const pendingVerificationCount = useMemo(
+    () => bookings.filter(needsPaymentVerification).length,
+    [bookings]
+  );
+
   const filteredBookings = useMemo(() => {
     const filtered = bookings.filter((booking) =>
       matchesBookingFilter(booking, statusFilter)
     );
-    return sortBookings(filtered, sortOrder);
+    const sorted = sortBookings(filtered, sortOrder);
+
+    if (statusFilter === "needs_verification") {
+      return sorted;
+    }
+
+    const needsReview = sorted.filter(needsPaymentVerification);
+    const rest = sorted.filter((booking) => !needsPaymentVerification(booking));
+    return [...needsReview, ...rest];
   }, [bookings, statusFilter, sortOrder]);
 
   const activeFilterLabel =
@@ -871,7 +929,10 @@ export function BookingsManager({
             <SelectContent position="popper" align="start">
               {BOOKING_FILTERS.map((filter) => (
                 <SelectItem key={filter.value} value={filter.value}>
-                  {filter.label}
+                  {filter.value === "needs_verification" &&
+                  pendingVerificationCount > 0
+                    ? `${filter.label} (${pendingVerificationCount})`
+                    : filter.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -899,6 +960,34 @@ export function BookingsManager({
         </div>
       </div>
 
+      {pendingVerificationCount > 0 ? (
+        <button
+          type="button"
+          onClick={() => setStatusFilter("needs_verification")}
+          className={cn(
+            "flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left text-sm transition-colors",
+            statusFilter === "needs_verification"
+              ? "border-amber-500/40 bg-amber-500/10"
+              : "border-amber-500/30 bg-amber-500/6 hover:bg-amber-500/10"
+          )}
+        >
+          <span>
+            <span className="font-medium text-foreground">
+              {pendingVerificationCount} payment
+              {pendingVerificationCount === 1 ? "" : "s"} to review
+            </span>
+            <span className="mt-0.5 block text-muted-foreground">
+              {statusFilter === "needs_verification"
+                ? "Showing bookings waiting on receipt approval"
+                : "Tap to show only bookings waiting on receipt approval"}
+            </span>
+          </span>
+          {statusFilter !== "needs_verification" ? (
+            <Badge variant="destructive">Review</Badge>
+          ) : null}
+        </button>
+      ) : null}
+
       {filteredBookings.length === 0 ? (
         <Card>
           <CardHeader>
@@ -906,7 +995,9 @@ export function BookingsManager({
             <CardDescription>
               {statusFilter === "all"
                 ? "Add a booking manually or wait for clients to book."
-                : `No ${activeFilterLabel.toLowerCase()} bookings.`}
+                : statusFilter === "needs_verification"
+                  ? "No bookings waiting on payment verification."
+                  : `No ${activeFilterLabel.toLowerCase()} bookings.`}
             </CardDescription>
           </CardHeader>
         </Card>
@@ -915,6 +1006,8 @@ export function BookingsManager({
           {filteredBookings.map((booking) => {
             const earliest = getEarliestSessionDate(booking.sessions);
             const paidLabel = paymentLabel(booking);
+            const needsReview = needsPaymentVerification(booking);
+            const reviewHint = verificationHint(booking);
             const phone = formatWhatsAppDisplay(
               booking.contact.country_code,
               booking.contact.mobile
@@ -929,7 +1022,12 @@ export function BookingsManager({
                 <Card
                   role="button"
                   tabIndex={0}
-                  className="cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                  className={cn(
+                    "cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                    needsReview
+                      ? "border-amber-500/35 bg-amber-500/4 hover:bg-amber-500/8"
+                      : "hover:bg-muted/40"
+                  )}
                   onClick={() => setSelectedBooking(booking)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
@@ -944,7 +1042,7 @@ export function BookingsManager({
                         <CardTitle className="truncate text-base">
                           {booking.contact.name}
                         </CardTitle>
-                        <Badge variant={statusBadgeVariant(booking.status)}>
+                        <Badge variant={bookingBadgeVariant(booking)}>
                           {statusLabel(booking)}
                         </Badge>
                         {booking.source === "google_calendar" ? (
@@ -957,13 +1055,19 @@ export function BookingsManager({
                         booking.source !== "google_calendar" ? (
                           <Badge variant="outline">{paidLabel}</Badge>
                         ) : null}
-                        {booking.paymentChannel === "manual_transfer" ? (
+                        {booking.paymentChannel === "manual_transfer" &&
+                        !needsReview ? (
                           <Badge variant="outline">Manual transfer</Badge>
                         ) : null}
                       </div>
                       <CardDescription className="mt-1">
                         {booking.packageNames}
                       </CardDescription>
+                      {reviewHint ? (
+                        <p className="mt-1 text-sm font-medium text-amber-800 dark:text-amber-300">
+                          {reviewHint}
+                        </p>
+                      ) : null}
                       {whatsappUrl ? (
                         <p className="mt-1 text-sm text-muted-foreground">
                           <a
@@ -1024,13 +1128,9 @@ export function BookingsManager({
                               </button>
                             ) : null}
                           </p>
-                          {(booking.depositVerificationStatus === "pending" &&
-                            booking.status === "pending") ||
-                          booking.balanceVerificationStatus === "pending" ? (
+                          {needsReview ? (
                             <div className="flex flex-wrap gap-2">
-                              {booking.depositVerificationStatus ===
-                                "pending" &&
-                              booking.status === "pending" ? (
+                              {isDepositVerificationPending(booking) ? (
                                 <>
                                   <Button
                                     type="button"
@@ -1072,8 +1172,7 @@ export function BookingsManager({
                                   </Button>
                                 </>
                               ) : null}
-                              {booking.balanceVerificationStatus ===
-                              "pending" ? (
+                              {isBalanceVerificationPending(booking) ? (
                                 <>
                                   <Button
                                     type="button"
