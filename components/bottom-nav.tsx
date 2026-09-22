@@ -27,10 +27,10 @@ const navItems: {
     match: (pathname) => pathname.startsWith("/dashboard/bookings"),
   },
   {
-    title: "Packages",
-    href: "/dashboard/packages",
-    icon: IconBoxMultiple,
-    match: (pathname) => pathname.startsWith("/dashboard/packages"),
+    title: "Calendar",
+    href: "/dashboard/calendar",
+    icon: IconCalendar,
+    match: (pathname) => pathname.startsWith("/dashboard/calendar"),
   },
   {
     title: "Home",
@@ -40,10 +40,10 @@ const navItems: {
     match: (pathname) => pathname === "/dashboard",
   },
   {
-    title: "Calendar",
-    href: "/dashboard/calendar",
-    icon: IconCalendar,
-    match: (pathname) => pathname.startsWith("/dashboard/calendar"),
+    title: "Packages",
+    href: "/dashboard/packages",
+    icon: IconBoxMultiple,
+    match: (pathname) => pathname.startsWith("/dashboard/packages"),
   },
   {
     title: "Settings",
