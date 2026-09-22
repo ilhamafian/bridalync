@@ -223,16 +223,8 @@ export function addMinutesToDate(date: Date, minutes: number) {
   return new Date(date.getTime() + minutes * 60_000);
 }
 
-export function formatHourLabel(hour: number, compact = false) {
-  const date = parse(
-    `${String(hour).padStart(2, "0")}:00`,
-    "HH:mm",
-    new Date()
-  );
-  if (compact) {
-    return format(date, "ha").replace("AM", "a").replace("PM", "p").toLowerCase();
-  }
-  return format(date, "h a");
+export function formatHourLabel(hour: number, _compact = false) {
+  return minutesToHhmm(hour * 60);
 }
 
 export function isMarkedDay(day: Date, keys: Set<string>) {
