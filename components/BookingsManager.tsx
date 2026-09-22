@@ -154,13 +154,9 @@ function isFullyPaid(booking: SerializedBooking) {
 
 function isDepositPaid(booking: SerializedBooking) {
   return (
-    booking.status !== "cancelled" &&
-    booking.status !== "failed" &&
+    (booking.status === "confirmed" || booking.status === "completed") &&
     booking.paymentOption === "deposit" &&
-    booking.invoice.balanceRm > 0 &&
-    (booking.status === "confirmed" ||
-      booking.status === "completed" ||
-      booking.status === "pending")
+    booking.invoice.balanceRm > 0
   );
 }
 
@@ -175,8 +171,7 @@ function matchesBookingFilter(
       return isDepositPaid(booking);
     case "full":
       return (
-        booking.status !== "cancelled" &&
-        booking.status !== "failed" &&
+        (booking.status === "confirmed" || booking.status === "completed") &&
         isFullyPaid(booking)
       );
     case "confirmed":
@@ -274,7 +269,7 @@ function statusLabel(booking: SerializedBooking) {
   }
 }
 
-function paymentLabel(booking: SerializedBooking) {
+function paymentLabel(booking: SerializedBooking): string | null {
   if (
     booking.status === "pending" &&
     booking.depositVerificationStatus === "pending"
@@ -283,6 +278,10 @@ function paymentLabel(booking: SerializedBooking) {
   }
   if (booking.balanceVerificationStatus === "pending") {
     return "Balance submitted";
+  }
+  // Only show paid labels after the booking is actually confirmed/paid.
+  if (booking.status !== "confirmed" && booking.status !== "completed") {
+    return null;
   }
   return isFullyPaid(booking) ? "Fully paid" : "Deposit paid";
 }
@@ -907,6 +906,7 @@ export function BookingsManager({
         <ul className="flex flex-col gap-3">
           {filteredBookings.map((booking) => {
             const earliest = getEarliestSessionDate(booking.sessions);
+            const paidLabel = paymentLabel(booking);
             return (
               <li key={booking._id}>
                 <Card>
@@ -922,13 +922,12 @@ export function BookingsManager({
                         {booking.source === "google_calendar" ? (
                           <Badge variant="outline">Google import</Badge>
                         ) : null}
-                        {booking.status !== "cancelled" &&
+                        {paidLabel &&
+                        booking.status !== "cancelled" &&
                         booking.status !== "failed" &&
                         booking.status !== "enquiry" &&
                         booking.source !== "google_calendar" ? (
-                          <Badge variant="outline">
-                            {paymentLabel(booking)}
-                          </Badge>
+                          <Badge variant="outline">{paidLabel}</Badge>
                         ) : null}
                         {booking.paymentChannel === "manual_transfer" ? (
                           <Badge variant="outline">Manual transfer</Badge>

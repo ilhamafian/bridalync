@@ -9,8 +9,15 @@ import {
 } from "@/utils/stripe/connect";
 import { buildBookingCheckoutMetadata } from "@/utils/stripe/metadata";
 
+/** Stripe allows 30 minutes–24 hours; keep abandoned slots free sooner. */
+const CHECKOUT_SESSION_TTL_SECONDS = 30 * 60;
+
 function toStripeAmount(rm: number) {
   return Math.round(rm * 100);
+}
+
+function checkoutExpiresAt() {
+  return Math.floor(Date.now() / 1000) + CHECKOUT_SESSION_TTL_SECONDS;
 }
 
 function isFpxAvailable(account: Awaited<ReturnType<typeof ensurePaymentCapabilities>>) {
@@ -40,21 +47,23 @@ async function createConnectedCheckoutSession(
   const stripe = getStripe();
   const paymentMethodTypes = checkoutPaymentMethodTypes(account);
 
+  const sessionParams: Stripe.Checkout.SessionCreateParams = {
+    ...params,
+    expires_at: params.expires_at ?? checkoutExpiresAt(),
+    // Deferred Standard accounts have no Dashboard payment-method settings,
+    // so dynamic methods resolve to none. Cards and FPX are valid for MYR.
+    payment_method_types: paymentMethodTypes,
+  };
+
   try {
-    return await stripe.checkout.sessions.create(
-      {
-        ...params,
-        // Deferred Standard accounts have no Dashboard payment-method settings,
-        // so dynamic methods resolve to none. Cards and FPX are valid for MYR.
-        payment_method_types: paymentMethodTypes,
-      },
-      { stripeAccount: stripeAccountId }
-    );
+    return await stripe.checkout.sessions.create(sessionParams, {
+      stripeAccount: stripeAccountId,
+    });
   } catch (error) {
     if (paymentMethodTypes.includes("fpx")) {
       return stripe.checkout.sessions.create(
         {
-          ...params,
+          ...sessionParams,
           payment_method_types: ["card"],
         },
         { stripeAccount: stripeAccountId }
