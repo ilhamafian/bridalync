@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
 
+import { BookingDetailSheet } from "@/components/booking/BookingDetailSheet";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import {
   DEFAULT_COUNTRY_CODE,
@@ -67,6 +68,10 @@ import {
 } from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import { formatLocationAddress } from "@/utils/session";
+import {
+  buildWhatsAppProfileUrl,
+  formatWhatsAppDisplay,
+} from "@/utils/socialLinks";
 
 export type PackageCatalogItem = {
   _id: string;
@@ -453,6 +458,8 @@ export function BookingsManager({
   const [statusFilter, setStatusFilter] = useState<BookingFilter>("all");
   const [sortOrder, setSortOrder] = useState<BookingSort>("upcoming");
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [selectedBooking, setSelectedBooking] =
+    useState<SerializedBooking | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -589,6 +596,7 @@ export function BookingsManager({
   }
 
   function openEdit(booking: SerializedBooking) {
+    setSelectedBooking(null);
     setEditingId(booking._id);
     setEditingSource(booking.source ?? "bridalync");
     setForm(bookingToForm(booking, timeSlots));
@@ -907,9 +915,29 @@ export function BookingsManager({
           {filteredBookings.map((booking) => {
             const earliest = getEarliestSessionDate(booking.sessions);
             const paidLabel = paymentLabel(booking);
+            const phone = formatWhatsAppDisplay(
+              booking.contact.country_code,
+              booking.contact.mobile
+            );
+            const whatsappUrl = buildWhatsAppProfileUrl(
+              booking.contact.country_code,
+              booking.contact.mobile
+            );
+
             return (
               <li key={booking._id}>
-                <Card>
+                <Card
+                  role="button"
+                  tabIndex={0}
+                  className="cursor-pointer transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+                  onClick={() => setSelectedBooking(booking)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setSelectedBooking(booking);
+                    }
+                  }}
+                >
                   <CardHeader className="flex-row items-start justify-between gap-3 space-y-0">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
@@ -936,6 +964,19 @@ export function BookingsManager({
                       <CardDescription className="mt-1">
                         {booking.packageNames}
                       </CardDescription>
+                      {whatsappUrl ? (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          <a
+                            href={whatsappUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-foreground hover:underline"
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            {phone}
+                          </a>
+                        </p>
+                      ) : null}
                       <p className="mt-2 text-sm text-muted-foreground">
                         {earliest
                           ? formatListDate(earliest.toISOString())
@@ -944,7 +985,11 @@ export function BookingsManager({
                         {formatRm(booking.invoice.totalRm)}
                       </p>
                       {booking.depositReceiptUrl || booking.balanceReceiptUrl ? (
-                        <div className="mt-2 flex flex-col gap-2">
+                        <div
+                          className="mt-2 flex flex-col gap-2"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
                           <p className="text-sm">
                             {booking.depositReceiptUrl ? (
                               <button
@@ -1081,7 +1126,11 @@ export function BookingsManager({
                         </div>
                       ) : null}
                     </div>
-                    <div className="flex shrink-0 gap-1">
+                    <div
+                      className="flex shrink-0 gap-1"
+                      onClick={(event) => event.stopPropagation()}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
                       <Button
                         type="button"
                         variant="ghost"
@@ -1113,6 +1162,12 @@ export function BookingsManager({
           })}
         </ul>
       )}
+
+      <BookingDetailSheet
+        booking={selectedBooking}
+        onClose={() => setSelectedBooking(null)}
+        onEdit={openEdit}
+      />
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent
