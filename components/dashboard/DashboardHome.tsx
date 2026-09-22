@@ -201,7 +201,6 @@ export function DashboardHome({
         <div className="grid grid-cols-2 gap-3">
           <Button
             type="button"
-            variant="outline"
             size="lg"
             className="h-auto min-h-14 flex-col gap-1 py-3"
             onClick={handleShareLink}
@@ -210,7 +209,12 @@ export function DashboardHome({
             <IconLink className="size-5" />
             <span>Share Booking Link</span>
           </Button>
-          <Button asChild size="lg" className="h-auto min-h-14 flex-col gap-1 py-3">
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="h-auto min-h-14 flex-col gap-1 py-3"
+          >
             <Link href="/dashboard/bookings" scroll={false}>
               <IconCalendarPlus className="size-5" />
               <span>New Booking</span>
