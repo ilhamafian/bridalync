@@ -25,6 +25,7 @@ function serializeProfile(user: {
   country_code?: string;
   role?: "hijabstylist" | "makeupartist";
   profile_photo_url?: string;
+  bio?: string;
   social_links?: {
     instagram?: string;
     tiktok?: string;
@@ -52,6 +53,7 @@ function serializeProfile(user: {
     country_code: user.country_code ?? "",
     role: user.role ?? null,
     profile_photo_url: user.profile_photo_url ?? "",
+    bio: user.bio ?? "",
     social_links: {
       instagram: user.social_links?.instagram ?? "",
       tiktok: user.social_links?.tiktok ?? "",
@@ -130,6 +132,7 @@ export async function PATCH(req: NextRequest) {
     const mobile = parsed.data.mobile.trim();
     const country_code = parsed.data.country_code.trim();
     const profile_photo_url = parsed.data.profile_photo_url?.trim() || "";
+    const bio = parsed.data.bio?.trim() ?? "";
     const social_links = normalizeSocialLinks(parsed.data.social_links) ?? {};
 
     const existingWithUsername = await userModel.findByUsername(username);
@@ -151,6 +154,7 @@ export async function PATCH(req: NextRequest) {
         mobile,
         country_code,
         profile_photo_url,
+        bio,
         social_links,
       },
       updateUserSchema as ZodSchema<Partial<User>>

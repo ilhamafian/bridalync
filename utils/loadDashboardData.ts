@@ -173,6 +173,7 @@ export async function loadDashboardData(
         country_code: user.country_code ?? "",
         role: user.role ?? null,
         profile_photo_url: user.profile_photo_url ?? "",
+        bio: user.bio ?? "",
         social_links: {
           instagram: user.social_links?.instagram ?? "",
           tiktok: user.social_links?.tiktok ?? "",

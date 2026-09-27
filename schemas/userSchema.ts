@@ -4,6 +4,7 @@ import {
   defaultOnboardingProgress,
   onboardingProgressSchema,
 } from "./onboardingSchema";
+import { BIO_MAX_LENGTH } from "./bio";
 import { objectIdSchema } from "./objectId";
 
 export {
@@ -59,6 +60,7 @@ export const userSchema = z.object({
   country_code: z.string().min(1).optional(),
   language: z.string().min(1).optional(),
   profile_photo_url: z.string().optional(),
+  bio: z.string().optional(),
   social_links: socialLinksSchema.optional(),
   stripe_account_id: z.string().optional(),
   is_stripe_connected: z.boolean().default(false),
@@ -98,6 +100,7 @@ export const publicProfileSchema = z.object({
   username: z.string().optional(),
   role: z.enum(["hijabstylist", "makeupartist"]).optional(),
   profile_photo_url: z.string().optional(),
+  bio: z.string().optional(),
   mobile: z.string().optional(),
   country_code: z.string().optional(),
   social_links: socialLinksSchema.optional(),
@@ -126,6 +129,11 @@ export const profileUpdateSchema = z.object({
   mobile: z.string().min(1, "Phone number is required"),
   country_code: z.string().min(1, "Country code is required"),
   profile_photo_url: z.string().trim().max(2000).optional(),
+  bio: z
+    .string()
+    .trim()
+    .max(BIO_MAX_LENGTH, `Bio must be ${BIO_MAX_LENGTH} characters or fewer.`)
+    .optional(),
   social_links: z
     .object({
       instagram: optionalSocialUrl.optional(),
@@ -149,6 +157,7 @@ export function toPublicProfile(user: User): PublicProfile {
     username: user.username,
     role: user.role,
     profile_photo_url: user.profile_photo_url,
+    bio: user.bio,
     mobile: user.mobile,
     country_code: user.country_code,
     social_links: user.social_links

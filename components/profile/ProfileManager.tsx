@@ -21,6 +21,8 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { BIO_MAX_LENGTH } from "@/schemas/bio";
 import { compressImageFile } from "@/utils/image/compressClient";
 import { cn } from "@/lib/utils";
 import { formatWhatsAppDisplay } from "@/utils/socialLinks";
@@ -39,6 +41,7 @@ export type ProfileItem = {
   country_code: string;
   role: "hijabstylist" | "makeupartist" | null;
   profile_photo_url: string;
+  bio: string;
   social_links: ProfileSocialLinks;
 };
 
@@ -90,6 +93,7 @@ export function ProfileManager({
   const [photoUrl, setPhotoUrl] = useState(
     initialProfile.profile_photo_url || ""
   );
+  const [bio, setBio] = useState(initialProfile.bio || "");
   const [socials, setSocials] = useState<ProfileSocialLinks>({
     ...EMPTY_SOCIALS,
     ...initialProfile.social_links,
@@ -224,6 +228,11 @@ export function ProfileManager({
       return;
     }
 
+    if (bio.trim().length > BIO_MAX_LENGTH) {
+      setError(`Bio must be ${BIO_MAX_LENGTH} characters or fewer.`);
+      return;
+    }
+
     setSaving(true);
     try {
       const response = await fetch("/api/profile", {
@@ -235,6 +244,7 @@ export function ProfileManager({
           mobile: mobile.trim(),
           country_code: countryCode,
           profile_photo_url: photoUrl,
+          bio: bio.trim(),
           social_links: socials,
         }),
       });
@@ -256,6 +266,7 @@ export function ProfileManager({
       setMobile(saved.mobile);
       setCountryCode(saved.country_code || DEFAULT_COUNTRY_CODE);
       setPhotoUrl(saved.profile_photo_url || "");
+      setBio(saved.bio || "");
       setSocials({ ...EMPTY_SOCIALS, ...saved.social_links });
       setSuccess("Profile saved.");
     } finally {
@@ -408,6 +419,24 @@ export function ProfileManager({
               onChange={(event) => setName(event.target.value)}
               placeholder="Aisha Rahman"
             />
+          </Field>
+
+          <Field label="Bio" htmlFor="profile-bio">
+            <Textarea
+              id="profile-bio"
+              className="min-h-20 bg-background px-3 text-sm md:text-sm"
+              value={bio}
+              onChange={(event) => setBio(event.target.value)}
+              maxLength={BIO_MAX_LENGTH}
+              rows={3}
+              placeholder="Bridal makeup & hijab styling based in Kuala Lumpur."
+            />
+            <p className="flex justify-between gap-2 text-xs text-muted-foreground">
+              <span>Shown under your role on your booking page.</span>
+              <span className="shrink-0 tabular-nums">
+                {bio.length}/{BIO_MAX_LENGTH}
+              </span>
+            </p>
           </Field>
 
           <Field label="Username" htmlFor="profile-username">

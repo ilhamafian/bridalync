@@ -149,6 +149,7 @@ export function ClientProfile({
   const lightboxClosedAtRef = useRef(0);
   const displayName = user.name?.trim() || user.username || "Stylist";
   const role = user.role ? roleLabel(user.role, t) : null;
+  const bio = user.bio?.trim();
   const socialEntries = buildSocialEntries(user);
 
   useEffect(() => {
@@ -222,6 +223,11 @@ export function ClientProfile({
           {role ? (
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               {role}
+            </p>
+          ) : null}
+          {bio ? (
+            <p className="mt-3 max-w-xs whitespace-pre-line break-words text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+              {bio}
             </p>
           ) : null}
 
