@@ -83,6 +83,9 @@ export const signupUserSchema = userSchema.pick({
 export const updateUserSchema = userSchema
   .omit({ email: true, password: true, onboarding: true })
   .extend({
+    // Zod 4 applies .default() even inside .partial(), which would reset
+    // these on every partial update.
+    is_stripe_connected: z.boolean().optional(),
     onboarding: onboardingProgressSchema.partial().optional(),
     deferred_onboarding: deferredOnboardingSchema.partial().optional(),
   })

@@ -1,9 +1,13 @@
+import type { ZodSchema } from "zod";
+
 import { UserModel } from "@/models/User";
 import {
   isOnboardingComplete,
   sessionUserSchema,
+  updateUserSchema,
   userSchema,
   type SessionUser,
+  type User,
 } from "@/schemas/userSchema";
 import { toIdString } from "@/schemas/objectId";
 import { isSignupEmailAllowed } from "@/utils/auth/signup-allowlist";
@@ -73,7 +77,7 @@ export async function authenticateGoogleProfile(
           ? {}
           : { profile_photo_url: profile.picture }),
       },
-      userSchema.partial()
+      updateUserSchema as ZodSchema<Partial<User>>
     );
 
     const linked = await userModel.findById(userId);
