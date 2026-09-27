@@ -1,1 +1,1 @@
-export const BIO_MAX_LENGTH = 150;
+export const BIO_MAX_LENGTH = 500;
