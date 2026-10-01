@@ -2,6 +2,7 @@ import type Stripe from "stripe";
 
 import { getStripe } from "@/lib/stripe";
 import { getAppUrl } from "@/utils/appUrl";
+import { calculateProcessingFeeRm } from "@/utils/booking/pricing";
 import type { PersistedBooking } from "@/schemas/bookingSchema";
 import {
   ensurePaymentCapabilities,
@@ -89,6 +90,12 @@ export async function createDepositCheckoutSession(input: {
     throw new Error("This booking does not require a payment.");
   }
 
+  // Deposits are charged flat; the fee for the whole booking is collected
+  // with the balance, or upfront when paying in full.
+  const chargeRm = isFullPayment
+    ? amountDueRm + calculateProcessingFeeRm(input.booking.invoice.totalRm)
+    : amountDueRm;
+
   const account = await prepareConnectedAccountForCheckout(input.stripeAccountId);
 
   const metadata = buildBookingCheckoutMetadata({
@@ -114,7 +121,7 @@ export async function createDepositCheckoutSession(input: {
         {
           price_data: {
             currency: "myr",
-            unit_amount: toStripeAmount(amountDueRm),
+            unit_amount: toStripeAmount(chargeRm),
             product_data: {
               name: productName,
               description: productDescription,
@@ -159,6 +166,9 @@ export async function createBalanceCheckoutSession(input: {
     throw new Error("This booking has no remaining balance.");
   }
 
+  const chargeRm =
+    amountDueRm + calculateProcessingFeeRm(input.booking.invoice.totalRm);
+
   const account = await prepareConnectedAccountForCheckout(input.stripeAccountId);
 
   const metadata = buildBookingCheckoutMetadata({
@@ -179,7 +189,7 @@ export async function createBalanceCheckoutSession(input: {
         {
           price_data: {
             currency: "myr",
-            unit_amount: toStripeAmount(amountDueRm),
+            unit_amount: toStripeAmount(chargeRm),
             product_data: {
               name: productName,
               description: productDescription,

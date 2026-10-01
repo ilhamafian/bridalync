@@ -62,7 +62,16 @@ export type StyleItem = {
   }[];
 };
 
-type Tab = "packages" | "styles";
+export type AddOnItem = {
+  _id: string;
+  name: string;
+  price: number;
+  order: number;
+};
+
+type Tab = "packages" | "styles" | "addons";
+
+type SheetType = "package" | "style" | "addon";
 
 type VariantRow = {
   id: string;
@@ -83,10 +92,21 @@ type StyleFormState = {
   variants: VariantRow[];
 };
 
+type AddOnFormState = {
+  name: string;
+  price: string;
+};
+
 type DeleteTarget = {
-  type: "package" | "style";
+  type: SheetType;
   id: string;
   name: string;
+};
+
+const DELETE_LABELS: Record<SheetType, string> = {
+  package: "package",
+  style: "style",
+  addon: "add-on",
 };
 
 const inputClassName = cn(
@@ -166,6 +186,20 @@ function styleToForm(style: StyleItem): StyleFormState {
   };
 }
 
+function emptyAddOnForm(): AddOnFormState {
+  return {
+    name: "",
+    price: "",
+  };
+}
+
+function addOnToForm(addOn: AddOnItem): AddOnFormState {
+  return {
+    name: addOn.name,
+    price: addOn.price.toString(),
+  };
+}
+
 function Field({
   label,
   children,
@@ -184,14 +218,20 @@ function Field({
 export function PackagesManager({
   initialPackages,
   initialStyles,
+  initialAddOns,
+  chargeBy,
 }: {
   initialPackages: PackageItem[];
   initialStyles: StyleItem[];
+  initialAddOns: AddOnItem[];
+  chargeBy: "package" | "style";
 }) {
   const [tab, setTab] = useState<Tab>("packages");
   const [packages, setPackages] = useState(initialPackages);
   const [styles, setStyles] = useState(initialStyles);
+  const [addOns, setAddOns] = useState(initialAddOns);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetType, setSheetType] = useState<SheetType>("package");
   const [saving, setSaving] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -199,42 +239,56 @@ export function PackagesManager({
   const [editingStyleId, setEditingStyleId] = useState<string | null>(null);
   const [packageForm, setPackageForm] = useState<PackageFormState>(emptyPackageForm);
   const [styleForm, setStyleForm] = useState<StyleFormState>(emptyStyleForm);
+  const [editingAddOnId, setEditingAddOnId] = useState<string | null>(null);
+  const [addOnForm, setAddOnForm] = useState<AddOnFormState>(emptyAddOnForm);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  function openCreatePackage() {
-    setTab("packages");
-    setEditingPackageId(null);
-    setEditingStyleId(null);
-    setPackageForm(emptyPackageForm());
+  function openSheet(type: SheetType) {
+    setSheetType(type);
     setError(null);
     setSheetOpen(true);
+  }
+
+  function openCreatePackage() {
+    setEditingPackageId(null);
+    setPackageForm(emptyPackageForm());
+    openSheet("package");
   }
 
   function openEditPackage(pkg: PackageItem) {
-    setTab("packages");
     setEditingPackageId(pkg._id);
-    setEditingStyleId(null);
     setPackageForm(packageToForm(pkg));
-    setError(null);
-    setSheetOpen(true);
+    openSheet("package");
   }
 
   function openCreateStyle() {
-    setTab("styles");
     setEditingStyleId(null);
-    setEditingPackageId(null);
     setStyleForm(emptyStyleForm());
-    setError(null);
-    setSheetOpen(true);
+    openSheet("style");
   }
 
   function openEditStyle(style: StyleItem) {
-    setTab("styles");
     setEditingStyleId(style._id);
-    setEditingPackageId(null);
     setStyleForm(styleToForm(style));
-    setError(null);
-    setSheetOpen(true);
+    openSheet("style");
+  }
+
+  function openCreateAddOn() {
+    setEditingAddOnId(null);
+    setAddOnForm(emptyAddOnForm());
+    openSheet("addon");
+  }
+
+  function openEditAddOn(addOn: AddOnItem) {
+    setEditingAddOnId(addOn._id);
+    setAddOnForm(addOnToForm(addOn));
+    openSheet("addon");
+  }
+
+  function openCreateForTab() {
+    if (tab === "packages") openCreatePackage();
+    else if (tab === "styles") openCreateStyle();
+    else openCreateAddOn();
   }
 
   async function handleReorderPackages(nextPackages: PackageItem[]) {
@@ -299,17 +353,49 @@ export function PackagesManager({
     }
   }
 
+  async function handleReorderAddOns(nextAddOns: AddOnItem[]) {
+    const previous = addOns;
+    const reordered = nextAddOns.map((addOn, index) => ({
+      ...addOn,
+      order: index,
+    }));
+
+    setAddOns(reordered);
+    setReordering(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/add-ons/reorder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: reordered.map((addOn) => addOn._id) }),
+      });
+
+      if (!response.ok) {
+        setAddOns(previous);
+        setError("Failed to reorder add-ons.");
+        return;
+      }
+
+      const data = await response.json();
+      setAddOns(data.addOns as AddOnItem[]);
+    } finally {
+      setReordering(false);
+    }
+  }
+
   async function confirmDelete() {
     if (!deleteTarget) return;
 
-    const endpoint =
-      deleteTarget.type === "package"
-        ? `/api/packages/${deleteTarget.id}`
-        : `/api/styles/${deleteTarget.id}`;
+    const endpoint = {
+      package: `/api/packages/${deleteTarget.id}`,
+      style: `/api/styles/${deleteTarget.id}`,
+      addon: `/api/add-ons/${deleteTarget.id}`,
+    }[deleteTarget.type];
 
     const response = await fetch(endpoint, { method: "DELETE" });
     if (!response.ok) {
-      setError(`Failed to delete ${deleteTarget.type}.`);
+      setError(`Failed to delete ${DELETE_LABELS[deleteTarget.type]}.`);
       setDeleteTarget(null);
       return;
     }
@@ -318,9 +404,13 @@ export function PackagesManager({
       setPackages((current) =>
         current.filter((pkg) => pkg._id !== deleteTarget.id)
       );
-    } else {
+    } else if (deleteTarget.type === "style") {
       setStyles((current) =>
         current.filter((style) => style._id !== deleteTarget.id)
+      );
+    } else {
+      setAddOns((current) =>
+        current.filter((addOn) => addOn._id !== deleteTarget.id)
       );
     }
 
@@ -439,8 +529,71 @@ export function PackagesManager({
     }
   }
 
-  const isPackageSheet = tab === "packages" && !editingStyleId;
-  const isStyleSheet = tab === "styles" || editingStyleId !== null;
+  async function handleSaveAddOn() {
+    if (!addOnForm.name.trim()) {
+      setError("Add-on name is required.");
+      return;
+    }
+
+    const price = parseOptionalNumber(addOnForm.price);
+    if (price === undefined || price < 0) {
+      setError("Enter a valid price.");
+      return;
+    }
+
+    const payload = {
+      name: addOnForm.name.trim(),
+      price,
+      order: editingAddOnId
+        ? addOns.find((addOn) => addOn._id === editingAddOnId)?.order ?? addOns.length
+        : addOns.length,
+    };
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        editingAddOnId ? `/api/add-ons/${editingAddOnId}` : "/api/add-ons",
+        {
+          method: editingAddOnId ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        setError("Could not save add-on.");
+        return;
+      }
+
+      const saved = data.addOn as AddOnItem;
+      setAddOns((current) => {
+        if (editingAddOnId) {
+          return current
+            .map((addOn) => (addOn._id === saved._id ? saved : addOn))
+            .sort((a, b) => a.order - b.order);
+        }
+        return [...current, saved].sort((a, b) => a.order - b.order);
+      });
+      setSheetOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const sheetTitle = {
+    package: editingPackageId ? "Edit package" : "New package",
+    style: editingStyleId ? "Edit style" : "New style",
+    addon: editingAddOnId ? "Edit add-on" : "New add-on",
+  }[sheetType];
+
+  const handleSave = {
+    package: handleSavePackage,
+    style: handleSaveStyle,
+    addon: handleSaveAddOn,
+  }[sheetType];
 
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
@@ -453,8 +606,14 @@ export function PackagesManager({
         </div>
         <Button
           size="icon"
-          onClick={tab === "packages" ? openCreatePackage : openCreateStyle}
-          aria-label={tab === "packages" ? "Add package" : "Add style"}
+          onClick={openCreateForTab}
+          aria-label={
+            tab === "packages"
+              ? "Add package"
+              : tab === "styles"
+                ? "Add style"
+                : "Add add-on"
+          }
         >
           <IconPlus />
         </Button>
@@ -465,9 +624,10 @@ export function PackagesManager({
         onValueChange={(value) => setTab(value as Tab)}
         className="gap-4"
       >
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="packages">Packages</TabsTrigger>
           <TabsTrigger value="styles">Styles</TabsTrigger>
+          <TabsTrigger value="addons">Add-ons</TabsTrigger>
         </TabsList>
 
         {error && !sheetOpen ? (
@@ -613,23 +773,108 @@ export function PackagesManager({
             />
           )}
         </TabsContent>
+
+        <TabsContent value="addons" className="mt-0 flex flex-col gap-3">
+          {chargeBy === "package" ? (
+            <p className="text-sm text-muted-foreground">
+              Clients only see add-ons when you charge by style. You can still
+              add them to bookings you create yourself.
+            </p>
+          ) : null}
+
+          {addOns.length === 0 ? (
+            <Card>
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                No add-ons yet. Tap + to offer extras like accessories or
+                touch-ups. Clients skip this step when there are none.
+              </CardContent>
+            </Card>
+          ) : (
+            <SortableList
+              items={addOns}
+              getItemId={(addOn) => addOn._id}
+              onReorder={handleReorderAddOns}
+              disabled={reordering || sheetOpen}
+              renderItem={(addOn) => (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <CardTitle className="text-base">{addOn.name}</CardTitle>
+                        <CardDescription>+{formatRm(addOn.price)}</CardDescription>
+                      </div>
+                      <div className="flex shrink-0 gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => openEditAddOn(addOn)}
+                          aria-label={`Edit ${addOn.name}`}
+                        >
+                          <IconPencil />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() =>
+                            setDeleteTarget({
+                              type: "addon",
+                              id: addOn._id,
+                              name: addOn.name,
+                            })
+                          }
+                          aria-label={`Delete ${addOn.name}`}
+                        >
+                          <IconTrash />
+                        </Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </Card>
+              )}
+            />
+          )}
+        </TabsContent>
       </Tabs>
 
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" contained className="max-h-[85dvh] overflow-y-auto rounded-t-2xl">
           <SheetHeader>
-            <SheetTitle>
-              {isPackageSheet
-                ? editingPackageId
-                  ? "Edit package"
-                  : "New package"
-                : editingStyleId
-                  ? "Edit style"
-                  : "New style"}
-            </SheetTitle>
+            <SheetTitle>{sheetTitle}</SheetTitle>
           </SheetHeader>
 
-          {isPackageSheet ? (
+          {sheetType === "addon" ? (
+            <div className="flex flex-col gap-4 px-6">
+              <Field label="Name">
+                <Input
+                  className={inputClassName}
+                  value={addOnForm.name}
+                  onChange={(event) =>
+                    setAddOnForm((current) => ({
+                      ...current,
+                      name: event.target.value,
+                    }))
+                  }
+                  placeholder="Jahit Accessories Baju"
+                />
+              </Field>
+              <Field label="Price">
+                <Input
+                  className={inputClassName}
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={addOnForm.price}
+                  onChange={(event) =>
+                    setAddOnForm((current) => ({
+                      ...current,
+                      price: event.target.value,
+                    }))
+                  }
+                  placeholder="30"
+                />
+              </Field>
+            </div>
+          ) : sheetType === "package" ? (
             <div className="flex flex-col gap-4 px-6">
               <Field label="Name">
                 <Input
@@ -850,7 +1095,7 @@ export function PackagesManager({
             <Button
               type="button"
               className="flex-1"
-              onClick={isStyleSheet ? handleSaveStyle : handleSavePackage}
+              onClick={handleSave}
               disabled={saving}
             >
               {saving ? "Saving..." : "Save"}
@@ -868,7 +1113,7 @@ export function PackagesManager({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete {deleteTarget?.type === "package" ? "package" : "style"}?
+              Delete {deleteTarget ? DELETE_LABELS[deleteTarget.type] : ""}?
             </AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete &quot;{deleteTarget?.name}&quot;. This

@@ -12,7 +12,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { useLocale } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import type { PublicBooking } from "@/schemas/bookingSchema";
-import { formatRm } from "@/utils/booking/pricing";
+import { calculateProcessingFeeRm, formatRm } from "@/utils/booking/pricing";
 import {
   buildBookingResultMessage,
   buildWhatsAppUrl,
@@ -337,6 +337,9 @@ function BookingResultPageContent() {
     (booking.paymentOption === "full" || booking.invoice.balanceRm === 0);
   const usesManualBalance =
     (booking.stylistPaymentMethod ?? "manual_transfer") === "manual_transfer";
+  const balanceProcessingFeeRm = usesManualBalance
+    ? 0
+    : calculateProcessingFeeRm(booking.invoice.totalRm);
   const whatsAppUrl =
     booking.freelancer?.mobile && booking.freelancer.country_code
       ? buildWhatsAppUrl(
@@ -477,7 +480,9 @@ function BookingResultPageContent() {
                 {payingBalance
                   ? t.startingCheckout
                   : format(t.payRemainingBalance, {
-                      amount: formatRm(booking.invoice.balanceRm),
+                      amount: formatRm(
+                        booking.invoice.balanceRm + balanceProcessingFeeRm
+                      ),
                     })}
               </Button>
               {payError && (

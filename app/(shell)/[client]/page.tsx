@@ -30,7 +30,13 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { calculateBookingQuotation, formatRm, applyPaymentOption, requiresFullPayment } from "@/utils/booking/pricing";
+import {
+  applyPaymentOption,
+  calculateBookingQuotation,
+  calculateProcessingFeeRm,
+  formatRm,
+  requiresFullPayment,
+} from "@/utils/booking/pricing";
 import {
   isSlotTaken,
   normalizeSessionDate,
@@ -875,6 +881,11 @@ export default function ClientPage() {
     () => applyPaymentOption(quotation, effectivePaymentOption),
     [quotation, effectivePaymentOption]
   );
+  const stripeProcessingFeeRm =
+    settings?.payment.method === "payment_gateway" &&
+    effectivePaymentOption === "full"
+      ? calculateProcessingFeeRm(payableQuotation.totalRm)
+      : 0;
 
   useEffect(() => {
     if (mustPayFull && paymentOption !== "full") {
@@ -2039,10 +2050,14 @@ export default function ClientPage() {
                     ? t.redirectingStripe
                     : effectivePaymentOption === "full"
                       ? format(t.payNow, {
-                          amount: formatRm(payableQuotation.totalRm),
+                          amount: formatRm(
+                            payableQuotation.depositRm + stripeProcessingFeeRm
+                          ),
                         })
                       : format(t.payDepositNow, {
-                          amount: formatRm(payableQuotation.depositRm),
+                          amount: formatRm(
+                            payableQuotation.depositRm + stripeProcessingFeeRm
+                          ),
                         })}
                 </Button>
               </>

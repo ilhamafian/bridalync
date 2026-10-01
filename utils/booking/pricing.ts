@@ -46,6 +46,15 @@ export function roundRm(amount: number) {
   return Math.round(amount);
 }
 
+export const PROCESSING_FEE_PERCENT = 3;
+
+/** Charged to clients on top of Stripe payments; rounded up to whole ringgit. */
+export function calculateProcessingFeeRm(amountRm: number) {
+  const rounded = roundRm(amountRm);
+  if (rounded <= 0) return 0;
+  return Math.ceil((rounded * PROCESSING_FEE_PERCENT) / 100);
+}
+
 export function formatRm(amount: number) {
   return `RM${roundRm(amount).toLocaleString("en-MY", {
     minimumFractionDigits: 2,

@@ -4,7 +4,11 @@ import type {
   StyleCatalogItem,
 } from "@/components/BookingsManager";
 import type { DashboardHomeProps } from "@/components/dashboard/DashboardHome";
-import type { PackageItem, StyleItem } from "@/components/PackagesManager";
+import type {
+  AddOnItem,
+  PackageItem,
+  StyleItem,
+} from "@/components/PackagesManager";
 import type { ProfileItem } from "@/components/profile/ProfileManager";
 import type { SettingsItem } from "@/components/SettingsManager";
 import type { DashboardReview } from "@/schemas/reviewSchema";
@@ -32,6 +36,7 @@ export type DashboardData = {
   packages: {
     initialPackages: PackageItem[];
     initialStyles: StyleItem[];
+    initialAddOns: AddOnItem[];
     chargeBy: "package" | "style";
   };
   settings: {

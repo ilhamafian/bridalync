@@ -1,12 +1,17 @@
 import { WithId } from "mongodb";
 
-import type { PackageItem, StyleItem } from "@/components/PackagesManager";
+import type {
+  AddOnItem,
+  PackageItem,
+  StyleItem,
+} from "@/components/PackagesManager";
 import { AddOnModel } from "@/models/AddOn";
 import { bookingModel } from "@/models/Booking";
 import { PackageModel } from "@/models/Package";
 import { reviewModel } from "@/models/Review";
 import { SettingModel } from "@/models/Setting";
 import { StyleModel } from "@/models/Style";
+import type { AddOn } from "@/schemas/addOnSchema";
 import type { Package } from "@/schemas/packageSchema";
 import { toIdString } from "@/schemas/objectId";
 import { toDashboardReview } from "@/schemas/reviewSchema";
@@ -50,6 +55,15 @@ function serializeStyle(style: WithId<Style>): StyleItem {
     name: style.name,
     order: style.order,
     variants: style.variants,
+  };
+}
+
+function serializeAddOn(addOn: WithId<AddOn>): AddOnItem {
+  return {
+    _id: toIdString(addOn._id),
+    name: addOn.name,
+    price: addOn.price,
+    order: addOn.order,
   };
 }
 
@@ -143,6 +157,7 @@ export async function loadDashboardData(
     packages: {
       initialPackages: packages.map(serializePackage),
       initialStyles: styles.map(serializeStyle),
+      initialAddOns: addOns.map(serializeAddOn),
       chargeBy,
     },
     settings: {

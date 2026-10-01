@@ -72,6 +72,8 @@ export function DashboardShell({ data }: { data: DashboardData }) {
         <PackagesManager
           initialPackages={data.packages.initialPackages}
           initialStyles={data.packages.initialStyles}
+          initialAddOns={data.packages.initialAddOns}
+          chargeBy={data.packages.chargeBy}
         />
       </Section>
 
