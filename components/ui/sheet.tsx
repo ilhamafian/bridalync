@@ -55,11 +55,13 @@ function SheetContent({
   side = "right",
   showCloseButton = true,
   contained = false,
+  overlayClassName,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
   showCloseButton?: boolean
   contained?: boolean
+  overlayClassName?: string
 }) {
   const [portalContainer, setPortalContainer] =
     React.useState<HTMLElement | null>(null)
@@ -76,7 +78,7 @@ function SheetContent({
 
   return (
     <SheetPortal container={contained ? portalContainer : undefined}>
-      <SheetOverlay contained={contained} />
+      <SheetOverlay contained={contained} className={overlayClassName} />
       <SheetPrimitive.Content
         data-slot="sheet-content"
         data-side={side}

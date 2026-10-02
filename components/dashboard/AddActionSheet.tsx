@@ -80,7 +80,8 @@ export function AddActionSheet({
       <SheetContent
         side="bottom"
         contained
-        className="rounded-t-2xl border-white/60 bg-white/60 backdrop-blur-md dark:border-white/15 dark:bg-zinc-950/60"
+        overlayClassName="bg-black/10 supports-backdrop-filter:backdrop-blur-[2px]"
+        className="rounded-t-2xl border-white/60 bg-white/80 backdrop-blur-xl dark:border-white/15 dark:bg-zinc-950/75"
       >
         <SheetHeader className="pb-2">
           <SheetTitle>Add</SheetTitle>
