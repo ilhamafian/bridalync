@@ -1,15 +1,27 @@
 "use client";
 
-import { IconBrandWhatsapp } from "@tabler/icons-react";
+import Link from "next/link";
+import {
+  IconBrandWhatsapp,
+  IconCalendarPlus,
+  IconCalendarX,
+  IconCash,
+  IconCircleCheck,
+  type Icon,
+} from "@tabler/icons-react";
 
 import { BookingCarousel } from "@/components/dashboard/BookingCarousel";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type {
-  ActivityItem,
-  CompletedScheduleItem,
-  ScheduleItem,
+import { formatRm } from "@/utils/booking/pricing";
+import {
+  bookingStatusLabel,
+  type ActivityItem,
+  type ActivityKind,
+  type CompletedScheduleItem,
+  type ScheduleItem,
 } from "@/utils/dashboard";
 
 export type DashboardHomeProps = {
@@ -58,6 +70,77 @@ function formatActivityTime(value: string) {
   });
 }
 
+const activityIcons: Record<ActivityKind, Icon> = {
+  new: IconCalendarPlus,
+  deposit: IconCash,
+  paid: IconCash,
+  completed: IconCircleCheck,
+  cancelled: IconCalendarX,
+};
+
+function activityBadgeVariant(
+  status: ActivityItem["bookingStatus"]
+): "default" | "secondary" | "outline" | "destructive" {
+  switch (status) {
+    case "confirmed":
+      return "default";
+    case "completed":
+      return "secondary";
+    case "cancelled":
+    case "failed":
+      return "destructive";
+    default:
+      return "outline";
+  }
+}
+
+function ActivityRow({ item }: { item: ActivityItem }) {
+  const Icon = activityIcons[item.kind];
+  const isCancelled = item.kind === "cancelled";
+  const showBalance =
+    !isCancelled && item.kind !== "completed" && item.balanceRm > 0;
+
+  return (
+    <li className="flex items-center gap-3 px-4 py-3">
+      <span
+        className={cn(
+          "flex size-9 shrink-0 items-center justify-center rounded-full bg-white/50 dark:bg-white/10",
+          isCancelled ? "text-muted-foreground" : "text-primary"
+        )}
+      >
+        <Icon className="size-4.5" aria-hidden />
+      </span>
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <p className="truncate text-sm font-medium">{item.label}</p>
+        <p className="truncate text-xs text-muted-foreground">
+          {item.clientName} · {item.packageName}
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {formatActivityTime(item.at)}
+        </p>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+        <p
+          className={cn(
+            "text-sm font-semibold tabular-nums",
+            isCancelled && "text-muted-foreground line-through"
+          )}
+        >
+          {formatRm(item.amountRm)}
+        </p>
+        <Badge variant={activityBadgeVariant(item.bookingStatus)}>
+          {bookingStatusLabel(item.bookingStatus)}
+        </Badge>
+        {showBalance ? (
+          <p className="text-xs text-muted-foreground tabular-nums">
+            {formatRm(item.balanceRm)} due
+          </p>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
 function EmptyCard({ children }: { children: React.ReactNode }) {
   return (
     <div
@@ -84,7 +167,7 @@ export function DashboardHome({
   const bookings = showToday ? todaysSchedule : upcoming;
 
   return (
-    <div className="flex flex-col gap-6 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 lg:px-6">
       <section className="pr-12">
         <h2 className="text-xl font-semibold tracking-tight">
           {greeting}, {firstName}
@@ -132,17 +215,18 @@ export function DashboardHome({
           <div className={glassCardClassName}>
             <ul className="divide-y divide-white/50 dark:divide-white/10">
               {activity.map((item) => (
-                <li key={item.id} className="flex flex-col gap-0.5 px-4 py-3">
-                  <p className="text-sm font-medium">{item.label}</p>
-                  <p className="text-sm text-muted-foreground">{item.detail}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatActivityTime(item.at)}
-                  </p>
-                </li>
+                <ActivityRow key={item.id} item={item} />
               ))}
             </ul>
           </div>
         )}
+        <Link
+          href="/dashboard/notifications"
+          scroll={false}
+          className="self-end text-sm font-medium text-primary hover:underline"
+        >
+          See more
+        </Link>
       </section>
     </div>
   );

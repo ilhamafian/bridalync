@@ -149,7 +149,7 @@ export async function loadDashboardData(
       todaysSchedule: getTodaysSchedule(scheduleItems, now),
       upcoming: getUpcomingBookings(scheduleItems, now, 3),
       completed,
-      activity: getRecentActivity(serializedBookings, 5),
+      activity: getRecentActivity(serializedBookings, 3),
     },
     bookings: {
       initialBookings: serializedBookings,
