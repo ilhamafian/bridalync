@@ -1,79 +1,22 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
-import {
-  IconBoxMultiple,
-  IconCalendar,
-  IconCalendarPlus,
-  IconCheck,
-  IconCircle,
-  IconLink,
-  IconMapPin,
-} from "@tabler/icons-react";
 
-import { NavigateButton } from "@/components/dashboard/NavigateButton";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { BookingCarousel } from "@/components/dashboard/BookingCarousel";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  formatScheduleDate,
+  glassCardClassName,
+} from "@/components/dashboard/HomeBookingCard";
 import { cn } from "@/lib/utils";
-import { formatRm } from "@/utils/booking/pricing";
-import { formatLocationAddress } from "@/utils/session";
-import {
-  scheduleStatusLabel,
-  type ActivityItem,
-  type ChecklistItem,
-  type DashboardStats,
-  type OutstandingPayments,
-  type ScheduleItem,
-  type ScheduleStatus,
-} from "@/utils/dashboard";
+import type { ActivityItem, ScheduleItem } from "@/utils/dashboard";
 
 export type DashboardHomeProps = {
   greeting: string;
   firstName: string;
   upcomingThisWeek: number;
   todaysSchedule: ScheduleItem[];
-  nextUpcoming: ScheduleItem | null;
-  summary: DashboardStats;
-  outstanding: OutstandingPayments;
+  upcoming: ScheduleItem[];
+  completed: ScheduleItem[];
   activity: ActivityItem[];
-  checklist: ChecklistItem[];
-  bookingLink: string;
 };
-
-function statusBadgeVariant(
-  status: ScheduleStatus
-): "default" | "secondary" | "outline" {
-  switch (status) {
-    case "in_progress":
-      return "default";
-    case "completed":
-      return "secondary";
-    default:
-      return "outline";
-  }
-}
-
-function formatTimeRange(startTime: string, endTime: string) {
-  return `${startTime} – ${endTime}`;
-}
-
-function formatScheduleDate(dateValue: string) {
-  const date = new Date(dateValue);
-  if (Number.isNaN(date.getTime())) return "Date TBD";
-  return date.toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
 
 function formatActivityTime(value: string) {
   const date = new Date(value);
@@ -86,62 +29,28 @@ function formatActivityTime(value: string) {
   });
 }
 
-function BookingCard({
-  item,
-  showDate = false,
-  clickable = false,
-}: {
-  item: ScheduleItem;
-  showDate?: boolean;
-  clickable?: boolean;
-}) {
+function EmptyCard({ children }: { children: React.ReactNode }) {
   return (
-    <Card className={cn("relative", clickable && "transition-colors hover:bg-muted/30")}>
-      {clickable ? (
-        <Link
-          href="/dashboard/bookings"
-          scroll={false}
-          className="absolute inset-0 z-0 rounded-xl"
-          aria-label={`View booking for ${item.clientName}`}
-        />
-      ) : null}
-      <CardHeader className="relative z-10 space-y-2 pb-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-muted-foreground">
-              {showDate ? `${formatScheduleDate(item.date)} · ` : null}
-              {formatTimeRange(item.startTime, item.endTime)}
-            </p>
-            <CardTitle className="truncate text-base">{item.clientName}</CardTitle>
-            <CardDescription className="truncate">
-              {item.packageName}
-              {item.sessionName ? ` · ${item.sessionName}` : ""}
-            </CardDescription>
-          </div>
-          <Badge variant={statusBadgeVariant(item.scheduleStatus)}>
-            {scheduleStatusLabel(item.scheduleStatus)}
-          </Badge>
-        </div>
-        {item.location ? (
-          <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-            <IconMapPin className="mt-0.5 size-4 shrink-0" />
-            <span className="line-clamp-2">
-              {formatLocationAddress(item.location)}
-            </span>
-          </p>
-        ) : null}
-      </CardHeader>
-      <CardContent className="relative z-10 flex flex-col gap-2 pt-0 sm:flex-row">
-        <Button asChild variant="outline" size="lg" className="min-h-11 flex-1">
-          <Link href="/dashboard/bookings" scroll={false}>View Details</Link>
-        </Button>
-        <NavigateButton
-          lat={item.location?.lat ?? 0}
-          lng={item.location?.lng ?? 0}
-          disabled={!item.location?.navigable}
-        />
-      </CardContent>
-    </Card>
+    <div
+      className={cn(
+        glassCardClassName,
+        "px-4 py-8 text-center text-sm text-muted-foreground"
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SeeMoreLink({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      scroll={false}
+      className="block px-4 py-3 text-center text-sm font-medium text-primary hover:underline"
+    >
+      See more
+    </Link>
   );
 }
 
@@ -150,43 +59,16 @@ export function DashboardHome({
   firstName,
   upcomingThisWeek,
   todaysSchedule,
-  nextUpcoming,
-  summary,
-  outstanding,
+  upcoming,
+  completed,
   activity,
-  checklist,
-  bookingLink,
 }: DashboardHomeProps) {
-  const [shareMessage, setShareMessage] = useState<string | null>(null);
-  const incompleteChecklist = checklist.filter((item) => !item.done);
-  const showChecklist = incompleteChecklist.length > 0;
-
-  async function handleShareLink() {
-    setShareMessage(null);
-    try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "Book with me",
-          text: "Book your appointment",
-          url: bookingLink,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(bookingLink);
-      setShareMessage("Booking link copied.");
-    } catch {
-      try {
-        await navigator.clipboard.writeText(bookingLink);
-        setShareMessage("Booking link copied.");
-      } catch {
-        setShareMessage("Could not share link.");
-      }
-    }
-  }
+  const showToday = todaysSchedule.length > 0;
+  const bookings = showToday ? todaysSchedule : upcoming;
 
   return (
     <div className="flex flex-col gap-6 px-4 lg:px-6">
-      <section>
+      <section className="pr-12">
         <h2 className="text-xl font-semibold tracking-tight">
           {greeting}, {firstName}
         </h2>
@@ -197,200 +79,77 @@ export function DashboardHome({
       </section>
 
       <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">Quick actions</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <Button
-            type="button"
-            size="lg"
-            className="h-auto min-h-14 flex-col gap-1 py-3"
-            onClick={handleShareLink}
-            disabled={!bookingLink}
-          >
-            <IconLink className="size-5" />
-            <span>Share Booking Link</span>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="h-auto min-h-14 flex-col gap-1 py-3"
-          >
-            <Link href="/dashboard/bookings" scroll={false}>
-              <IconCalendarPlus className="size-5" />
-              <span>New Booking</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="h-auto min-h-14 flex-col gap-1 py-3"
-          >
-            <Link href="/dashboard/bookings" scroll={false}>
-              <IconCalendar className="size-5" />
-              <span>View Bookings</span>
-            </Link>
-          </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="lg"
-            className="h-auto min-h-14 flex-col gap-1 py-3"
-          >
-            <Link href="/dashboard/packages" scroll={false}>
-              <IconBoxMultiple className="size-5" />
-              <span>Manage Packages</span>
-            </Link>
-          </Button>
-        </div>
-        {shareMessage ? (
-          <p className="text-sm text-muted-foreground">{shareMessage}</p>
-        ) : null}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <div>
-          <h3 className="text-sm font-medium">Today&apos;s schedule</h3>
-          <p className="text-sm text-muted-foreground">
-            Your appointments for today, in order.
-          </p>
-        </div>
-        {todaysSchedule.length === 0 ? (
-          <Card>
-            <CardContent className="py-8 text-center text-sm text-muted-foreground">
-              Nothing scheduled today. Enjoy your free day.
-            </CardContent>
-          </Card>
+        <h3 className="text-sm font-medium">
+          {showToday ? "Today's bookings" : "Upcoming bookings"}
+        </h3>
+        {bookings.length === 0 ? (
+          <EmptyCard>No upcoming bookings.</EmptyCard>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {todaysSchedule.map((item) => (
-              <li key={`${item.bookingId}-${item.startsAtMs}`}>
-                <BookingCard item={item} />
-              </li>
-            ))}
-          </ul>
+          <BookingCarousel
+            items={bookings}
+            showDate={!showToday}
+            seeMoreHref="/dashboard/bookings"
+          />
         )}
       </section>
 
       <section className="flex flex-col gap-3">
-        <div>
-          <h3 className="text-sm font-medium">Next upcoming booking</h3>
-          <p className="text-sm text-muted-foreground">
-            The next session after today.
-          </p>
-        </div>
-        {nextUpcoming ? (
-          <BookingCard item={nextUpcoming} showDate clickable />
+        <h3 className="text-sm font-medium">Completed bookings</h3>
+        {completed.length === 0 ? (
+          <EmptyCard>No completed bookings yet.</EmptyCard>
         ) : (
-          <Card>
-            <CardContent className="py-6 text-sm text-muted-foreground">
-              No upcoming bookings after today.
-            </CardContent>
-          </Card>
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">Booking summary</h3>
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Today", value: summary.today },
-            { label: "This week", value: summary.thisWeek },
-            { label: "This month", value: summary.thisMonth },
-          ].map((stat) => (
-            <Card key={stat.label}>
-              <CardContent className="px-3 py-4 text-center">
-                <p className="text-2xl font-semibold tabular-nums">{stat.value}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{stat.label}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      <section>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Outstanding payments</CardTitle>
-            <CardDescription>
-              Balances still due from confirmed bookings.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
-            <div>
-              <p className="text-2xl font-semibold tabular-nums">
-                {formatRm(outstanding.totalRm)}
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {outstanding.clientCount} client
-                {outstanding.clientCount === 1 ? "" : "s"} with pending payments
-              </p>
+          <div className={cn(glassCardClassName, "overflow-hidden")}>
+            <ul className="divide-y divide-white/50 dark:divide-white/10">
+              {completed.map((item) => (
+                <li key={`${item.bookingId}-${item.startsAtMs}`}>
+                  <Link
+                    href="/dashboard/bookings"
+                    scroll={false}
+                    className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/30 dark:hover:bg-white/5"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">
+                        {item.clientName}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        {item.packageName}
+                        {item.sessionName ? ` · ${item.sessionName}` : ""}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-xs text-muted-foreground">
+                      {formatScheduleDate(item.date)}
+                    </p>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+            <div className="border-t border-white/50 dark:border-white/10">
+              <SeeMoreLink href="/dashboard/bookings?status=completed" />
             </div>
-            <Button asChild variant="outline" className="w-full sm:w-fit">
-              <Link href="/dashboard/bookings" scroll={false}>View pending payments</Link>
-            </Button>
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </section>
 
       <section className="flex flex-col gap-3">
         <h3 className="text-sm font-medium">Recent activity</h3>
-        <Card>
-          <CardContent className="divide-y p-0">
-            {activity.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-muted-foreground">
-                No recent activity yet.
-              </p>
-            ) : (
-              activity.map((item) => (
-                <div key={item.id} className="flex flex-col gap-0.5 px-4 py-3">
+        {activity.length === 0 ? (
+          <EmptyCard>No recent activity yet.</EmptyCard>
+        ) : (
+          <div className={glassCardClassName}>
+            <ul className="divide-y divide-white/50 dark:divide-white/10">
+              {activity.map((item) => (
+                <li key={item.id} className="flex flex-col gap-0.5 px-4 py-3">
                   <p className="text-sm font-medium">{item.label}</p>
                   <p className="text-sm text-muted-foreground">{item.detail}</p>
                   <p className="text-xs text-muted-foreground">
                     {formatActivityTime(item.at)}
                   </p>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-      </section>
-
-      {showChecklist ? (
-        <section className="flex flex-col gap-3">
-          <div>
-            <h3 className="text-sm font-medium">Setup checklist</h3>
-            <p className="text-sm text-muted-foreground">
-              Finish these to get the most from Bridalync.
-            </p>
-          </div>
-          <Card>
-            <CardContent className="flex flex-col gap-1 p-2">
-              {checklist.map((item) => (
-                <Link
-                  key={item.id}
-                  href={item.href}
-                  scroll={false}
-                  className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm transition-colors hover:bg-muted/60"
-                >
-                  {item.done ? (
-                    <IconCheck className="size-4 text-primary" />
-                  ) : (
-                    <IconCircle className="size-4 text-muted-foreground" />
-                  )}
-                  <span
-                    className={cn(
-                      item.done && "text-muted-foreground line-through"
-                    )}
-                  >
-                    {item.label}
-                  </span>
-                </Link>
+                </li>
               ))}
-            </CardContent>
-          </Card>
-        </section>
-      ) : null}
+            </ul>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

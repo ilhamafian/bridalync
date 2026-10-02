@@ -48,42 +48,23 @@ function HomeSkeleton() {
       </section>
 
       <section className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-4 w-36" />
-          <Skeleton className="h-4 w-52 max-w-full" />
+        <Skeleton className="h-4 w-36" />
+        <Skeleton className="h-48 w-full rounded-2xl" />
+        <div className="flex justify-center gap-1.5">
+          <Skeleton className="h-1.5 w-4 rounded-full" />
+          <Skeleton className="size-1.5 rounded-full" />
+          <Skeleton className="size-1.5 rounded-full" />
         </div>
-        <CardRowSkeleton />
-        <CardRowSkeleton />
       </section>
 
       <section className="flex flex-col gap-3">
-        <div className="flex flex-col gap-2">
-          <Skeleton className="h-4 w-44" />
-          <Skeleton className="h-4 w-40" />
-        </div>
-        <CardRowSkeleton />
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-48 w-full rounded-2xl" />
       </section>
 
       <section className="flex flex-col gap-3">
         <Skeleton className="h-4 w-32" />
-        <div className="grid grid-cols-3 gap-3">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div
-              key={index}
-              className="rounded-xl border border-border px-3 py-4"
-            >
-              <Skeleton className="mx-auto h-8 w-10" />
-              <Skeleton className="mx-auto mt-2 h-3 w-14" />
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="rounded-xl border border-border p-4">
-        <Skeleton className="h-5 w-44" />
-        <Skeleton className="mt-3 h-8 w-28" />
-        <Skeleton className="mt-2 h-4 w-48 max-w-full" />
-        <Skeleton className="mt-4 h-9 w-40" />
+        <Skeleton className="h-56 w-full rounded-2xl" />
       </section>
     </div>
   );

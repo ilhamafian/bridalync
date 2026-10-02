@@ -129,6 +129,14 @@
   --sidebar-ring: oklch(0.58 0.031 107.3);
 }
 
+/* Dashboard uses the client booking page's rose-800 accent. Scoped on .app-shell
+   so portaled sheets/dialogs inside the shell pick it up too. */
+.app-shell:has(.dashboard-theme) {
+  --primary: oklch(0.455 0.188 13.697);
+  --primary-foreground: oklch(1 0 0);
+  --ring: oklch(0.455 0.188 13.697);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

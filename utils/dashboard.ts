@@ -225,6 +225,27 @@ export function getNextUpcomingBooking(
   );
 }
 
+export function getUpcomingBookings(
+  items: ScheduleItem[],
+  now = new Date(),
+  limit = 3
+) {
+  const endToday = endOfDay(now).getTime();
+  return items
+    .filter(
+      (item) =>
+        item.startsAtMs > endToday && item.scheduleStatus !== "completed"
+    )
+    .slice(0, limit);
+}
+
+export function getRecentCompletedBookings(items: ScheduleItem[], limit = 3) {
+  return items
+    .filter((item) => item.scheduleStatus === "completed")
+    .sort((a, b) => b.endsAtMs - a.endsAtMs)
+    .slice(0, limit);
+}
+
 export function countUpcomingThisWeek(items: ScheduleItem[], now = new Date()) {
   const { start, end } = getWeekRange(now);
   const bookingIds = new Set<string>();

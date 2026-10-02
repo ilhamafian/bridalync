@@ -54,7 +54,7 @@ export default async function DashboardLayout({
 
   return (
     <TooltipProvider>
-      <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="dashboard-theme relative flex h-full min-h-0 flex-col overflow-hidden">
         <AnimatedFlow
           variant="blush"
           flowSpeed={0.9}

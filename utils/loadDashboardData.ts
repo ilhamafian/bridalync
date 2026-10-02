@@ -23,19 +23,16 @@ import {
 } from "@/schemas/settingSchema";
 import type { Style } from "@/schemas/styleSchema";
 import type { SessionUser } from "@/schemas/userSchema";
-import { buildProfileUrl, getAppUrl } from "@/utils/appUrl";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import {
   countUpcomingThisWeek,
   flattenScheduleItems,
-  getBookingSummary,
   getFirstName,
   getGreeting,
-  getNextUpcomingBooking,
-  getOutstandingPayments,
   getRecentActivity,
-  getSetupChecklist,
+  getRecentCompletedBookings,
   getTodaysSchedule,
+  getUpcomingBookings,
 } from "@/utils/dashboard";
 import type { DashboardData } from "@/utils/dashboardShell";
 
@@ -99,15 +96,6 @@ export async function loadDashboardData(
   const payment = paymentSettingSchema.parse(settings.payment ?? {});
   const invoice = invoiceSettingSchema.parse(settings.invoice ?? {});
 
-  let bookingLink = "";
-  if (user.username) {
-    try {
-      bookingLink = buildProfileUrl(getAppUrl(), user.username);
-    } catch {
-      bookingLink = `/${user.username}`;
-    }
-  }
-
   const username = user.username ?? "";
 
   return {
@@ -116,16 +104,9 @@ export async function loadDashboardData(
       firstName: getFirstName(user.name),
       upcomingThisWeek: countUpcomingThisWeek(scheduleItems, now),
       todaysSchedule: getTodaysSchedule(scheduleItems, now),
-      nextUpcoming: getNextUpcomingBooking(scheduleItems, now),
-      summary: getBookingSummary(scheduleItems, now),
-      outstanding: getOutstandingPayments(serializedBookings),
+      upcoming: getUpcomingBookings(scheduleItems, now, 3),
+      completed: getRecentCompletedBookings(scheduleItems, 3),
       activity: getRecentActivity(serializedBookings, 5),
-      checklist: getSetupChecklist({
-        packageCount: packages.length,
-        timeSlotCount: timeSlots.length,
-        hasUsername: Boolean(user.username?.trim()),
-      }),
-      bookingLink,
     },
     bookings: {
       initialBookings: serializedBookings,
