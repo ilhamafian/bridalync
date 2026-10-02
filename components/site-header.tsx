@@ -14,13 +14,12 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="relative flex h-14 shrink-0 items-center justify-between gap-3 px-4">
-      <div />
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end px-4">
       <Link
         href="/dashboard/notifications"
         scroll={false}
         prefetch
-        className="flex size-10 items-center justify-center rounded-full border border-zinc-900/10 bg-white/40 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-white/55 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
+        className="pointer-events-auto flex size-10 items-center justify-center rounded-full border border-zinc-900/10 bg-white/40 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-white/55 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
       >
         <IconBell className="size-5" aria-hidden />
         <span className="sr-only">Notifications</span>
