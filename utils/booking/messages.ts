@@ -17,6 +17,20 @@ export function buildWhatsAppUrl(
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
+export function buildReviewRequestMessage(input: {
+  clientName: string;
+  freelancerName: string;
+  reviewUrl: string;
+}) {
+  const firstName = input.clientName.trim().split(/\s+/)[0] || "there";
+  return [
+    `Hi ${firstName}, thank you so much for choosing ${input.freelancerName}! It was a pleasure being part of your special day.`,
+    "",
+    `If you have a moment, I'd love to hear about your experience. You can leave a review here:`,
+    input.reviewUrl,
+  ].join("\n");
+}
+
 function formatClientPhone(contact: PublicBooking["contact"]) {
   if (contact.mobile) {
     const prefix = contact.country_code ? `${contact.country_code} ` : "";

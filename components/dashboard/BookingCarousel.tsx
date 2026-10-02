@@ -7,14 +7,17 @@ import { HomeBookingCard } from "@/components/dashboard/HomeBookingCard";
 import { cn } from "@/lib/utils";
 import type { ScheduleItem } from "@/utils/dashboard";
 
-export function BookingCarousel({
+export function BookingCarousel<T extends ScheduleItem>({
   items,
   showDate = false,
   seeMoreHref,
+  renderAction,
 }: {
-  items: ScheduleItem[];
+  items: T[];
   showDate?: boolean;
   seeMoreHref: string;
+  /** Replaces the default Navigate button on each card. */
+  renderAction?: (item: T) => React.ReactNode;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -45,6 +48,7 @@ export function BookingCarousel({
             key={`${item.bookingId}-${item.startsAtMs}`}
             item={item}
             showDate={showDate}
+            action={renderAction?.(item)}
             className="w-full shrink-0 snap-start"
           />
         ))}

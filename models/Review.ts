@@ -22,6 +22,15 @@ class ReviewModel extends ModelBase<Review> {
     );
   }
 
+  async findReviewedBookingIds(freelancerUserId: string): Promise<string[]> {
+    const collection = await this.getCollection();
+    const ids = await collection.distinct("bookingId", {
+      freelancerUserId,
+      bookingId: { $exists: true },
+    });
+    return ids.filter((id): id is string => typeof id === "string");
+  }
+
   async ensureIndexes() {
     const collection = await this.getCollection();
     try {

@@ -23,9 +23,15 @@ import {
 } from "@/schemas/settingSchema";
 import type { Style } from "@/schemas/styleSchema";
 import type { SessionUser } from "@/schemas/userSchema";
+import { buildReviewUrl, getAppUrl } from "@/utils/appUrl";
+import {
+  buildReviewRequestMessage,
+  buildWhatsAppUrl,
+} from "@/utils/booking/messages";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import {
   countUpcomingThisWeek,
+  type CompletedScheduleItem,
   flattenScheduleItems,
   getFirstName,
   getGreeting,
@@ -70,8 +76,15 @@ export async function loadDashboardData(
   const userId = toIdString(user._id);
   if (!userId) return null;
 
-  const [bookings, packages, styles, addOns, settings, reviewDocs] =
-    await Promise.all([
+  const [
+    bookings,
+    packages,
+    styles,
+    addOns,
+    settings,
+    reviewDocs,
+    reviewedBookingIdList,
+  ] = await Promise.all([
       bookingModel.find(
         { freelancerUserId: userId },
         { sort: { created_at: -1 } }
@@ -81,6 +94,7 @@ export async function loadDashboardData(
       new AddOnModel().find({ user_id: userId }, { sort: { order: 1 } }),
       new SettingModel().findSettingsByUserId(userId),
       reviewModel.findByFreelancerUserId(userId, 100),
+      reviewModel.findReviewedBookingIds(userId),
     ]);
 
   if (!settings) return null;
@@ -98,6 +112,35 @@ export async function loadDashboardData(
 
   const username = user.username ?? "";
 
+  let appUrl: string | null = null;
+  try {
+    appUrl = getAppUrl();
+  } catch {
+    appUrl = null;
+  }
+  const freelancerName = user.name?.trim() || username || "us";
+  const reviewedBookingIds = new Set(reviewedBookingIdList);
+  const completed: CompletedScheduleItem[] = getRecentCompletedBookings(
+    scheduleItems,
+    3,
+    reviewedBookingIds
+  ).map((item) => {
+    const { clientCountryCode, clientMobile } = item;
+    const leaveReviewUrl =
+      appUrl && username && clientCountryCode && clientMobile
+        ? buildWhatsAppUrl(
+            clientCountryCode,
+            clientMobile,
+            buildReviewRequestMessage({
+              clientName: item.clientName,
+              freelancerName,
+              reviewUrl: buildReviewUrl(appUrl, username, item.bookingId),
+            })
+          )
+        : null;
+    return { ...item, leaveReviewUrl };
+  });
+
   return {
     home: {
       greeting: getGreeting(now),
@@ -105,7 +148,7 @@ export async function loadDashboardData(
       upcomingThisWeek: countUpcomingThisWeek(scheduleItems, now),
       todaysSchedule: getTodaysSchedule(scheduleItems, now),
       upcoming: getUpcomingBookings(scheduleItems, now, 3),
-      completed: getRecentCompletedBookings(scheduleItems, 3),
+      completed,
       activity: getRecentActivity(serializedBookings, 5),
     },
     bookings: {

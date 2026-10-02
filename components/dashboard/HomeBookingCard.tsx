@@ -3,7 +3,6 @@ import { IconMapPin } from "@tabler/icons-react";
 
 import { NavigateButton } from "@/components/dashboard/NavigateButton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatLocationAddress } from "@/utils/session";
 import {
@@ -41,15 +40,32 @@ export function formatScheduleDate(dateValue: string) {
 export function HomeBookingCard({
   item,
   showDate = false,
+  href = "/dashboard/bookings",
+  action,
   className,
 }: {
   item: ScheduleItem;
   showDate?: boolean;
+  href?: string;
+  /** Bottom-right action; defaults to the Navigate button. */
+  action?: React.ReactNode;
   className?: string;
 }) {
   return (
-    <div className={cn(glassCardClassName, "flex flex-col gap-4 p-4", className)}>
-      <div className="flex items-start justify-between gap-3">
+    <div
+      className={cn(
+        glassCardClassName,
+        "relative flex flex-col gap-4 p-4 transition-colors hover:bg-white/40 dark:hover:bg-white/15",
+        className
+      )}
+    >
+      <Link
+        href={href}
+        scroll={false}
+        className="absolute inset-0 rounded-2xl"
+        aria-label={`View booking for ${item.clientName}`}
+      />
+      <div className="pointer-events-none relative flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-medium text-muted-foreground">
             {showDate ? `${formatScheduleDate(item.date)} · ` : null}
@@ -65,30 +81,25 @@ export function HomeBookingCard({
           {scheduleStatusLabel(item.scheduleStatus)}
         </Badge>
       </div>
-      {item.location ? (
-        <p className="flex items-start gap-1.5 text-sm text-muted-foreground">
-          <IconMapPin className="mt-0.5 size-4 shrink-0" />
-          <span className="line-clamp-2">
-            {formatLocationAddress(item.location)}
-          </span>
-        </p>
-      ) : null}
-      <div className="mt-auto flex gap-2">
-        <Button
-          asChild
-          variant="outline"
-          size="lg"
-          className="min-h-11 flex-1 border-white/60 bg-white/40 hover:bg-white/60 dark:border-white/15 dark:bg-white/10 dark:hover:bg-white/15"
-        >
-          <Link href="/dashboard/bookings" scroll={false}>
-            View details
-          </Link>
-        </Button>
-        <NavigateButton
-          lat={item.location?.lat ?? 0}
-          lng={item.location?.lng ?? 0}
-          disabled={!item.location?.navigable}
-        />
+      <div className="relative mt-auto flex items-end justify-between gap-3">
+        {item.location ? (
+          <p className="pointer-events-none flex min-w-0 items-start gap-1.5 text-sm text-muted-foreground">
+            <IconMapPin className="mt-0.5 size-4 shrink-0" />
+            <span className="line-clamp-2">
+              {formatLocationAddress(item.location)}
+            </span>
+          </p>
+        ) : (
+          <span />
+        )}
+        {action ?? (
+          <NavigateButton
+            lat={item.location?.lat ?? 0}
+            lng={item.location?.lng ?? 0}
+            disabled={!item.location?.navigable}
+            className="flex-none px-4"
+          />
+        )}
       </div>
     </div>
   );

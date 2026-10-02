@@ -180,6 +180,26 @@ export const ms = {
   balanceDueBefore: "Baki perlu dibayar {days} hari sebelum sesi anda.",
   noLineItems: "Tiada item baris.",
   noLineItemsYet: "Tiada item baris lagi.",
+
+  // Booking review
+  reviewTitle: "Bagaimana pengalaman anda bersama {name}?",
+  reviewSubtitle:
+    "Ulasan anda membantu {name} berkembang dan membantu bakal pengantin lain membuat pilihan.",
+  reviewPlaceholder: "Kongsi pengalaman anda…",
+  reviewSubmit: "Hantar ulasan",
+  reviewSubmitting: "Menghantar…",
+  reviewThanksTitle: "Terima kasih!",
+  reviewThanksBody: "Ulasan anda telah dihantar kepada {name}.",
+  reviewAlreadySubmitted: "Ulasan untuk tempahan ini telah pun dihantar. Terima kasih!",
+  reviewNotAvailable: "Tempahan ini belum boleh diulas.",
+  reviewCouldNotSubmit: "Ulasan tidak dapat dihantar. Sila cuba lagi.",
+  reviewRequired: "Sila tulis ulasan ringkas.",
+  reviewingAs: "Mengulas sebagai {name}",
+  reviewAddPhotos: "Tambah foto ({count}/{max})",
+  reviewUploadingPhotos: "Memuat naik…",
+  reviewRemovePhoto: "Buang foto",
+  reviewPhotoLimit: "Anda boleh memuat naik sehingga {max} foto.",
+  reviewPhotoUploadFailed: "Foto tidak dapat dimuat naik.",
 };
 
 export type Locale = typeof ms;

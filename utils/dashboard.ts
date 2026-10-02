@@ -27,6 +27,13 @@ export type ScheduleItem = {
   location: ScheduleLocation | null;
   startsAtMs: number;
   endsAtMs: number;
+  clientCountryCode?: string;
+  clientMobile?: string;
+};
+
+export type CompletedScheduleItem = ScheduleItem & {
+  /** WhatsApp link with a pre-filled thank-you message and review link. */
+  leaveReviewUrl: string | null;
 };
 
 export type ActivityItem = {
@@ -193,6 +200,8 @@ export function flattenScheduleItems(
         location: toScheduleLocation(session.location),
         startsAtMs: startsAt.getTime(),
         endsAtMs: endsAt.getTime(),
+        clientCountryCode: booking.contact.country_code,
+        clientMobile: booking.contact.mobile,
       });
     }
   }
@@ -239,10 +248,25 @@ export function getUpcomingBookings(
     .slice(0, limit);
 }
 
-export function getRecentCompletedBookings(items: ScheduleItem[], limit = 3) {
+/** Most recently finished bookings, one entry per booking (latest session). */
+export function getRecentCompletedBookings(
+  items: ScheduleItem[],
+  limit = 3,
+  excludeBookingIds: ReadonlySet<string> = new Set()
+) {
+  const seen = new Set<string>();
   return items
-    .filter((item) => item.scheduleStatus === "completed")
+    .filter(
+      (item) =>
+        item.scheduleStatus === "completed" &&
+        !excludeBookingIds.has(item.bookingId)
+    )
     .sort((a, b) => b.endsAtMs - a.endsAtMs)
+    .filter((item) => {
+      if (seen.has(item.bookingId)) return false;
+      seen.add(item.bookingId);
+      return true;
+    })
     .slice(0, limit);
 }
 

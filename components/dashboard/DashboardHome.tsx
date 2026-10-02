@@ -1,12 +1,16 @@
-import Link from "next/link";
+"use client";
+
+import { IconBrandWhatsapp } from "@tabler/icons-react";
 
 import { BookingCarousel } from "@/components/dashboard/BookingCarousel";
-import {
-  formatScheduleDate,
-  glassCardClassName,
-} from "@/components/dashboard/HomeBookingCard";
+import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { ActivityItem, ScheduleItem } from "@/utils/dashboard";
+import type {
+  ActivityItem,
+  CompletedScheduleItem,
+  ScheduleItem,
+} from "@/utils/dashboard";
 
 export type DashboardHomeProps = {
   greeting: string;
@@ -14,9 +18,34 @@ export type DashboardHomeProps = {
   upcomingThisWeek: number;
   todaysSchedule: ScheduleItem[];
   upcoming: ScheduleItem[];
-  completed: ScheduleItem[];
+  completed: CompletedScheduleItem[];
   activity: ActivityItem[];
 };
+
+function LeaveReviewButton({ item }: { item: CompletedScheduleItem }) {
+  if (!item.leaveReviewUrl) {
+    return (
+      <Button
+        size="lg"
+        className="min-h-11 flex-none gap-2 px-4"
+        disabled
+        title="This client has no phone number"
+      >
+        <IconBrandWhatsapp className="size-5" />
+        Leave Review
+      </Button>
+    );
+  }
+
+  return (
+    <Button asChild size="lg" className="min-h-11 flex-none gap-2 px-4">
+      <a href={item.leaveReviewUrl} target="_blank" rel="noopener noreferrer">
+        <IconBrandWhatsapp className="size-5" />
+        Leave Review
+      </a>
+    </Button>
+  );
+}
 
 function formatActivityTime(value: string) {
   const date = new Date(value);
@@ -39,18 +68,6 @@ function EmptyCard({ children }: { children: React.ReactNode }) {
     >
       {children}
     </div>
-  );
-}
-
-function SeeMoreLink({ href }: { href: string }) {
-  return (
-    <Link
-      href={href}
-      scroll={false}
-      className="block px-4 py-3 text-center text-sm font-medium text-primary hover:underline"
-    >
-      See more
-    </Link>
   );
 }
 
@@ -98,35 +115,12 @@ export function DashboardHome({
         {completed.length === 0 ? (
           <EmptyCard>No completed bookings yet.</EmptyCard>
         ) : (
-          <div className={cn(glassCardClassName, "overflow-hidden")}>
-            <ul className="divide-y divide-white/50 dark:divide-white/10">
-              {completed.map((item) => (
-                <li key={`${item.bookingId}-${item.startsAtMs}`}>
-                  <Link
-                    href="/dashboard/bookings"
-                    scroll={false}
-                    className="flex items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-white/30 dark:hover:bg-white/5"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">
-                        {item.clientName}
-                      </p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {item.packageName}
-                        {item.sessionName ? ` · ${item.sessionName}` : ""}
-                      </p>
-                    </div>
-                    <p className="shrink-0 text-xs text-muted-foreground">
-                      {formatScheduleDate(item.date)}
-                    </p>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <div className="border-t border-white/50 dark:border-white/10">
-              <SeeMoreLink href="/dashboard/bookings?status=completed" />
-            </div>
-          </div>
+          <BookingCarousel
+            items={completed}
+            showDate
+            seeMoreHref="/dashboard/bookings?status=completed"
+            renderAction={(item) => <LeaveReviewButton item={item} />}
+          />
         )}
       </section>
 

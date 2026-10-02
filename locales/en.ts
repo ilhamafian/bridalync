@@ -183,4 +183,24 @@ export const en: Locale = {
   balanceDueBefore: "Balance due {days} {days, day, days} before your session.",
   noLineItems: "No line items.",
   noLineItemsYet: "No line items yet.",
+
+  // Booking review
+  reviewTitle: "How was your experience with {name}?",
+  reviewSubtitle:
+    "Your review helps {name} grow and helps other brides decide.",
+  reviewPlaceholder: "Share your experience…",
+  reviewSubmit: "Submit review",
+  reviewSubmitting: "Submitting…",
+  reviewThanksTitle: "Thank you!",
+  reviewThanksBody: "Your review has been sent to {name}.",
+  reviewAlreadySubmitted: "A review for this booking was already submitted. Thank you!",
+  reviewNotAvailable: "This booking can't be reviewed yet.",
+  reviewCouldNotSubmit: "Could not submit your review. Please try again.",
+  reviewRequired: "Please write a short review.",
+  reviewingAs: "Reviewing as {name}",
+  reviewAddPhotos: "Add photos ({count}/{max})",
+  reviewUploadingPhotos: "Uploading…",
+  reviewRemovePhoto: "Remove photo",
+  reviewPhotoLimit: "You can upload up to {max} photos.",
+  reviewPhotoUploadFailed: "Could not upload photo.",
 };
