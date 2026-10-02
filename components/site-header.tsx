@@ -1,72 +1,30 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconExternalLink, IconUser } from "@tabler/icons-react";
+import { IconBell } from "@tabler/icons-react";
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { getDashboardSection, NAVBAR_SECTIONS } from "@/utils/dashboardShell";
 
-export function SiteHeader({
-  profilePreviewUrl,
-  profileName,
-  profilePhotoUrl,
-}: {
-  profilePreviewUrl?: string | null;
-  profileName?: string | null;
-  profilePhotoUrl?: string | null;
-}) {
+export function SiteHeader() {
   const pathname = usePathname();
-  const isProfileActive = pathname.startsWith("/dashboard/profile");
-  const displayName = profileName?.trim() || "Profile";
-  const photoUrl = profilePhotoUrl?.trim() || "";
-  const initials = displayName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
+
+  if (!NAVBAR_SECTIONS.includes(getDashboardSection(pathname))) {
+    return null;
+  }
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b px-4">
+    <header className="relative flex h-14 shrink-0 items-center justify-between gap-3 px-4">
+      <div />
       <Link
-        href="/dashboard/profile"
+        href="/dashboard/notifications"
         scroll={false}
         prefetch
-        className={cn(
-          "flex min-w-0 items-center gap-2 rounded-full py-1 pr-2 transition-colors",
-          isProfileActive
-            ? "bg-primary/10 text-primary"
-            : "text-foreground hover:bg-muted"
-        )}
+        className="flex size-10 items-center justify-center rounded-full border border-zinc-900/10 bg-white/40 text-foreground shadow-sm backdrop-blur-sm transition-colors hover:bg-white/55 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
       >
-        <span className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted text-xs font-medium text-muted-foreground">
-          {photoUrl ? (
-            <Image
-              src={photoUrl}
-              alt=""
-              fill
-              className="object-cover"
-              sizes="32px"
-            />
-          ) : initials ? (
-            <span aria-hidden>{initials}</span>
-          ) : (
-            <IconUser className="size-4" aria-hidden />
-          )}
-        </span>
-        <span className="truncate text-sm font-medium">{displayName}</span>
-        <span className="sr-only">Profile</span>
+        <IconBell className="size-5" aria-hidden />
+        <span className="sr-only">Notifications</span>
       </Link>
-      {profilePreviewUrl ? (
-        <Button asChild variant="outline" size="sm" className="md:hidden">
-          <a href={profilePreviewUrl} target="_blank" rel="noreferrer">
-            Profile preview
-            <IconExternalLink data-icon="inline-end" />
-          </a>
-        </Button>
-      ) : null}
     </header>
   );
 }

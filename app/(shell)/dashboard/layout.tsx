@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
+import { AnimatedFlow } from "@/components/animated-flow";
 import { BottomNav } from "@/components/bottom-nav";
 import { DashboardScrollArea } from "@/components/dashboard/DashboardRefresh";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
@@ -40,12 +41,12 @@ export default async function DashboardLayout({
   }
 
   const username = user.username?.trim() ?? "";
+  let profileUrl: string | null = null;
   let profilePreviewUrl: string | null = null;
   if (username) {
     try {
-      profilePreviewUrl = buildProfilePreviewUrl(
-        buildProfileUrl(getAppUrl(), username)
-      );
+      profileUrl = buildProfileUrl(getAppUrl(), username);
+      profilePreviewUrl = buildProfilePreviewUrl(profileUrl);
     } catch {
       profilePreviewUrl = buildProfilePreviewUrl(`/${username}`);
     }
@@ -53,22 +54,26 @@ export default async function DashboardLayout({
 
   return (
     <TooltipProvider>
-      <div className="flex h-full min-h-0 flex-col">
-        <SiteHeader
-          profilePreviewUrl={profilePreviewUrl}
-          profileName={user.name}
-          profilePhotoUrl={user.profile_photo_url}
+      <div className="relative flex h-full min-h-0 flex-col overflow-hidden">
+        <AnimatedFlow
+          variant="blush"
+          flowSpeed={0.9}
+          distortionWarp={1.4}
+          filmGrain={0.25}
+          rotationAngle={120}
+          className="pointer-events-none absolute inset-0 min-h-0"
         />
+        <SiteHeader />
         <DashboardScrollArea>
           <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+            <div className="flex flex-col gap-4 pt-4 pb-28 md:gap-6 md:pt-6">
               <Suspense fallback={<DashboardSkeleton />}>
                 <DashboardContent user={user} />
               </Suspense>
             </div>
           </div>
         </DashboardScrollArea>
-        <BottomNav />
+        <BottomNav profileUrl={profileUrl} />
       </div>
       {profilePreviewUrl ? (
         <ProfilePreviewAside href={profilePreviewUrl} />

@@ -17,11 +17,24 @@ import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
 export type DashboardSection =
   | "home"
+  | "analytics"
+  | "notifications"
   | "bookings"
   | "packages"
   | "calendar"
+  | "blocked"
+  | "hot-dates"
+  | "booking-period"
   | "settings"
   | "profile";
+
+/** Sections reachable from the bottom navbar; these show the top header. */
+export const NAVBAR_SECTIONS: readonly DashboardSection[] = [
+  "home",
+  "analytics",
+  "settings",
+  "profile",
+];
 
 export type DashboardData = {
   home: DashboardHomeProps;
@@ -51,6 +64,11 @@ export type DashboardData = {
 };
 
 export function getDashboardSection(pathname: string): DashboardSection {
+  if (pathname.startsWith("/dashboard/analytics")) return "analytics";
+  if (pathname.startsWith("/dashboard/notifications")) return "notifications";
+  if (pathname.startsWith("/dashboard/blocked")) return "blocked";
+  if (pathname.startsWith("/dashboard/hot-dates")) return "hot-dates";
+  if (pathname.startsWith("/dashboard/booking-period")) return "booking-period";
   if (pathname.startsWith("/dashboard/bookings")) return "bookings";
   if (pathname.startsWith("/dashboard/packages")) return "packages";
   if (pathname.startsWith("/dashboard/calendar")) return "calendar";

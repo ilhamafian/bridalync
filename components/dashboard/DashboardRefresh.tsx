@@ -78,7 +78,7 @@ export function DashboardScrollArea({ children }: { children: ReactNode }) {
       <main
         ref={scrollRef}
         data-dashboard-scroll=""
-        className="min-h-0 flex-1 overflow-y-auto overscroll-y-none"
+        className="relative min-h-0 flex-1 overflow-y-auto overscroll-y-none"
         style={{ touchAction: "pan-y", WebkitOverflowScrolling: "touch" }}
       >
         <PullToRefresh

@@ -40,6 +40,15 @@ function Section({
   );
 }
 
+function PlaceholderPage({ title }: { title: string }) {
+  return (
+    <div className="flex flex-col gap-2 px-4 lg:px-6">
+      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
+      <p className="text-sm text-muted-foreground">Coming soon.</p>
+    </div>
+  );
+}
+
 export function DashboardShell({ data }: { data: DashboardData }) {
   const pathname = usePathname();
   const active = getDashboardSection(pathname);
@@ -55,6 +64,26 @@ export function DashboardShell({ data }: { data: DashboardData }) {
     <Fragment key={refreshVersion}>
       <Section id="home" active={active}>
         <DashboardHome {...data.home} />
+      </Section>
+
+      <Section id="analytics" active={active}>
+        <PlaceholderPage title="Analytics" />
+      </Section>
+
+      <Section id="notifications" active={active}>
+        <PlaceholderPage title="Notifications" />
+      </Section>
+
+      <Section id="blocked" active={active}>
+        <PlaceholderPage title="Blocked dates & slots" />
+      </Section>
+
+      <Section id="hot-dates" active={active}>
+        <PlaceholderPage title="Hot dates" />
+      </Section>
+
+      <Section id="booking-period" active={active}>
+        <PlaceholderPage title="Booking period" />
       </Section>
 
       <Section id="bookings" active={active}>
