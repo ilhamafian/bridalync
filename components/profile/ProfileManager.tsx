@@ -1,30 +1,46 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useRef, useState } from "react";
-import { IconPhoto, IconTrash, IconUpload } from "@tabler/icons-react";
+import {
+  IconBriefcase,
+  IconChevronRight,
+  IconExternalLink,
+  IconMail,
+  IconPhoto,
+  IconStar,
+  IconTrash,
+  IconUpload,
+} from "@tabler/icons-react";
 
+import { emitProfilePhotoChange } from "@/components/dashboard/profilePhotoEvents";
+import {
+  IconBadge,
+  RowText,
+  SettingsFeedback,
+  SettingsSection,
+  settingsCardClassName,
+  settingsListClassName,
+  settingsRowClassName,
+} from "@/components/dashboard/settings/SettingsUi";
 import {
   DEFAULT_COUNTRY_CODE,
   PhoneNumberInput,
   isValidPhoneNumber,
 } from "@/components/PhoneNumberInput";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { BIO_MAX_LENGTH } from "@/schemas/bio";
-import { compressImageFile } from "@/utils/image/compressClient";
 import { cn } from "@/lib/utils";
+import { BIO_MAX_LENGTH } from "@/schemas/bio";
+import {
+  buildProfilePreviewUrl,
+  buildProfileUrl,
+  formatAppHost,
+} from "@/utils/appUrl";
+import { compressImageFile } from "@/utils/image/compressClient";
 import { formatWhatsAppDisplay } from "@/utils/socialLinks";
 
 export type ProfileSocialLinks = {
@@ -51,7 +67,7 @@ const EMPTY_SOCIALS: ProfileSocialLinks = {
 };
 
 const inputClassName = cn(
-  "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground",
+  "h-10 w-full rounded-md border border-border bg-white/60 px-3 text-sm text-foreground dark:bg-white/5",
   "placeholder:text-muted-foreground",
   "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
 );
@@ -78,10 +94,18 @@ function Field({
   );
 }
 
+function normalizeUsername(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
+}
+
 export function ProfileManager({
   initialProfile,
+  appUrl,
+  reviewCount,
 }: {
   initialProfile: ProfileItem;
+  appUrl: string | null;
+  reviewCount: number;
 }) {
   const [profile, setProfile] = useState(initialProfile);
   const [name, setName] = useState(initialProfile.name);
@@ -100,15 +124,19 @@ export function ProfileManager({
   });
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [loggingOut, setLoggingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
 
-  function normalizeUsername(value: string) {
-    return value.toLowerCase().replace(/[^a-z0-9_-]/g, "");
-  }
+  const busy = saving || uploading;
+  const appHost = appUrl ? formatAppHost(appUrl) : "";
+  const previewUrl = profile.username
+    ? buildProfilePreviewUrl(
+        appUrl
+          ? buildProfileUrl(appUrl, profile.username)
+          : `/${profile.username}`
+      )
+    : null;
 
   function setSocialField(key: keyof ProfileSocialLinks, value: string) {
     setSocials((prev) => ({ ...prev, [key]: value }));
@@ -136,6 +164,7 @@ export function ProfileManager({
       profile_photo_url: saved.profile_photo_url || "",
     }));
     setPhotoUrl(saved.profile_photo_url || "");
+    emitProfilePhotoChange(saved.profile_photo_url || "");
   }
 
   async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -188,7 +217,7 @@ export function ProfileManager({
   }
 
   async function handleRemovePhoto() {
-    if (uploading || saving || loggingOut) return;
+    if (busy) return;
 
     setUploading(true);
     setError(null);
@@ -269,147 +298,115 @@ export function ProfileManager({
       setBio(saved.bio || "");
       setSocials({ ...EMPTY_SOCIALS, ...saved.social_links });
       setSuccess("Profile saved.");
+    } catch {
+      setError("Something went wrong. Please try again.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function handleLogout() {
-    if (loggingOut) return;
-
-    setError(null);
-    setSuccess(null);
-    setLoggingOut(true);
-
-    try {
-      const response = await fetch("/api/auth/logout", { method: "POST" });
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok) {
-        setError(
-          typeof data.error === "string" ? data.error : "Failed to log out."
-        );
-        return;
-      }
-
-      const redirectTo =
-        typeof data.redirectTo === "string" ? data.redirectTo : "/auth";
-      router.push(redirectTo);
-      router.refresh();
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setLoggingOut(false);
-    }
-  }
-
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold">Profile</h2>
-          <p className="text-sm text-muted-foreground">
-            Update how clients find and contact you.
-          </p>
-        </div>
-        <Button
-          type="button"
-          variant="destructive"
-          size="sm"
-          onClick={handleLogout}
-          disabled={saving || loggingOut || uploading}
-          className="shrink-0"
-        >
-          {loggingOut ? "Logging out…" : "Log out"}
-        </Button>
-      </div>
+      <section className="pr-12">
+        <h2 className="text-xl font-semibold tracking-tight">Profile</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Update how clients find and contact you.
+        </p>
+      </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Public profile</CardTitle>
-          <CardDescription>
-            These details appear on your booking page.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Field label="Profile photo">
-            <div className="flex items-center gap-3">
-              <div className="relative size-20 shrink-0 overflow-hidden rounded-full bg-muted">
+      <SettingsSection title="Reviews">
+        <nav aria-label="Reviews" className={settingsListClassName}>
+          <Link
+            href="/dashboard/profile/reviews"
+            scroll={false}
+            className={settingsRowClassName}
+          >
+            <IconBadge icon={IconStar} />
+            <RowText
+              title="View reviews"
+              description={
+                reviewCount === 1
+                  ? "1 review on your public profile"
+                  : `${reviewCount} reviews on your public profile`
+              }
+            />
+            <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
+          </Link>
+        </nav>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Public profile"
+        action={
+          previewUrl ? (
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="text-primary hover:bg-white/40 dark:hover:bg-white/10"
+            >
+              <a href={previewUrl} target="_blank" rel="noreferrer">
+                Preview profile
+                <IconExternalLink data-icon="inline-end" />
+              </a>
+            </Button>
+          ) : null
+        }
+      >
+        <div className={settingsCardClassName}>
+          <div className="flex items-center gap-4">
+            <div className="relative size-20 shrink-0 overflow-hidden rounded-full bg-white/50 ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/15">
+              {photoUrl ? (
+                <Image
+                  src={photoUrl}
+                  alt="Profile photo"
+                  fill
+                  className="object-cover"
+                  sizes="80px"
+                />
+              ) : (
+                <div className="flex size-full items-center justify-center text-muted-foreground">
+                  <IconPhoto className="size-8" />
+                </div>
+              )}
+            </div>
+            <div className="flex min-w-0 flex-col gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  onClick={() => photoInputRef.current?.click()}
+                >
+                  <IconUpload />
+                  {uploading ? "Uploading…" : photoUrl ? "Replace" : "Upload"}
+                </Button>
                 {photoUrl ? (
-                  <Image
-                    src={photoUrl}
-                    alt="Profile photo"
-                    fill
-                    className="object-cover"
-                    sizes="80px"
-                  />
-                ) : (
-                  <div className="flex size-full items-center justify-center text-muted-foreground">
-                    <IconPhoto className="size-8" />
-                  </div>
-                )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    disabled={saving || loggingOut || uploading}
-                    onClick={() => photoInputRef.current?.click()}
+                    disabled={busy}
+                    onClick={() => void handleRemovePhoto()}
                   >
-                    <IconUpload />
-                    {uploading ? "Uploading…" : photoUrl ? "Replace" : "Upload"}
+                    <IconTrash />
+                    Remove
                   </Button>
-                  {photoUrl ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={saving || loggingOut || uploading}
-                      onClick={() => void handleRemovePhoto()}
-                    >
-                      <IconTrash />
-                      Remove
-                    </Button>
-                  ) : null}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  JPEG, PNG, WebP, or GIF. Large images are compressed automatically. Saves automatically.
-                </p>
+                ) : null}
               </div>
-              <input
-                ref={photoInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                className="hidden"
-                onChange={handlePhotoChange}
-              />
+              <p className="text-xs text-muted-foreground">
+                JPEG, PNG, WebP, or GIF. Saves automatically.
+              </p>
             </div>
-          </Field>
-
-          <Field label="Email">
-            <Input
-              className={inputClassName}
-              value={profile.email}
-              disabled
-              readOnly
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={handlePhotoChange}
             />
-            <p className="text-xs text-muted-foreground">
-              Email is used for sign-in and cannot be changed here.
-            </p>
-          </Field>
-
-          {profile.role ? (
-            <Field label="Role">
-              <Input
-                className={inputClassName}
-                value={roleLabel[profile.role]}
-                disabled
-                readOnly
-              />
-            </Field>
-          ) : null}
+          </div>
 
           <Field label="Display name" htmlFor="profile-name">
             <Input
@@ -424,7 +421,7 @@ export function ProfileManager({
           <Field label="Bio" htmlFor="profile-bio">
             <Textarea
               id="profile-bio"
-              className="min-h-20 bg-background px-3 text-sm md:text-sm"
+              className="min-h-20 bg-white/60 px-3 text-sm md:text-sm dark:bg-white/5"
               value={bio}
               onChange={(event) => setBio(event.target.value)}
               maxLength={BIO_MAX_LENGTH}
@@ -440,21 +437,34 @@ export function ProfileManager({
           </Field>
 
           <Field label="Username" htmlFor="profile-username">
-            <Input
-              id="profile-username"
-              className={inputClassName}
-              value={username}
-              onChange={(event) =>
-                setUsername(normalizeUsername(event.target.value))
-              }
-              placeholder="aisha"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-            />
+            <div
+              className={cn(
+                "flex h-10 w-full items-center rounded-md border border-border bg-white/60 text-sm dark:bg-white/5",
+                "focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30"
+              )}
+            >
+              <label
+                htmlFor="profile-username"
+                className="max-w-[60%] shrink-0 truncate pl-3 text-muted-foreground select-none"
+              >
+                {appHost}/
+              </label>
+              <input
+                id="profile-username"
+                className="h-full min-w-0 flex-1 bg-transparent pr-3 text-foreground outline-none placeholder:text-muted-foreground"
+                value={username}
+                onChange={(event) =>
+                  setUsername(normalizeUsername(event.target.value))
+                }
+                placeholder="aisha"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+            </div>
             <p className="text-xs text-muted-foreground">
-              Letters, numbers, hyphens, and underscores. Changing this updates
-              your public booking URL.
+              Letters, numbers, hyphens, and underscores. Changing this changes
+              your public profile link.
             </p>
           </Field>
 
@@ -465,21 +475,15 @@ export function ProfileManager({
               onCountryCodeChange={setCountryCode}
               onMobileChange={setMobile}
               inputClassName={inputClassName}
+              selectTriggerClassName="bg-white/60 dark:bg-white/5"
               mobileInputId="profile-mobile"
             />
           </Field>
-        </CardContent>
-      </Card>
+        </div>
+      </SettingsSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Social links</CardTitle>
-          <CardDescription>
-            Shown on your public profile. Paste a URL or username for Instagram
-            and TikTok.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+      <SettingsSection title="Social links">
+        <div className={settingsCardClassName}>
           <Field label="Instagram" htmlFor="social-instagram">
             <Input
               id="social-instagram"
@@ -512,26 +516,40 @@ export function ProfileManager({
               readOnly
             />
             <p className="text-xs text-muted-foreground">
-              Uses your WhatsApp number above. To change it, update the WhatsApp
-              number in Public profile, then save.
+              Uses your WhatsApp number above.
             </p>
           </Field>
+        </div>
+      </SettingsSection>
 
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          {success ? (
-            <p className="text-sm text-muted-foreground">{success}</p>
+      <SettingsSection title="Account">
+        <div className={settingsListClassName}>
+          <div className={cn(settingsRowClassName, "hover:bg-transparent dark:hover:bg-transparent")}>
+            <IconBadge icon={IconMail} />
+            <RowText
+              title={profile.email}
+              description="Used for sign-in and can't be changed here"
+            />
+          </div>
+          {profile.role ? (
+            <div className={cn(settingsRowClassName, "hover:bg-transparent dark:hover:bg-transparent")}>
+              <IconBadge icon={IconBriefcase} />
+              <RowText title={roleLabel[profile.role]} description="Role" />
+            </div>
           ) : null}
-        </CardContent>
-        <CardFooter>
-          <Button
-            type="button"
-            onClick={handleSave}
-            disabled={saving || loggingOut || uploading}
-          >
-            {saving ? "Saving…" : "Save profile"}
-          </Button>
-        </CardFooter>
-      </Card>
+        </div>
+      </SettingsSection>
+
+      <SettingsFeedback error={error} success={success} />
+      <Button
+        type="button"
+        size="lg"
+        className="min-h-11"
+        onClick={handleSave}
+        disabled={busy}
+      >
+        {saving ? "Saving…" : "Save profile"}
+      </Button>
     </div>
   );
 }

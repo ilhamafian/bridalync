@@ -268,6 +268,7 @@ export async function loadDashboardData(
         },
       },
       initialReviews: reviewDocs.map(toDashboardReview),
+      appUrl,
     },
   };
 }

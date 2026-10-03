@@ -64,6 +64,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
   const [savedBookings, setSavedBookings] = useState<
     Record<string, SerializedBooking>
   >({});
+  const [reviews, setReviews] = useState(data.profile.initialReviews);
   const bookingDetailsId = getBookingDetailsId(pathname);
   const bookingFormTarget = getBookingFormTarget(pathname);
   const settingsCategory = getSettingsCategory(pathname);
@@ -168,12 +169,15 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="profile" active={active}>
-        <div className="flex flex-col gap-6">
-          <ProfileManager initialProfile={data.profile.initialProfile} />
-          <div className="px-4 lg:px-6">
-            <ReviewsManager initialReviews={data.profile.initialReviews} />
-          </div>
-        </div>
+        <ProfileManager
+          initialProfile={data.profile.initialProfile}
+          appUrl={data.profile.appUrl}
+          reviewCount={reviews.length}
+        />
+      </Section>
+
+      <Section id="profile-reviews" active={active}>
+        <ReviewsManager reviews={reviews} onReviewsChange={setReviews} />
       </Section>
     </Fragment>
   );

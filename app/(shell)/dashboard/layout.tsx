@@ -73,7 +73,10 @@ export default async function DashboardLayout({
             </div>
           </div>
         </DashboardScrollArea>
-        <BottomNav profileUrl={profileUrl} />
+        <BottomNav
+          profileUrl={profileUrl}
+          profilePhotoUrl={user.profile_photo_url?.trim() || null}
+        />
       </div>
       {profilePreviewUrl ? (
         <ProfilePreviewAside href={profilePreviewUrl} />

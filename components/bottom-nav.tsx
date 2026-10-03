@@ -1,7 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   IconCash,
   IconHome,
@@ -12,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 
 import { AddActionSheet } from "@/components/dashboard/AddActionSheet";
+import { onProfilePhotoChange } from "@/components/dashboard/profilePhotoEvents";
 import { cn } from "@/lib/utils";
 
 type NavLinkItem = {
@@ -51,7 +54,15 @@ const rightItems: NavLinkItem[] = [
   },
 ];
 
-function NavLink({ item, pathname }: { item: NavLinkItem; pathname: string }) {
+function NavLink({
+  item,
+  pathname,
+  photoUrl,
+}: {
+  item: NavLinkItem;
+  pathname: string;
+  photoUrl?: string;
+}) {
   const isActive = item.match(pathname);
   const Icon = item.icon;
 
@@ -67,17 +78,43 @@ function NavLink({ item, pathname }: { item: NavLinkItem; pathname: string }) {
           : "text-muted-foreground hover:bg-white/40 hover:text-foreground dark:hover:bg-white/10"
       )}
     >
-      <Icon
-        className={cn("size-5", isActive && "stroke-[2.25]")}
-        aria-hidden
-      />
+      {photoUrl ? (
+        <span
+          className={cn(
+            "relative size-7 overflow-hidden rounded-full ring-1 ring-white/60 dark:ring-white/15",
+            isActive && "ring-2 ring-primary dark:ring-primary"
+          )}
+        >
+          <Image
+            src={photoUrl}
+            alt=""
+            fill
+            className="object-cover"
+            sizes="28px"
+          />
+        </span>
+      ) : (
+        <Icon
+          className={cn("size-5", isActive && "stroke-[2.25]")}
+          aria-hidden
+        />
+      )}
       <span className="sr-only">{item.title}</span>
     </Link>
   );
 }
 
-export function BottomNav({ profileUrl }: { profileUrl: string | null }) {
+export function BottomNav({
+  profileUrl,
+  profilePhotoUrl,
+}: {
+  profileUrl: string | null;
+  profilePhotoUrl: string | null;
+}) {
   const pathname = usePathname();
+  const [photoUrl, setPhotoUrl] = useState(profilePhotoUrl ?? "");
+
+  useEffect(() => onProfilePhotoChange(setPhotoUrl), []);
 
   return (
     <nav
@@ -100,7 +137,12 @@ export function BottomNav({ profileUrl }: { profileUrl: string | null }) {
         </AddActionSheet>
 
         {rightItems.map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} />
+          <NavLink
+            key={item.href}
+            item={item}
+            pathname={pathname}
+            photoUrl={item.href === "/dashboard/profile" ? photoUrl : undefined}
+          />
         ))}
       </div>
     </nav>

@@ -29,7 +29,8 @@ export type DashboardSection =
   | "booking-period"
   | "settings"
   | "settings-category"
-  | "profile";
+  | "profile"
+  | "profile-reviews";
 
 export const SETTINGS_CATEGORIES = [
   "pricing-model",
@@ -77,6 +78,7 @@ export type DashboardData = {
   profile: {
     initialProfile: ProfileItem;
     initialReviews: DashboardReview[];
+    appUrl: string | null;
   };
 };
 
@@ -119,6 +121,7 @@ export function getDashboardSection(pathname: string): DashboardSection {
   if (pathname.startsWith("/dashboard/bookings")) return "bookings";
   if (pathname.startsWith("/dashboard/calendar")) return "calendar";
   if (pathname.startsWith("/dashboard/settings")) return "settings";
+  if (pathname.startsWith("/dashboard/profile/reviews")) return "profile-reviews";
   if (pathname.startsWith("/dashboard/profile")) return "profile";
   return "home";
 }
