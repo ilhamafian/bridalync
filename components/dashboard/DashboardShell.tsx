@@ -12,7 +12,6 @@ import { usePathname } from "next/navigation";
 import type { DateRange } from "react-day-picker";
 
 import { BookingsManager } from "@/components/BookingsManager";
-import { BackButton } from "@/components/dashboard/BackButton";
 import { BlockDatesPage } from "@/components/dashboard/blocked/BlockDatesPage";
 import {
   BlockedPage,
@@ -21,6 +20,7 @@ import {
 import { BlockSlotsPage } from "@/components/dashboard/blocked/BlockSlotsPage";
 import { BookingDetailsPage } from "@/components/dashboard/BookingDetailsPage";
 import { BookingFormPage } from "@/components/dashboard/BookingFormPage";
+import { BookingPeriodPage } from "@/components/dashboard/BookingPeriodPage";
 import { useDashboardRefreshVersion } from "@/components/dashboard/DashboardRefresh";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { AddHotDatesPage } from "@/components/dashboard/hot-dates/AddHotDatesPage";
@@ -65,22 +65,6 @@ function Section({
   );
 }
 
-function PlaceholderPage({
-  title,
-  backHref,
-}: {
-  title: string;
-  backHref?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-2 px-4 lg:px-6">
-      {backHref ? <BackButton fallbackHref={backHref} /> : null}
-      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-      <p className="text-sm text-muted-foreground">Coming soon.</p>
-    </div>
-  );
-}
-
 export function DashboardShell({ data }: { data: DashboardData }) {
   const pathname = usePathname();
   const active = getDashboardSection(pathname);
@@ -93,6 +77,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
   const [blockedSlots, setBlockedSlots] = useState(data.blocked.slots);
   const [blockedTab, setBlockedTab] = useState<BlockedTab>("dates");
   const [hotDates, setHotDates] = useState(data.hotDates);
+  const [bookingUntil, setBookingUntil] = useState(data.bookingUntil);
   const [hotDateDraft, setHotDateDraft] = useState<{
     id: number;
     range?: DateRange;
@@ -206,7 +191,10 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="booking-period" active={active}>
-        <PlaceholderPage title="Booking period" />
+        <BookingPeriodPage
+          bookingUntil={bookingUntil}
+          onBookingUntilChange={setBookingUntil}
+        />
       </Section>
 
       <Section id="bookings" active={active}>

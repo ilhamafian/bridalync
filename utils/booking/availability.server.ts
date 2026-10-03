@@ -17,8 +17,8 @@ import {
   isDateBlocked,
 } from "@/utils/booking/blockedDates";
 import {
-  getEffectiveMaxBookingYear,
-  isYearBlocked,
+  getEffectiveBookingUntil,
+  isPastBookingWindow,
 } from "@/utils/booking/bookingWindow";
 
 type SessionSlotInput = {
@@ -67,14 +67,12 @@ export async function assertSessionsAvailable(
   const blockedKeys = buildBlockedDateSet(
     blockedDocs.map((doc) => doc.date)
   );
-  const maxBookingYear = getEffectiveMaxBookingYear(
-    settings?.max_booking_year
-  );
+  const bookingUntil = getEffectiveBookingUntil(settings);
 
   for (const session of sessions) {
-    if (isYearBlocked(session.date, maxBookingYear)) {
+    if (isPastBookingWindow(session.date, bookingUntil)) {
       throw new Error(
-        `${formatDate(session.date)} is outside the open booking year.`
+        `${formatDate(session.date)} is outside the open booking period.`
       );
     }
 

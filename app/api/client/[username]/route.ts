@@ -19,7 +19,10 @@ import {
   getOccupiedSlotsFromBookings,
   toDateKey,
 } from "@/utils/booking/availability";
-import { getEffectiveMaxBookingYear } from "@/utils/booking/bookingWindow";
+import {
+  getEffectiveBookingUntil,
+  getEffectiveMaxBookingYear,
+} from "@/utils/booking/bookingWindow";
 import { toHotDateLookup } from "@/utils/booking/hotDates";
 
 export async function GET(request: NextRequest) {
@@ -43,6 +46,7 @@ export async function GET(request: NextRequest) {
     const publicSettings = publicSettingSchema.parse({
       ...settings,
       max_booking_year: getEffectiveMaxBookingYear(settings.max_booking_year),
+      booking_until: getEffectiveBookingUntil(settings),
     });
 
     const chargeBy = publicSettings.charge_by ?? "package";

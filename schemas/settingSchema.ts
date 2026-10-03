@@ -120,6 +120,10 @@ export function getDefaultTimeSlots(
   return slots.map((slot) => ({ ...slot }));
 }
 
+const bookingUntilSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD");
+
 export const settingSchema = z.object({
   user_id: z.string(),
   charge_by: z.enum(["package", "style"]),
@@ -127,8 +131,10 @@ export const settingSchema = z.object({
   payment: paymentSettingSchema.default(() => paymentSettingSchema.parse({})),
   invoice: invoiceSettingSchema.default(() => invoiceSettingSchema.parse({})),
   time_slots: timeSlotSettingSchema,
-  /** Highest calendar year clients may book. Unset = current year + 1. */
+  /** Legacy: highest calendar year clients may book. Superseded by `booking_until`. */
   max_booking_year: z.number().int().optional(),
+  /** Last date (YYYY-MM-DD, inclusive) clients may book. Unset = 31 Dec of `max_booking_year`. */
+  booking_until: bookingUntilSchema.optional(),
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
 });
@@ -141,6 +147,7 @@ export const settingUpdateSchema = z.object({
   invoice: invoiceSettingSchema.partial().optional(),
   time_slots: z.array(timeSlotSchema).optional(),
   max_booking_year: z.number().int().optional(),
+  booking_until: bookingUntilSchema.optional(),
 });
 
 export const publicSettingSchema = settingSchema.extend({

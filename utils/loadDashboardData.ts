@@ -36,6 +36,7 @@ import {
   buildReviewRequestMessage,
   buildWhatsAppUrl,
 } from "@/utils/booking/messages";
+import { getEffectiveBookingUntil } from "@/utils/booking/bookingWindow";
 import { toHotDateItem } from "@/utils/booking/hotDates";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import {
@@ -288,5 +289,6 @@ export async function loadDashboardData(
       slots: blockedSlotDocs.map(serializeBlockedSlot),
     },
     hotDates: hotDateDocs.map(toHotDateItem),
+    bookingUntil: getEffectiveBookingUntil(settings, now),
   };
 }

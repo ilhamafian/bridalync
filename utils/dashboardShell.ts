@@ -89,6 +89,8 @@ export type DashboardData = {
     slots: BlockedSlotItem[];
   };
   hotDates: HotDateItem[];
+  /** Last date (YYYY-MM-DD, inclusive) clients can book. */
+  bookingUntil: string;
 };
 
 export type HotDateItem = PublicHotDate;

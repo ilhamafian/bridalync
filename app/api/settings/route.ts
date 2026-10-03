@@ -13,7 +13,10 @@ import {
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
-import { getCurrentBookingYear } from "@/utils/booking/bookingWindow";
+import {
+  getCurrentBookingYear,
+  getTodayBookingDateKey,
+} from "@/utils/booking/bookingWindow";
 
 function serializeSetting(setting: WithId<Setting>) {
   return {
@@ -25,6 +28,7 @@ function serializeSetting(setting: WithId<Setting>) {
     invoice: setting.invoice,
     time_slots: setting.time_slots,
     max_booking_year: setting.max_booking_year,
+    booking_until: setting.booking_until,
     created_at: setting.created_at,
     updated_at: setting.updated_at,
   };
@@ -68,6 +72,10 @@ function mergeSettingsUpdate(
 
   if (patch.max_booking_year !== undefined) {
     update.max_booking_year = patch.max_booking_year;
+  }
+
+  if (patch.booking_until !== undefined) {
+    update.booking_until = patch.booking_until;
   }
 
   return update;
@@ -170,6 +178,16 @@ export async function PATCH(req: NextRequest) {
           400
         );
       }
+    }
+
+    if (
+      parsed.data.booking_until !== undefined &&
+      parsed.data.booking_until < getTodayBookingDateKey()
+    ) {
+      return createResponse(
+        { error: "Booking period can't end before today." },
+        400
+      );
     }
 
     const update = mergeSettingsUpdate(existing, parsed.data);

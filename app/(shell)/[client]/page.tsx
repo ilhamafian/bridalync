@@ -48,8 +48,8 @@ import {
   isDateBlocked,
 } from "@/utils/booking/blockedDates";
 import {
-  getEffectiveMaxBookingYear,
-  isYearBlocked,
+  getEffectiveBookingUntil,
+  isPastBookingWindow,
 } from "@/utils/booking/bookingWindow";
 import {
   buildHotDatePriceMap,
@@ -676,15 +676,19 @@ export default function ClientPage() {
     [blockedDates]
   );
 
-  const maxBookingYear = useMemo(
-    () => getEffectiveMaxBookingYear(settings?.max_booking_year),
-    [settings?.max_booking_year]
+  const bookingUntil = useMemo(
+    () =>
+      getEffectiveBookingUntil({
+        booking_until: settings?.booking_until,
+        max_booking_year: settings?.max_booking_year,
+      }),
+    [settings?.booking_until, settings?.max_booking_year]
   );
 
-  const bookingCalendarEndMonth = useMemo(
-    () => new Date(maxBookingYear, 11, 1),
-    [maxBookingYear]
-  );
+  const bookingCalendarEndMonth = useMemo(() => {
+    const [year, month] = bookingUntil.split("-").map(Number);
+    return new Date(year, month - 1, 1);
+  }, [bookingUntil]);
 
   const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
 
@@ -1117,7 +1121,7 @@ export default function ClientPage() {
 
   function handleAddSession() {
     if (!nextPackageToSchedule || !selectedDate || !selectedTimeSlot) return;
-    if (isYearBlocked(selectedDate, maxBookingYear)) {
+    if (isPastBookingWindow(selectedDate, bookingUntil)) {
       return;
     }
     if (isDateBlocked(selectedDate, blockedDateKeys)) {
@@ -1578,7 +1582,7 @@ export default function ClientPage() {
                       { before: new Date() },
                       (date) => isDateFullyBooked(date),
                       (date) => isDateBlocked(date, blockedDateKeys),
-                      (date) => isYearBlocked(date, maxBookingYear),
+                      (date) => isPastBookingWindow(date, bookingUntil),
                     ]}
                     endMonth={bookingCalendarEndMonth}
                     captionLayout="dropdown"
