@@ -16,12 +16,12 @@ export const glassCardClassName =
 
 function statusBadgeVariant(
   status: ScheduleStatus
-): "default" | "secondary" | "outline" {
+): "default" | "success" | "outline" {
   switch (status) {
     case "in_progress":
       return "default";
     case "completed":
-      return "secondary";
+      return "success";
     default:
       return "outline";
   }

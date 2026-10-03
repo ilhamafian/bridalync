@@ -15,7 +15,7 @@ import {
   formatWhatsAppDisplay,
 } from "@/utils/socialLinks";
 
-type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
+type BadgeVariant = "default" | "success" | "destructive" | "outline";
 
 export function bookingStatusText(booking: SerializedBooking) {
   if (
@@ -54,7 +54,7 @@ function statusBadgeVariant(status: SerializedBooking["status"]): BadgeVariant {
     case "confirmed":
       return "default";
     case "completed":
-      return "secondary";
+      return "success";
     case "cancelled":
     case "failed":
       return "destructive";

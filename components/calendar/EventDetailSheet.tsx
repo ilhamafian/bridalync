@@ -44,12 +44,12 @@ function bookingStatusLabel(status: CalendarEvent["status"]) {
 
 function bookingStatusVariant(
   status: CalendarEvent["status"]
-): "default" | "secondary" | "destructive" | "outline" {
+): "default" | "success" | "destructive" | "outline" {
   switch (status) {
     case "confirmed":
       return "default";
     case "completed":
-      return "secondary";
+      return "success";
     case "cancelled":
     case "failed":
       return "destructive";

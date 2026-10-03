@@ -80,12 +80,12 @@ const activityIcons: Record<ActivityKind, Icon> = {
 
 function activityBadgeVariant(
   status: ActivityItem["bookingStatus"]
-): "default" | "secondary" | "outline" | "destructive" {
+): "default" | "success" | "outline" | "destructive" {
   switch (status) {
     case "confirmed":
       return "default";
     case "completed":
-      return "secondary";
+      return "success";
     case "cancelled":
     case "failed":
       return "destructive";

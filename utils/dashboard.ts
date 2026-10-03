@@ -222,8 +222,13 @@ export function flattenScheduleItems(
   return items.sort((a, b) => a.startsAtMs - b.startsAtMs);
 }
 
+/** Today's sessions that haven't finished yet. */
 export function getTodaysSchedule(items: ScheduleItem[], now = new Date()) {
-  return items.filter((item) => isSameLocalDay(new Date(item.date), now));
+  return items.filter(
+    (item) =>
+      isSameLocalDay(new Date(item.date), now) &&
+      item.scheduleStatus !== "completed"
+  );
 }
 
 export function getNextUpcomingBooking(

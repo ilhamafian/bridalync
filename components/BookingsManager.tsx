@@ -277,12 +277,12 @@ function formatListDate(value: string | undefined) {
 
 function statusBadgeVariant(
   status: Booking["status"]
-): "default" | "secondary" | "destructive" | "outline" {
+): "default" | "success" | "destructive" | "outline" {
   switch (status) {
     case "confirmed":
       return "default";
     case "completed":
-      return "secondary";
+      return "success";
     case "cancelled":
     case "failed":
       return "destructive";
@@ -293,7 +293,7 @@ function statusBadgeVariant(
 
 function bookingBadgeVariant(
   booking: SerializedBooking
-): "default" | "secondary" | "destructive" | "outline" {
+): "default" | "success" | "destructive" | "outline" {
   if (needsPaymentVerification(booking)) return "destructive";
   if (booking.depositVerificationStatus === "rejected") return "destructive";
   return statusBadgeVariant(booking.status);
