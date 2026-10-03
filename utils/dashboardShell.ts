@@ -12,6 +12,7 @@ import type {
 } from "@/components/PackagesManager";
 import type { ProfileItem } from "@/components/profile/ProfileManager";
 import type { SettingsItem } from "@/components/SettingsManager";
+import type { PublicHotDate } from "@/schemas/hotDateSchema";
 import type { DashboardReview } from "@/schemas/reviewSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
@@ -23,11 +24,11 @@ export type DashboardSection =
   | "bookings"
   | "booking-details"
   | "booking-form"
-  | "calendar"
   | "blocked"
   | "block-dates"
   | "block-slots"
   | "hot-dates"
+  | "hot-dates-new"
   | "booking-period"
   | "settings"
   | "settings-category"
@@ -41,6 +42,7 @@ export const SETTINGS_CATEGORIES = [
   "travel-fee",
   "payment-method",
   "invoice",
+  "google-calendar",
   "theme",
   "notifications",
 ] as const;
@@ -84,12 +86,24 @@ export type DashboardData = {
   };
   blocked: {
     dates: BlockedDateItem[];
+    slots: BlockedSlotItem[];
   };
+  hotDates: HotDateItem[];
 };
+
+export type HotDateItem = PublicHotDate;
 
 export type BlockedDateItem = {
   /** YYYY-MM-DD */
   date: string;
+  createdAt: string | null;
+};
+
+export type BlockedSlotItem = {
+  /** YYYY-MM-DD */
+  date: string;
+  startTime: string;
+  endTime: string;
   createdAt: string | null;
 };
 
@@ -129,10 +143,10 @@ export function getDashboardSection(pathname: string): DashboardSection {
   if (pathname.startsWith("/dashboard/blocked/dates/new")) return "block-dates";
   if (pathname.startsWith("/dashboard/blocked/slots/new")) return "block-slots";
   if (pathname.startsWith("/dashboard/blocked")) return "blocked";
+  if (pathname.startsWith("/dashboard/hot-dates/new")) return "hot-dates-new";
   if (pathname.startsWith("/dashboard/hot-dates")) return "hot-dates";
   if (pathname.startsWith("/dashboard/booking-period")) return "booking-period";
   if (pathname.startsWith("/dashboard/bookings")) return "bookings";
-  if (pathname.startsWith("/dashboard/calendar")) return "calendar";
   if (pathname.startsWith("/dashboard/settings")) return "settings";
   if (pathname.startsWith("/dashboard/profile/reviews")) return "profile-reviews";
   if (pathname.startsWith("/dashboard/profile")) return "profile";

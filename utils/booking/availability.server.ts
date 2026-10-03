@@ -1,6 +1,8 @@
 import { blockedDateModel } from "@/models/BlockedDate";
+import { blockedSlotModel } from "@/models/BlockedSlot";
 import { bookingModel } from "@/models/Booking";
 import { SettingModel } from "@/models/Setting";
+import type { BlockedSlot } from "@/schemas/blockedSlotSchema";
 import type { Booking } from "@/schemas/bookingSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
 import { formatDate } from "@/utils/utils";
@@ -30,6 +32,12 @@ const BLOCKING_BOOKING_STATUSES: Booking["status"][] = [
   "completed",
 ];
 
+export function toPublicBlockedSlot(
+  slot: Pick<BlockedSlot, "date" | "startTime" | "endTime">
+): PublicBookedSlot {
+  return { date: slot.date, startTime: slot.startTime, endTime: slot.endTime };
+}
+
 export async function getOccupiedSlotsForFreelancer(
   freelancerUserId: string
 ): Promise<PublicBookedSlot[]> {
@@ -48,11 +56,14 @@ export async function assertSessionsAvailable(
   const sessionDateKeys = sessions
     .map((session) => toDateKey(session.date))
     .filter(Boolean);
-  const [occupied, blockedDocs, settings] = await Promise.all([
-    getOccupiedSlotsForFreelancer(freelancerUserId),
-    blockedDateModel.findByUserIdAndDates(freelancerUserId, sessionDateKeys),
-    new SettingModel().findSettingsByUserId(freelancerUserId),
-  ]);
+  const [bookedSlots, blockedDocs, blockedSlotDocs, settings] =
+    await Promise.all([
+      getOccupiedSlotsForFreelancer(freelancerUserId),
+      blockedDateModel.findByUserIdAndDates(freelancerUserId, sessionDateKeys),
+      blockedSlotModel.findByUserIdAndDates(freelancerUserId, sessionDateKeys),
+      new SettingModel().findSettingsByUserId(freelancerUserId),
+    ]);
+  const occupied = [...bookedSlots, ...blockedSlotDocs.map(toPublicBlockedSlot)];
   const blockedKeys = buildBlockedDateSet(
     blockedDocs.map((doc) => doc.date)
   );

@@ -1,5 +1,6 @@
 import type { PublicHotDate } from "@/schemas/hotDateSchema";
 import { toDateKey } from "@/utils/booking/availability";
+import { nextDateKey } from "@/utils/booking/blockedDates";
 
 export type HotDateLookup = {
   date: string;
@@ -20,6 +21,19 @@ export function toHotDateLookup(
     package_id: item.package_id,
     style_id: item.style_id,
     variant_order: item.variant_order,
+    price: item.price,
+  };
+}
+
+/** Plain, serializable hot date (drops `_id`, `user_id`, timestamps). */
+export function toHotDateItem(item: HotDateLookup): PublicHotDate {
+  return {
+    date: item.date,
+    ...(item.package_id ? { package_id: item.package_id } : {}),
+    ...(item.style_id ? { style_id: item.style_id } : {}),
+    ...(item.variant_order !== undefined
+      ? { variant_order: item.variant_order }
+      : {}),
     price: item.price,
   };
 }
@@ -76,6 +90,110 @@ export function getStyleHotDatePrice(
   const dateKey = toDateKey(date);
   if (!dateKey) return undefined;
   return priceMap.get(styleHotDateKey(dateKey, styleId, variantOrder));
+}
+
+export type HotDateTarget =
+  | { package_id: string }
+  | { style_id: string; variant_order: number };
+
+/** A package (package pricing) or style variant (style pricing) that can get a hot date price. */
+export type HotDateCatalogRow = {
+  key: string;
+  label: string;
+  catalogPrice: number;
+  target: HotDateTarget;
+};
+
+export function hotDateTargetKey(
+  item: Pick<HotDateLookup, "package_id" | "style_id" | "variant_order">
+): string | null {
+  if (item.package_id) return `package:${item.package_id}`;
+  if (item.style_id && item.variant_order !== undefined) {
+    return `style:${item.style_id}:${item.variant_order}`;
+  }
+  return null;
+}
+
+export function buildHotDateCatalog(
+  chargeBy: "package" | "style",
+  packages: { _id: string; name: string; price: number }[],
+  styles: {
+    _id: string;
+    name: string;
+    variants: { name: string; order: number; price: number }[];
+  }[]
+): HotDateCatalogRow[] {
+  if (chargeBy === "package") {
+    return packages.map((pkg) => ({
+      key: `package:${pkg._id}`,
+      label: pkg.name,
+      catalogPrice: pkg.price,
+      target: { package_id: pkg._id },
+    }));
+  }
+
+  return styles.flatMap((style) =>
+    [...style.variants]
+      .sort((a, b) => a.order - b.order)
+      .map((variant) => ({
+        key: `style:${style._id}:${variant.order}`,
+        label: `${style.name} — ${variant.name}`,
+        catalogPrice: variant.price,
+        target: { style_id: style._id, variant_order: variant.order },
+      }))
+  );
+}
+
+/** `date|targetKey` -> price, for looking up a row's override on a date. */
+export function buildHotDateRowPriceMap(hotDates: HotDateLookup[]) {
+  const map = new Map<string, number>();
+  for (const item of hotDates) {
+    const targetKey = hotDateTargetKey(item);
+    if (targetKey) map.set(`${item.date}|${targetKey}`, item.price);
+  }
+  return map;
+}
+
+export type HotDateRange = {
+  /** YYYY-MM-DD, inclusive */
+  start: string;
+  end: string;
+  dates: string[];
+  prices: { row: HotDateCatalogRow; price: number }[];
+};
+
+/**
+ * Groups hot dates into runs of consecutive days with identical prices, sorted by start date.
+ * Overrides for items no longer in the catalog are ignored.
+ */
+export function groupHotDateRanges(
+  hotDates: HotDateLookup[],
+  catalog: HotDateCatalogRow[]
+): HotDateRange[] {
+  const priceMap = buildHotDateRowPriceMap(hotDates);
+  const dates = [...new Set(hotDates.map((item) => item.date))].sort();
+  const ranges: HotDateRange[] = [];
+  let lastSignature = "";
+
+  for (const date of dates) {
+    const prices = catalog.flatMap((row) => {
+      const price = priceMap.get(`${date}|${row.key}`);
+      return price === undefined ? [] : [{ row, price }];
+    });
+    if (prices.length === 0) continue;
+
+    const signature = prices.map(({ row, price }) => `${row.key}=${price}`).join(",");
+    const last = ranges.at(-1);
+    if (last && lastSignature === signature && nextDateKey(last.end) === date) {
+      last.end = date;
+      last.dates.push(date);
+    } else {
+      ranges.push({ start: date, end: date, dates: [date], prices });
+    }
+    lastSignature = signature;
+  }
+
+  return ranges;
 }
 
 export function resolveEffectivePrice(

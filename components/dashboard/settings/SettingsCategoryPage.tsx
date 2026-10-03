@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { BackButton } from "@/components/dashboard/BackButton";
 import { SETTINGS_CATEGORY_META } from "@/components/dashboard/settings/categories";
+import { GoogleCalendarImport } from "@/components/dashboard/settings/GoogleCalendarImport";
 import { ThemeSettings } from "@/components/dashboard/settings/ThemeSettings";
 import { PackagesManager } from "@/components/PackagesManager";
 import { PwaSettingsCard } from "@/components/PwaSettingsCard";
@@ -64,6 +65,7 @@ export function SettingsCategoryPage({
             isStripeConnected={settings.isStripeConnected}
             hasStripeAccount={settings.hasStripeAccount}
           />
+          {category === "google-calendar" ? <GoogleCalendarImport /> : null}
         </Suspense>
         {category === "theme" ? <ThemeSettings /> : null}
         {category === "notifications" ? <PwaSettingsCard /> : null}

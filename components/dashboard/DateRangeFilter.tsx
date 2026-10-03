@@ -4,8 +4,8 @@ import { format } from "date-fns";
 import { IconCalendarEvent, IconX } from "@tabler/icons-react";
 import type { DateRange } from "react-day-picker";
 
+import { DashboardCalendar } from "@/components/dashboard/DashboardCalendar";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -58,25 +58,12 @@ export function DateRangeFilter({
         align="end"
         className="z-100 w-76 gap-0 overflow-hidden rounded-2xl bg-white/80 p-0 shadow-lg ring-1 ring-white/60 backdrop-blur-xl dark:bg-zinc-950/75 dark:ring-white/15"
       >
-        <Calendar
+        <DashboardCalendar
           mode="range"
           selected={value}
           onSelect={onChange}
           numberOfMonths={1}
           defaultMonth={value?.from}
-          className={cn(
-            "w-full p-3 [--cell-radius:var(--radius-lg)] [--cell-size:--spacing(9)]",
-            "[&_[data-range-middle=true]]:bg-primary/10! [&_[data-range-middle=true]]:text-primary!"
-          )}
-          classNames={{
-            root: "w-full",
-            range_start:
-              "relative isolate z-0 rounded-l-(--cell-radius) bg-primary/10 after:absolute after:inset-y-0 after:right-0 after:w-4 after:bg-primary/10",
-            range_end:
-              "relative isolate z-0 rounded-r-(--cell-radius) bg-primary/10 after:absolute after:inset-y-0 after:left-0 after:w-4 after:bg-primary/10",
-            today:
-              "rounded-(--cell-radius) font-semibold text-primary data-[selected=true]:rounded-none",
-          }}
         />
         <div className="flex items-center justify-between gap-3 border-t border-white/60 px-4 py-3 dark:border-white/10">
           <span

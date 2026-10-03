@@ -97,20 +97,6 @@ function PackagesSkeleton() {
   );
 }
 
-function CalendarSkeleton() {
-  return (
-    <div className="flex flex-col gap-8 px-4 lg:px-6">
-      {Array.from({ length: 3 }).map((_, index) => (
-        <div key={index} className="rounded-xl border border-border p-4">
-          <Skeleton className="h-5 w-40" />
-          <Skeleton className="mt-2 h-4 w-56 max-w-full" />
-          <Skeleton className="mt-4 h-64 w-full" />
-        </div>
-      ))}
-    </div>
-  );
-}
-
 function SettingsSkeleton() {
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
@@ -175,8 +161,6 @@ export function DashboardSkeleton() {
   switch (section) {
     case "bookings":
       return <BookingsSkeleton />;
-    case "calendar":
-      return <CalendarSkeleton />;
     case "settings":
     case "settings-category":
       return getSettingsCategory(pathname) === "packages" ? (

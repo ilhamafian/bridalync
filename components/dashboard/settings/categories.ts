@@ -1,5 +1,6 @@
 import {
   IconBell,
+  IconBrandGoogle,
   IconCar,
   IconClock,
   IconCreditCard,
@@ -18,7 +19,7 @@ export const SETTINGS_GROUPS: { title: string; categories: SettingsCategory[] }[
     categories: ["pricing-model", "packages", "time-slots", "travel-fee"],
   },
   { title: "Payments", categories: ["payment-method", "invoice"] },
-  { title: "App", categories: ["theme", "notifications"] },
+  { title: "App", categories: ["google-calendar", "theme", "notifications"] },
 ];
 
 export const SETTINGS_CATEGORY_META: Record<
@@ -54,6 +55,11 @@ export const SETTINGS_CATEGORY_META: Record<
     label: "Invoice",
     description: "Company details and terms shown on your invoices.",
     icon: IconFileInvoice,
+  },
+  "google-calendar": {
+    label: "Google Calendar",
+    description: "Import one-off Google Calendar events as bookings.",
+    icon: IconBrandGoogle,
   },
   theme: {
     label: "Theme",

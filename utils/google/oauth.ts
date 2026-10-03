@@ -306,7 +306,7 @@ export function authErrorRedirect(code: string) {
 }
 
 export function calendarRedirect(query: Record<string, string>) {
-  const url = new URL(`${getAppUrl()}/dashboard/calendar`);
+  const url = new URL(`${getAppUrl()}/dashboard/settings/google-calendar`);
   for (const [key, value] of Object.entries(query)) {
     url.searchParams.set(key, value);
   }

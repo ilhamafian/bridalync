@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { format } from "date-fns";
 import {
@@ -11,6 +11,7 @@ import {
 } from "@tabler/icons-react";
 
 import { BackButton } from "@/components/dashboard/BackButton";
+import { parseDateKey } from "@/components/dashboard/DashboardCalendar";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
@@ -49,49 +50,35 @@ import {
   groupBlockedDateRanges,
   type BlockedDateRange,
 } from "@/utils/booking/blockedDates";
-import { MAX_DATE_RANGE_DAYS } from "@/utils/booking/dateRange";
-import type { BlockedDateItem } from "@/utils/dashboardShell";
-
-function parseDateKey(dateKey: string) {
-  const [year, month, day] = dateKey.split("-").map(Number);
-  return new Date(year, month - 1, day, 12);
-}
+import {
+  chunkDateKeys,
+  formatDateKeyRangeSpan,
+  formatDateKeyRangeTitle,
+} from "@/utils/booking/dateRange";
+import type {
+  BlockedDateItem,
+  BlockedSlotItem,
+} from "@/utils/dashboardShell";
 
 function formatRangeTitle(range: BlockedDateRange) {
-  const start = parseDateKey(range.start);
-  if (range.start === range.end) return format(start, "EEE, d MMM yyyy");
-
-  const end = parseDateKey(range.end);
-  if (start.getFullYear() !== end.getFullYear()) {
-    return `${format(start, "d MMM yyyy")} – ${format(end, "d MMM yyyy")}`;
-  }
-  if (start.getMonth() === end.getMonth()) {
-    return `${format(start, "d")} – ${format(end, "d MMM yyyy")}`;
-  }
-  return `${format(start, "d MMM")} – ${format(end, "d MMM yyyy")}`;
+  return formatDateKeyRangeTitle(range.start, range.end);
 }
 
 function formatRangeDescription(range: BlockedDateRange) {
-  if (range.dates.length === 1) return "Full day";
-  const start = parseDateKey(range.start);
-  const end = parseDateKey(range.end);
-  return `${range.dates.length} days · ${format(start, "EEE")} – ${format(end, "EEE")}`;
-}
-
-function chunk<T>(items: T[], size: number) {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) {
-    chunks.push(items.slice(i, i + size));
-  }
-  return chunks;
+  return (
+    formatDateKeyRangeSpan(range.start, range.end, range.dates.length) ??
+    "Full day"
+  );
 }
 
 function UnblockButton({
   title,
+  description,
   disabled,
   onConfirm,
 }: {
   title: string;
+  description: string;
   disabled: boolean;
   onConfirm: () => void;
 }) {
@@ -112,9 +99,7 @@ function UnblockButton({
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Unblock {title}?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Clients will be able to book on these dates again.
-          </AlertDialogDescription>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -162,8 +147,59 @@ function BlockedDatesList({
               <RowText title={title} description={formatRangeDescription(range)} />
               <UnblockButton
                 title={title}
-                disabled={busyKey === range.start}
+                description="Clients will be able to book on these dates again."
+                disabled={busyKey === `date:${range.start}`}
                 onConfirm={() => onUnblock(range)}
+              />
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function blockedSlotKey(slot: BlockedSlotItem) {
+  return `slot:${slot.date}:${slot.startTime}-${slot.endTime}`;
+}
+
+function BlockedSlotsList({
+  slots,
+  filtered,
+  busyKey,
+  onUnblock,
+}: {
+  slots: BlockedSlotItem[];
+  filtered: boolean;
+  busyKey: string | null;
+  onUnblock: (slot: BlockedSlotItem) => void;
+}) {
+  if (slots.length === 0) {
+    return (
+      <EmptyCard>
+        {filtered
+          ? "No blocked slots in this date range."
+          : "No upcoming blocked slots."}
+      </EmptyCard>
+    );
+  }
+
+  return (
+    <div className={cn(glassCardClassName, "overflow-hidden")}>
+      <ul className="divide-y divide-white/50 dark:divide-white/10">
+        {slots.map((slot) => {
+          const key = blockedSlotKey(slot);
+          const dateLabel = format(parseDateKey(slot.date), "EEE, d MMM yyyy");
+          const timeLabel = `${slot.startTime} – ${slot.endTime}`;
+          return (
+            <li key={key} className="flex items-center gap-3 py-3 pr-2 pl-4">
+              <IconBadge icon={IconClockOff} />
+              <RowText title={dateLabel} description={timeLabel} />
+              <UnblockButton
+                title={`${timeLabel} on ${dateLabel}`}
+                description="Clients will be able to book this slot again."
+                disabled={busyKey === key}
+                onConfirm={() => onUnblock(slot)}
               />
             </li>
           );
@@ -200,29 +236,94 @@ function BlockMenu() {
   );
 }
 
-export function BlockedPage({ dates }: { dates: BlockedDateItem[] }) {
-  const [blockedDates, setBlockedDates] = useState(dates);
+export type BlockedTab = "dates" | "slots";
+
+export function BlockedPage({
+  dates,
+  slots,
+  tab,
+  onTabChange,
+  onDatesChange,
+  onSlotsChange,
+}: {
+  dates: BlockedDateItem[];
+  slots: BlockedSlotItem[];
+  tab: BlockedTab;
+  onTabChange: (tab: BlockedTab) => void;
+  onDatesChange: (dates: BlockedDateItem[]) => void;
+  onSlotsChange: (slots: BlockedSlotItem[]) => void;
+}) {
   const [range, setRange] = useState<DateRange | undefined>();
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const filtered = Boolean(range?.from);
 
-  const ranges = useMemo(() => {
-    const todayKey = toDateKey(new Date());
-    const visible = blockedDates.filter((item) =>
-      range?.from ? isDateKeyInRange(item.date, range) : item.date >= todayKey
-    );
-    return groupBlockedDateRanges(visible);
-  }, [blockedDates, range]);
+  const isVisible = useCallback(
+    (dateKey: string) =>
+      range?.from
+        ? isDateKeyInRange(dateKey, range)
+        : dateKey >= toDateKey(new Date()),
+    [range]
+  );
 
-  async function handleUnblock(range: BlockedDateRange) {
-    setBusyKey(range.start);
+  const ranges = useMemo(
+    () => groupBlockedDateRanges(dates.filter((item) => isVisible(item.date))),
+    [dates, isVisible]
+  );
+
+  const visibleSlots = useMemo(
+    () =>
+      slots
+        .filter((slot) => isVisible(slot.date))
+        .sort(
+          (a, b) =>
+            a.date.localeCompare(b.date) ||
+            a.startTime.localeCompare(b.startTime)
+        ),
+    [slots, isVisible]
+  );
+
+  async function handleUnblockSlot(slot: BlockedSlotItem) {
+    setBusyKey(blockedSlotKey(slot));
     setError(null);
     setSuccess(null);
 
     try {
-      for (const dateChunk of chunk(range.dates, MAX_DATE_RANGE_DAYS)) {
+      const response = await fetch("/api/blocked-slots", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          date: slot.date,
+          slots: [{ startTime: slot.startTime, endTime: slot.endTime }],
+          blocked: false,
+        }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setError(
+          typeof data.error === "string" ? data.error : "Could not unblock slot."
+        );
+        return;
+      }
+
+      const key = blockedSlotKey(slot);
+      onSlotsChange(slots.filter((item) => blockedSlotKey(item) !== key));
+      setSuccess("Slot unblocked.");
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setBusyKey(null);
+    }
+  }
+
+  async function handleUnblock(range: BlockedDateRange) {
+    setBusyKey(`date:${range.start}`);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      for (const dateChunk of chunkDateKeys(range.dates)) {
         const response = await fetch("/api/blocked-dates", {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
@@ -240,9 +341,7 @@ export function BlockedPage({ dates }: { dates: BlockedDateItem[] }) {
       }
 
       const removed = new Set(range.dates);
-      setBlockedDates((current) =>
-        current.filter((item) => !removed.has(item.date))
-      );
+      onDatesChange(dates.filter((item) => !removed.has(item.date)));
       setSuccess(
         range.dates.length === 1
           ? "Date unblocked."
@@ -271,7 +370,11 @@ export function BlockedPage({ dates }: { dates: BlockedDateItem[] }) {
 
       <SettingsFeedback error={error} success={success} />
 
-      <Tabs defaultValue="dates" className="gap-3">
+      <Tabs
+        value={tab}
+        onValueChange={(value) => onTabChange(value as BlockedTab)}
+        className="gap-3"
+      >
         <div className="flex items-center gap-2">
           <TabsList className="h-10! min-w-0 flex-1 bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15">
             <TabsTrigger value="dates" className="text-sm">
@@ -297,7 +400,12 @@ export function BlockedPage({ dates }: { dates: BlockedDateItem[] }) {
           />
         </TabsContent>
         <TabsContent value="slots">
-          <EmptyCard>No blocked slots yet.</EmptyCard>
+          <BlockedSlotsList
+            slots={visibleSlots}
+            filtered={filtered}
+            busyKey={busyKey}
+            onUnblock={(slot) => void handleUnblockSlot(slot)}
+          />
         </TabsContent>
       </Tabs>
     </div>

@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { AddOnModel } from "@/models/AddOn";
 import { blockedDateModel } from "@/models/BlockedDate";
+import { blockedSlotModel } from "@/models/BlockedSlot";
+import { toPublicBlockedSlot } from "@/utils/booking/availability.server";
 import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { StyleModel } from "@/models/Style";
@@ -57,20 +59,26 @@ export async function GET(request: NextRequest) {
       freelancerUserId: user_id,
       status: { $in: ["pending", "confirmed", "completed"] },
     });
-    const booked_slots = getOccupiedSlotsFromBookings(bookings);
-
     const reviewDocs = await reviewModel.findByFreelancerUserId(user_id, 20);
     const reviews = reviewDocs.map(toPublicReview);
 
     const todayKey = toDateKey(new Date());
-    const [hotDateDocs, blockedDateDocs] = await Promise.all([
+    const [hotDateDocs, blockedDateDocs, blockedSlotDocs] = await Promise.all([
       hotDateModel.findByUserId(user_id, {
         from: todayKey || undefined,
       }),
       blockedDateModel.findByUserId(user_id, {
         from: todayKey || undefined,
       }),
+      blockedSlotModel.findByUserId(user_id, {
+        from: todayKey || undefined,
+      }),
     ]);
+    // Blocked slots are exposed as taken so clients can't tell them apart from bookings.
+    const booked_slots = [
+      ...getOccupiedSlotsFromBookings(bookings),
+      ...blockedSlotDocs.map(toPublicBlockedSlot),
+    ];
     const hot_dates = hotDateDocs.map((doc) => toHotDateLookup(doc));
     const blocked_dates = blockedDateDocs.map((doc) => doc.date);
 

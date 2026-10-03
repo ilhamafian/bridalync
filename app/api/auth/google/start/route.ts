@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
     const intent = parseIntent(req.nextUrl.searchParams.get("intent"));
     if (intent === "calendar") {
       return NextResponse.redirect(
-        `${getAppUrl()}/dashboard/calendar?google_error=config`
+        `${getAppUrl()}/dashboard/settings/google-calendar?google_error=config`
       );
     }
     return NextResponse.redirect(`${getAppUrl()}/auth?error=google_config`);

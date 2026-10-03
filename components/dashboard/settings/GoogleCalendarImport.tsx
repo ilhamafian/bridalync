@@ -1,11 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { IconBrandGoogle } from "@tabler/icons-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { IconBrandGoogle, IconCalendarEvent } from "@tabler/icons-react";
 
+import { EmptyCard } from "@/components/dashboard/DashboardHome";
+import {
+  IconBadge,
+  RowText,
+  SettingsFeedback,
+  SettingsSection,
+  settingsCardClassName,
+  settingsListClassName,
+  settingsRowClassName,
+} from "@/components/dashboard/settings/SettingsUi";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import type {
   GoogleCalendarPreviewEvent,
@@ -24,6 +36,49 @@ type ImportResponse = {
   skippedConflict?: number;
   error?: string;
 };
+
+const GOOGLE_CONNECT_URL = "/api/auth/google/start?intent=calendar";
+
+const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
+  denied: "Google Calendar access was not granted.",
+  config: "Google Calendar is not configured yet.",
+};
+
+function googleErrorMessage(code: string | null) {
+  if (!code) return null;
+  return (
+    GOOGLE_ERROR_MESSAGES[code] ??
+    "Could not connect Google Calendar. Try again."
+  );
+}
+
+type PreviewResult =
+  | { kind: "needs-connect" }
+  | { kind: "error"; message: string }
+  | {
+      kind: "ok";
+      events: GoogleCalendarPreviewEvent[];
+      skipCounts?: GoogleCalendarSkipCounts;
+    };
+
+const PREVIEW_ERROR = "Could not load Google Calendar events.";
+
+async function fetchPreview(): Promise<PreviewResult> {
+  try {
+    const response = await fetch("/api/google/calendar/preview");
+    const data = (await response.json().catch(() => ({}))) as PreviewResponse;
+    if (response.status === 401) return { kind: "needs-connect" };
+    if (!response.ok) {
+      return {
+        kind: "error",
+        message: typeof data.error === "string" ? data.error : PREVIEW_ERROR,
+      };
+    }
+    return { kind: "ok", events: data.events ?? [], skipCounts: data.skipCounts };
+  } catch {
+    return { kind: "error", message: PREVIEW_ERROR };
+  }
+}
 
 function skipSummary(counts: GoogleCalendarSkipCounts | undefined) {
   if (!counts) return null;
@@ -45,15 +100,16 @@ function skipSummary(counts: GoogleCalendarSkipCounts | undefined) {
   return `Skipped ${parts.join(", ")}.`;
 }
 
-export function GoogleCalendarImport({
-  onImported,
-}: {
-  onImported?: (bookings: SerializedBooking[]) => void;
-}) {
+export function GoogleCalendarImport() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [needsConnect, setNeedsConnect] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    googleErrorMessage(searchParams.get("google_error"))
+  );
+  const [success, setSuccess] = useState<string | null>(null);
   const [events, setEvents] = useState<GoogleCalendarPreviewEvent[]>([]);
   const [skipCounts, setSkipCounts] = useState<GoogleCalendarSkipCounts>();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -63,47 +119,42 @@ export function GoogleCalendarImport({
     [events]
   );
 
-  const loadPreview = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/google/calendar/preview");
-      const data = (await response.json().catch(() => ({}))) as PreviewResponse;
-      if (response.status === 401) {
-        setNeedsConnect(true);
-        setEvents([]);
-        return;
-      }
-      if (!response.ok) {
-        setError(
-          typeof data.error === "string"
-            ? data.error
-            : "Could not load Google Calendar events."
-        );
-        return;
-      }
-
-      const nextEvents = data.events ?? [];
-      setNeedsConnect(false);
-      setEvents(nextEvents);
-      setSkipCounts(data.skipCounts);
-      setSelectedIds(
-        new Set(
-          nextEvents
-            .filter((event) => !event.alreadyImported && !event.conflict)
-            .map((event) => event.id)
-        )
-      );
-    } catch {
-      setError("Could not load Google Calendar events.");
-    } finally {
-      setLoading(false);
+  const applyPreview = useCallback((result: PreviewResult) => {
+    setLoading(false);
+    if (result.kind === "needs-connect") {
+      setNeedsConnect(true);
+      setEvents([]);
+      return;
     }
+    if (result.kind === "error") {
+      setError(result.message);
+      return;
+    }
+
+    setNeedsConnect(false);
+    setEvents(result.events);
+    setSkipCounts(result.skipCounts);
+    setSelectedIds(
+      new Set(
+        result.events
+          .filter((event) => !event.alreadyImported && !event.conflict)
+          .map((event) => event.id)
+      )
+    );
   }, []);
 
+  const loadPreview = useCallback(
+    async () => applyPreview(await fetchPreview()),
+    [applyPreview]
+  );
+
   useEffect(() => {
-    void loadPreview();
-  }, [loadPreview]);
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("google") || params.has("google_error")) {
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    void fetchPreview().then(applyPreview);
+  }, [applyPreview]);
 
   function toggleId(id: string, checked: boolean) {
     setSelectedIds((current) => {
@@ -116,6 +167,9 @@ export function GoogleCalendarImport({
 
   const allSelected =
     importable.length > 0 && importable.every((event) => selectedIds.has(event.id));
+  const selectedCount = importable.filter((event) =>
+    selectedIds.has(event.id)
+  ).length;
 
   async function handleUseDifferentAccount() {
     setError(null);
@@ -124,7 +178,7 @@ export function GoogleCalendarImport({
     } catch {
       // Continue to Google anyway so the account picker still opens.
     }
-    window.location.href = "/api/auth/google/start?intent=calendar";
+    window.location.href = GOOGLE_CONNECT_URL;
   }
 
   async function handleImport() {
@@ -138,6 +192,7 @@ export function GoogleCalendarImport({
 
     setImporting(true);
     setError(null);
+    setSuccess(null);
     try {
       const response = await fetch("/api/google/calendar/import", {
         method: "POST",
@@ -154,8 +209,13 @@ export function GoogleCalendarImport({
         return;
       }
 
-      onImported?.(data.imported ?? []);
+      const count = data.imported?.length ?? 0;
+      setSuccess(
+        count === 1 ? "1 booking imported." : `${count} bookings imported.`
+      );
+      setLoading(true);
       await loadPreview();
+      if (count > 0) router.refresh();
     } catch {
       setError("Could not import Google Calendar events.");
     } finally {
@@ -165,7 +225,7 @@ export function GoogleCalendarImport({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className={cn(settingsCardClassName, "flex-row items-center text-muted-foreground")}>
         <Spinner />
         Loading Google Calendar…
       </div>
@@ -174,101 +234,122 @@ export function GoogleCalendarImport({
 
   if (needsConnect) {
     return (
-      <div className="flex flex-col gap-3">
-        <p className="text-sm text-muted-foreground">
-          Connect Google Calendar to import titled events as bookings. Public
-          holidays and repeating events are skipped. You can add locations later
-          from Bookings.
-        </p>
-        <Button asChild className="w-full">
-          <a href="/api/auth/google/start?intent=calendar">
-            <IconBrandGoogle className="size-4" />
-            Connect Google Calendar
-          </a>
+      <div className="flex flex-col gap-4">
+        <SettingsSection title="Connect">
+          <div className={cn(settingsCardClassName, "flex-row items-start")}>
+            <IconBadge icon={IconBrandGoogle} />
+            <p className="text-sm text-muted-foreground">
+              Connect Google Calendar to import titled events as bookings.
+              Public holidays and repeating events are skipped. You can add
+              locations later from Bookings.
+            </p>
+          </div>
+        </SettingsSection>
+        <SettingsFeedback error={error} />
+        <Button
+          type="button"
+          size="lg"
+          className="min-h-11"
+          onClick={() => {
+            window.location.href = GOOGLE_CONNECT_URL;
+          }}
+        >
+          <IconBrandGoogle data-icon="inline-start" />
+          Connect Google Calendar
         </Button>
       </div>
     );
   }
 
+  const skipped = skipSummary(skipCounts);
+
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted-foreground">
-        Each selected event becomes a confirmed booking. Location is left empty
-        so you can add it from Bookings.
-      </p>
-      {skipSummary(skipCounts) ? (
-        <p className="text-xs text-muted-foreground">{skipSummary(skipCounts)}</p>
-      ) : null}
-
-      {importable.length > 0 ? (
-        <label className="flex items-center gap-2 text-sm">
-          <Checkbox
-            checked={allSelected}
-            onCheckedChange={(value) => {
-              setSelectedIds(
-                value === true
-                  ? new Set(importable.map((event) => event.id))
-                  : new Set()
+      <SettingsSection
+        title="Events"
+        action={
+          importable.length > 0 ? (
+            <button
+              type="button"
+              className="text-sm font-medium text-primary hover:underline"
+              onClick={() =>
+                setSelectedIds(
+                  allSelected
+                    ? new Set()
+                    : new Set(importable.map((event) => event.id))
+                )
+              }
+            >
+              {allSelected ? "Deselect all" : "Select all"}
+            </button>
+          ) : null
+        }
+      >
+        {events.length === 0 ? (
+          <EmptyCard>No one-off timed events found to import.</EmptyCard>
+        ) : (
+          <div className={settingsListClassName}>
+            {events.map((event) => {
+              const disabled = event.alreadyImported || event.conflict;
+              const status = event.alreadyImported
+                ? " · Already imported"
+                : event.conflict
+                  ? " · Conflicts with a booking"
+                  : "";
+              return (
+                <label
+                  key={event.id}
+                  className={cn(
+                    settingsRowClassName,
+                    disabled
+                      ? "cursor-not-allowed opacity-60 hover:bg-transparent dark:hover:bg-transparent"
+                      : "cursor-pointer"
+                  )}
+                >
+                  <IconBadge icon={IconCalendarEvent} />
+                  <RowText
+                    title={event.title}
+                    description={`${event.dateLabel} · ${event.timeLabel}${status}`}
+                  />
+                  <Checkbox
+                    checked={selectedIds.has(event.id)}
+                    disabled={disabled}
+                    onCheckedChange={(value) =>
+                      toggleId(event.id, value === true)
+                    }
+                    aria-label={`Import ${event.title}`}
+                  />
+                </label>
               );
-            }}
-          />
-          Select all importable events
-        </label>
-      ) : null}
-
-      {events.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          No one-off timed events found to import.
+            })}
+          </div>
+        )}
+        <p className="text-xs text-muted-foreground">
+          Each selected event becomes a confirmed booking. Location is left
+          empty so you can add it from Bookings.
+          {skipped ? ` ${skipped}` : ""}
         </p>
-      ) : (
-        <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto">
-          {events.map((event) => {
-            const disabled = event.alreadyImported || event.conflict;
-            return (
-              <li
-                key={event.id}
-                className="flex items-start gap-3 rounded-md border border-border px-3 py-2"
-              >
-                <Checkbox
-                  checked={selectedIds.has(event.id)}
-                  disabled={disabled}
-                  onCheckedChange={(value) =>
-                    toggleId(event.id, value === true)
-                  }
-                  className="mt-0.5"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{event.title}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {event.dateLabel} · {event.timeLabel}
-                  </p>
-                  {event.alreadyImported ? (
-                    <p className="text-xs text-muted-foreground">Already imported</p>
-                  ) : null}
-                  {event.conflict ? (
-                    <p className="text-xs text-muted-foreground">
-                      Conflicts with an existing booking
-                    </p>
-                  ) : null}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      </SettingsSection>
 
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
+      <SettingsFeedback error={error} success={success} />
       <Button
         type="button"
-        disabled={importing || importable.length === 0}
+        size="lg"
+        className="min-h-11"
+        disabled={importing || selectedCount === 0}
         onClick={() => void handleImport()}
       >
-        {importing ? "Importing…" : "Import selected events"}
+        {importing
+          ? "Importing…"
+          : selectedCount > 0
+            ? `Import ${selectedCount} ${selectedCount === 1 ? "event" : "events"}`
+            : "Import events"}
       </Button>
       <Button
         type="button"
+        size="lg"
         variant="outline"
+        className="min-h-11"
         disabled={importing}
         onClick={() => void handleUseDifferentAccount()}
       >

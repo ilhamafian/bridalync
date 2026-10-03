@@ -1,16 +1,30 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState, Fragment } from "react";
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  Fragment,
+} from "react";
 import { usePathname } from "next/navigation";
+import type { DateRange } from "react-day-picker";
 
 import { BookingsManager } from "@/components/BookingsManager";
-import { CalendarManager } from "@/components/calendar/CalendarManager";
 import { BackButton } from "@/components/dashboard/BackButton";
-import { BlockedPage } from "@/components/dashboard/blocked/BlockedPage";
+import { BlockDatesPage } from "@/components/dashboard/blocked/BlockDatesPage";
+import {
+  BlockedPage,
+  type BlockedTab,
+} from "@/components/dashboard/blocked/BlockedPage";
+import { BlockSlotsPage } from "@/components/dashboard/blocked/BlockSlotsPage";
 import { BookingDetailsPage } from "@/components/dashboard/BookingDetailsPage";
 import { BookingFormPage } from "@/components/dashboard/BookingFormPage";
 import { useDashboardRefreshVersion } from "@/components/dashboard/DashboardRefresh";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
+import { AddHotDatesPage } from "@/components/dashboard/hot-dates/AddHotDatesPage";
+import { HotDatesPage } from "@/components/dashboard/hot-dates/HotDatesPage";
 import { NotificationsPage } from "@/components/dashboard/NotificationsPage";
 import { PaymentsPage } from "@/components/dashboard/payments/PaymentsPage";
 import { SettingsCategoryPage } from "@/components/dashboard/settings/SettingsCategoryPage";
@@ -18,6 +32,7 @@ import { SettingsPage } from "@/components/dashboard/settings/SettingsPage";
 import { ProfileManager } from "@/components/profile/ProfileManager";
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
 import { cn } from "@/lib/utils";
+import { buildHotDateCatalog } from "@/utils/booking/hotDates";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
   getBookingDetailsId,
@@ -74,6 +89,23 @@ export function DashboardShell({ data }: { data: DashboardData }) {
     Record<string, SerializedBooking>
   >({});
   const [reviews, setReviews] = useState(data.profile.initialReviews);
+  const [blockedDates, setBlockedDates] = useState(data.blocked.dates);
+  const [blockedSlots, setBlockedSlots] = useState(data.blocked.slots);
+  const [blockedTab, setBlockedTab] = useState<BlockedTab>("dates");
+  const [hotDates, setHotDates] = useState(data.hotDates);
+  const [hotDateDraft, setHotDateDraft] = useState<{
+    id: number;
+    range?: DateRange;
+  }>({ id: 0 });
+  const hotDateCatalog = useMemo(
+    () =>
+      buildHotDateCatalog(
+        data.bookings.chargeBy,
+        data.bookings.packages,
+        data.bookings.styles
+      ),
+    [data.bookings.chargeBy, data.bookings.packages, data.bookings.styles]
+  );
   const bookingDetailsId = getBookingDetailsId(pathname);
   const bookingFormTarget = getBookingFormTarget(pathname);
   const settingsCategory = getSettingsCategory(pathname);
@@ -115,19 +147,62 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="blocked" active={active}>
-        <BlockedPage dates={data.blocked.dates} />
+        <BlockedPage
+          dates={blockedDates}
+          slots={blockedSlots}
+          tab={blockedTab}
+          onTabChange={setBlockedTab}
+          onDatesChange={setBlockedDates}
+          onSlotsChange={setBlockedSlots}
+        />
       </Section>
 
       <Section id="block-dates" active={active}>
-        <PlaceholderPage title="Block dates" backHref="/dashboard/blocked" />
+        <BlockDatesPage
+          blockedDates={blockedDates}
+          onBlockedDatesChange={(dates) => {
+            setBlockedDates(dates);
+            setBlockedTab("dates");
+          }}
+        />
       </Section>
 
       <Section id="block-slots" active={active}>
-        <PlaceholderPage title="Block slots" backHref="/dashboard/blocked" />
+        <BlockSlotsPage
+          timeSlots={data.bookings.timeSlots}
+          bookings={data.bookings.initialBookings}
+          blockedDates={blockedDates}
+          blockedSlots={blockedSlots}
+          onBlockedSlotsChange={(slots) => {
+            setBlockedSlots(slots);
+            setBlockedTab("slots");
+          }}
+        />
       </Section>
 
       <Section id="hot-dates" active={active}>
-        <PlaceholderPage title="Hot dates" />
+        <HotDatesPage
+          hotDates={hotDates}
+          catalog={hotDateCatalog}
+          onHotDatesChange={setHotDates}
+          onOpenDraft={(range) =>
+            setHotDateDraft((current) => ({ id: current.id + 1, range }))
+          }
+        />
+      </Section>
+
+      <Section id="hot-dates-new" active={active}>
+        <AddHotDatesPage
+          key={hotDateDraft.id}
+          hotDates={hotDates}
+          catalog={hotDateCatalog}
+          chargeBy={data.bookings.chargeBy}
+          initialRange={hotDateDraft.range}
+          onSaved={(next) => {
+            setHotDates(next);
+            setHotDateDraft((current) => ({ id: current.id + 1 }));
+          }}
+        />
       </Section>
 
       <Section id="booking-period" active={active}>
@@ -161,16 +236,6 @@ export function DashboardShell({ data }: { data: DashboardData }) {
             onSaved={handleBookingSaved}
           />
         ) : null}
-      </Section>
-
-      <Section id="calendar" active={active}>
-        <CalendarManager
-          initialBookings={data.bookings.initialBookings}
-          chargeBy={data.packages.chargeBy}
-          packages={data.packages.initialPackages}
-          styles={data.packages.initialStyles}
-          maxBookingYear={data.settings.initialSettings.max_booking_year}
-        />
       </Section>
 
       <Section id="settings" active={active}>

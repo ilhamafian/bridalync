@@ -30,7 +30,7 @@ export type BlockedDateRange = {
   createdAt: string | null;
 };
 
-function nextDateKey(dateKey: string) {
+export function nextDateKey(dateKey: string) {
   const date = new Date(`${dateKey}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + 1);
   return date.toISOString().slice(0, 10);

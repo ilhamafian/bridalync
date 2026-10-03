@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: "/dashboard/calendar",
+        destination: "/dashboard",
+        permanent: true,
+      },
+      {
         source: "/dashboard/packages",
         destination: "/dashboard/settings/packages",
         permanent: true,

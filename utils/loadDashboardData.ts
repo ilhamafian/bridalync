@@ -7,7 +7,9 @@ import type {
 } from "@/components/PackagesManager";
 import { AddOnModel } from "@/models/AddOn";
 import { blockedDateModel } from "@/models/BlockedDate";
+import { blockedSlotModel, serializeBlockedSlot } from "@/models/BlockedSlot";
 import { bookingModel } from "@/models/Booking";
+import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { reviewModel } from "@/models/Review";
 import { SettingModel } from "@/models/Setting";
@@ -34,6 +36,7 @@ import {
   buildReviewRequestMessage,
   buildWhatsAppUrl,
 } from "@/utils/booking/messages";
+import { toHotDateItem } from "@/utils/booking/hotDates";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import {
   countUpcomingThisWeek,
@@ -98,6 +101,8 @@ export async function loadDashboardData(
     reviewDocs,
     reviewedBookingIdList,
     blockedDateDocs,
+    blockedSlotDocs,
+    hotDateDocs,
   ] = await Promise.all([
       bookingModel.find(
         { freelancerUserId: userId },
@@ -110,6 +115,8 @@ export async function loadDashboardData(
       reviewModel.findByFreelancerUserId(userId, 100),
       reviewModel.findReviewedBookingIds(userId),
       blockedDateModel.findByUserId(userId),
+      blockedSlotModel.findByUserId(userId),
+      hotDateModel.findByUserId(userId),
     ]);
 
   if (!settings) return null;
@@ -278,6 +285,8 @@ export async function loadDashboardData(
         date: doc.date,
         createdAt: doc.created_at ? new Date(doc.created_at).toISOString() : null,
       })),
+      slots: blockedSlotDocs.map(serializeBlockedSlot),
     },
+    hotDates: hotDateDocs.map(toHotDateItem),
   };
 }
