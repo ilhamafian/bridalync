@@ -3,7 +3,10 @@
 import { usePathname } from "next/navigation";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { getDashboardSection } from "@/utils/dashboardShell";
+import {
+  getDashboardSection,
+  getSettingsCategory,
+} from "@/utils/dashboardShell";
 
 function PageHeaderSkeleton({
   withAction = false,
@@ -172,12 +175,15 @@ export function DashboardSkeleton() {
   switch (section) {
     case "bookings":
       return <BookingsSkeleton />;
-    case "packages":
-      return <PackagesSkeleton />;
     case "calendar":
       return <CalendarSkeleton />;
     case "settings":
-      return <SettingsSkeleton />;
+    case "settings-category":
+      return getSettingsCategory(pathname) === "packages" ? (
+        <PackagesSkeleton />
+      ) : (
+        <SettingsSkeleton />
+      );
     case "profile":
       return <ProfileSkeleton />;
     default:

@@ -11,16 +11,17 @@ import { useDashboardRefreshVersion } from "@/components/dashboard/DashboardRefr
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { NotificationsPage } from "@/components/dashboard/NotificationsPage";
 import { PaymentsPage } from "@/components/dashboard/payments/PaymentsPage";
-import { PackagesManager } from "@/components/PackagesManager";
+import { SettingsCategoryPage } from "@/components/dashboard/settings/SettingsCategoryPage";
+import { SettingsPage } from "@/components/dashboard/settings/SettingsPage";
 import { ProfileManager } from "@/components/profile/ProfileManager";
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
-import { SettingsManager } from "@/components/SettingsManager";
 import { cn } from "@/lib/utils";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
   getBookingDetailsId,
   getBookingFormTarget,
   getDashboardSection,
+  getSettingsCategory,
   type DashboardData,
   type DashboardSection,
 } from "@/utils/dashboardShell";
@@ -65,6 +66,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
   >({});
   const bookingDetailsId = getBookingDetailsId(pathname);
   const bookingFormTarget = getBookingFormTarget(pathname);
+  const settingsCategory = getSettingsCategory(pathname);
   const bookingFormId =
     bookingFormTarget?.mode === "edit" ? bookingFormTarget.id : null;
 
@@ -86,7 +88,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
     document
       .querySelector<HTMLElement>("[data-dashboard-scroll]")
       ?.scrollTo({ top: 0 });
-  }, [active, bookingDetailsId, bookingFormId]);
+  }, [active, bookingDetailsId, bookingFormId, settingsCategory]);
 
   return (
     <Fragment key={refreshVersion}>
@@ -143,15 +145,6 @@ export function DashboardShell({ data }: { data: DashboardData }) {
         ) : null}
       </Section>
 
-      <Section id="packages" active={active}>
-        <PackagesManager
-          initialPackages={data.packages.initialPackages}
-          initialStyles={data.packages.initialStyles}
-          initialAddOns={data.packages.initialAddOns}
-          chargeBy={data.packages.chargeBy}
-        />
-      </Section>
-
       <Section id="calendar" active={active}>
         <CalendarManager
           initialBookings={data.bookings.initialBookings}
@@ -163,13 +156,15 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="settings" active={active}>
-        <Suspense fallback={null}>
-          <SettingsManager
-            initialSettings={data.settings.initialSettings}
-            isStripeConnected={data.settings.isStripeConnected}
-            hasStripeAccount={data.settings.hasStripeAccount}
-          />
-        </Suspense>
+        <SettingsPage />
+      </Section>
+
+      <Section id="settings-category" active={active}>
+        <SettingsCategoryPage
+          category={settingsCategory}
+          settings={data.settings}
+          packages={data.packages}
+        />
       </Section>
 
       <Section id="profile" active={active}>

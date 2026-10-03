@@ -3,16 +3,15 @@
 import { useEffect, useState } from "react";
 import { IconBell, IconDeviceMobile } from "@tabler/icons-react";
 
+import {
+  IconBadge,
+  RowText,
+  SettingsFeedback,
+  SettingsSection,
+  settingsCardClassName,
+} from "@/components/dashboard/settings/SettingsUi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -224,104 +223,90 @@ export function PwaSettingsCard() {
 
   const notificationsOn = Boolean(subscription) || serverSubscribed;
 
+  const installDescription = isStandalone ? (
+    "You're using the installed app."
+  ) : isIos ? (
+    <>
+      On iPhone/iPad: tap Share, then{" "}
+      <span className="font-medium text-foreground">Add to Home Screen</span>.
+      Open Bridalync from the home screen icon to enable notifications.
+    </>
+  ) : deferredPrompt ? (
+    "Install Bridalync for a full-screen app experience and more reliable notifications."
+  ) : (
+    "Use your browser menu to install: Chrome/Edge → Install app, or the install icon in the address bar."
+  );
+
+  const notificationsDescription = !isSupported
+    ? `Push notifications aren't supported in this browser.${
+        isIos && !isStandalone
+          ? " Install to your Home Screen first, then open the app and enable notifications."
+          : ""
+      }`
+    : "Get notified when a client books, pays, or has a session coming up in the next 24 hours.";
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>App & notifications</CardTitle>
-        <CardDescription>
-          Install Bridalync on your phone and get alerts for new and upcoming
-          client bookings.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-5">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <IconDeviceMobile className="size-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Install app</span>
+    <div className="flex flex-col gap-4">
+      <SettingsSection title="Install app">
+        <div className={settingsCardClassName}>
+          <div className="flex items-center gap-3">
+            <IconBadge icon={IconDeviceMobile} />
+            <RowText title="Bridalync app" description={installDescription} />
             <Badge variant={isStandalone ? "default" : "secondary"}>
               {isStandalone ? "Installed" : "Browser"}
             </Badge>
           </div>
-          {isStandalone ? (
-            <p className="text-sm text-muted-foreground">
-              You&apos;re using the installed app.
-            </p>
-          ) : isIos ? (
-            <p className="text-sm text-muted-foreground">
-              On iPhone/iPad: tap Share, then{" "}
-              <span className="font-medium text-foreground">
-                Add to Home Screen
-              </span>
-              . Open Bridalync from the home screen icon to enable notifications.
-            </p>
-          ) : deferredPrompt ? (
-            <p className="text-sm text-muted-foreground">
-              Install Bridalync for a full-screen app experience and more
-              reliable notifications.
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Use your browser menu to install: Chrome/Edge → Install app, or
-              the install icon in the address bar.
-            </p>
-          )}
+          {!isStandalone && deferredPrompt ? (
+            <Button
+              type="button"
+              size="lg"
+              className="min-h-11"
+              onClick={handleInstall}
+              disabled={busy}
+            >
+              {busy ? "Working…" : "Install Bridalync"}
+            </Button>
+          ) : null}
         </div>
+      </SettingsSection>
 
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <IconBell className="size-4 text-muted-foreground" />
-            <span className="text-sm font-medium">Booking notifications</span>
+      <SettingsSection title="Booking notifications">
+        <div className={settingsCardClassName}>
+          <div className="flex items-center gap-3">
+            <IconBadge icon={IconBell} />
+            <RowText
+              title="Push notifications"
+              description={notificationsDescription}
+            />
             <Badge variant={notificationsOn ? "default" : "secondary"}>
               {notificationsOn ? "On" : "Off"}
             </Badge>
           </div>
-          {!isSupported ? (
-            <p className="text-sm text-muted-foreground">
-              Push notifications aren&apos;t supported in this browser.
-              {isIos && !isStandalone
-                ? " Install to your Home Screen first, then open the app and enable notifications."
-                : null}
-            </p>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Get notified when a client books, pays, or has a session coming up
-              in the next 24 hours.
-            </p>
-          )}
+          {isSupported ? (
+            <Button
+              type="button"
+              variant={notificationsOn ? "outline" : "default"}
+              size="lg"
+              className="min-h-11"
+              onClick={
+                notificationsOn
+                  ? handleDisableNotifications
+                  : handleEnableNotifications
+              }
+              disabled={busy}
+            >
+              {busy
+                ? "Working…"
+                : notificationsOn
+                  ? "Turn off notifications"
+                  : "Enable notifications"}
+            </Button>
+          ) : null}
         </div>
+      </SettingsSection>
 
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
-        {message ? (
-          <p className="text-sm text-muted-foreground">{message}</p>
-        ) : null}
-      </CardContent>
-      <CardFooter className="flex flex-wrap gap-2">
-        {!isStandalone && deferredPrompt ? (
-          <Button type="button" onClick={handleInstall} disabled={busy}>
-            {busy ? "Working…" : "Install Bridalync"}
-          </Button>
-        ) : null}
-        {isSupported ? (
-          notificationsOn ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleDisableNotifications}
-              disabled={busy}
-            >
-              {busy ? "Working…" : "Turn off notifications"}
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              onClick={handleEnableNotifications}
-              disabled={busy}
-            >
-              {busy ? "Working…" : "Enable notifications"}
-            </Button>
-          )
-        ) : null}
-      </CardFooter>
-    </Card>
+      <SettingsFeedback error={error} success={message} />
+    </div>
   );
 }
+

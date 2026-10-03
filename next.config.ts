@@ -9,6 +9,11 @@ const nextConfig: NextConfig = {
         destination: "/dashboard/payments",
         permanent: true,
       },
+      {
+        source: "/dashboard/packages",
+        destination: "/dashboard/settings/packages",
+        permanent: true,
+      },
     ];
   },
   images: {

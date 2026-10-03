@@ -23,13 +23,26 @@ export type DashboardSection =
   | "bookings"
   | "booking-details"
   | "booking-form"
-  | "packages"
   | "calendar"
   | "blocked"
   | "hot-dates"
   | "booking-period"
   | "settings"
+  | "settings-category"
   | "profile";
+
+export const SETTINGS_CATEGORIES = [
+  "pricing-model",
+  "packages",
+  "time-slots",
+  "travel-fee",
+  "payment-method",
+  "invoice",
+  "theme",
+  "notifications",
+] as const;
+
+export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
 
 /** Sections reachable from the bottom navbar; these show the top header. */
 export const NAVBAR_SECTIONS: readonly DashboardSection[] = [
@@ -84,7 +97,18 @@ export function getBookingFormTarget(pathname: string): BookingFormTarget | null
   return { mode: "edit", id: decodeURIComponent(match[1]) };
 }
 
+/** Category from `/dashboard/settings/[category]`, or null for other paths. */
+export function getSettingsCategory(pathname: string): SettingsCategory | null {
+  const match = pathname.match(/^\/dashboard\/settings\/([^/]+)\/?$/);
+  if (!match) return null;
+  const slug = decodeURIComponent(match[1]);
+  return (SETTINGS_CATEGORIES as readonly string[]).includes(slug)
+    ? (slug as SettingsCategory)
+    : null;
+}
+
 export function getDashboardSection(pathname: string): DashboardSection {
+  if (getSettingsCategory(pathname)) return "settings-category";
   if (getBookingFormTarget(pathname)) return "booking-form";
   if (getBookingDetailsId(pathname)) return "booking-details";
   if (pathname.startsWith("/dashboard/payments")) return "payments";
@@ -93,7 +117,6 @@ export function getDashboardSection(pathname: string): DashboardSection {
   if (pathname.startsWith("/dashboard/hot-dates")) return "hot-dates";
   if (pathname.startsWith("/dashboard/booking-period")) return "booking-period";
   if (pathname.startsWith("/dashboard/bookings")) return "bookings";
-  if (pathname.startsWith("/dashboard/packages")) return "packages";
   if (pathname.startsWith("/dashboard/calendar")) return "calendar";
   if (pathname.startsWith("/dashboard/settings")) return "settings";
   if (pathname.startsWith("/dashboard/profile")) return "profile";

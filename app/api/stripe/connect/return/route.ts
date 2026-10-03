@@ -22,7 +22,7 @@ function parseFlow(req: NextRequest): ConnectFlow {
 
 function settingsRedirect(appUrl: string, status: string) {
   return NextResponse.redirect(
-    `${appUrl}/dashboard/settings?stripe_payout=${status}`
+    `${appUrl}/dashboard/settings/payment-method?stripe_payout=${status}`
   );
 }
 

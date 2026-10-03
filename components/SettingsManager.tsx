@@ -2,22 +2,32 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import {
+  IconBrandStripe,
+  IconBuildingBank,
+  IconCar,
+  IconClock,
+  IconCreditCard,
+  IconPackage,
+  IconPlus,
+  IconSparkles,
+  IconTrash,
+} from "@tabler/icons-react";
 
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
+import {
+  IconBadge,
+  RowText,
+  SettingsFeedback,
+  SettingsSection,
+  settingsCardClassName,
+  settingsListClassName,
+  settingsRowClassName,
+} from "@/components/dashboard/settings/SettingsUi";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import { PaymentQrUpload } from "@/components/PaymentQrUpload";
-import { PwaSettingsCard } from "@/components/PwaSettingsCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -31,6 +41,7 @@ import {
   type PaymentMethod,
   type TimeSlot,
 } from "@/schemas/settingSchema";
+import type { SettingsCategory } from "@/utils/dashboardShell";
 
 export type SettingsItem = {
   _id: string;
@@ -66,17 +77,16 @@ const DISABLED_TRAVEL_LOCATION: Address = {
 };
 
 const inputClassName = cn(
-  "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground",
+  "h-10 w-full rounded-md border border-border bg-white/60 px-3 text-sm text-foreground dark:bg-white/5",
   "placeholder:text-muted-foreground",
   "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
 );
 
 const textareaClassName = cn(
-  "min-h-40 w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground",
+  "min-h-40 w-full rounded-md border border-border bg-white/60 px-3 py-2 text-sm text-foreground dark:bg-white/5",
   "placeholder:text-muted-foreground",
   "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
 );
-
 type SectionKey =
   | "charge_by"
   | "travel"
@@ -134,6 +144,38 @@ function Field({
   );
 }
 
+function SettingsPanel({
+  error,
+  success,
+  saving,
+  disabled = false,
+  onSave,
+  children,
+}: {
+  error?: string;
+  success?: string;
+  saving: boolean;
+  disabled?: boolean;
+  onSave: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-4">
+      {children}
+      <SettingsFeedback error={error} success={success} />
+      <Button
+        type="button"
+        size="lg"
+        className="min-h-11"
+        onClick={onSave}
+        disabled={saving || disabled}
+      >
+        {saving ? "Saving…" : "Save"}
+      </Button>
+    </div>
+  );
+}
+
 function stripeStatusLabel(
   stripeConnected: boolean,
   hasStripeAccount: boolean,
@@ -146,10 +188,12 @@ function stripeStatusLabel(
 }
 
 export function SettingsManager({
+  category,
   initialSettings,
   isStripeConnected,
   hasStripeAccount,
 }: {
+  category: SettingsCategory | null;
   initialSettings: SettingsItem;
   isStripeConnected: boolean;
   hasStripeAccount: boolean;
@@ -250,7 +294,7 @@ export function SettingsManager({
       setStripeSetupPhase(status === "missing" ? null : "incomplete");
     }
 
-    router.replace("/dashboard/settings", { scroll: false });
+    router.replace("/dashboard/settings/payment-method", { scroll: false });
   }, [router, searchParams]);
 
   function clearSectionFeedback(section: SectionKey) {
@@ -554,192 +598,142 @@ export function SettingsManager({
     );
   }
 
-  return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <div>
-        <h2 className="text-lg font-semibold">Settings</h2>
-        <p className="text-sm text-muted-foreground">
-          Manage pricing, travel, payments, invoice details, and payouts.
-        </p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Pricing model</CardTitle>
-          <CardDescription>
-            Charge clients by package or by style. Changing this resets your
-            default time slots.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+  if (category === "pricing-model") {
+    return (
+      <SettingsPanel
+        error={sectionError.charge_by}
+        success={sectionSuccess.charge_by}
+        saving={savingSection === "charge_by"}
+        onSave={saveChargeBy}
+      >
+        <SettingsSection title="Charge clients by">
           <RadioGroup
             value={chargeBy}
-            onValueChange={(value) =>
-              setChargeBy(value as "package" | "style")
-            }
-            className="gap-3"
+            onValueChange={(value) => setChargeBy(value as "package" | "style")}
+            className={settingsListClassName}
           >
-            <label className="flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2">
-              <RadioGroupItem value="package" id="charge-package" />
-              <span className="text-sm">
-                <span className="font-medium">By package</span>
-                <span className="block text-muted-foreground">
-                  Makeup artist style pricing
-                </span>
-              </span>
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconPackage} />
+              <RowText
+                title="By package"
+                description="Makeup artist style pricing"
+              />
+              <RadioGroupItem value="package" aria-label="By package" />
             </label>
-            <label className="flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2">
-              <RadioGroupItem value="style" id="charge-style" />
-              <span className="text-sm">
-                <span className="font-medium">By style</span>
-                <span className="block text-muted-foreground">
-                  Hijab stylist style pricing
-                </span>
-              </span>
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconSparkles} />
+              <RowText
+                title="By style"
+                description="Hijab stylist style pricing"
+              />
+              <RadioGroupItem value="style" aria-label="By style" />
             </label>
           </RadioGroup>
-          {sectionError.charge_by ? (
-            <p className="mt-3 text-sm text-destructive">
-              {sectionError.charge_by}
-            </p>
-          ) : null}
-          {sectionSuccess.charge_by ? (
-            <p className="mt-3 text-sm text-muted-foreground">
-              {sectionSuccess.charge_by}
-            </p>
-          ) : null}
-        </CardContent>
-        <CardFooter>
-          <Button
-            type="button"
-            onClick={saveChargeBy}
-            disabled={savingSection === "charge_by"}
-          >
-            {savingSection === "charge_by" ? "Saving…" : "Save"}
-          </Button>
-        </CardFooter>
-      </Card>
+          <p className="text-xs text-muted-foreground">
+            Changing this resets your default time slots.
+          </p>
+        </SettingsSection>
+      </SettingsPanel>
+    );
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Travel</CardTitle>
-          <CardDescription>
-            Charge for travel from your base location.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium">Enable travel fee</p>
-              <p className="text-sm text-muted-foreground">
-                Clients pay based on distance from your base.
-              </p>
-            </div>
-            <Switch
-              checked={travelEnabled}
-              onCheckedChange={setTravelEnabled}
-            />
+  if (category === "travel-fee") {
+    return (
+      <SettingsPanel
+        error={sectionError.travel}
+        success={sectionSuccess.travel}
+        saving={savingSection === "travel"}
+        onSave={saveTravel}
+      >
+        <SettingsSection title="Travel fee">
+          <div className={settingsListClassName}>
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconCar} />
+              <RowText
+                title="Enable travel fee"
+                description="Clients pay based on distance from your base."
+              />
+              <Switch
+                checked={travelEnabled}
+                onCheckedChange={setTravelEnabled}
+              />
+            </label>
           </div>
+        </SettingsSection>
 
-          {travelEnabled ? (
-            <MapsProvider>
-              <Field label="Rate per km (RM)">
-                <Input
-                  className={inputClassName}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={ratePerKm}
-                  onChange={(event) => setRatePerKm(event.target.value)}
-                  placeholder="1.00"
-                />
-                <p className="text-sm text-muted-foreground">
+        {travelEnabled ? (
+          <MapsProvider>
+            <SettingsSection title="Rate">
+              <div className={settingsCardClassName}>
+                <Field label="Rate per km (RM)">
+                  <Input
+                    className={inputClassName}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={ratePerKm}
+                    onChange={(event) => setRatePerKm(event.target.value)}
+                    placeholder="1.00"
+                  />
+                </Field>
+                <p className="text-xs text-muted-foreground">
                   Travel is charged as a round trip — to the client and back to
                   your base. For example, 10 km away at RM 1/km adds RM 20 to
                   the booking.
                 </p>
-              </Field>
-              <Field label="Base location">
+              </div>
+            </SettingsSection>
+            <SettingsSection title="Base location">
+              <div className={settingsCardClassName}>
                 <LocationMapPicker
                   value={travelLocation}
                   onChange={setTravelLocation}
                 />
-              </Field>
-            </MapsProvider>
-          ) : null}
+              </div>
+            </SettingsSection>
+          </MapsProvider>
+        ) : null}
+      </SettingsPanel>
+    );
+  }
 
-          {sectionError.travel ? (
-            <p className="text-sm text-destructive">{sectionError.travel}</p>
-          ) : null}
-          {sectionSuccess.travel ? (
-            <p className="text-sm text-muted-foreground">
-              {sectionSuccess.travel}
-            </p>
-          ) : null}
-        </CardContent>
-        <CardFooter>
-          <Button
-            type="button"
-            onClick={saveTravel}
-            disabled={savingSection === "travel"}
+  if (category === "payment-method") {
+    return (
+      <SettingsPanel
+        error={sectionError.payment}
+        success={sectionSuccess.payment}
+        saving={savingSection === "payment"}
+        disabled={uploadingQr}
+        onSave={savePayment}
+      >
+        <SettingsSection title="How clients pay">
+          <RadioGroup
+            value={paymentMethod}
+            onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
+            className={settingsListClassName}
           >
-            {savingSection === "travel" ? "Saving…" : "Save"}
-          </Button>
-        </CardFooter>
-      </Card>
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconBuildingBank} />
+              <RowText
+                title="Manual Transfer"
+                description="Clients pay via your QR or bank transfer and upload a receipt. You verify payments in Bookings before the booking is confirmed."
+              />
+              <RadioGroupItem value="manual_transfer" aria-label="Manual Transfer" />
+            </label>
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconCreditCard} />
+              <RowText
+                title="Payment Gateway"
+                description="Clients pay online with Stripe (card / FPX). Setup takes about 3 minutes and requires your SSM and Tax Identification Number."
+              />
+              <RadioGroupItem value="payment_gateway" aria-label="Payment Gateway" />
+            </label>
+          </RadioGroup>
+        </SettingsSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment</CardTitle>
-          <CardDescription>
-            How clients pay you, and when full payment is required.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Label>Payment method</Label>
-            <RadioGroup
-              value={paymentMethod}
-              onValueChange={(value) =>
-                setPaymentMethod(value as PaymentMethod)
-              }
-              className="gap-3"
-            >
-              <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border px-3 py-2">
-                <RadioGroupItem
-                  value="manual_transfer"
-                  id="payment-manual"
-                  className="mt-1"
-                />
-                <span className="text-sm">
-                  <span className="font-medium">Manual Transfer</span>
-                  <span className="block text-muted-foreground">
-                    Clients pay you via your QR or bank transfer and upload a
-                    receipt. You verify payments in Bookings before the booking
-                    is confirmed.
-                  </span>
-                </span>
-              </label>
-              <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border px-3 py-2">
-                <RadioGroupItem
-                  value="payment_gateway"
-                  id="payment-gateway"
-                  className="mt-1"
-                />
-                <span className="text-sm">
-                  <span className="font-medium">Payment Gateway</span>
-                  <span className="block text-muted-foreground">
-                    Clients pay online with Stripe (card / FPX). Setup takes
-                    about 3 minutes and requires your SSM and Tax Identification
-                    Number.
-                  </span>
-                </span>
-              </label>
-            </RadioGroup>
-          </div>
-
-          {paymentMethod === "manual_transfer" ? (
-            <div className="flex flex-col gap-4 rounded-md border border-border p-3">
+        {paymentMethod === "manual_transfer" ? (
+          <SettingsSection title="Transfer details">
+            <div className={settingsCardClassName}>
               <PaymentQrUpload
                 value={qrImageUrl}
                 onChange={setQrImageUrl}
@@ -777,14 +771,24 @@ export function SettingsManager({
                 />
               </Field>
             </div>
-          ) : null}
+          </SettingsSection>
+        ) : null}
 
-          {paymentMethod === "payment_gateway" ? (
-            <div className="flex flex-col gap-3 rounded-md border border-border p-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">
-                  Stripe status
-                </span>
+        {paymentMethod === "payment_gateway" ? (
+          <SettingsSection title="Stripe">
+            <div className={settingsCardClassName}>
+              <div className="flex items-center gap-3">
+                <IconBadge icon={IconBrandStripe} />
+                <RowText
+                  title="Stripe account"
+                  description={
+                    stripeConnected
+                      ? "Clients can pay you online."
+                      : stripeSetupPhase === "verifying"
+                        ? "Stripe is reviewing your details. You can enable Payment Gateway once this shows Connected."
+                        : "Finish Stripe setup before enabling Payment Gateway. Clients cannot pay online until this is connected."
+                  }
+                />
                 <Badge variant={stripeConnected ? "default" : "secondary"}>
                   {stripeStatusLabel(
                     stripeConnected,
@@ -793,17 +797,11 @@ export function SettingsManager({
                   )}
                 </Badge>
               </div>
-              {!stripeConnected ? (
-                <p className="text-sm text-muted-foreground">
-                  {stripeSetupPhase === "verifying"
-                    ? "Stripe is reviewing your details. You can enable Payment Gateway once the badge shows Connected."
-                    : "Finish Stripe setup before enabling Payment Gateway. Clients cannot pay online until this is connected."}
-                </p>
-              ) : null}
               <Button
                 type="button"
                 variant="outline"
-                className="w-fit"
+                size="lg"
+                className="min-h-11"
                 onClick={handleStripeConnect}
                 disabled={connectingStripe}
               >
@@ -815,189 +813,157 @@ export function SettingsManager({
                       ? "Check Stripe status"
                       : "Set up Stripe"}
               </Button>
-              {sectionError.payouts ? (
-                <p className="text-sm text-destructive">{sectionError.payouts}</p>
-              ) : null}
-              {sectionSuccess.payouts ? (
-                <p className="text-sm text-muted-foreground">
-                  {sectionSuccess.payouts}
-                </p>
-              ) : null}
+              <SettingsFeedback
+                error={sectionError.payouts}
+                success={sectionSuccess.payouts}
+              />
             </div>
-          ) : null}
+          </SettingsSection>
+        ) : null}
 
-          <Field label="Balance due before (days)">
-            <Input
-              className={inputClassName}
-              type="number"
-              min="0"
-              step="1"
-              value={balanceDueBefore}
-              onChange={(event) => setBalanceDueBefore(event.target.value)}
-            />
-          </Field>
-          {sectionError.payment ? (
-            <p className="text-sm text-destructive">{sectionError.payment}</p>
-          ) : null}
-          {sectionSuccess.payment ? (
-            <p className="text-sm text-muted-foreground">
-              {sectionSuccess.payment}
-            </p>
-          ) : null}
-        </CardContent>
-        <CardFooter>
-          <Button
-            type="button"
-            onClick={savePayment}
-            disabled={savingSection === "payment" || uploadingQr}
-          >
-            {savingSection === "payment" ? "Saving…" : "Save"}
-          </Button>
-        </CardFooter>
-      </Card>
+        <SettingsSection title="Balance due">
+          <div className={settingsCardClassName}>
+            <Field label="Days before the session">
+              <Input
+                className={inputClassName}
+                type="number"
+                min="0"
+                step="1"
+                value={balanceDueBefore}
+                onChange={(event) => setBalanceDueBefore(event.target.value)}
+              />
+            </Field>
+          </div>
+        </SettingsSection>
+      </SettingsPanel>
+    );
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoice</CardTitle>
-          <CardDescription>
-            Company details shown on invoices and booking terms.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <Field label="Company name">
-            <Input
-              className={inputClassName}
-              value={companyName}
-              onChange={(event) => setCompanyName(event.target.value)}
+  if (category === "invoice") {
+    return (
+      <SettingsPanel
+        error={sectionError.invoice}
+        success={sectionSuccess.invoice}
+        saving={savingSection === "invoice"}
+        disabled={uploadingLogo}
+        onSave={saveInvoice}
+      >
+        <SettingsSection title="Company">
+          <div className={settingsCardClassName}>
+            <Field label="Company name">
+              <Input
+                className={inputClassName}
+                value={companyName}
+                onChange={(event) => setCompanyName(event.target.value)}
+              />
+            </Field>
+            <Field label="Registration number (optional)">
+              <Input
+                className={inputClassName}
+                value={companyReg}
+                onChange={(event) => setCompanyReg(event.target.value)}
+              />
+            </Field>
+          </div>
+        </SettingsSection>
+        <SettingsSection title="Logo">
+          <div className={settingsCardClassName}>
+            <CompanyLogoUpload
+              value={companyLogo}
+              onChange={(url) => {
+                void saveCompanyLogo(url);
+              }}
+              disabled={savingSection === "invoice"}
+              onUploadingChange={setUploadingLogo}
+              hint="JPEG, PNG, WebP, or GIF. Large images are compressed automatically. Cropped to 16:9. Saves automatically."
             />
-          </Field>
-          <Field label="Registration number (optional)">
-            <Input
-              className={inputClassName}
-              value={companyReg}
-              onChange={(event) => setCompanyReg(event.target.value)}
-            />
-          </Field>
-          <CompanyLogoUpload
-            value={companyLogo}
-            onChange={(url) => {
-              void saveCompanyLogo(url);
-            }}
-            disabled={savingSection === "invoice"}
-            onUploadingChange={setUploadingLogo}
-            hint="JPEG, PNG, WebP, or GIF. Large images are compressed automatically. Cropped to 16:9. Saves automatically."
-          />
-          <Field label="Terms and conditions">
+          </div>
+        </SettingsSection>
+        <SettingsSection title="Terms and conditions">
+          <div className={settingsCardClassName}>
             <Textarea
               className={textareaClassName}
               value={terms}
               onChange={(event) => setTerms(event.target.value)}
+              aria-label="Terms and conditions"
             />
-          </Field>
-          {sectionError.invoice ? (
-            <p className="text-sm text-destructive">{sectionError.invoice}</p>
-          ) : null}
-          {sectionSuccess.invoice ? (
-            <p className="text-sm text-muted-foreground">
-              {sectionSuccess.invoice}
-            </p>
-          ) : null}
-        </CardContent>
-        <CardFooter>
-          <Button
-            type="button"
-            onClick={saveInvoice}
-            disabled={savingSection === "invoice" || uploadingLogo}
-          >
-            {savingSection === "invoice" ? "Saving…" : "Save"}
-          </Button>
-        </CardFooter>
-      </Card>
+          </div>
+        </SettingsSection>
+      </SettingsPanel>
+    );
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Time slots</CardTitle>
-          <CardDescription>
-            Available session windows clients can book.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          {timeSlots.map((slot, index) => (
-            <div
-              key={`${slot.startTime}-${slot.endTime}-${index}`}
-              className="flex flex-wrap items-end gap-2 rounded-md border border-border p-3"
-            >
-              <Field label="Start">
+  if (category === "time-slots") {
+    return (
+      <SettingsPanel
+        error={sectionError.time_slots}
+        success={sectionSuccess.time_slots}
+        saving={savingSection === "time_slots"}
+        onSave={saveTimeSlots}
+      >
+        <SettingsSection title="Slots">
+          <div className={settingsListClassName}>
+            {timeSlots.map((slot, index) => (
+              <div
+                key={`${slot.startTime}-${slot.endTime}-${index}`}
+                className="flex items-center gap-2 py-3 pr-2 pl-4"
+              >
+                <IconBadge icon={IconClock} />
                 <Input
-                  className={cn(inputClassName, "w-32")}
+                  className={cn(inputClassName, "min-w-0 flex-1 px-2")}
                   type="time"
                   value={slot.startTime}
+                  aria-label="Start time"
                   onChange={(event) =>
                     updateTimeSlot(index, { startTime: event.target.value })
                   }
                 />
-              </Field>
-              <Field label="End">
+                <span className="text-muted-foreground">–</span>
                 <Input
-                  className={cn(inputClassName, "w-32")}
+                  className={cn(inputClassName, "min-w-0 flex-1 px-2")}
                   type="time"
                   value={slot.endTime}
+                  aria-label="End time"
                   onChange={(event) =>
                     updateTimeSlot(index, { endTime: event.target.value })
                   }
                 />
-              </Field>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                disabled={timeSlots.length <= 1}
-                onClick={() =>
-                  setTimeSlots((current) =>
-                    current.filter((_, i) => i !== index)
-                  )
-                }
-                aria-label="Remove time slot"
-              >
-                <IconTrash className="size-4" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            className="w-fit"
-            onClick={() =>
-              setTimeSlots((current) => [
-                ...current,
-                { startTime: "09:00", endTime: "10:00" },
-              ])
-            }
-          >
-            <IconPlus className="size-4" />
-            Add slot
-          </Button>
-          {sectionError.time_slots ? (
-            <p className="text-sm text-destructive">{sectionError.time_slots}</p>
-          ) : null}
-          {sectionSuccess.time_slots ? (
-            <p className="text-sm text-muted-foreground">
-              {sectionSuccess.time_slots}
-            </p>
-          ) : null}
-        </CardContent>
-        <CardFooter>
-          <Button
-            type="button"
-            onClick={saveTimeSlots}
-            disabled={savingSection === "time_slots"}
-          >
-            {savingSection === "time_slots" ? "Saving…" : "Save"}
-          </Button>
-        </CardFooter>
-      </Card>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  disabled={timeSlots.length <= 1}
+                  onClick={() =>
+                    setTimeSlots((current) =>
+                      current.filter((_, i) => i !== index)
+                    )
+                  }
+                  aria-label="Remove time slot"
+                >
+                  <IconTrash className="size-4" />
+                </Button>
+              </div>
+            ))}
+            <button
+              type="button"
+              className={settingsRowClassName}
+              onClick={() =>
+                setTimeSlots((current) => [
+                  ...current,
+                  { startTime: "09:00", endTime: "10:00" },
+                ])
+              }
+            >
+              <IconBadge icon={IconPlus} />
+              <RowText title="Add slot" />
+            </button>
+          </div>
+        </SettingsSection>
+      </SettingsPanel>
+    );
+  }
 
-      <PwaSettingsCard />
-    </div>
-  );
+  return null;
 }
+

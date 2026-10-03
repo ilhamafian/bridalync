@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
         );
       }
       return NextResponse.redirect(
-        `${appUrl}/dashboard/settings?stripe_payout=ready`
+        `${appUrl}/dashboard/settings/payment-method?stripe_payout=ready`
       );
     }
 
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
         );
       }
       return NextResponse.redirect(
-        `${appUrl}/dashboard/settings?stripe_payout=error`
+        `${appUrl}/dashboard/settings/payment-method?stripe_payout=error`
       );
     }
 
@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
       );
     }
     return NextResponse.redirect(
-      `${appUrl}/dashboard/settings?stripe_payout=error`
+      `${appUrl}/dashboard/settings/payment-method?stripe_payout=error`
     );
   }
 }

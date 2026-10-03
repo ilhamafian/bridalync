@@ -413,13 +413,13 @@ export function getSetupChecklist(input: {
       id: "package",
       label: "Add package",
       done: input.packageCount > 0,
-      href: "/dashboard/packages",
+      href: "/dashboard/settings/packages",
     },
     {
       id: "availability",
       label: "Set availability",
       done: input.timeSlotCount > 0,
-      href: "/dashboard/settings",
+      href: "/dashboard/settings/time-slots",
     },
     {
       id: "publish",
