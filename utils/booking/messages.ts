@@ -31,6 +31,28 @@ export function buildReviewRequestMessage(input: {
   ].join("\n");
 }
 
+export function buildBalanceReminderMessage(input: {
+  clientName: string;
+  balanceRm: number;
+  sessionDate: string;
+  bookingUrl: string | null;
+}) {
+  const firstName = input.clientName.trim().split(/\s+/)[0] || "there";
+  const date = new Date(input.sessionDate).toLocaleDateString("en-MY", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+  return [
+    `Hi ${firstName}, just a friendly reminder that your balance of ${formatRm(input.balanceRm)} for your session on ${date} is still outstanding.`,
+    ...(input.bookingUrl
+      ? ["", "You can view your booking and pay the balance here:", input.bookingUrl]
+      : []),
+    "",
+    "Thank you!",
+  ].join("\n");
+}
+
 function formatClientPhone(contact: PublicBooking["contact"]) {
   if (contact.mobile) {
     const prefix = contact.country_code ? `${contact.country_code} ` : "";

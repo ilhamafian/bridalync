@@ -70,11 +70,6 @@ export type DashboardStats = {
   thisMonth: number;
 };
 
-export type OutstandingPayments = {
-  totalRm: number;
-  clientCount: number;
-};
-
 function startOfDay(date: Date) {
   const next = new Date(date);
   next.setHours(0, 0, 0, 0);
@@ -344,28 +339,6 @@ export function getBookingSummary(
     thisWeek: weekIds.size,
     thisMonth: monthIds.size,
   };
-}
-
-export function getOutstandingPayments(
-  bookings: SerializedBooking[]
-): OutstandingPayments {
-  let totalRm = 0;
-  let clientCount = 0;
-
-  for (const booking of bookings) {
-    if (
-      booking.status !== "confirmed" &&
-      booking.status !== "completed" &&
-      booking.status !== "pending"
-    ) {
-      continue;
-    }
-    if (booking.invoice.balanceRm <= 0) continue;
-    totalRm += booking.invoice.balanceRm;
-    clientCount += 1;
-  }
-
-  return { totalRm, clientCount };
 }
 
 export function getRecentActivity(

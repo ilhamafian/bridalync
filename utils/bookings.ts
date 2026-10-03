@@ -28,6 +28,7 @@ const bookingPaymentUpdateSchema = bookingSchema.pick({
   status: true,
   stripePaymentIntentId: true,
   depositVerificationStatus: true,
+  depositPaidAt: true,
 });
 
 const bookingBalanceUpdateSchema = bookingSchema.pick({
@@ -35,6 +36,8 @@ const bookingBalanceUpdateSchema = bookingSchema.pick({
   invoice: true,
   stripePaymentIntentId: true,
   balanceVerificationStatus: true,
+  balancePaidAt: true,
+  balancePaidRm: true,
 });
 
 export async function updateBookingStatus(
@@ -61,6 +64,7 @@ export async function confirmBookingPayment(
     bookingId,
     {
       status: "confirmed",
+      depositPaidAt: new Date(),
       ...(existing.paymentChannel === "manual_transfer"
         ? { depositVerificationStatus: "approved" as const }
         : {}),
@@ -141,6 +145,8 @@ export async function confirmBookingBalancePayment(
     {
       paymentOption: "full",
       invoice: settledInvoice,
+      balancePaidAt: new Date(),
+      balancePaidRm: existing.invoice.balanceRm,
       ...(existing.balanceVerificationStatus === "pending"
         ? { balanceVerificationStatus: "approved" as const }
         : {}),

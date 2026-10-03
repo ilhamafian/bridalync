@@ -2,6 +2,15 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["sharp"],
+  async redirects() {
+    return [
+      {
+        source: "/dashboard/analytics",
+        destination: "/dashboard/payments",
+        permanent: true,
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       {

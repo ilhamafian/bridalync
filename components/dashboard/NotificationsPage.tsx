@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityList } from "@/components/dashboard/ActivityList";
 import { BackButton } from "@/components/dashboard/BackButton";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
-import { cn } from "@/lib/utils";
+import { FilterPills } from "@/components/dashboard/FilterPills";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import { getRecentActivity, type ActivityKind } from "@/utils/dashboard";
 
@@ -80,31 +80,12 @@ export function NotificationsPage({
         </p>
       </div>
 
-      <div
-        role="group"
-        aria-label="Filter notifications"
-        className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 no-scrollbar lg:-mx-6 lg:px-6"
-      >
-        {NOTIFICATION_FILTERS.map((option) => {
-          const active = filter === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={active}
-              onClick={() => selectFilter(option.value)}
-              className={cn(
-                "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                active
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "bg-white/30 text-foreground shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-              )}
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+      <FilterPills
+        label="Filter notifications"
+        options={NOTIFICATION_FILTERS}
+        value={filter}
+        onChange={selectFilter}
+      />
 
       {filtered.length === 0 ? (
         <EmptyCard>

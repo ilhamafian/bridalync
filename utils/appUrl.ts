@@ -27,6 +27,14 @@ export function buildReviewUrl(
   return `${buildProfileUrl(appUrl, username)}/review/${bookingId}`;
 }
 
+export function buildClientBookingUrl(
+  appUrl: string,
+  username: string,
+  bookingId: string
+) {
+  return `${buildProfileUrl(appUrl, username)}/bookings/${bookingId}`;
+}
+
 export function buildProfileDisplayUrl(appUrl: string, username: string) {
   return `${formatAppHost(appUrl)}/${username}`;
 }

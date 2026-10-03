@@ -10,6 +10,7 @@ import { BookingFormPage } from "@/components/dashboard/BookingFormPage";
 import { useDashboardRefreshVersion } from "@/components/dashboard/DashboardRefresh";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { NotificationsPage } from "@/components/dashboard/NotificationsPage";
+import { PaymentsPage } from "@/components/dashboard/payments/PaymentsPage";
 import { PackagesManager } from "@/components/PackagesManager";
 import { ProfileManager } from "@/components/profile/ProfileManager";
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
@@ -93,8 +94,8 @@ export function DashboardShell({ data }: { data: DashboardData }) {
         <DashboardHome {...data.home} />
       </Section>
 
-      <Section id="analytics" active={active}>
-        <PlaceholderPage title="Analytics" />
+      <Section id="payments" active={active}>
+        <PaymentsPage {...data.payments} />
       </Section>
 
       <Section id="notifications" active={active}>

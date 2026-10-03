@@ -8,6 +8,7 @@ import {
   getEarliestSessionDate,
   roundRm,
 } from "@/utils/booking/pricing";
+import { invoiceNumberFromBookingId } from "@/utils/invoice/invoiceNumber";
 import { formatLocationAddress } from "@/utils/session";
 
 const PAGE_WIDTH = 595.28; // A4
@@ -77,13 +78,6 @@ function formatTimeLabel(hhmm: string): string {
   const displayHour = hour % 12 || 12;
   if (minute === 0) return `${displayHour}${period}`;
   return `${displayHour}.${String(minute).padStart(2, "0")}${period}`;
-}
-
-function invoiceNumberFromBookingId(bookingId: string): string {
-  const hex = bookingId.replace(/[^a-f0-9]/gi, "").slice(-6);
-  if (!hex) return "0001";
-  const numeric = Number.parseInt(hex, 16) % 1_000_000;
-  return String(numeric).padStart(4, "0");
 }
 
 function amountPaidRm(booking: PersistedBooking): number {

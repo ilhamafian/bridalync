@@ -78,6 +78,11 @@ export const bookingSchema = z.object({
   depositVerificationStatus: paymentVerificationStatusSchema.optional(),
   balanceReceiptUrl: z.string().optional(),
   balanceVerificationStatus: paymentVerificationStatusSchema.optional(),
+  /** Missing on bookings paid before payment times were recorded. */
+  depositPaidAt: z.coerce.date().optional(),
+  balancePaidAt: z.coerce.date().optional(),
+  /** Balance amount settled at `balancePaidAt`; the invoice folds it into `depositRm`. */
+  balancePaidRm: z.number().optional(),
   stripeCheckoutSessionId: z.string().optional(),
   stripePaymentIntentId: z.string().optional(),
   /** Keys of sessions that already received an upcoming-session push. */

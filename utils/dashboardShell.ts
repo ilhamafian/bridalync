@@ -4,6 +4,7 @@ import type {
   StyleCatalogItem,
 } from "@/components/booking/BookingForm";
 import type { DashboardHomeProps } from "@/components/dashboard/DashboardHome";
+import type { PaymentsPageProps } from "@/components/dashboard/payments/PaymentsPage";
 import type {
   AddOnItem,
   PackageItem,
@@ -17,7 +18,7 @@ import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
 export type DashboardSection =
   | "home"
-  | "analytics"
+  | "payments"
   | "notifications"
   | "bookings"
   | "booking-details"
@@ -33,13 +34,14 @@ export type DashboardSection =
 /** Sections reachable from the bottom navbar; these show the top header. */
 export const NAVBAR_SECTIONS: readonly DashboardSection[] = [
   "home",
-  "analytics",
+  "payments",
   "settings",
   "profile",
 ];
 
 export type DashboardData = {
   home: DashboardHomeProps;
+  payments: PaymentsPageProps;
   bookings: {
     initialBookings: SerializedBooking[];
     packages: PackageCatalogItem[];
@@ -85,7 +87,7 @@ export function getBookingFormTarget(pathname: string): BookingFormTarget | null
 export function getDashboardSection(pathname: string): DashboardSection {
   if (getBookingFormTarget(pathname)) return "booking-form";
   if (getBookingDetailsId(pathname)) return "booking-details";
-  if (pathname.startsWith("/dashboard/analytics")) return "analytics";
+  if (pathname.startsWith("/dashboard/payments")) return "payments";
   if (pathname.startsWith("/dashboard/notifications")) return "notifications";
   if (pathname.startsWith("/dashboard/blocked")) return "blocked";
   if (pathname.startsWith("/dashboard/hot-dates")) return "hot-dates";

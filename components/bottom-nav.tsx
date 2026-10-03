@@ -29,10 +29,10 @@ const leftItems: NavLinkItem[] = [
     match: (pathname) => pathname === "/dashboard",
   },
   {
-    title: "Analytics",
-    href: "/dashboard/analytics",
+    title: "Payments",
+    href: "/dashboard/payments",
     icon: IconCash,
-    match: (pathname) => pathname.startsWith("/dashboard/analytics"),
+    match: (pathname) => pathname.startsWith("/dashboard/payments"),
   },
 ];
 

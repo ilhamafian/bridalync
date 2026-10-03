@@ -23,8 +23,13 @@ import {
 } from "@/schemas/settingSchema";
 import type { Style } from "@/schemas/styleSchema";
 import type { SessionUser } from "@/schemas/userSchema";
-import { buildReviewUrl, getAppUrl } from "@/utils/appUrl";
 import {
+  buildClientBookingUrl,
+  buildReviewUrl,
+  getAppUrl,
+} from "@/utils/appUrl";
+import {
+  buildBalanceReminderMessage,
   buildReviewRequestMessage,
   buildWhatsAppUrl,
 } from "@/utils/booking/messages";
@@ -41,6 +46,13 @@ import {
   getUpcomingBookings,
 } from "@/utils/dashboard";
 import type { DashboardData } from "@/utils/dashboardShell";
+import {
+  getInvoices,
+  getMonthlyReports,
+  getOutstandingThisMonth,
+  getPayments,
+  getWeekSummary,
+} from "@/utils/payments";
 
 function serializePackage(pkg: WithId<Package>): PackageItem {
   return {
@@ -141,6 +153,9 @@ export async function loadDashboardData(
     return { ...item, leaveReviewUrl };
   });
 
+  const payments = getPayments(serializedBookings);
+  const outstanding = getOutstandingThisMonth(serializedBookings, now);
+
   return {
     home: {
       greeting: getGreeting(now),
@@ -150,6 +165,40 @@ export async function loadDashboardData(
       upcoming: getUpcomingBookings(scheduleItems, now, 3),
       completed,
       activity: getRecentActivity(serializedBookings, 3),
+    },
+    payments: {
+      week: getWeekSummary(payments, now),
+      outstanding: {
+        totalRm: outstanding.totalRm,
+        clients: outstanding.clients.map(
+          ({ countryCode, mobile, ...client }) => ({
+            ...client,
+            messageUrl:
+              countryCode && mobile
+                ? buildWhatsAppUrl(
+                    countryCode,
+                    mobile,
+                    buildBalanceReminderMessage({
+                      clientName: client.clientName,
+                      balanceRm: client.balanceRm,
+                      sessionDate: client.sessionDate,
+                      bookingUrl:
+                        appUrl && username
+                          ? buildClientBookingUrl(
+                              appUrl,
+                              username,
+                              client.bookingId
+                            )
+                          : null,
+                    })
+                  )
+                : null,
+          })
+        ),
+      },
+      reports: getMonthlyReports(payments, now),
+      recentPayments: payments,
+      invoices: getInvoices(serializedBookings, payments),
     },
     bookings: {
       initialBookings: serializedBookings,
