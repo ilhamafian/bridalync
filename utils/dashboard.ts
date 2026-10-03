@@ -45,6 +45,7 @@ export type ActivityKind =
 
 export type ActivityItem = {
   id: string;
+  bookingId: string;
   kind: ActivityKind;
   label: string;
   clientName: string;
@@ -369,7 +370,7 @@ export function getOutstandingPayments(
 
 export function getRecentActivity(
   bookings: SerializedBooking[],
-  limit = 5
+  limit?: number
 ): ActivityItem[] {
   const sorted = [...bookings].sort((a, b) => {
     const aTime = new Date(a.updated_at ?? a.created_at ?? 0).getTime();
@@ -381,6 +382,7 @@ export function getRecentActivity(
     const kind = getActivityKind(booking);
     return {
       id: `${booking._id}-${kind}`,
+      bookingId: booking._id,
       kind,
       label: ACTIVITY_LABELS[kind],
       clientName: booking.contact.name,

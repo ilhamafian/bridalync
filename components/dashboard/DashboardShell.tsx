@@ -9,6 +9,7 @@ import { BookingDetailsPage } from "@/components/dashboard/BookingDetailsPage";
 import { BookingFormPage } from "@/components/dashboard/BookingFormPage";
 import { useDashboardRefreshVersion } from "@/components/dashboard/DashboardRefresh";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
+import { NotificationsPage } from "@/components/dashboard/NotificationsPage";
 import { PackagesManager } from "@/components/PackagesManager";
 import { ProfileManager } from "@/components/profile/ProfileManager";
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
@@ -97,7 +98,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="notifications" active={active}>
-        <PlaceholderPage title="Notifications" />
+        <NotificationsPage bookings={data.bookings.initialBookings} />
       </Section>
 
       <Section id="blocked" active={active}>
