@@ -188,7 +188,7 @@ export function DashboardHome({
           <BookingCarousel
             items={bookings}
             showDate={!showToday}
-            seeMoreHref="/dashboard/bookings"
+            seeMoreHref="/dashboard/bookings?filter=active&sort=upcoming"
           />
         )}
       </section>
@@ -201,7 +201,7 @@ export function DashboardHome({
           <BookingCarousel
             items={completed}
             showDate
-            seeMoreHref="/dashboard/bookings?status=completed"
+            seeMoreHref="/dashboard/bookings?filter=completed&sort=latest"
             renderAction={(item) => <LeaveReviewButton item={item} />}
           />
         )}

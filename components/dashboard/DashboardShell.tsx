@@ -113,14 +113,9 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="bookings" active={active}>
-        <BookingsManager
-          initialBookings={data.bookings.initialBookings}
-          packages={data.bookings.packages}
-          styles={data.bookings.styles}
-          addOns={data.bookings.addOns}
-          chargeBy={data.bookings.chargeBy}
-          timeSlots={data.bookings.timeSlots}
-        />
+        <Suspense fallback={null}>
+          <BookingsManager initialBookings={data.bookings.initialBookings} />
+        </Suspense>
       </Section>
 
       <Section id="booking-details" active={active}>

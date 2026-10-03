@@ -59,8 +59,6 @@ Early development. The app currently includes a calendar date picker as the firs
 | `DB_NAME` | Yes | Database name |
 | `APP_URL` | Yes | Public app URL (e.g. `http://localhost:3000`) |
 | `AUTH_SECRET` | Yes | Session signing secret |
-| `ADMIN_EMAIL` | Optional | Bootstrap admin email for `/admin` (legacy receipt tools) |
-| `ADMIN_PASSWORD` | Optional | Bootstrap admin password (creates admin on first login if missing) |
 | `STRIPE_SECRET_KEY` | Yes (gateway) | Stripe secret key (`sk_test_...` or `sk_live_...`) |
 | `STRIPE_PUBLISHABLE_KEY` | Yes | Stripe publishable key for client-side Stripe.js |
 | `STRIPE_WEBHOOK_SECRET` | Yes (Connect) | Webhook signing secret from the Stripe Dashboard |

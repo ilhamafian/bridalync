@@ -168,6 +168,12 @@ async function seed(db, user, userId, bookings) {
   const byName = new Map(packages.map((p) => [p.name, p]));
   if (byName.size === 0) throw new Error(`User ${email} has no packages`);
 
+  const receiptSource = await bookings.findOne(
+    { depositReceiptUrl: { $exists: true, $ne: "" } },
+    { projection: { depositReceiptUrl: 1 } }
+  );
+  const receiptUrl = receiptSource?.depositReceiptUrl;
+
   const docs = PLAN.map(([pkgName, offset, status, payment, slotIdx], i) => {
     const pkg = byName.get(pkgName) ?? packages[i % packages.length];
     const [name, mobile] = CLIENTS[i % CLIENTS.length];
@@ -223,6 +229,7 @@ async function seed(db, user, userId, bookings) {
     if (payment !== "unpaid") {
       doc.paymentChannel = "manual_transfer";
       doc.depositVerificationStatus = payment === "pending_receipt" ? "pending" : "approved";
+      if (payment === "pending_receipt" && receiptUrl) doc.depositReceiptUrl = receiptUrl;
     }
     return doc;
   });

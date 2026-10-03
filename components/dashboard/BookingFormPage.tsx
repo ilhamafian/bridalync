@@ -73,7 +73,10 @@ export function BookingFormPage({
         {...catalog}
         onSaved={handleSaved}
         onCancel={handleCancel}
-        className={cn(glassCardClassName, "p-4")}
+        className={cn(
+          glassCardClassName,
+          "bg-white/70 p-4 backdrop-blur-md dark:bg-zinc-900/70"
+        )}
       />
     </div>
   );

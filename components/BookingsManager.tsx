@@ -1,25 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { IconPencil, IconPlus, IconTrash } from "@tabler/icons-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  IconAdjustmentsHorizontal,
+  IconSearch,
+} from "@tabler/icons-react";
 
-import { BookingDetailSheet } from "@/components/booking/BookingDetailSheet";
-import {
-  BookingForm,
-  type AddOnCatalogItem,
-  type PackageCatalogItem,
-  type StyleCatalogItem,
-} from "@/components/booking/BookingForm";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { BackButton } from "@/components/dashboard/BackButton";
+import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,23 +24,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { Booking } from "@/schemas/bookingSchema";
-import type { TimeSlot } from "@/schemas/settingSchema";
 import {
   formatRm,
   getEarliestSessionDate,
@@ -63,14 +46,9 @@ import {
   formatWhatsAppDisplay,
 } from "@/utils/socialLinks";
 
-export type {
-  AddOnCatalogItem,
-  PackageCatalogItem,
-  StyleCatalogItem,
-} from "@/components/booking/BookingForm";
-
 type BookingFilter =
   | "all"
+  | "active"
   | "needs_verification"
   | "deposit"
   | "full"
@@ -82,6 +60,7 @@ type BookingSort = "upcoming" | "latest";
 
 const BOOKING_FILTERS: { value: BookingFilter; label: string }[] = [
   { value: "all", label: "All" },
+  { value: "active", label: "Not completed" },
   { value: "needs_verification", label: "Needs verification" },
   { value: "deposit", label: "Deposit paid" },
   { value: "full", label: "Fully paid" },
@@ -156,6 +135,12 @@ function matchesBookingFilter(
   switch (filter) {
     case "all":
       return true;
+    case "active":
+      return (
+        booking.status !== "completed" &&
+        booking.status !== "cancelled" &&
+        booking.status !== "failed"
+      );
     case "needs_verification":
       return needsPaymentVerification(booking);
     case "deposit":
@@ -174,6 +159,29 @@ function matchesBookingFilter(
     default:
       return true;
   }
+}
+
+function digitsOnly(value: string | undefined) {
+  return (value ?? "").replace(/\D/g, "");
+}
+
+function matchesBookingSearch(booking: SerializedBooking, query: string) {
+  const text = query.trim().toLowerCase();
+  if (!text) return true;
+
+  const { name, email, mobile, country_code } = booking.contact;
+  if (name.toLowerCase().includes(text)) return true;
+  if (email.toLowerCase().includes(text)) return true;
+
+  const queryDigits = digitsOnly(text);
+  if (!queryDigits) return false;
+  const mobileDigits = digitsOnly(mobile).replace(/^0+/, "");
+  if (!mobileDigits) return false;
+  return [
+    mobileDigits,
+    `0${mobileDigits}`,
+    `${digitsOnly(country_code)}${mobileDigits}`,
+  ].some((candidate) => candidate.includes(queryDigits));
 }
 
 function startOfLocalDay(date = new Date()) {
@@ -301,32 +309,15 @@ function bookingBadgeVariant(
 
 export function BookingsManager({
   initialBookings,
-  packages,
-  styles,
-  addOns,
-  chargeBy,
-  timeSlots,
 }: {
   initialBookings: SerializedBooking[];
-  packages: PackageCatalogItem[];
-  styles: StyleCatalogItem[];
-  addOns: AddOnCatalogItem[];
-  chargeBy: "package" | "style";
-  timeSlots: TimeSlot[];
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [bookings, setBookings] = useState(initialBookings);
   const [statusFilter, setStatusFilter] = useState<BookingFilter>("all");
   const [sortOrder, setSortOrder] = useState<BookingSort>("upcoming");
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] =
-    useState<SerializedBooking | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [editingBooking, setEditingBooking] =
-    useState<SerializedBooking | null>(null);
-  const [formKey, setFormKey] = useState(0);
-  const [deleteTarget, setDeleteTarget] = useState<SerializedBooking | null>(
-    null
-  );
+  const [searchQuery, setSearchQuery] = useState("");
   const [verifyingKey, setVerifyingKey] = useState<string | null>(null);
   const [verifyError, setVerifyError] = useState<string | null>(null);
   const [verifyErrorBookingId, setVerifyErrorBookingId] = useState<
@@ -340,6 +331,17 @@ export function BookingsManager({
   useEffect(() => {
     setBookings(initialBookings);
   }, [initialBookings]);
+
+  const filterParam = searchParams.get("filter");
+  const sortParam = searchParams.get("sort");
+  useEffect(() => {
+    if (BOOKING_FILTERS.some((filter) => filter.value === filterParam)) {
+      setStatusFilter(filterParam as BookingFilter);
+    }
+    if (BOOKING_SORTS.some((sort) => sort.value === sortParam)) {
+      setSortOrder(sortParam as BookingSort);
+    }
+  }, [filterParam, sortParam]);
 
   async function verifyPayment(
     bookingId: string,
@@ -374,6 +376,7 @@ export function BookingsManager({
           )
         );
       }
+      router.refresh();
     } catch {
       setVerifyErrorBookingId(bookingId);
       setVerifyError("Could not update payment verification.");
@@ -388,8 +391,10 @@ export function BookingsManager({
   );
 
   const filteredBookings = useMemo(() => {
-    const filtered = bookings.filter((booking) =>
-      matchesBookingFilter(booking, statusFilter)
+    const filtered = bookings.filter(
+      (booking) =>
+        matchesBookingFilter(booking, statusFilter) &&
+        matchesBookingSearch(booking, searchQuery)
     );
     const sorted = sortBookings(filtered, sortOrder);
 
@@ -400,116 +405,96 @@ export function BookingsManager({
     const needsReview = sorted.filter(needsPaymentVerification);
     const rest = sorted.filter((booking) => !needsPaymentVerification(booking));
     return [...needsReview, ...rest];
-  }, [bookings, statusFilter, sortOrder]);
+  }, [bookings, statusFilter, sortOrder, searchQuery]);
 
   const activeFilterLabel =
     BOOKING_FILTERS.find((filter) => filter.value === statusFilter)?.label ??
     statusFilter;
-  function openCreate() {
-    setEditingBooking(null);
-    setFormKey((current) => current + 1);
-    setError(null);
-    setSheetOpen(true);
-  }
 
-  function openEdit(booking: SerializedBooking) {
-    setSelectedBooking(null);
-    setEditingBooking(booking);
-    setFormKey((current) => current + 1);
-    setError(null);
-    setSheetOpen(true);
-  }
-
-  function handleSaved(saved: SerializedBooking) {
-    setBookings((current) =>
-      current.some((booking) => booking._id === saved._id)
-        ? current.map((booking) => (booking._id === saved._id ? saved : booking))
-        : [saved, ...current]
-    );
-    setSheetOpen(false);
-  }
-
-  async function confirmDelete() {
-    if (!deleteTarget) return;
-
-    const response = await fetch(`/api/bookings/${deleteTarget._id}`, {
-      method: "DELETE",
+  function openDetails(booking: SerializedBooking) {
+    router.push(`/dashboard/bookings/${encodeURIComponent(booking._id)}`, {
+      scroll: false,
     });
-
-    if (!response.ok) {
-      setError("Failed to delete booking.");
-      setDeleteTarget(null);
-      return;
-    }
-
-    setBookings((current) =>
-      current.filter((booking) => booking._id !== deleteTarget._id)
-    );
-    setDeleteTarget(null);
   }
 
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">Bookings</h2>
-          <p className="text-sm text-muted-foreground">
-            Manage client bookings and add bookings manually.
-          </p>
-        </div>
-        <Button type="button" onClick={openCreate}>
-          <IconPlus className="size-4" />
-          Add booking
-        </Button>
+      <BackButton />
+
+      <div>
+        <h2 className="text-lg font-semibold">Booking Finder</h2>
+        <p className="text-sm text-muted-foreground">
+          Manage and find bookings
+        </p>
       </div>
 
-      {error && !sheetOpen ? (
-        <p className="text-sm text-destructive">{error}</p>
-      ) : null}
-
-      <div className="flex min-w-0 items-center gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <Label htmlFor="booking-filter" className="shrink-0 text-sm">
-            Filter
-          </Label>
-          <Select
-            value={statusFilter}
-            onValueChange={(value) => setStatusFilter(value as BookingFilter)}
-          >
-            <SelectTrigger id="booking-filter" className="min-w-0 flex-1">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper" align="start">
-              {BOOKING_FILTERS.map((filter) => (
-                <SelectItem key={filter.value} value={filter.value}>
-                  {filter.value === "needs_verification" &&
-                  pendingVerificationCount > 0
-                    ? `${filter.label} (${pendingVerificationCount})`
-                    : filter.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <IconSearch className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-foreground/70" />
+            <Input
+              type="search"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search name, email or phone"
+              aria-label="Search bookings by name, email or phone"
+              className="h-10 rounded-lg border-zinc-900/10 bg-white/40 pl-9 text-sm shadow-sm backdrop-blur-sm placeholder:text-foreground/50 md:text-sm dark:border-white/20 dark:bg-white/10"
+            />
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="Sort bookings"
+                className="size-10 shrink-0 rounded-lg border border-zinc-900/10 bg-white/40 shadow-sm backdrop-blur-sm hover:bg-white/50 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
+              >
+                <IconAdjustmentsHorizontal className="size-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="z-100 w-40 min-w-40">
+              <DropdownMenuLabel>Sort by</DropdownMenuLabel>
+              <DropdownMenuRadioGroup
+                value={sortOrder}
+                onValueChange={(value) => setSortOrder(value as BookingSort)}
+              >
+                {BOOKING_SORTS.map((sort) => (
+                  <DropdownMenuRadioItem key={sort.value} value={sort.value}>
+                    {sort.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <Label htmlFor="booking-sort" className="shrink-0 text-sm">
-            Sort
-          </Label>
-          <Select
-            value={sortOrder}
-            onValueChange={(value) => setSortOrder(value as BookingSort)}
-          >
-            <SelectTrigger id="booking-sort" className="w-28">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent position="popper" align="end">
-              {BOOKING_SORTS.map((sort) => (
-                <SelectItem key={sort.value} value={sort.value}>
-                  {sort.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div
+          role="group"
+          aria-label="Filter bookings"
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 no-scrollbar lg:-mx-6 lg:px-6"
+        >
+          {BOOKING_FILTERS.map((filter) => {
+            const active = statusFilter === filter.value;
+            return (
+              <button
+                key={filter.value}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setStatusFilter(filter.value)}
+                className={cn(
+                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                  active
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-white/30 text-foreground shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
+                )}
+              >
+                {filter.value === "needs_verification" &&
+                pendingVerificationCount > 0
+                  ? `${filter.label} (${pendingVerificationCount})`
+                  : filter.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -544,9 +529,13 @@ export function BookingsManager({
       {filteredBookings.length === 0 ? (
         <Card>
           <CardHeader>
-            <CardTitle>No bookings yet</CardTitle>
+            <CardTitle>
+              {searchQuery.trim() ? "No matching bookings" : "No bookings yet"}
+            </CardTitle>
             <CardDescription>
-              {statusFilter === "all"
+              {searchQuery.trim()
+                ? "Try a different name, email or phone number."
+                : statusFilter === "all"
                 ? "Add a booking manually or wait for clients to book."
                 : statusFilter === "needs_verification"
                   ? "No bookings waiting on payment verification."
@@ -579,13 +568,16 @@ export function BookingsManager({
                     "cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                     needsReview
                       ? "border-amber-500/35 bg-amber-500/4 hover:bg-amber-500/8"
-                      : "hover:bg-muted/40"
+                      : cn(
+                          glassCardClassName,
+                          "hover:bg-white/40 dark:hover:bg-white/15"
+                        )
                   )}
-                  onClick={() => setSelectedBooking(booking)}
+                  onClick={() => openDetails(booking)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      setSelectedBooking(booking);
+                      openDetails(booking);
                     }
                   }}
                 >
@@ -778,30 +770,6 @@ export function BookingsManager({
                         </div>
                       ) : null}
                     </div>
-                    <div
-                      className="flex shrink-0 gap-1"
-                      onClick={(event) => event.stopPropagation()}
-                      onKeyDown={(event) => event.stopPropagation()}
-                    >
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(booking)}
-                        aria-label="Edit booking"
-                      >
-                        <IconPencil className="size-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setDeleteTarget(booking)}
-                        aria-label="Delete booking"
-                      >
-                        <IconTrash className="size-4" />
-                      </Button>
-                    </div>
                   </CardHeader>
                   {booking.sessions[0]?.location ? (
                     <CardContent className="pt-0 text-sm text-muted-foreground">
@@ -814,44 +782,6 @@ export function BookingsManager({
           })}
         </ul>
       )}
-
-      <BookingDetailSheet
-        booking={selectedBooking}
-        onClose={() => setSelectedBooking(null)}
-        onEdit={openEdit}
-      />
-
-      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
-        <SheetContent
-          side="bottom"
-          contained
-          className="max-h-[85dvh] overflow-y-auto rounded-t-2xl"
-        >
-          <SheetHeader>
-            <SheetTitle>
-              {editingBooking
-                ? editingBooking.source === "google_calendar"
-                  ? "Edit imported booking"
-                  : "Edit booking"
-                : "New booking"}
-            </SheetTitle>
-          </SheetHeader>
-
-          <BookingForm
-            key={formKey}
-            booking={editingBooking}
-            packages={packages}
-            styles={styles}
-            addOns={addOns}
-            chargeBy={chargeBy}
-            timeSlots={timeSlots}
-            onSaved={handleSaved}
-            onCancel={() => setSheetOpen(false)}
-            className="px-6 pb-4"
-            actionsClassName="px-6 pb-6"
-          />
-        </SheetContent>
-      </Sheet>
 
       <Dialog
         open={Boolean(receiptPreview)}
@@ -875,27 +805,6 @@ export function BookingsManager({
           ) : null}
         </DialogContent>
       </Dialog>
-
-      <AlertDialog
-        open={Boolean(deleteTarget)}
-        onOpenChange={(open) => {
-          if (!open) setDeleteTarget(null);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete booking?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently remove the booking for{" "}
-              {deleteTarget?.contact.name ?? "this client"}.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

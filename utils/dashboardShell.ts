@@ -2,7 +2,7 @@ import type {
   AddOnCatalogItem,
   PackageCatalogItem,
   StyleCatalogItem,
-} from "@/components/BookingsManager";
+} from "@/components/booking/BookingForm";
 import type { DashboardHomeProps } from "@/components/dashboard/DashboardHome";
 import type {
   AddOnItem,
