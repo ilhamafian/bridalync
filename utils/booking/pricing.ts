@@ -8,11 +8,18 @@ export type QuotationLineItem = {
   amountRm: number;
 };
 
+export type BookingQuotationBreakdown = {
+  sessions: Array<QuotationLineItem & { sessionKey?: string }>;
+  addOns: QuotationLineItem[];
+  travelFeeRm: number;
+};
+
 export type BookingQuotationSummary = {
   lineItems: QuotationLineItem[];
   totalRm: number;
   depositRm: number;
   balanceRm: number;
+  breakdown?: BookingQuotationBreakdown;
 };
 
 export type QuotationLineItemInput = {
@@ -23,6 +30,8 @@ export type QuotationLineItemInput = {
 
 export type QuotationPackageInput = QuotationLineItemInput & {
   deposit: number;
+  /** `client_key` of the session this price belongs to. */
+  sessionKey?: string;
 };
 
 export type TravelQuotationInput = {
@@ -119,6 +128,7 @@ export function calculateBookingQuotation(
   input: CalculateQuotationInput
 ): BookingQuotationSummary {
   const lineItems: QuotationLineItem[] = [];
+  const sessionPrices: BookingQuotationBreakdown["sessions"] = [];
 
   const travelFeeRm =
     input.travel?.enabled === true
@@ -130,30 +140,28 @@ export function calculateBookingQuotation(
         })
       : 0;
 
-  if (input.chargeBy === "package") {
-    input.selectedPackages.forEach((pkg, index) => {
-      lineItems.push({
-        label: pkg.name,
-        amountRm: roundRm(pkg.price + (index === 0 ? travelFeeRm : 0)),
-      });
-    });
-  }
+  const priced =
+    input.chargeBy === "package"
+      ? input.selectedPackages
+      : (input.selectedSessionStyles ?? []);
 
-  if (input.chargeBy === "style" && input.selectedSessionStyles) {
-    input.selectedSessionStyles.forEach((style, index) => {
-      lineItems.push({
-        label: style.name,
-        amountRm: roundRm(style.price + (index === 0 ? travelFeeRm : 0)),
-      });
-    });
-  }
-
-  for (const addOn of input.selectedAddOns) {
+  priced.forEach((item, index) => {
     lineItems.push({
-      label: addOn.name,
-      amountRm: roundRm(addOn.price),
+      label: item.name,
+      amountRm: roundRm(item.price + (index === 0 ? travelFeeRm : 0)),
     });
-  }
+    sessionPrices.push({
+      label: item.name,
+      amountRm: roundRm(item.price),
+      ...(item.sessionKey ? { sessionKey: item.sessionKey } : {}),
+    });
+  });
+
+  const addOnPrices = input.selectedAddOns.map((addOn) => ({
+    label: addOn.name,
+    amountRm: roundRm(addOn.price),
+  }));
+  lineItems.push(...addOnPrices);
 
   const totalRm = lineItems.reduce((sum, item) => sum + item.amountRm, 0);
   const depositRm = roundRm(
@@ -172,6 +180,11 @@ export function calculateBookingQuotation(
     totalRm,
     depositRm: cappedDepositRm,
     balanceRm,
+    breakdown: {
+      sessions: sessionPrices,
+      addOns: addOnPrices,
+      travelFeeRm: roundRm(travelFeeRm),
+    },
   };
 }
 

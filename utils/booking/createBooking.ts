@@ -199,12 +199,18 @@ export async function resolveBookingQuotation(
       name: pkg.name,
       price: resolveEffectivePrice(catalogPrice, overridePrice),
       deposit: chargeBy === "style" ? 0 : (pkg.deposit ?? 0),
+      sessionKey: session?.client_key,
     };
   });
 
   const resolvedSessionStyles = new Map<string, ResolvedSessionStyle>();
   let selectedSessionStyles:
-    | Array<{ name: string; price: number; deposit: number }>
+    | Array<{
+        name: string;
+        price: number;
+        deposit: number;
+        sessionKey: string;
+      }>
     | undefined;
 
   if (chargeBy === "style") {
@@ -226,6 +232,7 @@ export async function resolveBookingQuotation(
         name: resolved.lineItemName,
         price: resolved.price,
         deposit: resolved.deposit,
+        sessionKey: session.client_key,
       });
     }
   }

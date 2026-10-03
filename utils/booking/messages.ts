@@ -24,9 +24,9 @@ export function buildReviewRequestMessage(input: {
 }) {
   const firstName = input.clientName.trim().split(/\s+/)[0] || "there";
   return [
-    `Hi ${firstName}, thank you so much for choosing ${input.freelancerName}! It was a pleasure being part of your special day.`,
+    `Hi ${firstName}, thank you so much for hiring me on your big day!`,
     "",
-    `If you have a moment, I'd love to hear about your experience. You can leave a review here:`,
+    `Kalau ada masa, boleh tak share review kat sini:`,
     input.reviewUrl,
   ].join("\n");
 }

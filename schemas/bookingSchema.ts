@@ -14,16 +14,27 @@ export const bookingContactSchema = z.object({
   country_code: z.string().optional(),
 });
 
-export const quotationSummarySchema = z.object({
-  lineItems: z.array(
-    z.object({
-      label: z.string(),
-      amountRm: z.number(),
-    })
+const quotationAmountSchema = z.object({
+  label: z.string(),
+  amountRm: z.number(),
+});
+
+/** Itemised prices; `lineItems` folds the travel fee into the first item. */
+export const quotationBreakdownSchema = z.object({
+  sessions: z.array(
+    quotationAmountSchema.extend({ sessionKey: z.string().optional() })
   ),
+  addOns: z.array(quotationAmountSchema),
+  travelFeeRm: z.number(),
+});
+
+export const quotationSummarySchema = z.object({
+  lineItems: z.array(quotationAmountSchema),
   totalRm: z.number(),
   depositRm: z.number(),
   balanceRm: z.number(),
+  /** Missing on bookings saved before itemised pricing was recorded. */
+  breakdown: quotationBreakdownSchema.optional(),
 });
 
 export const bookingSessionSchema = sessionSchema.extend({

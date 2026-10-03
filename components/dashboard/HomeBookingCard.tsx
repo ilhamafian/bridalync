@@ -40,13 +40,11 @@ export function formatScheduleDate(dateValue: string) {
 export function HomeBookingCard({
   item,
   showDate = false,
-  href = "/dashboard/bookings",
   action,
   className,
 }: {
   item: ScheduleItem;
   showDate?: boolean;
-  href?: string;
   /** Bottom-right action; defaults to the Navigate button. */
   action?: React.ReactNode;
   className?: string;
@@ -60,7 +58,7 @@ export function HomeBookingCard({
       )}
     >
       <Link
-        href={href}
+        href={`/dashboard/bookings/${encodeURIComponent(item.bookingId)}`}
         scroll={false}
         className="absolute inset-0 rounded-2xl"
         aria-label={`View booking for ${item.clientName}`}

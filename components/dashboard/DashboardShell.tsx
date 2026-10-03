@@ -1,10 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, Fragment } from "react";
+import { Suspense, useCallback, useEffect, useState, Fragment } from "react";
 import { usePathname } from "next/navigation";
 
 import { BookingsManager } from "@/components/BookingsManager";
 import { CalendarManager } from "@/components/calendar/CalendarManager";
+import { BookingDetailsPage } from "@/components/dashboard/BookingDetailsPage";
+import { BookingFormPage } from "@/components/dashboard/BookingFormPage";
 import { useDashboardRefreshVersion } from "@/components/dashboard/DashboardRefresh";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
 import { PackagesManager } from "@/components/PackagesManager";
@@ -12,7 +14,10 @@ import { ProfileManager } from "@/components/profile/ProfileManager";
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
 import { SettingsManager } from "@/components/SettingsManager";
 import { cn } from "@/lib/utils";
+import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
+  getBookingDetailsId,
+  getBookingFormTarget,
   getDashboardSection,
   type DashboardData,
   type DashboardSection,
@@ -53,12 +58,33 @@ export function DashboardShell({ data }: { data: DashboardData }) {
   const pathname = usePathname();
   const active = getDashboardSection(pathname);
   const refreshVersion = useDashboardRefreshVersion();
+  const [savedBookings, setSavedBookings] = useState<
+    Record<string, SerializedBooking>
+  >({});
+  const bookingDetailsId = getBookingDetailsId(pathname);
+  const bookingFormTarget = getBookingFormTarget(pathname);
+  const bookingFormId =
+    bookingFormTarget?.mode === "edit" ? bookingFormTarget.id : null;
+
+  const findBooking = useCallback(
+    (id: string | null) =>
+      id
+        ? (savedBookings[id] ??
+          data.bookings.initialBookings.find((booking) => booking._id === id) ??
+          null)
+        : null,
+    [savedBookings, data.bookings.initialBookings]
+  );
+
+  const handleBookingSaved = useCallback((saved: SerializedBooking) => {
+    setSavedBookings((current) => ({ ...current, [saved._id]: saved }));
+  }, []);
 
   useEffect(() => {
     document
       .querySelector<HTMLElement>("[data-dashboard-scroll]")
       ?.scrollTo({ top: 0 });
-  }, [active]);
+  }, [active, bookingDetailsId, bookingFormId]);
 
   return (
     <Fragment key={refreshVersion}>
@@ -95,6 +121,29 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           chargeBy={data.bookings.chargeBy}
           timeSlots={data.bookings.timeSlots}
         />
+      </Section>
+
+      <Section id="booking-details" active={active}>
+        {bookingDetailsId ? (
+          <BookingDetailsPage booking={findBooking(bookingDetailsId)} />
+        ) : null}
+      </Section>
+
+      <Section id="booking-form" active={active}>
+        {bookingFormTarget ? (
+          <BookingFormPage
+            mode={bookingFormTarget.mode}
+            booking={findBooking(bookingFormId)}
+            catalog={{
+              packages: data.bookings.packages,
+              styles: data.bookings.styles,
+              addOns: data.bookings.addOns,
+              chargeBy: data.bookings.chargeBy,
+              timeSlots: data.bookings.timeSlots,
+            }}
+            onSaved={handleBookingSaved}
+          />
+        ) : null}
       </Section>
 
       <Section id="packages" active={active}>

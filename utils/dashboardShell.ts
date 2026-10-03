@@ -20,6 +20,8 @@ export type DashboardSection =
   | "analytics"
   | "notifications"
   | "bookings"
+  | "booking-details"
+  | "booking-form"
   | "packages"
   | "calendar"
   | "blocked"
@@ -63,7 +65,26 @@ export type DashboardData = {
   };
 };
 
+/** Booking id from `/dashboard/bookings/[id]`, or null for other paths. */
+export function getBookingDetailsId(pathname: string): string | null {
+  const match = pathname.match(/^\/dashboard\/bookings\/([^/]+)\/?$/);
+  if (!match || match[1] === "new") return null;
+  return decodeURIComponent(match[1]);
+}
+
+export type BookingFormTarget = { mode: "new" } | { mode: "edit"; id: string };
+
+/** `/dashboard/bookings/new` or `/dashboard/bookings/[id]/edit`, else null. */
+export function getBookingFormTarget(pathname: string): BookingFormTarget | null {
+  if (/^\/dashboard\/bookings\/new\/?$/.test(pathname)) return { mode: "new" };
+  const match = pathname.match(/^\/dashboard\/bookings\/([^/]+)\/edit\/?$/);
+  if (!match || match[1] === "new") return null;
+  return { mode: "edit", id: decodeURIComponent(match[1]) };
+}
+
 export function getDashboardSection(pathname: string): DashboardSection {
+  if (getBookingFormTarget(pathname)) return "booking-form";
+  if (getBookingDetailsId(pathname)) return "booking-details";
   if (pathname.startsWith("/dashboard/analytics")) return "analytics";
   if (pathname.startsWith("/dashboard/notifications")) return "notifications";
   if (pathname.startsWith("/dashboard/blocked")) return "blocked";
