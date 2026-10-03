@@ -3,11 +3,18 @@
 import Image from "next/image";
 import { useState } from "react";
 import {
+  IconGift,
+  IconPackage,
   IconPencil,
   IconPlus,
+  IconSparkles,
   IconTrash,
+  type Icon,
 } from "@tabler/icons-react";
 
+import { EmptyCard } from "@/components/dashboard/DashboardHome";
+import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { IconBadge, RowText } from "@/components/dashboard/settings/SettingsUi";
 import { SortableList } from "@/components/SortableList";
 import { VariantImageUpload } from "@/components/VariantImageUpload";
 import {
@@ -21,13 +28,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -210,6 +210,50 @@ function Field({
   return (
     <div className="flex flex-col gap-1.5">
       <Label>{label}</Label>
+      {children}
+    </div>
+  );
+}
+
+function CatalogItemCard({
+  icon,
+  title,
+  description,
+  onEdit,
+  onDelete,
+  children,
+}: {
+  icon: Icon;
+  title: string;
+  description: string;
+  onEdit: () => void;
+  onDelete: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className={cn(glassCardClassName, "overflow-hidden")}>
+      <div className="flex items-center gap-3 py-3 pr-2 pl-4">
+        <IconBadge icon={icon} />
+        <RowText title={title} description={description} />
+        <div className="flex shrink-0 gap-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onEdit}
+            aria-label={`Edit ${title}`}
+          >
+            <IconPencil />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={onDelete}
+            aria-label={`Delete ${title}`}
+          >
+            <IconTrash />
+          </Button>
+        </div>
+      </div>
       {children}
     </div>
   );
@@ -598,14 +642,17 @@ export function PackagesManager({
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">Packages & Styles</h2>
-          <p className="text-sm text-muted-foreground">
+        <section>
+          <h2 className="text-xl font-semibold tracking-tight">
+            Packages & styles
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Drag to reorder. Manage what clients can book from your profile.
           </p>
-        </div>
+        </section>
         <Button
           size="icon"
+          className="size-10 shrink-0 rounded-full"
           onClick={openCreateForTab}
           aria-label={
             tab === "packages"
@@ -622,12 +669,18 @@ export function PackagesManager({
       <Tabs
         value={tab}
         onValueChange={(value) => setTab(value as Tab)}
-        className="gap-4"
+        className="gap-3"
       >
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="packages">Packages</TabsTrigger>
-          <TabsTrigger value="styles">Styles</TabsTrigger>
-          <TabsTrigger value="addons">Add-ons</TabsTrigger>
+        <TabsList className="grid h-10! w-full grid-cols-3 bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15">
+          <TabsTrigger value="packages" className="text-sm">
+            Packages
+          </TabsTrigger>
+          <TabsTrigger value="styles" className="text-sm">
+            Styles
+          </TabsTrigger>
+          <TabsTrigger value="addons" className="text-sm">
+            Add-ons
+          </TabsTrigger>
         </TabsList>
 
         {error && !sheetOpen ? (
@@ -636,57 +689,33 @@ export function PackagesManager({
 
         <TabsContent value="packages" className="mt-0">
           {packages.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                No packages yet. Tap + to add your first package.
-              </CardContent>
-            </Card>
+            <EmptyCard>No packages yet. Tap + to add your first package.</EmptyCard>
           ) : (
             <SortableList
               items={packages}
               getItemId={(pkg) => pkg._id}
               onReorder={handleReorderPackages}
               disabled={reordering || sheetOpen}
+              handleClassName="mt-4"
               renderItem={(pkg) => (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <CardTitle className="text-base">{pkg.name}</CardTitle>
-                        <CardDescription>
-                          {pkg.price != null ? formatRm(pkg.price) : "No price set"}
-                          {pkg.deposit != null
-                            ? ` · ${formatRm(pkg.deposit)} deposit`
-                            : ""}
-                        </CardDescription>
-                      </div>
-                      <div className="flex shrink-0 gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => openEditPackage(pkg)}
-                          aria-label={`Edit ${pkg.name}`}
-                        >
-                          <IconPencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() =>
-                            setDeleteTarget({
-                              type: "package",
-                              id: pkg._id,
-                              name: pkg.name,
-                            })
-                          }
-                          aria-label={`Delete ${pkg.name}`}
-                        >
-                          <IconTrash />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
+                <CatalogItemCard
+                  icon={IconPackage}
+                  title={pkg.name}
+                  description={
+                    (pkg.price != null ? formatRm(pkg.price) : "No price set") +
+                    (pkg.deposit != null
+                      ? ` · ${formatRm(pkg.deposit)} deposit`
+                      : "")
+                  }
+                  onEdit={() => openEditPackage(pkg)}
+                  onDelete={() =>
+                    setDeleteTarget({
+                      type: "package",
+                      id: pkg._id,
+                      name: pkg.name,
+                    })
+                  }
+                />
               )}
             />
           )}
@@ -694,81 +723,61 @@ export function PackagesManager({
 
         <TabsContent value="styles" className="mt-0">
           {styles.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                No styles yet. Tap + to add your first style category.
-              </CardContent>
-            </Card>
+            <EmptyCard>
+              No styles yet. Tap + to add your first style category.
+            </EmptyCard>
           ) : (
             <SortableList
               items={styles}
               getItemId={(style) => style._id}
               onReorder={handleReorderStyles}
               disabled={reordering || sheetOpen}
+              handleClassName="mt-4"
               renderItem={(style) => (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <CardTitle className="text-base">{style.name}</CardTitle>
-                        <CardDescription>
-                          {style.variants.length} variant
-                          {style.variants.length === 1 ? "" : "s"}
-                        </CardDescription>
-                      </div>
-                      <div className="flex shrink-0 gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => openEditStyle(style)}
-                          aria-label={`Edit ${style.name}`}
+                <CatalogItemCard
+                  icon={IconSparkles}
+                  title={style.name}
+                  description={`${style.variants.length} variant${
+                    style.variants.length === 1 ? "" : "s"
+                  }`}
+                  onEdit={() => openEditStyle(style)}
+                  onDelete={() =>
+                    setDeleteTarget({
+                      type: "style",
+                      id: style._id,
+                      name: style.name,
+                    })
+                  }
+                >
+                  {style.variants.length > 0 ? (
+                    <ul className="divide-y divide-white/50 border-t border-white/50 dark:divide-white/10 dark:border-white/10">
+                      {style.variants.map((variant) => (
+                        <li
+                          key={`${style._id}-${variant.order}`}
+                          className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
                         >
-                          <IconPencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() =>
-                            setDeleteTarget({
-                              type: "style",
-                              id: style._id,
-                              name: style.name,
-                            })
-                          }
-                          aria-label={`Delete ${style.name}`}
-                        >
-                          <IconTrash />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="flex flex-col gap-2">
-                    {style.variants.map((variant) => (
-                      <div
-                        key={`${style._id}-${variant.order}`}
-                        className="flex items-center justify-between gap-3 text-sm"
-                      >
-                        <span className="flex min-w-0 items-center gap-2">
-                          {variant.image_url ? (
-                            <span className="relative size-8 shrink-0 overflow-hidden rounded-md bg-muted">
-                              <Image
-                                src={variant.image_url}
-                                alt={variant.name}
-                                fill
-                                className="object-cover"
-                                sizes="32px"
-                              />
-                            </span>
-                          ) : null}
-                          <span className="truncate">{variant.name}</span>
-                        </span>
-                        <span className="shrink-0 text-muted-foreground">
-                          {formatRm(variant.price)}
-                        </span>
-                      </div>
-                    ))}
-                  </CardContent>
-                </Card>
+                          <span className="flex min-w-0 items-center gap-2">
+                            {variant.image_url ? (
+                              <span className="relative size-8 shrink-0 overflow-hidden rounded-md bg-white/50 dark:bg-white/10">
+                                <Image
+                                  src={variant.image_url}
+                                  alt={variant.name}
+                                  fill
+                                  className="object-cover"
+                                  sizes="32px"
+                                />
+                              </span>
+                            ) : null}
+                            <span className="truncate">{variant.name}</span>
+                          </span>
+                          <span className="shrink-0 font-medium tabular-nums">
+                            {formatRm(variant.price)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </CatalogItemCard>
               )}
             />
           )}
@@ -776,60 +785,38 @@ export function PackagesManager({
 
         <TabsContent value="addons" className="mt-0 flex flex-col gap-3">
           {chargeBy === "package" ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Clients only see add-ons when you charge by style. You can still
               add them to bookings you create yourself.
             </p>
           ) : null}
 
           {addOns.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-sm text-muted-foreground">
-                No add-ons yet. Tap + to offer extras like accessories or
-                touch-ups. Clients skip this step when there are none.
-              </CardContent>
-            </Card>
+            <EmptyCard>
+              No add-ons yet. Tap + to offer extras like accessories or
+              touch-ups. Clients skip this step when there are none.
+            </EmptyCard>
           ) : (
             <SortableList
               items={addOns}
               getItemId={(addOn) => addOn._id}
               onReorder={handleReorderAddOns}
               disabled={reordering || sheetOpen}
+              handleClassName="mt-4"
               renderItem={(addOn) => (
-                <Card>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <CardTitle className="text-base">{addOn.name}</CardTitle>
-                        <CardDescription>+{formatRm(addOn.price)}</CardDescription>
-                      </div>
-                      <div className="flex shrink-0 gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => openEditAddOn(addOn)}
-                          aria-label={`Edit ${addOn.name}`}
-                        >
-                          <IconPencil />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() =>
-                            setDeleteTarget({
-                              type: "addon",
-                              id: addOn._id,
-                              name: addOn.name,
-                            })
-                          }
-                          aria-label={`Delete ${addOn.name}`}
-                        >
-                          <IconTrash />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
+                <CatalogItemCard
+                  icon={IconGift}
+                  title={addOn.name}
+                  description={`+${formatRm(addOn.price)}`}
+                  onEdit={() => openEditAddOn(addOn)}
+                  onDelete={() =>
+                    setDeleteTarget({
+                      type: "addon",
+                      id: addOn._id,
+                      name: addOn.name,
+                    })
+                  }
+                />
               )}
             />
           )}

@@ -29,6 +29,7 @@ type SortableListProps<T> = {
   renderItem: (item: T, index: number) => React.ReactNode;
   className?: string;
   itemClassName?: string;
+  handleClassName?: string;
   disabled?: boolean;
 };
 
@@ -36,11 +37,13 @@ function SortableRow({
   id,
   children,
   className,
+  handleClassName,
   disabled,
 }: {
   id: string;
   children: React.ReactNode;
   className?: string;
+  handleClassName?: string;
   disabled?: boolean;
 }) {
   const {
@@ -69,7 +72,7 @@ function SortableRow({
         type="button"
         variant="ghost"
         size="icon-sm"
-        className="mt-1 shrink-0 touch-none text-muted-foreground"
+        className={cn("mt-1 shrink-0 touch-none text-muted-foreground", handleClassName)}
         disabled={disabled}
         aria-label="Drag to reorder"
         {...attributes}
@@ -89,6 +92,7 @@ export function SortableList<T>({
   renderItem,
   className,
   itemClassName,
+  handleClassName,
   disabled = false,
 }: SortableListProps<T>) {
   const sensors = useSensors(
@@ -132,6 +136,7 @@ export function SortableList<T>({
               id={getItemId(item)}
               disabled={disabled}
               className={itemClassName}
+              handleClassName={handleClassName}
             >
               {renderItem(item, index)}
             </SortableRow>
