@@ -25,6 +25,8 @@ export type DashboardSection =
   | "booking-form"
   | "calendar"
   | "blocked"
+  | "block-dates"
+  | "block-slots"
   | "hot-dates"
   | "booking-period"
   | "settings"
@@ -80,6 +82,15 @@ export type DashboardData = {
     initialReviews: DashboardReview[];
     appUrl: string | null;
   };
+  blocked: {
+    dates: BlockedDateItem[];
+  };
+};
+
+export type BlockedDateItem = {
+  /** YYYY-MM-DD */
+  date: string;
+  createdAt: string | null;
 };
 
 /** Booking id from `/dashboard/bookings/[id]`, or null for other paths. */
@@ -115,6 +126,8 @@ export function getDashboardSection(pathname: string): DashboardSection {
   if (getBookingDetailsId(pathname)) return "booking-details";
   if (pathname.startsWith("/dashboard/payments")) return "payments";
   if (pathname.startsWith("/dashboard/notifications")) return "notifications";
+  if (pathname.startsWith("/dashboard/blocked/dates/new")) return "block-dates";
+  if (pathname.startsWith("/dashboard/blocked/slots/new")) return "block-slots";
   if (pathname.startsWith("/dashboard/blocked")) return "blocked";
   if (pathname.startsWith("/dashboard/hot-dates")) return "hot-dates";
   if (pathname.startsWith("/dashboard/booking-period")) return "booking-period";

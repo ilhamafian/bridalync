@@ -6,6 +6,7 @@ import type {
   StyleItem,
 } from "@/components/PackagesManager";
 import { AddOnModel } from "@/models/AddOn";
+import { blockedDateModel } from "@/models/BlockedDate";
 import { bookingModel } from "@/models/Booking";
 import { PackageModel } from "@/models/Package";
 import { reviewModel } from "@/models/Review";
@@ -96,6 +97,7 @@ export async function loadDashboardData(
     settings,
     reviewDocs,
     reviewedBookingIdList,
+    blockedDateDocs,
   ] = await Promise.all([
       bookingModel.find(
         { freelancerUserId: userId },
@@ -107,6 +109,7 @@ export async function loadDashboardData(
       new SettingModel().findSettingsByUserId(userId),
       reviewModel.findByFreelancerUserId(userId, 100),
       reviewModel.findReviewedBookingIds(userId),
+      blockedDateModel.findByUserId(userId),
     ]);
 
   if (!settings) return null;
@@ -269,6 +272,12 @@ export async function loadDashboardData(
       },
       initialReviews: reviewDocs.map(toDashboardReview),
       appUrl,
+    },
+    blocked: {
+      dates: blockedDateDocs.map((doc) => ({
+        date: doc.date,
+        createdAt: doc.created_at ? new Date(doc.created_at).toISOString() : null,
+      })),
     },
   };
 }

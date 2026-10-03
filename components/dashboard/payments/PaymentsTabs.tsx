@@ -2,27 +2,22 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  IconAdjustmentsHorizontal,
-  IconCash,
-  IconDownload,
-  IconFileInvoice,
-} from "@tabler/icons-react";
+import { IconCash, IconDownload, IconFileInvoice } from "@tabler/icons-react";
 
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { formatPaymentTime } from "@/components/dashboard/payments/format";
-import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  DateRangeChip,
+  DateRangeFilter,
+  isDateKeyInRange,
+  type DateRange,
+} from "@/components/dashboard/DateRangeFilter";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { toDateKey } from "@/utils/booking/availability";
+import { formatDateRangeLabel } from "@/utils/booking/dateRange";
 import { formatRm } from "@/utils/booking/pricing";
 import {
   PAYMENT_KIND_LABELS,
@@ -54,11 +49,23 @@ function ShowMoreButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function PaymentsList({ payments }: { payments: PaymentRecord[] }) {
+function PaymentsList({
+  payments,
+  filtered,
+}: {
+  payments: PaymentRecord[];
+  filtered: boolean;
+}) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   if (payments.length === 0) {
-    return <EmptyCard>No payments received yet.</EmptyCard>;
+    return (
+      <EmptyCard>
+        {filtered
+          ? "No payments in this date range."
+          : "No payments received yet."}
+      </EmptyCard>
+    );
   }
 
   return (
@@ -106,11 +113,23 @@ function PaymentsList({ payments }: { payments: PaymentRecord[] }) {
   );
 }
 
-function InvoicesList({ invoices }: { invoices: InvoiceItem[] }) {
+function InvoicesList({
+  invoices,
+  filtered,
+}: {
+  invoices: InvoiceItem[];
+  filtered: boolean;
+}) {
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
   if (invoices.length === 0) {
-    return <EmptyCard>Invoices appear here once a client pays.</EmptyCard>;
+    return (
+      <EmptyCard>
+        {filtered
+          ? "No invoices in this date range."
+          : "Invoices appear here once a client pays."}
+      </EmptyCard>
+    );
   }
 
   return (
@@ -174,34 +193,15 @@ function InvoicesList({ invoices }: { invoices: InvoiceItem[] }) {
   );
 }
 
-type PaymentSort = "newest" | "oldest" | "highest" | "lowest";
-
-const PAYMENT_SORTS: { value: PaymentSort; label: string }[] = [
-  { value: "newest", label: "Newest" },
-  { value: "oldest", label: "Oldest" },
-  { value: "highest", label: "Highest amount" },
-  { value: "lowest", label: "Lowest amount" },
-];
-
-function sortItems<T>(
+function filterNewestFirst<T>(
   items: T[],
-  sort: PaymentSort,
-  getTime: (item: T) => string,
-  getAmount: (item: T) => number
+  range: DateRange | undefined,
+  getTime: (item: T) => string
 ) {
   const time = (item: T) => new Date(getTime(item)).getTime();
-  return [...items].sort((a, b) => {
-    switch (sort) {
-      case "newest":
-        return time(b) - time(a);
-      case "oldest":
-        return time(a) - time(b);
-      case "highest":
-        return getAmount(b) - getAmount(a) || time(b) - time(a);
-      case "lowest":
-        return getAmount(a) - getAmount(b) || time(b) - time(a);
-    }
-  });
+  return items
+    .filter((item) => isDateKeyInRange(toDateKey(getTime(item)), range))
+    .sort((a, b) => time(b) - time(a));
 }
 
 export function PaymentsTabs({
@@ -211,27 +211,17 @@ export function PaymentsTabs({
   payments: PaymentRecord[];
   invoices: InvoiceItem[];
 }) {
-  const [sort, setSort] = useState<PaymentSort>("newest");
+  const [range, setRange] = useState<DateRange | undefined>();
+  const filtered = Boolean(range?.from);
+  const rangeKey = formatDateRangeLabel(range) ?? "all";
 
-  const sortedPayments = useMemo(
-    () =>
-      sortItems(
-        payments,
-        sort,
-        (payment) => payment.at,
-        (payment) => payment.amountRm
-      ),
-    [payments, sort]
+  const visiblePayments = useMemo(
+    () => filterNewestFirst(payments, range, (payment) => payment.at),
+    [payments, range]
   );
-  const sortedInvoices = useMemo(
-    () =>
-      sortItems(
-        invoices,
-        sort,
-        (invoice) => invoice.issuedAt,
-        (invoice) => invoice.totalRm
-      ),
-    [invoices, sort]
+  const visibleInvoices = useMemo(
+    () => filterNewestFirst(invoices, range, (invoice) => invoice.issuedAt),
+    [invoices, range]
   );
 
   return (
@@ -245,38 +235,26 @@ export function PaymentsTabs({
             Invoices
           </TabsTrigger>
         </TabsList>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              aria-label="Sort payments"
-              className="size-10 shrink-0 rounded-lg border border-zinc-900/10 bg-white/40 shadow-sm backdrop-blur-sm hover:bg-white/50 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
-            >
-              <IconAdjustmentsHorizontal className="size-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="z-100 w-44 min-w-44">
-            <DropdownMenuLabel>Sort by</DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              value={sort}
-              onValueChange={(value) => setSort(value as PaymentSort)}
-            >
-              {PAYMENT_SORTS.map((option) => (
-                <DropdownMenuRadioItem key={option.value} value={option.value}>
-                  {option.label}
-                </DropdownMenuRadioItem>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <DateRangeFilter
+          label="Filter payments by date range"
+          value={range}
+          onChange={setRange}
+        />
       </div>
+      <DateRangeChip value={range} onClear={() => setRange(undefined)} />
       <TabsContent value="payments">
-        <PaymentsList payments={sortedPayments} />
+        <PaymentsList
+          key={rangeKey}
+          payments={visiblePayments}
+          filtered={filtered}
+        />
       </TabsContent>
       <TabsContent value="invoices">
-        <InvoicesList invoices={sortedInvoices} />
+        <InvoicesList
+          key={rangeKey}
+          invoices={visibleInvoices}
+          filtered={filtered}
+        />
       </TabsContent>
     </Tabs>
   );

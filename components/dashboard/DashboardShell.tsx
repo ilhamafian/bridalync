@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 
 import { BookingsManager } from "@/components/BookingsManager";
 import { CalendarManager } from "@/components/calendar/CalendarManager";
+import { BackButton } from "@/components/dashboard/BackButton";
+import { BlockedPage } from "@/components/dashboard/blocked/BlockedPage";
 import { BookingDetailsPage } from "@/components/dashboard/BookingDetailsPage";
 import { BookingFormPage } from "@/components/dashboard/BookingFormPage";
 import { useDashboardRefreshVersion } from "@/components/dashboard/DashboardRefresh";
@@ -48,9 +50,16 @@ function Section({
   );
 }
 
-function PlaceholderPage({ title }: { title: string }) {
+function PlaceholderPage({
+  title,
+  backHref,
+}: {
+  title: string;
+  backHref?: string;
+}) {
   return (
     <div className="flex flex-col gap-2 px-4 lg:px-6">
+      {backHref ? <BackButton fallbackHref={backHref} /> : null}
       <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
       <p className="text-sm text-muted-foreground">Coming soon.</p>
     </div>
@@ -106,7 +115,15 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="blocked" active={active}>
-        <PlaceholderPage title="Blocked dates & slots" />
+        <BlockedPage dates={data.blocked.dates} />
+      </Section>
+
+      <Section id="block-dates" active={active}>
+        <PlaceholderPage title="Block dates" backHref="/dashboard/blocked" />
+      </Section>
+
+      <Section id="block-slots" active={active}>
+        <PlaceholderPage title="Block slots" backHref="/dashboard/blocked" />
       </Section>
 
       <Section id="hot-dates" active={active}>
