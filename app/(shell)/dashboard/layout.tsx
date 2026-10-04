@@ -10,7 +10,12 @@ import { ProfilePreviewAside } from "@/components/dashboard/ProfilePreviewAside"
 import { UnreadNotificationsProvider } from "@/components/dashboard/UnreadNotifications";
 import { SiteHeader } from "@/components/site-header";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { isOnboardingComplete, type SessionUser } from "@/schemas/userSchema";
+import { UserThemeProvider } from "@/components/UserThemeProvider";
+import {
+  DEFAULT_THEME,
+  isOnboardingComplete,
+  type SessionUser,
+} from "@/schemas/userSchema";
 import { buildProfilePreviewUrl, buildProfileUrl, getAppUrl } from "@/utils/appUrl";
 import { getSessionUser } from "@/utils/auth/session";
 import { loadDashboardData } from "@/utils/loadDashboardData";
@@ -54,36 +59,38 @@ export default async function DashboardLayout({
   }
 
   return (
-    <TooltipProvider>
-      <div className="dashboard-theme relative flex h-full min-h-0 flex-col overflow-hidden">
-        <AnimatedFlow
-          variant="blush"
-          flowSpeed={0.9}
-          distortionWarp={1.4}
-          filmGrain={0.25}
-          rotationAngle={120}
-          className="pointer-events-none absolute inset-0 min-h-0"
-        />
-        <UnreadNotificationsProvider>
-          <SiteHeader />
-          <DashboardScrollArea>
-            <div className="@container/main flex flex-1 flex-col gap-2">
-              <div className="flex flex-col gap-4 pt-4 pb-28 md:gap-6 md:pt-6">
-                <Suspense fallback={<DashboardSkeleton />}>
-                  <DashboardContent user={user} />
-                </Suspense>
+    <UserThemeProvider theme={user.theme ?? DEFAULT_THEME}>
+      <TooltipProvider>
+        <div className="dashboard-theme relative flex h-full min-h-0 flex-col overflow-hidden">
+          <AnimatedFlow
+            variant="blush"
+            flowSpeed={0.9}
+            distortionWarp={1.4}
+            filmGrain={0.25}
+            rotationAngle={120}
+            className="pointer-events-none absolute inset-0 min-h-0"
+          />
+          <UnreadNotificationsProvider>
+            <SiteHeader />
+            <DashboardScrollArea>
+              <div className="@container/main flex flex-1 flex-col gap-2">
+                <div className="flex flex-col gap-4 pt-4 pb-28 md:gap-6 md:pt-6">
+                  <Suspense fallback={<DashboardSkeleton />}>
+                    <DashboardContent user={user} />
+                  </Suspense>
+                </div>
               </div>
-            </div>
-          </DashboardScrollArea>
-        </UnreadNotificationsProvider>
-        <BottomNav
-          profileUrl={profileUrl}
-          profilePhotoUrl={user.profile_photo_url?.trim() || null}
-        />
-      </div>
-      {profilePreviewUrl ? (
-        <ProfilePreviewAside href={profilePreviewUrl} />
-      ) : null}
-    </TooltipProvider>
+            </DashboardScrollArea>
+          </UnreadNotificationsProvider>
+          <BottomNav
+            profileUrl={profileUrl}
+            profilePhotoUrl={user.profile_photo_url?.trim() || null}
+          />
+        </div>
+        {profilePreviewUrl ? (
+          <ProfilePreviewAside href={profilePreviewUrl} />
+        ) : null}
+      </TooltipProvider>
+    </UserThemeProvider>
   );
 }

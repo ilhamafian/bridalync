@@ -6,6 +6,13 @@ import {
 } from "./onboardingSchema";
 import { BIO_MAX_LENGTH } from "./bio";
 import { objectIdSchema } from "./objectId";
+import { themePreferenceSchema } from "./themeSchema";
+
+export {
+  DEFAULT_THEME,
+  themePreferenceSchema,
+  type ThemePreference,
+} from "./themeSchema";
 
 export {
   defaultOnboardingProgress,
@@ -45,7 +52,6 @@ export const socialLinksSchema = z.object({
 });
 
 export type SocialLinks = z.infer<typeof socialLinksSchema>;
-
 export const userSchema = z.object({
   _id: objectIdSchema.optional(),
   email: z.email(),
@@ -62,6 +68,8 @@ export const userSchema = z.object({
   profile_photo_url: z.string().optional(),
   bio: z.string().optional(),
   social_links: socialLinksSchema.optional(),
+  /** Applies to the dashboard and this user's public client pages. */
+  theme: themePreferenceSchema.optional(),
   stripe_account_id: z.string().optional(),
   is_stripe_connected: z.boolean().default(false),
   deferred_onboarding: deferredOnboardingSchema.default(() =>

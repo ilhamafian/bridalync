@@ -1,6 +1,6 @@
 import { ZodSchema } from "zod";
 import { ModelBase } from "@/models/ModelBase";
-import { userSchema, User } from "@/schemas/userSchema";
+import { userSchema, User, type ThemePreference } from "@/schemas/userSchema";
 import { isOnboardingComplete } from "@/schemas/onboardingSchema";
 
 export class UserModel extends ModelBase<User> {
@@ -23,11 +23,22 @@ export class UserModel extends ModelBase<User> {
   }
 
   async checkUserOnboarded(username: string): Promise<boolean> {
+    return (await this.findOnboardedByUsername(username)) !== null;
+  }
+
+  async findOnboardedByUsername(username: string): Promise<User | null> {
     const user = await this.findByUsername(username);
-    if (!user?._id) {
-      return false;
+    if (!user?._id || !isOnboardingComplete(user.onboarding)) {
+      return null;
     }
-    return isOnboardingComplete(user.onboarding);
+    return user;
+  }
+
+  async setTheme(userId: string, theme: ThemePreference) {
+    const collection = await this.getCollection();
+    return collection.updateOne(this.buildIdFilter(userId), {
+      $set: { theme, updated_at: new Date() },
+    } as never);
   }
 
   async setDeferredMinimalAccount(userId: string, stripeAccountId: string) {

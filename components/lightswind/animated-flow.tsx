@@ -1,8 +1,16 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { useTheme } from "next-themes";
+import React, { useEffect, useRef, useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
+
+function subscribeToRootClass(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+  return () => observer.disconnect();
+}
 
 export type FlowVariant =
   | "blue"
@@ -237,48 +245,13 @@ export function AnimatedFlow({
 }: AnimatedFlowProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5 });
-  const { resolvedTheme, theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  const [isLightMode, setIsLightMode] = useState(false);
+  const isLightMode = useSyncExternalStore(
+    subscribeToRootClass,
+    () => !document.documentElement.classList.contains("dark"),
+    () => false
+  );
 
-  useEffect(() => {
-    setMounted(true);
-    const checkIsLight = () => {
-      if (typeof document !== "undefined") {
-        if (document.documentElement.classList.contains("dark")) {
-          return false;
-        }
-        if (document.documentElement.classList.contains("light")) {
-          return true;
-        }
-      }
-      if (resolvedTheme) {
-        return resolvedTheme === "light";
-      }
-      if (theme) {
-        return theme === "light";
-      }
-      if (typeof window !== "undefined" && window.matchMedia) {
-        return !window.matchMedia("(prefers-color-scheme: dark)").matches;
-      }
-      return false;
-    };
-
-    setIsLightMode(checkIsLight());
-
-    if (typeof document !== "undefined") {
-      const observer = new MutationObserver(() => {
-        setIsLightMode(checkIsLight());
-      });
-      observer.observe(document.documentElement, {
-        attributes: true,
-        attributeFilter: ["class"],
-      });
-      return () => observer.disconnect();
-    }
-  }, [resolvedTheme, theme]);
-
-  const paletteKey = mounted && isLightMode ? "light" : "dark";
+  const paletteKey = isLightMode ? "light" : "dark";
 
   // Resolve palette preset or custom overrides
   const selectedPalette = VARIANT_PALETTES[variant === "custom" ? "blue" : variant][paletteKey];
@@ -290,7 +263,7 @@ export function AnimatedFlow({
   const activeColor5 = color5 ?? colors?.[4] ?? selectedPalette[4];
 
   // Default vignette adapts by theme (no dark vignette in light mode)
-  const activeVignette = vignetteStrength ?? (mounted && isLightMode ? 0.0 : 0.45);
+  const activeVignette = vignetteStrength ?? (isLightMode ? 0.0 : 0.45);
 
   useEffect(() => {
     const canvas = canvasRef.current;
