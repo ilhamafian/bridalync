@@ -47,7 +47,6 @@ export async function POST(req: NextRequest) {
       packageIds: data.packageIds,
       addOns: data.addOns,
       sessions: data.sessions,
-      distanceKmBySessionKey: data.distanceKmBySessionKey,
       paymentOption: data.paymentOption,
     };
 

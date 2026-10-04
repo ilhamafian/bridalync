@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import {
@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import type { Address } from "@/schemas/addressSchema";
+import type { Address, LatLng } from "@/schemas/addressSchema";
 import type { Booking } from "@/schemas/bookingSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
 import {
@@ -39,6 +39,7 @@ import {
   sortTimeSlots,
   toggleConsecutiveSlot,
 } from "@/utils/booking/slots";
+import { calculateTravelFeeRm } from "@/utils/booking/travel";
 
 export type PackageCatalogItem = {
   _id: string;
@@ -65,13 +66,30 @@ export type AddOnCatalogItem = {
   price: number;
 };
 
+export type BookingFormTravel = {
+  origin: LatLng;
+  ratePerKm: number;
+  longDistanceRatePerKm?: number;
+};
+
 export type BookingFormCatalog = {
   packages: PackageCatalogItem[];
   styles: StyleCatalogItem[];
   addOns: AddOnCatalogItem[];
   chargeBy: "package" | "style";
   timeSlots: TimeSlot[];
+  /** Null when the travel fee is turned off in Settings. */
+  travel: BookingFormTravel | null;
 };
+
+type VenueDistance =
+  | { status: "loading" }
+  | { status: "ready"; distanceKm: number }
+  | { status: "error" };
+
+function venueKey(location: LatLng) {
+  return `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`;
+}
 
 type DashboardStatus = "confirmed" | "completed" | "cancelled";
 
@@ -244,6 +262,7 @@ export function BookingForm({
   addOns,
   chargeBy,
   timeSlots,
+  travel,
   onSaved,
   onCancel,
   className,
@@ -286,6 +305,83 @@ export function BookingForm({
     () => buildHotDatePriceMap(hotDates),
     [hotDates]
   );
+
+  const [venueDistances, setVenueDistances] = useState<
+    Record<string, VenueDistance>
+  >({});
+  const requestedVenuesRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!travel) return;
+
+    for (const session of form.sessions) {
+      if (!session.location) continue;
+      const destination = session.location.location;
+      const key = venueKey(destination);
+      if (requestedVenuesRef.current.has(key)) continue;
+      requestedVenuesRef.current.add(key);
+
+      void fetch("/api/travel-distance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ origin: travel.origin, destination }),
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || typeof data.distanceKm !== "number") {
+            throw new Error("Travel distance request failed.");
+          }
+          setVenueDistances((current) => ({
+            ...current,
+            [key]: { status: "ready", distanceKm: data.distanceKm },
+          }));
+        })
+        .catch(() => {
+          requestedVenuesRef.current.delete(key);
+          setVenueDistances((current) => ({
+            ...current,
+            [key]: { status: "error" },
+          }));
+        });
+    }
+  }, [travel, form.sessions]);
+
+  const travelQuote = useMemo(() => {
+    if (!travel) return { status: "ready" as const, feeRm: 0 };
+
+    const distanceKmBySessionKey: Record<string, number> = {};
+    let status: VenueDistance["status"] = "ready";
+    for (const session of form.sessions) {
+      if (!session.location) continue;
+      const distance = venueDistances[venueKey(session.location.location)];
+      if (distance?.status === "ready") {
+        distanceKmBySessionKey[session.client_key] = distance.distanceKm;
+      } else if (distance?.status === "error") {
+        status = "error";
+      } else if (status !== "error") {
+        status = "loading";
+      }
+    }
+
+    const feeRm = roundRm(
+      calculateTravelFeeRm({
+        sessions: form.sessions
+          .filter((session) => session.location && session.time_slots.length > 0)
+          .map((session) => ({
+            client_key: session.client_key,
+            date: new Date(`${session.date || "1970-01-01"}T12:00:00`),
+            time_slot: mergeSlots(session.time_slots),
+            location: session.location!,
+          })),
+        timeSlots,
+        ratePerKm: travel.ratePerKm,
+        longDistanceRatePerKm: travel.longDistanceRatePerKm,
+        distanceKmBySessionKey,
+      })
+    );
+
+    return { status, feeRm };
+  }, [travel, form.sessions, venueDistances, timeSlots]);
 
   const styleOptions = useMemo(
     () =>
@@ -366,8 +462,9 @@ export function BookingForm({
     const addOnsRm = addOns
       .filter((addOn) => form.addOnIds.includes(addOn._id))
       .reduce((sum, addOn) => sum + roundRm(addOn.price), 0);
-    return sessionsRm + addOnsRm;
+    return sessionsRm + addOnsRm + travelQuote.feeRm;
   }, [
+    travelQuote.feeRm,
     chargeBy,
     form.packageIds,
     form.sessions,
@@ -484,6 +581,16 @@ export function BookingForm({
       if (!session.location) {
         return { error: "Each session needs a location." };
       }
+    }
+
+    if (!isGoogleImport && travelQuote.status === "loading") {
+      return { error: "Still calculating the travel fee. Try again in a moment." };
+    }
+
+    if (!isGoogleImport && travelQuote.status === "error") {
+      return {
+        error: "Couldn't calculate the travel fee. Check the locations and try again.",
+      };
     }
 
     if (!isGoogleImport && totalError) {
@@ -857,6 +964,18 @@ export function BookingForm({
             <Separator />
 
             <div className="flex flex-col gap-3">
+              {travel ? (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Travel fee</span>
+                  <span className="tabular-nums">
+                    {travelQuote.status === "loading"
+                      ? "Calculating…"
+                      : travelQuote.status === "error"
+                        ? "Unavailable"
+                        : formatRm(travelQuote.feeRm)}
+                  </span>
+                </div>
+              ) : null}
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Full price</span>
                 <span className="tabular-nums">{formatRm(fullPriceRm)}</span>

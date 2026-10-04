@@ -244,6 +244,13 @@ export async function loadDashboardData(
       })),
       chargeBy,
       timeSlots,
+      travel: settings.travel.enabled
+        ? {
+            origin: settings.travel.location.location,
+            ratePerKm: settings.travel.rate_per_km,
+            longDistanceRatePerKm: settings.travel.long_distance_rate_per_km,
+          }
+        : null,
     },
     packages: {
       initialPackages: packages.map(serializePackage),

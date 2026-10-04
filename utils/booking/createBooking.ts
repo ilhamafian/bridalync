@@ -15,6 +15,7 @@ import {
   type BookingQuotationSummary,
 } from "@/utils/booking/pricing";
 import { normalizeSessionDate, toDateKey } from "@/utils/booking/availability";
+import { resolveSessionDistancesKm } from "@/utils/booking/roadDistance.server";
 import { countSessionSlots } from "@/utils/booking/slots";
 import {
   buildHotDatePriceMap,
@@ -252,6 +253,21 @@ export async function resolveBookingQuotation(
     }
   }
 
+  let distanceKmBySessionKey: Record<string, number> = {};
+  if (settings.travel.enabled) {
+    try {
+      distanceKmBySessionKey = await resolveSessionDistancesKm(
+        settings.travel.location.location,
+        input.sessions
+      );
+    } catch (error) {
+      console.error("Travel distance lookup failed:", error);
+      throw new Error(
+        "We couldn't calculate the travel fee right now. Please try again."
+      );
+    }
+  }
+
   const quotation = calculateBookingQuotation({
     chargeBy,
     selectedPackages,
@@ -267,7 +283,7 @@ export async function resolveBookingQuotation(
           longDistanceRatePerKm: settings.travel.long_distance_rate_per_km,
           timeSlots: settings.time_slots,
           sessions: input.sessions,
-          distanceKmBySessionKey: input.distanceKmBySessionKey ?? {},
+          distanceKmBySessionKey,
         }
       : undefined,
   });

@@ -95,10 +95,26 @@ function amountPaidRm(booking: PersistedBooking): number {
   return booking.invoice.depositRm;
 }
 
+/** Bookings saved before `breakdown` existed have the travel fee folded into the first line item. */
+function invoiceItems(booking: PersistedBooking) {
+  const { breakdown } = booking.invoice;
+  if (!breakdown) {
+    return booking.invoice.lineItems.filter((item) => item.amountRm >= 0);
+  }
+
+  return [
+    ...breakdown.sessions,
+    ...breakdown.addOns,
+    ...(breakdown.travelFeeRm > 0
+      ? [{ label: "Travel fee", amountRm: breakdown.travelFeeRm }]
+      : []),
+  ];
+}
+
 function buildLineRows(booking: PersistedBooking): InvoiceLineRow[] {
   const rows: InvoiceLineRow[] = [];
 
-  for (const item of booking.invoice.lineItems) {
+  for (const item of invoiceItems(booking)) {
     const amount = roundRm(item.amountRm);
     const existing = rows.find(
       (row) => row.label === item.label && row.unitPriceRm === amount

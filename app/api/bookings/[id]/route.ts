@@ -215,7 +215,6 @@ export async function PATCH(
           packageIds,
           addOns: data.addOns ?? [],
           sessions,
-          distanceKmBySessionKey: data.distanceKmBySessionKey,
           paymentOption: data.paymentOption ?? existing.paymentOption,
         };
 

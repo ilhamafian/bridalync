@@ -235,6 +235,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
               addOns: data.bookings.addOns,
               chargeBy: data.bookings.chargeBy,
               timeSlots: data.bookings.timeSlots,
+              travel: data.bookings.travel,
             }}
             onSaved={handleBookingSaved}
           />

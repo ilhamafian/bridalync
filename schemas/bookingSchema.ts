@@ -127,7 +127,6 @@ export const createBookingRequestSchema = z.object({
   packageIds: z.array(z.string()).min(1),
   addOns: z.array(bookingLineItemInputSchema).default([]),
   sessions: z.array(bookingSessionInputSchema).min(1),
-  distanceKmBySessionKey: z.record(z.string(), z.number()).optional(),
   paymentOption: z.enum(["deposit", "full"]).default("deposit"),
 });
 
@@ -207,7 +206,6 @@ export const manualBookingInputSchema = z.object({
   packageIds: z.array(z.string()).min(1),
   addOns: z.array(bookingLineItemInputSchema).default([]),
   sessions: z.array(bookingSessionInputSchema).min(1),
-  distanceKmBySessionKey: z.record(z.string(), z.number()).optional(),
   paymentOption: z.enum(["deposit", "full"]).default("deposit"),
   status: bookingStatusSchema.default("confirmed"),
   /** Discounted total; omitted = full price. Must not exceed the calculated subtotal. */

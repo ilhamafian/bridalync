@@ -1,5 +1,6 @@
 import type {
   AddOnCatalogItem,
+  BookingFormTravel,
   PackageCatalogItem,
   StyleCatalogItem,
 } from "@/components/booking/BookingForm";
@@ -69,6 +70,7 @@ export type DashboardData = {
     addOns: AddOnCatalogItem[];
     chargeBy: "package" | "style";
     timeSlots: TimeSlot[];
+    travel: BookingFormTravel | null;
   };
   packages: {
     initialPackages: PackageItem[];

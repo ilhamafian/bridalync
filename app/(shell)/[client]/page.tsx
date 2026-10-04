@@ -1206,6 +1206,11 @@ export default function ClientPage() {
 
   const allLocationsSet =
     sessions.length > 0 && sessions.every((session) => session.location);
+  const allDistancesReady =
+    !travelOrigin ||
+    sessions.every(
+      (session) => sessionRoadDistances[session.client_key]?.status === "ready"
+    );
 
   const sessionLocationHelperTextByKey = useMemo(() => {
     const messages: Record<string, string | undefined> = {};
@@ -1327,7 +1332,6 @@ export default function ClientPage() {
             },
           };
         }),
-        distanceKmBySessionKey,
         paymentOption: effectivePaymentOption,
       };
 
@@ -1779,7 +1783,7 @@ export default function ClientPage() {
             <Button
               size="lg"
               className="bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={!allLocationsSet}
+              disabled={!allLocationsSet || !allDistancesReady}
               onClick={goToNextStep}
             >
               {t.next}
