@@ -67,8 +67,7 @@ import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
 import { toManualTransferDetails } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,
   useEffect,
@@ -575,12 +574,22 @@ function formatTimeSlot(slot: TimeSlot): string {
 
 function ProfilePreviewBanner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   if (searchParams.get("preview") !== "1") return null;
+
+  function handleBack() {
+    if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push("/dashboard/profile");
+    }
+  }
 
   return (
     <div className="relative z-30 flex shrink-0 items-center gap-3 border-b border-zinc-900/10 bg-white/75 px-4 py-2.5 backdrop-blur-md dark:border-white/15 dark:bg-zinc-950/75">
-      <Button asChild size="sm" variant="outline" className="shrink-0">
-        <Link href="/dashboard">Back to Dashboard</Link>
+      <Button type="button" size="sm" variant="outline" className="shrink-0" onClick={handleBack}>
+        <ChevronLeftIcon />
+        Back
       </Button>
       <p className="min-w-0 flex-1 truncate text-sm text-zinc-700 dark:text-zinc-200">
         Previewing your profile

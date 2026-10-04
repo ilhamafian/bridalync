@@ -6,7 +6,6 @@ import { useRef, useState } from "react";
 import {
   IconBriefcase,
   IconChevronRight,
-  IconExternalLink,
   IconMail,
   IconPhoto,
   IconStar,
@@ -35,11 +34,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { BIO_MAX_LENGTH } from "@/schemas/bio";
-import {
-  buildProfilePreviewUrl,
-  buildProfileUrl,
-  formatAppHost,
-} from "@/utils/appUrl";
+import { buildProfilePreviewUrl, formatAppHost } from "@/utils/appUrl";
 import { compressImageFile } from "@/utils/image/compressClient";
 import { formatWhatsAppDisplay } from "@/utils/socialLinks";
 
@@ -131,11 +126,7 @@ export function ProfileManager({
   const busy = saving || uploading;
   const appHost = appUrl ? formatAppHost(appUrl) : "";
   const previewUrl = profile.username
-    ? buildProfilePreviewUrl(
-        appUrl
-          ? buildProfileUrl(appUrl, profile.username)
-          : `/${profile.username}`
-      )
+    ? buildProfilePreviewUrl(`/${profile.username}`)
     : null;
 
   function setSocialField(key: keyof ProfileSocialLinks, value: string) {
@@ -345,10 +336,10 @@ export function ProfileManager({
               size="sm"
               className="text-primary hover:bg-white/40 dark:hover:bg-white/10"
             >
-              <a href={previewUrl} target="_blank" rel="noreferrer">
+              <Link href={previewUrl}>
                 Preview profile
-                <IconExternalLink data-icon="inline-end" />
-              </a>
+                <IconChevronRight data-icon="inline-end" />
+              </Link>
             </Button>
           ) : null
         }
