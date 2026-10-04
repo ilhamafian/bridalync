@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { IconCash, IconDownload, IconFileInvoice } from "@tabler/icons-react";
+import { IconCash, IconFileInvoice } from "@tabler/icons-react";
 
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { InvoiceDownloadButton } from "@/components/dashboard/InvoiceDownloadButton";
 import { formatPaymentTime } from "@/components/dashboard/payments/format";
 import {
   DateRangeChip,
@@ -13,7 +14,6 @@ import {
   isDateKeyInRange,
   type DateRange,
 } from "@/components/dashboard/DateRangeFilter";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { toDateKey } from "@/utils/booking/availability";
@@ -165,20 +165,10 @@ function InvoicesList({
                     </p>
                   </div>
                 </Link>
-                <Button
-                  asChild
-                  variant="ghost"
-                  size="icon"
-                  className="size-10 shrink-0 rounded-full border border-zinc-900/10 bg-white/40 backdrop-blur-sm hover:bg-white/50 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
-                >
-                  <a
-                    href={`/api/bookings/${encodeURIComponent(invoice.bookingId)}/invoice`}
-                    download
-                    aria-label={`Download invoice #${invoice.invoiceNumber}`}
-                  >
-                    <IconDownload className="size-4.5" />
-                  </a>
-                </Button>
+                <InvoiceDownloadButton
+                  bookingId={invoice.bookingId}
+                  invoiceNumber={invoice.invoiceNumber}
+                />
               </li>
             );
           })}

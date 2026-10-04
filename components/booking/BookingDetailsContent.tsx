@@ -3,6 +3,7 @@
 import { format } from "date-fns";
 import { IconMail, IconMapPin, IconPhone } from "@tabler/icons-react";
 
+import { InvoiceDownloadButton } from "@/components/dashboard/InvoiceDownloadButton";
 import { NavigateButton } from "@/components/dashboard/NavigateButton";
 import { cn } from "@/lib/utils";
 import { formatRm } from "@/utils/booking/pricing";
@@ -197,7 +198,17 @@ export function BookingDetailsSections({
       </div>
 
       <div className={sectionClassName}>
-        <SectionLabel>Payment</SectionLabel>
+        <div className="flex items-center justify-between gap-3">
+          <SectionLabel>Payment</SectionLabel>
+          {booking.source !== "google_calendar" &&
+          (booking.status === "confirmed" || booking.status === "completed") ? (
+            <InvoiceDownloadButton
+              bookingId={booking._id}
+              label="Invoice"
+              className="-my-1"
+            />
+          ) : null}
+        </div>
         {booking.source === "google_calendar" ? (
           <p className="mt-0.5 text-muted-foreground">
             Imported bookings have no Bridalync invoice.
