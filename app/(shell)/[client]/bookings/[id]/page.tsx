@@ -25,7 +25,6 @@ function BookingResultLayout({ children }: { children: ReactNode }) {
   return (
     <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <AnimatedFlow
-        variant="blush"
         flowSpeed={0.9}
         distortionWarp={1.4}
         filmGrain={0.25}

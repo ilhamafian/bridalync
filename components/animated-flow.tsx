@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useSyncExternalStore } from "react";
+import { useOptionalUserTheme } from "@/components/UserThemeProvider";
 import { cn } from "@/lib/utils";
 
 export type FlowVariant =
@@ -18,7 +19,7 @@ export type FlowVariant =
 export interface AnimatedFlowProps {
   className?: string;
   children?: React.ReactNode;
-  /** Preset theme variant ("blue" | "purple" | "blush" | "emerald" | "solar" | "aurora" | "monochrome" | "custom") */
+  /** Preset theme variant; defaults to the user's theme color inside `UserThemeProvider`, else "blue" */
   variant?: FlowVariant;
   /** Velocity speed multiplier for fluid motion (default: 1.0) */
   flowSpeed?: number;
@@ -47,47 +48,56 @@ export interface AnimatedFlowProps {
 }
 
 /** Variant Color Palettes for Light and Dark Modes */
-const VARIANT_PALETTES: Record<
+export const VARIANT_PALETTES: Record<
   Exclude<FlowVariant, "custom">,
   { light: [string, string, string, string, string]; dark: [string, string, string, string, string] }
 > = {
   blue: {
-    light: ["#ffffff", "#e0f2fe", "#38bdf8", "#0284c7", "#1d4ed8"],
-    dark: ["#000000", "#031738", "#0055ff", "#00b4d8", "#7dd3fc"],
+    light: ["#ffffff", "#f5faff", "#e6f2fe", "#d0e6fc", "#b6d6f7"],
+    dark: ["#05080c", "#0a1018", "#111b29", "#18273a", "#213650"],
   },
   abyss: {
-    light: ["#ffffff", "#e0f2fe", "#38bdf8", "#0284c7", "#1d4ed8"],
-    dark: ["#000000", "#031738", "#0055ff", "#00b4d8", "#7dd3fc"],
+    light: ["#ffffff", "#f6f8ff", "#e8edfd", "#d3dcfa", "#bcc8f3"],
+    dark: ["#04060c", "#090c18", "#0f1427", "#161d38", "#20294d"],
   },
   purple: {
-    light: ["#ffffff", "#fdf2f8", "#f43f5e", "#c026d3", "#6b21a8"],
-    dark: ["#000000", "#1e0038", "#7b2cbf", "#ff007f", "#f472b6"],
+    light: ["#ffffff", "#faf7ff", "#f1e9fe", "#e3d4fc", "#d2bdf5"],
+    dark: ["#08060c", "#110c18", "#1c1229", "#28193a", "#36224f"],
   },
   blush: {
     light: ["#ffffff", "#fff7fa", "#ffe9f1", "#fcd5e3", "#f5bed3"],
-    dark: ["#120a0e", "#2a1620", "#4d2537", "#7d3f57", "#b06d86"],
+    dark: ["#0b0609", "#160c11", "#24121b", "#341a27", "#4a2536"],
   },
   silk: {
-    light: ["#ffffff", "#fdf2f8", "#f43f5e", "#c026d3", "#6b21a8"],
-    dark: ["#000000", "#1e0038", "#7b2cbf", "#ff007f", "#f472b6"],
+    light: ["#ffffff", "#fff7fd", "#fde9f8", "#f8d5ef", "#efbde3"],
+    dark: ["#0b060a", "#160c14", "#241222", "#341a31", "#482443"],
   },
   emerald: {
-    light: ["#ffffff", "#f0fdf4", "#34d399", "#059669", "#064e3b"],
-    dark: ["#000000", "#02261b", "#10b981", "#06b6d4", "#6ee7b7"],
+    light: ["#ffffff", "#f5fdf8", "#e5f8ed", "#cdefdc", "#b2e3c8"],
+    dark: ["#050a07", "#0a140f", "#111f18", "#192d23", "#234032"],
   },
   solar: {
-    light: ["#ffffff", "#fff7ed", "#fb923c", "#ea580c", "#9a3412"],
-    dark: ["#000000", "#240a02", "#c2410c", "#f97316", "#fde047"],
+    light: ["#ffffff", "#fffaf5", "#fff0e3", "#fde0c9", "#f8cbaa"],
+    dark: ["#0c0805", "#18100a", "#271a10", "#382517", "#4d331f"],
   },
   aurora: {
-    light: ["#ffffff", "#f0fdfa", "#2dd4bf", "#6366f1", "#4338ca"],
-    dark: ["#000000", "#022424", "#0d9488", "#8b5cf6", "#a7f3d0"],
+    light: ["#ffffff", "#f4fdfb", "#e3f7f3", "#dcdff9", "#c9c8f2"],
+    dark: ["#05090a", "#0a1416", "#0f2022", "#1a1d36", "#262650"],
   },
   monochrome: {
-    light: ["#ffffff", "#f1f5f9", "#94a3b8", "#475569", "#0f172a"],
-    dark: ["#000000", "#121215", "#3f3f46", "#71717a", "#e4e4e7"],
+    light: ["#ffffff", "#fafafa", "#f0f0f2", "#e2e3e7", "#d0d2d8"],
+    dark: ["#070708", "#0e0e10", "#17171a", "#222226", "#303036"],
   },
 };
+
+function subscribeToRootClass(onChange: () => void) {
+  const observer = new MutationObserver(onChange);
+  observer.observe(document.documentElement, {
+    attributes: true,
+    attributeFilter: ["class"],
+  });
+  return () => observer.disconnect();
+}
 
 /** Converts HEX color string ("#0047ff") to RGB float array ([0, 0.278, 1]) */
 function hexToRgb(hex: string): [number, number, number] {
@@ -223,7 +233,7 @@ void main() {
 export function AnimatedFlow({
   className,
   children,
-  variant = "blue",
+  variant: variantProp,
   flowSpeed = 1.0,
   zoomScale = 1.15,
   distortionWarp = 2.6,
@@ -241,24 +251,14 @@ export function AnimatedFlow({
 }: AnimatedFlowProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: 0.5, y: 0.5, targetX: 0.5, targetY: 0.5 });
-  const [isLightMode, setIsLightMode] = useState(true);
-
-  useEffect(() => {
-    // Dark mode is opt-in via a class on <html>, so light is the default.
-    const checkIsLight = () =>
-      !document.documentElement.classList.contains("dark");
-
-    setIsLightMode(checkIsLight());
-
-    const observer = new MutationObserver(() => {
-      setIsLightMode(checkIsLight());
-    });
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-    return () => observer.disconnect();
-  }, []);
+  const userTheme = useOptionalUserTheme();
+  const variant = variantProp ?? userTheme?.color ?? "blue";
+  // Dark mode is opt-in via a class on <html>, so light is the default.
+  const isLightMode = useSyncExternalStore(
+    subscribeToRootClass,
+    () => !document.documentElement.classList.contains("dark"),
+    () => true
+  );
 
   const paletteKey = isLightMode ? "light" : "dark";
 
@@ -340,7 +340,7 @@ export function AnimatedFlow({
     const uColor5 = gl.getUniformLocation(program, "u_color5");
 
     let animId: number;
-    let startTime = performance.now();
+    const startTime = performance.now();
 
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);

@@ -13,6 +13,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { UserThemeProvider } from "@/components/UserThemeProvider";
 import {
   DEFAULT_THEME,
+  DEFAULT_THEME_COLOR,
   isOnboardingComplete,
   type SessionUser,
 } from "@/schemas/userSchema";
@@ -59,11 +60,13 @@ export default async function DashboardLayout({
   }
 
   return (
-    <UserThemeProvider theme={user.theme ?? DEFAULT_THEME}>
+    <UserThemeProvider
+      theme={user.theme ?? DEFAULT_THEME}
+      color={user.theme_color ?? DEFAULT_THEME_COLOR}
+    >
       <TooltipProvider>
         <div className="dashboard-theme relative flex h-full min-h-0 flex-col overflow-hidden">
           <AnimatedFlow
-            variant="blush"
             flowSpeed={0.9}
             distortionWarp={1.4}
             filmGrain={0.25}

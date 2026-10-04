@@ -6,11 +6,14 @@ import {
 } from "./onboardingSchema";
 import { BIO_MAX_LENGTH } from "./bio";
 import { objectIdSchema } from "./objectId";
-import { themePreferenceSchema } from "./themeSchema";
+import { themeColorSchema, themePreferenceSchema } from "./themeSchema";
 
 export {
   DEFAULT_THEME,
+  DEFAULT_THEME_COLOR,
+  themeColorSchema,
   themePreferenceSchema,
+  type ThemeColor,
   type ThemePreference,
 } from "./themeSchema";
 
@@ -70,6 +73,7 @@ export const userSchema = z.object({
   social_links: socialLinksSchema.optional(),
   /** Applies to the dashboard and this user's public client pages. */
   theme: themePreferenceSchema.optional(),
+  theme_color: themeColorSchema.optional(),
   stripe_account_id: z.string().optional(),
   is_stripe_connected: z.boolean().default(false),
   deferred_onboarding: deferredOnboardingSchema.default(() =>

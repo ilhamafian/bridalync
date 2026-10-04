@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { LocaleProvider } from "@/components/LocaleProvider";
 import { UserThemeProvider } from "@/components/UserThemeProvider";
 import { UserModel } from "@/models/User";
-import { DEFAULT_THEME } from "@/schemas/userSchema";
+import { DEFAULT_THEME, DEFAULT_THEME_COLOR } from "@/schemas/userSchema";
 
 export default async function ClientLayout({
   children,
@@ -20,7 +20,10 @@ export default async function ClientLayout({
   }
 
   return (
-    <UserThemeProvider theme={user.theme ?? DEFAULT_THEME}>
+    <UserThemeProvider
+      theme={user.theme ?? DEFAULT_THEME}
+      color={user.theme_color ?? DEFAULT_THEME_COLOR}
+    >
       <LocaleProvider>{children}</LocaleProvider>
     </UserThemeProvider>
   );

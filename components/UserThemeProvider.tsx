@@ -9,18 +9,21 @@ import {
   useState,
 } from "react";
 
-import type { ThemePreference } from "@/schemas/themeSchema";
+import type { ThemeColor, ThemePreference } from "@/schemas/themeSchema";
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
+const COLOR_ATTRIBUTE = "data-theme-color";
 
 type UserThemeContextValue = {
   theme: ThemePreference;
   setTheme: (theme: ThemePreference) => void;
+  color: ThemeColor;
+  setColor: (color: ThemeColor) => void;
 };
 
 const UserThemeContext = createContext<UserThemeContextValue | null>(null);
 
-function applyTheme(isDark: boolean) {
+function applyMode(isDark: boolean) {
   const root = document.documentElement;
   root.classList.toggle("dark", isDark);
   root.style.colorScheme = isDark ? "dark" : "light";
@@ -30,6 +33,7 @@ function resetTheme() {
   const root = document.documentElement;
   root.classList.remove("dark");
   root.style.colorScheme = "";
+  root.removeAttribute(COLOR_ATTRIBUTE);
 }
 
 function disableTransitions() {
@@ -44,44 +48,55 @@ function disableTransitions() {
   };
 }
 
-/** Runs before first paint on full page loads so there's no light flash. */
-function themeScript(theme: ThemePreference) {
-  return `(function(t){try{var d=t==="dark"||(t==="system"&&matchMedia(${JSON.stringify(
-    DARK_QUERY
-  )}).matches);var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light"}catch(e){}})(${JSON.stringify(
-    theme
-  )})`;
+/** Runs before first paint on full page loads so there's no flash of the wrong theme. */
+function themeScript(theme: ThemePreference, color: ThemeColor) {
+  const args = [theme, color, DARK_QUERY, COLOR_ATTRIBUTE].map((value) =>
+    JSON.stringify(value)
+  );
+  return `(function(t,c,q,a){try{var d=t==="dark"||(t==="system"&&matchMedia(q).matches);var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";r.setAttribute(a,c)}catch(e){}})(${args.join(",")})`;
 }
 
 /**
- * Applies a user's theme to `<html>` only while mounted. Pages outside this
- * provider (landing, auth, onboarding) always render light.
+ * Applies a user's theme (light/dark mode + color) to `<html>` only while
+ * mounted. Pages outside this provider (landing, auth, onboarding) always
+ * render the default light look.
  */
 export function UserThemeProvider({
   theme: initialTheme,
+  color: initialColor,
   children,
 }: {
   theme: ThemePreference;
+  color: ThemeColor;
   children: React.ReactNode;
 }) {
   const [theme, setThemeState] = useState(initialTheme);
-  const [prevInitialTheme, setPrevInitialTheme] = useState(initialTheme);
-  if (initialTheme !== prevInitialTheme) {
-    setPrevInitialTheme(initialTheme);
+  const [color, setColorState] = useState(initialColor);
+  const [prevInitial, setPrevInitial] = useState({
+    theme: initialTheme,
+    color: initialColor,
+  });
+  if (initialTheme !== prevInitial.theme || initialColor !== prevInitial.color) {
+    setPrevInitial({ theme: initialTheme, color: initialColor });
     setThemeState(initialTheme);
+    setColorState(initialColor);
   }
 
   useEffect(() => {
     if (theme !== "system") {
-      applyTheme(theme === "dark");
+      applyMode(theme === "dark");
       return;
     }
     const media = window.matchMedia(DARK_QUERY);
-    const sync = () => applyTheme(media.matches);
+    const sync = () => applyMode(media.matches);
     sync();
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
   }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.setAttribute(COLOR_ATTRIBUTE, color);
+  }, [color]);
 
   useEffect(() => resetTheme, []);
 
@@ -91,7 +106,16 @@ export function UserThemeProvider({
     requestAnimationFrame(restore);
   }, []);
 
-  const value = useMemo(() => ({ theme, setTheme }), [theme, setTheme]);
+  const setColor = useCallback((next: ThemeColor) => {
+    const restore = disableTransitions();
+    setColorState(next);
+    requestAnimationFrame(restore);
+  }, []);
+
+  const value = useMemo(
+    () => ({ theme, setTheme, color, setColor }),
+    [theme, setTheme, color, setColor]
+  );
 
   return (
     <UserThemeContext.Provider value={value}>
@@ -99,11 +123,17 @@ export function UserThemeProvider({
         suppressHydrationWarning
         // Non-JS type on the client avoids React's script-tag warning on soft navigation.
         type={typeof window === "undefined" ? undefined : "text/plain"}
-        dangerouslySetInnerHTML={{ __html: themeScript(initialTheme) }}
+        dangerouslySetInnerHTML={{
+          __html: themeScript(initialTheme, initialColor),
+        }}
       />
       {children}
     </UserThemeContext.Provider>
   );
+}
+
+export function useOptionalUserTheme() {
+  return useContext(UserThemeContext);
 }
 
 export function useUserTheme() {

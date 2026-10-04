@@ -65,7 +65,7 @@ export const SETTINGS_CATEGORY_META: Record<
   },
   theme: {
     label: "Theme",
-    description: "Choose how Bridalync looks on this device.",
+    description: "Pick a color and light or dark mode for your dashboard and booking page.",
     icon: IconPalette,
   },
   notifications: {

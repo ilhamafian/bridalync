@@ -3,11 +3,18 @@ import { z } from "zod";
 
 import { UserModel } from "@/models/User";
 import { toIdString } from "@/schemas/objectId";
-import { themePreferenceSchema } from "@/schemas/userSchema";
+import { themeColorSchema, themePreferenceSchema } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
 
-const updateThemeSchema = z.object({ theme: themePreferenceSchema });
+const updateThemeSchema = z
+  .object({
+    theme: themePreferenceSchema.optional(),
+    color: themeColorSchema.optional(),
+  })
+  .refine((data) => data.theme || data.color, {
+    message: "Provide a theme or color.",
+  });
 
 export async function PUT(req: NextRequest) {
   try {
@@ -22,8 +29,12 @@ export async function PUT(req: NextRequest) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    await new UserModel().setTheme(userId, parsed.data.theme);
-    return createResponse({ theme: parsed.data.theme });
+    const { theme, color } = parsed.data;
+    await new UserModel().setThemePreferences(userId, {
+      ...(theme ? { theme } : {}),
+      ...(color ? { theme_color: color } : {}),
+    });
+    return createResponse({ theme, color });
   } catch (error) {
     return handleError(error);
   }

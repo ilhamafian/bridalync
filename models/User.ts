@@ -1,6 +1,11 @@
 import { ZodSchema } from "zod";
 import { ModelBase } from "@/models/ModelBase";
-import { userSchema, User, type ThemePreference } from "@/schemas/userSchema";
+import {
+  userSchema,
+  User,
+  type ThemeColor,
+  type ThemePreference,
+} from "@/schemas/userSchema";
 import { isOnboardingComplete } from "@/schemas/onboardingSchema";
 
 export class UserModel extends ModelBase<User> {
@@ -34,10 +39,13 @@ export class UserModel extends ModelBase<User> {
     return user;
   }
 
-  async setTheme(userId: string, theme: ThemePreference) {
+  async setThemePreferences(
+    userId: string,
+    prefs: { theme?: ThemePreference; theme_color?: ThemeColor }
+  ) {
     const collection = await this.getCollection();
     return collection.updateOne(this.buildIdFilter(userId), {
-      $set: { theme, updated_at: new Date() },
+      $set: { ...prefs, updated_at: new Date() },
     } as never);
   }
 

@@ -1387,7 +1387,6 @@ export default function ClientPage() {
         <ProfilePreviewBanner />
       </Suspense>
       <AnimatedFlow
-        variant="blush"
         flowSpeed={0.9}
         distortionWarp={1.4}
         filmGrain={0.25}
