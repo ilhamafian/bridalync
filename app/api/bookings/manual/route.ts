@@ -15,6 +15,7 @@ import {
   resolveBookingQuotation,
 } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
+import { scheduleBookingCalendarSync } from "@/utils/google/syncBookingCalendar";
 
 export async function POST(req: NextRequest) {
   try {
@@ -88,6 +89,7 @@ export async function POST(req: NextRequest) {
       paymentOption,
       status: data.status,
     });
+    scheduleBookingCalendarSync(booking._id.toString());
 
     return createResponse({ booking: serializeBooking(booking) }, 201);
   } catch (error) {

@@ -8,10 +8,12 @@ import {
   googleAuthRedirectPath,
 } from "@/utils/auth/google-auth";
 import { getAppUrl } from "@/utils/appUrl";
+import { saveGoogleCalendarConnection } from "@/utils/google/calendarConnection";
+import { scheduleUpcomingBookingsCalendarSync } from "@/utils/google/syncBookingCalendar";
 import {
-  applyCalendarTokenCookie,
   authErrorRedirect,
   calendarRedirect,
+  clearCalendarTokenCookie,
   clearOAuthCookie,
   exchangeGoogleCode,
   fetchGoogleUserInfo,
@@ -61,13 +63,13 @@ export async function GET(req: NextRequest) {
         return response;
       }
 
-      const response = calendarRedirect({ google: "connected" });
+      const saved = await saveGoogleCalendarConnection(userId, tokens);
+      if (saved) scheduleUpcomingBookingsCalendarSync(userId);
+      const response = calendarRedirect(
+        saved ? { google: "connected" } : { google_error: "failed" }
+      );
       clearOAuthCookie(response);
-      applyCalendarTokenCookie(response, {
-        accessToken: tokens.access_token,
-        expiresInSeconds: tokens.expires_in ?? 3600,
-        userId,
-      });
+      clearCalendarTokenCookie(response);
       return response;
     }
 

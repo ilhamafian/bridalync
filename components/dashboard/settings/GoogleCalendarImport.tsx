@@ -24,9 +24,17 @@ import type {
   GoogleCalendarSkipCounts,
 } from "@/utils/google/calendar";
 
+type ConnectionStatus = {
+  connected: boolean;
+  email: string | null;
+  canImport: boolean;
+  canSync: boolean;
+};
+
 type PreviewResponse = {
   events?: GoogleCalendarPreviewEvent[];
   skipCounts?: GoogleCalendarSkipCounts;
+  status?: ConnectionStatus;
   error?: string;
 };
 
@@ -59,6 +67,7 @@ type PreviewResult =
       kind: "ok";
       events: GoogleCalendarPreviewEvent[];
       skipCounts?: GoogleCalendarSkipCounts;
+      status?: ConnectionStatus;
     };
 
 const PREVIEW_ERROR = "Could not load Google Calendar events.";
@@ -74,7 +83,12 @@ async function fetchPreview(): Promise<PreviewResult> {
         message: typeof data.error === "string" ? data.error : PREVIEW_ERROR,
       };
     }
-    return { kind: "ok", events: data.events ?? [], skipCounts: data.skipCounts };
+    return {
+      kind: "ok",
+      events: data.events ?? [],
+      skipCounts: data.skipCounts,
+      status: data.status,
+    };
   } catch {
     return { kind: "error", message: PREVIEW_ERROR };
   }
@@ -112,6 +126,8 @@ export function GoogleCalendarImport() {
   const [success, setSuccess] = useState<string | null>(null);
   const [events, setEvents] = useState<GoogleCalendarPreviewEvent[]>([]);
   const [skipCounts, setSkipCounts] = useState<GoogleCalendarSkipCounts>();
+  const [status, setStatus] = useState<ConnectionStatus>();
+  const [disconnecting, setDisconnecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const importable = useMemo(
@@ -134,6 +150,7 @@ export function GoogleCalendarImport() {
     setNeedsConnect(false);
     setEvents(result.events);
     setSkipCounts(result.skipCounts);
+    setStatus(result.status);
     setSelectedIds(
       new Set(
         result.events
@@ -179,6 +196,28 @@ export function GoogleCalendarImport() {
       // Continue to Google anyway so the account picker still opens.
     }
     window.location.href = GOOGLE_CONNECT_URL;
+  }
+
+  async function handleDisconnect() {
+    setDisconnecting(true);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await fetch("/api/google/calendar/disconnect", {
+        method: "POST",
+      });
+      if (!response.ok) {
+        setError("Could not disconnect Google Calendar.");
+        return;
+      }
+      setNeedsConnect(true);
+      setEvents([]);
+      setStatus(undefined);
+    } catch {
+      setError("Could not disconnect Google Calendar.");
+    } finally {
+      setDisconnecting(false);
+    }
   }
 
   async function handleImport() {
@@ -239,9 +278,9 @@ export function GoogleCalendarImport() {
           <div className={cn(settingsCardClassName, "flex-row items-start")}>
             <IconBadge icon={IconBrandGoogle} />
             <p className="text-sm text-muted-foreground">
-              Connect Google Calendar to import titled events as bookings.
-              Public holidays and repeating events are skipped. You can add
-              locations later from Bookings.
+              Connect Google Calendar to add confirmed bookings to your
+              calendar automatically, and to import titled events as bookings.
+              Public holidays and repeating events are skipped.
             </p>
           </div>
         </SettingsSection>
@@ -265,6 +304,24 @@ export function GoogleCalendarImport() {
 
   return (
     <div className="flex flex-col gap-4">
+      {status ? (
+        <SettingsSection title="Connection">
+          <div className={settingsListClassName}>
+            <div className={settingsRowClassName}>
+              <IconBadge icon={IconBrandGoogle} />
+              <RowText
+                title={status.email ?? "Google account connected"}
+                description={
+                  status.canSync
+                    ? "Confirmed bookings are added to your primary calendar."
+                    : "Booking sync is off: calendar edit access wasn't granted. Reconnect and allow it."
+                }
+              />
+            </div>
+          </div>
+        </SettingsSection>
+      ) : null}
+
       <SettingsSection
         title="Events"
         action={
@@ -285,7 +342,12 @@ export function GoogleCalendarImport() {
           ) : null
         }
       >
-        {events.length === 0 ? (
+        {status && !status.canImport ? (
+          <EmptyCard>
+            Import is off: calendar view access wasn&apos;t granted. Reconnect
+            and allow it.
+          </EmptyCard>
+        ) : events.length === 0 ? (
           <EmptyCard>No one-off timed events found to import.</EmptyCard>
         ) : (
           <div className={settingsListClassName}>
@@ -350,10 +412,20 @@ export function GoogleCalendarImport() {
         size="lg"
         variant="outline"
         className="min-h-11"
-        disabled={importing}
+        disabled={importing || disconnecting}
         onClick={() => void handleUseDifferentAccount()}
       >
         Use a different Google account
+      </Button>
+      <Button
+        type="button"
+        size="lg"
+        variant="ghost"
+        className="min-h-11 text-destructive hover:text-destructive"
+        disabled={importing || disconnecting}
+        onClick={() => void handleDisconnect()}
+      >
+        {disconnecting ? "Disconnecting…" : "Disconnect Google Calendar"}
       </Button>
     </div>
   );

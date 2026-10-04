@@ -5,6 +5,8 @@ import {
 
 export const GOOGLE_IMPORT_PACKAGE_ID = "google-import";
 export const GOOGLE_IMPORT_CONTACT_EMAIL = "imported@bridalync.app";
+/** Private extended property on events Bridalync syncs to Google; the import skips them. */
+export const BRIDALYNC_BOOKING_PROPERTY = "bridalyncBookingId";
 
 export type GoogleCalendarListEntry = {
   id?: string;
@@ -25,6 +27,7 @@ export type GoogleCalendarEvent = {
   organizer?: { email?: string; displayName?: string };
   start?: { date?: string; dateTime?: string; timeZone?: string };
   end?: { date?: string; dateTime?: string; timeZone?: string };
+  extendedProperties?: { private?: Record<string, string> };
 };
 
 export type GoogleCalendarPreviewEvent = {
@@ -116,6 +119,9 @@ export function classifyGoogleEvent(event: GoogleCalendarEvent): {
   skip: keyof GoogleCalendarSkipCounts | null;
 } {
   if (event.status === "cancelled") return { skip: "cancelled" };
+  if (event.extendedProperties?.private?.[BRIDALYNC_BOOKING_PROPERTY]) {
+    return { skip: "other" };
+  }
   if (event.recurrence?.length || event.recurringEventId) {
     return { skip: "repeating" };
   }

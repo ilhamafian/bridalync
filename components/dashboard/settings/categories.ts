@@ -60,7 +60,8 @@ export const SETTINGS_CATEGORY_META: Record<
   },
   "google-calendar": {
     label: "Google Calendar",
-    description: "Import one-off Google Calendar events as bookings.",
+    description:
+      "Sync confirmed bookings to Google Calendar and import events as bookings.",
     icon: IconBrandGoogle,
   },
   theme: {

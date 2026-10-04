@@ -5,7 +5,11 @@ import { isOnboardingComplete } from "@/schemas/userSchema";
 import { toIdString } from "@/schemas/objectId";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
-import { getGoogleCalendarAccessToken } from "@/utils/google/oauth";
+import {
+  getGoogleCalendarAccessToken,
+  invalidateGoogleAccessToken,
+} from "@/utils/google/calendarConnection";
+import { GOOGLE_CALENDAR_READ_SCOPE } from "@/utils/google/oauth";
 import {
   importGoogleCalendarEvents,
   previewGoogleCalendarEvents,
@@ -28,7 +32,10 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: "Unauthorized" }, 401);
     }
 
-    const accessToken = await getGoogleCalendarAccessToken(userId);
+    const accessToken = await getGoogleCalendarAccessToken(
+      userId,
+      GOOGLE_CALENDAR_READ_SCOPE
+    );
     if (!accessToken) {
       return createResponse({ error: "Google Calendar is not connected." }, 401);
     }
@@ -68,9 +75,12 @@ export async function POST(req: NextRequest) {
       error instanceof Error &&
       error.message === "GOOGLE_CALENDAR_UNAUTHORIZED"
     ) {
+      const user = await getSessionUser();
+      const userId = user ? toIdString(user._id) : null;
+      if (userId) await invalidateGoogleAccessToken(userId);
       return createResponse(
-        { error: "Google Calendar access expired. Connect again." },
-        401
+        { error: "Google Calendar access expired. Try again or reconnect." },
+        502
       );
     }
     return handleError(error);

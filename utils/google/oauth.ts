@@ -18,8 +18,17 @@ export const GOOGLE_SIGNIN_SCOPES = [
   "https://www.googleapis.com/auth/userinfo.profile",
 ] as const;
 
-export const GOOGLE_CALENDAR_SCOPE =
+/** List calendars + read events (import). */
+export const GOOGLE_CALENDAR_READ_SCOPE =
   "https://www.googleapis.com/auth/calendar.readonly";
+/** Create/update/delete events (booking sync). */
+export const GOOGLE_CALENDAR_EVENTS_SCOPE =
+  "https://www.googleapis.com/auth/calendar.events";
+
+export const GOOGLE_CALENDAR_SCOPES = [
+  GOOGLE_CALENDAR_READ_SCOPE,
+  GOOGLE_CALENDAR_EVENTS_SCOPE,
+] as const;
 
 export type GoogleOAuthIntent = "login" | "signup" | "calendar";
 
@@ -30,14 +39,7 @@ type OAuthCookiePayload = {
   exp: number;
 };
 
-type CalendarTokenPayload = {
-  accessToken: string;
-  userId: string;
-  exp: number;
-};
-
 const OAUTH_COOKIE_MAX_AGE_SECONDS = 60 * 10;
-const CALENDAR_COOKIE_MAX_AGE_SECONDS = 60 * 50;
 
 function getAuthSecret() {
   const secret = process.env.AUTH_SECRET;
@@ -51,7 +53,7 @@ function encryptionKey() {
   return createHash("sha256").update(getAuthSecret()).digest();
 }
 
-function encryptJson(value: unknown) {
+export function encryptJson(value: unknown) {
   const iv = randomBytes(12);
   const cipher = createCipheriv("aes-256-gcm", encryptionKey(), iv);
   const plaintext = Buffer.from(JSON.stringify(value), "utf8");
@@ -60,7 +62,7 @@ function encryptJson(value: unknown) {
   return Buffer.concat([iv, tag, encrypted]).toString("base64url");
 }
 
-function decryptJson<T>(token: string): T | null {
+export function decryptJson<T>(token: string): T | null {
   try {
     const buffer = Buffer.from(token, "base64url");
     const iv = buffer.subarray(0, 12);
@@ -122,7 +124,7 @@ export function buildGoogleAuthUrl(intent: GoogleOAuthIntent) {
   const verifier = randomBytes(32).toString("base64url");
   const scopes =
     intent === "calendar"
-      ? [GOOGLE_CALENDAR_SCOPE]
+      ? [...GOOGLE_CALENDAR_SCOPES]
       : [...GOOGLE_SIGNIN_SCOPES];
 
   const params = new URLSearchParams({
@@ -134,8 +136,10 @@ export function buildGoogleAuthUrl(intent: GoogleOAuthIntent) {
     code_challenge: createCodeChallenge(verifier),
     code_challenge_method: "S256",
     include_granted_scopes: "true",
+    // `consent` makes Google return a refresh token on every connect, not just the first.
     prompt:
       intent === "calendar" ? "select_account consent" : "select_account",
+    ...(intent === "calendar" ? { access_type: "offline" } : {}),
   });
 
   return {
@@ -174,29 +178,7 @@ export async function readOAuthCookie(): Promise<OAuthCookiePayload | null> {
   return payload;
 }
 
-export function applyCalendarTokenCookie(
-  response: NextResponse,
-  input: {
-    accessToken: string;
-    expiresInSeconds: number;
-    userId: string;
-  }
-) {
-  const maxAge = Math.max(
-    60,
-    Math.min(input.expiresInSeconds - 60, CALENDAR_COOKIE_MAX_AGE_SECONDS)
-  );
-  response.cookies.set(
-    GOOGLE_CALENDAR_COOKIE,
-    encryptJson({
-      accessToken: input.accessToken,
-      userId: input.userId,
-      exp: Date.now() + maxAge * 1000,
-    } satisfies CalendarTokenPayload),
-    googleOAuthCookieOptions(maxAge)
-  );
-}
-
+/** Legacy cookie from before tokens were stored server-side; only cleared now. */
 export function clearCalendarTokenCookie(response?: NextResponse) {
   const options = {
     ...googleOAuthCookieOptions(0),
@@ -212,23 +194,6 @@ export async function clearGoogleConnectCookies() {
   const cookieStore = await cookies();
   cookieStore.delete(GOOGLE_CALENDAR_COOKIE);
   cookieStore.delete(GOOGLE_OAUTH_COOKIE);
-}
-
-export async function getGoogleCalendarAccessToken(userId: string) {
-  const cookieStore = await cookies();
-  const value = cookieStore.get(GOOGLE_CALENDAR_COOKIE)?.value;
-  if (!value) return null;
-
-  const payload = decryptJson<CalendarTokenPayload>(value);
-  if (
-    !payload?.accessToken ||
-    !payload.userId ||
-    payload.userId !== userId ||
-    payload.exp < Date.now()
-  ) {
-    return null;
-  }
-  return payload.accessToken;
 }
 
 export type GoogleTokenResponse = {
@@ -267,6 +232,55 @@ export async function exchangeGoogleCode(
   }
 
   return (await response.json()) as GoogleTokenResponse;
+}
+
+/** Thrown when Google rejects a refresh token (revoked access, password change, etc.). */
+export class GoogleRefreshRevokedError extends Error {
+  constructor() {
+    super("Google Calendar access was revoked.");
+  }
+}
+
+export async function refreshGoogleAccessToken(
+  refreshToken: string
+): Promise<GoogleTokenResponse> {
+  const { clientId, clientSecret } = getGoogleOAuthConfig();
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token",
+    }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    if (response.status === 400 && errorBody.includes("invalid_grant")) {
+      throw new GoogleRefreshRevokedError();
+    }
+    console.error("Google token refresh failed:", errorBody);
+    throw new Error("Could not refresh Google Calendar access.");
+  }
+
+  return (await response.json()) as GoogleTokenResponse;
+}
+
+/** Best effort; the token may already be revoked. */
+export async function revokeGoogleToken(token: string) {
+  try {
+    await fetch("https://oauth2.googleapis.com/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }),
+      cache: "no-store",
+    });
+  } catch (error) {
+    console.error("Google token revoke failed:", error);
+  }
 }
 
 export type GoogleUserInfo = {

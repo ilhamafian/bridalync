@@ -11,6 +11,10 @@ import {
 import { sendBalancePaymentReceivedEmail } from "@/utils/email/balance-payment-received";
 import { sendBookingPaymentConfirmationEmail } from "@/utils/email/booking-confirmation";
 import {
+  scheduleBookingCalendarRemoval,
+  scheduleBookingCalendarSync,
+} from "@/utils/google/syncBookingCalendar";
+import {
   notifyBalancePaymentReceived,
   notifyBookingConfirmed,
 } from "@/utils/push/bookingNotifications";
@@ -50,6 +54,7 @@ export async function updateBookingStatus(
   if (!ObjectId.isValid(id)) return null;
 
   await bookingModel.update(id, { status }, bookingStatusUpdateSchema);
+  scheduleBookingCalendarSync(id);
   return getBookingById(id);
 }
 
@@ -75,6 +80,7 @@ export async function confirmBookingPayment(
     },
     bookingPaymentUpdateSchema
   );
+  scheduleBookingCalendarSync(bookingId);
 
   const booking = await getBookingById(bookingId);
   if (booking?.freelancerUserId && booking.invoice.depositRm > 0) {
@@ -157,6 +163,7 @@ export async function confirmBookingBalancePayment(
     },
     bookingBalanceUpdateSchema
   );
+  scheduleBookingCalendarSync(bookingId);
 
   const booking = await getBookingById(bookingId);
   if (booking?.freelancerUserId && existing.invoice.balanceRm > 0) {
@@ -271,11 +278,16 @@ export async function updateDashboardBooking(
   if (!ObjectId.isValid(id)) return null;
 
   await bookingModel.update(id, data, bookingDashboardFieldsSchema.partial());
+  scheduleBookingCalendarSync(id);
   return getBookingById(id);
 }
 
 export async function deleteBooking(id: string) {
   if (!ObjectId.isValid(id)) return false;
+  const existing = await getBookingById(id);
   await bookingModel.delete(id);
+  if (existing?.freelancerUserId && existing.source !== "google_calendar") {
+    scheduleBookingCalendarRemoval(existing.freelancerUserId, id);
+  }
   return true;
 }
