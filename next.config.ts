@@ -16,7 +16,12 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/dashboard/packages",
-        destination: "/dashboard/settings/packages",
+        destination: "/dashboard/settings/events",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/settings/packages",
+        destination: "/dashboard/settings/events",
         permanent: true,
       },
     ];

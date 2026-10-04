@@ -194,11 +194,13 @@ export function SettingsManager({
   initialSettings,
   isStripeConnected,
   hasStripeAccount,
+  onChargeByChange,
 }: {
   category: SettingsCategory | null;
   initialSettings: SettingsItem;
   isStripeConnected: boolean;
   hasStripeAccount: boolean;
+  onChargeByChange?: (chargeBy: SettingsItem["charge_by"]) => void;
 }) {
   const [settings, setSettings] = useState(initialSettings);
   const [chargeBy, setChargeBy] = useState(initialSettings.charge_by);
@@ -372,7 +374,8 @@ export function SettingsManager({
     if (chargeBy !== settings.charge_by) {
       payload.time_slots = getDefaultTimeSlots(chargeBy);
     }
-    await patchSettings("charge_by", payload);
+    const saved = await patchSettings("charge_by", payload);
+    if (saved) onChargeByChange?.(saved.charge_by);
   }
 
   async function saveTravel() {
@@ -637,16 +640,16 @@ export function SettingsManager({
             <label className={cn(settingsRowClassName, "cursor-pointer")}>
               <IconBadge icon={IconPackage} />
               <RowText
-                title="By package"
-                description="Makeup artist style pricing"
+                title="By event"
+                description="Recommended for makeup artists"
               />
-              <RadioGroupItem value="package" aria-label="By package" />
+              <RadioGroupItem value="package" aria-label="By event" />
             </label>
             <label className={cn(settingsRowClassName, "cursor-pointer")}>
               <IconBadge icon={IconSparkles} />
               <RowText
                 title="By style"
-                description="Hijab stylist style pricing"
+                description="Recommended for hijab stylists"
               />
               <RadioGroupItem value="style" aria-label="By style" />
             </label>

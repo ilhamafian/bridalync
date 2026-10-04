@@ -238,10 +238,10 @@ export function AddHotDatesPage({
         {catalog.length === 0 ? (
           <EmptyCard>
             {chargeBy === "package"
-              ? "You have no packages yet."
+              ? "You have no events yet."
               : "You have no styles yet."}{" "}
             <Link
-              href="/dashboard/settings/packages"
+              href="/dashboard/settings/events"
               scroll={false}
               className="font-medium text-primary hover:underline"
             >

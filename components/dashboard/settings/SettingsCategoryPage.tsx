@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 
 import { BackButton } from "@/components/dashboard/BackButton";
 import { SETTINGS_CATEGORY_META } from "@/components/dashboard/settings/categories";
@@ -32,8 +32,9 @@ export function SettingsCategoryPage({
   packages: DashboardData["packages"];
   email: string;
 }) {
+  const [chargeBy, setChargeBy] = useState(packages.chargeBy);
   const meta = category ? SETTINGS_CATEGORY_META[category] : null;
-  const isPackages = category === "packages";
+  const isPackages = category === "events";
 
   return (
     <div className="flex flex-col gap-4">
@@ -56,7 +57,7 @@ export function SettingsCategoryPage({
           initialPackages={packages.initialPackages}
           initialStyles={packages.initialStyles}
           initialAddOns={packages.initialAddOns}
-          chargeBy={packages.chargeBy}
+          chargeBy={chargeBy}
         />
       </div>
 
@@ -67,6 +68,7 @@ export function SettingsCategoryPage({
             initialSettings={settings.initialSettings}
             isStripeConnected={settings.isStripeConnected}
             hasStripeAccount={settings.hasStripeAccount}
+            onChargeByChange={setChargeBy}
           />
           {category === "google-calendar" ? <GoogleCalendarImport /> : null}
         </Suspense>

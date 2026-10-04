@@ -163,7 +163,7 @@ export function DashboardSkeleton() {
       return <BookingsSkeleton />;
     case "settings":
     case "settings-category":
-      return getSettingsCategory(pathname) === "packages" ? (
+      return getSettingsCategory(pathname) === "events" ? (
         <PackagesSkeleton />
       ) : (
         <SettingsSkeleton />

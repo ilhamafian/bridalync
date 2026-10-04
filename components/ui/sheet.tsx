@@ -49,6 +49,52 @@ function SheetOverlay({
   )
 }
 
+/**
+ * Height of the on-screen keyboard overlapping the layout viewport. iOS Safari
+ * doesn't shrink the layout viewport when the keyboard opens, so bottom sheets
+ * would otherwise sit behind it.
+ */
+function useKeyboardViewport(enabled: boolean) {
+  const [viewport, setViewport] = React.useState<{
+    inset: number
+    height: number
+  } | null>(null)
+
+  React.useEffect(() => {
+    const visualViewport = window.visualViewport
+    if (!enabled || !visualViewport) return
+
+    function update() {
+      const vv = window.visualViewport
+      if (!vv) return
+      const inset = Math.max(
+        0,
+        Math.round(window.innerHeight - vv.height - vv.offsetTop)
+      )
+      setViewport(inset > 0 ? { inset, height: vv.height } : null)
+    }
+
+    update()
+    visualViewport.addEventListener("resize", update)
+    visualViewport.addEventListener("scroll", update)
+    return () => {
+      visualViewport.removeEventListener("resize", update)
+      visualViewport.removeEventListener("scroll", update)
+      setViewport(null)
+    }
+  }, [enabled])
+
+  return viewport
+}
+
+function isTextField(element: EventTarget | null): element is HTMLElement {
+  if (element instanceof HTMLTextAreaElement) return true
+  if (!(element instanceof HTMLInputElement)) return false
+  return !["checkbox", "radio", "button", "submit", "file", "range"].includes(
+    element.type
+  )
+}
+
 function SheetContent({
   className,
   children,
@@ -56,6 +102,9 @@ function SheetContent({
   showCloseButton = true,
   contained = false,
   overlayClassName,
+  style,
+  onOpenAutoFocus,
+  onFocus,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left"
@@ -65,6 +114,8 @@ function SheetContent({
 }) {
   const [portalContainer, setPortalContainer] =
     React.useState<HTMLElement | null>(null)
+  const isBottom = side === "bottom"
+  const keyboard = useKeyboardViewport(isBottom)
 
   React.useLayoutEffect(() => {
     if (contained) {
@@ -76,12 +127,43 @@ function SheetContent({
     return null
   }
 
+  function handleOpenAutoFocus(event: Event) {
+    onOpenAutoFocus?.(event)
+    if (event.defaultPrevented || !isBottom) return
+    // Focusing the first input would pop the mobile keyboard over the sheet.
+    event.preventDefault()
+    ;(event.target as HTMLElement | null)?.focus({ preventScroll: true })
+  }
+
+  function handleFocus(event: React.FocusEvent<HTMLDivElement>) {
+    onFocus?.(event)
+    if (!isBottom || !isTextField(event.target)) return
+    const field = event.target
+    // Wait for the keyboard to open and the sheet to move above it.
+    window.setTimeout(() => {
+      if (document.activeElement === field) {
+        field.scrollIntoView({ block: "nearest", behavior: "smooth" })
+      }
+    }, 300)
+  }
+
   return (
     <SheetPortal container={contained ? portalContainer : undefined}>
       <SheetOverlay contained={contained} className={overlayClassName} />
       <SheetPrimitive.Content
         data-slot="sheet-content"
         data-side={side}
+        onOpenAutoFocus={handleOpenAutoFocus}
+        onFocus={handleFocus}
+        style={
+          isBottom && keyboard
+            ? {
+                ...style,
+                bottom: keyboard.inset,
+                maxHeight: Math.max(keyboard.height - 16, 160),
+              }
+            : style
+        }
         className={cn(
           contained ? "absolute" : "fixed",
           "z-50 flex flex-col bg-popover bg-clip-padding text-xs/relaxed text-popover-foreground shadow-lg transition duration-200 ease-in-out data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-[side=bottom]:data-open:slide-in-from-bottom-10 data-[side=left]:data-open:slide-in-from-left-10 data-[side=right]:data-open:slide-in-from-right-10 data-[side=top]:data-open:slide-in-from-top-10 data-closed:animate-out data-closed:fade-out-0 data-[side=bottom]:data-closed:slide-out-to-bottom-10 data-[side=left]:data-closed:slide-out-to-left-10 data-[side=right]:data-closed:slide-out-to-right-10 data-[side=top]:data-closed:slide-out-to-top-10",

@@ -355,7 +355,7 @@ export function PackagesManager({
 
       if (!response.ok) {
         setPackages(previous);
-        setError("Failed to reorder packages.");
+        setError("Failed to reorder events.");
         return;
       }
 
@@ -463,7 +463,7 @@ export function PackagesManager({
 
   async function handleSavePackage() {
     if (!packageForm.name.trim()) {
-      setError("Package name is required.");
+      setError("Event name is required.");
       return;
     }
 
@@ -491,7 +491,7 @@ export function PackagesManager({
 
       const data = await response.json();
       if (!response.ok) {
-        setError("Could not save package.");
+        setError("Could not save event.");
         return;
       }
 
@@ -628,7 +628,7 @@ export function PackagesManager({
   }
 
   const sheetTitle = {
-    package: editingPackageId ? "Edit package" : "New package",
+    package: editingPackageId ? "Edit event" : "New event",
     style: editingStyleId ? "Edit style" : "New style",
     addon: editingAddOnId ? "Edit add-on" : "New add-on",
   }[sheetType];
@@ -644,7 +644,7 @@ export function PackagesManager({
       <div className="flex items-start justify-between gap-3">
         <section>
           <h2 className="text-xl font-semibold tracking-tight">
-            Packages & styles
+            Events & styles
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Drag to reorder. Manage what clients can book from your profile.
@@ -656,7 +656,7 @@ export function PackagesManager({
           onClick={openCreateForTab}
           aria-label={
             tab === "packages"
-              ? "Add package"
+              ? "Add event"
               : tab === "styles"
                 ? "Add style"
                 : "Add add-on"
@@ -673,7 +673,7 @@ export function PackagesManager({
       >
         <TabsList className="grid h-10! w-full grid-cols-3 bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15">
           <TabsTrigger value="packages" className="text-sm">
-            Packages
+            Events
           </TabsTrigger>
           <TabsTrigger value="styles" className="text-sm">
             Styles
@@ -689,7 +689,7 @@ export function PackagesManager({
 
         <TabsContent value="packages" className="mt-0">
           {packages.length === 0 ? (
-            <EmptyCard>No packages yet. Tap + to add your first package.</EmptyCard>
+            <EmptyCard>No events yet. Tap + to add your first event.</EmptyCard>
           ) : (
             <SortableList
               items={packages}
@@ -702,10 +702,12 @@ export function PackagesManager({
                   icon={IconPackage}
                   title={pkg.name}
                   description={
-                    (pkg.price != null ? formatRm(pkg.price) : "No price set") +
-                    (pkg.deposit != null
-                      ? ` · ${formatRm(pkg.deposit)} deposit`
-                      : "")
+                    chargeBy === "style"
+                      ? "Priced by style"
+                      : (pkg.price != null ? formatRm(pkg.price) : "No price set") +
+                        (pkg.deposit != null
+                          ? ` · ${formatRm(pkg.deposit)} deposit`
+                          : "")
                   }
                   onEdit={() => openEditPackage(pkg)}
                   onDelete={() =>
@@ -770,9 +772,11 @@ export function PackagesManager({
                             ) : null}
                             <span className="truncate">{variant.name}</span>
                           </span>
-                          <span className="shrink-0 font-medium tabular-nums">
-                            {formatRm(variant.price)}
-                          </span>
+                          {chargeBy === "style" ? (
+                            <span className="shrink-0 font-medium tabular-nums">
+                              {formatRm(variant.price)}
+                            </span>
+                          ) : null}
                         </li>
                       ))}
                     </ul>
@@ -877,40 +881,46 @@ export function PackagesManager({
                 />
               </Field>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Price (optional)">
-                  <Input
-                    className={inputClassName}
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={packageForm.price}
-                    onChange={(event) =>
-                      setPackageForm((current) => ({
-                        ...current,
-                        price: event.target.value,
-                      }))
-                    }
-                    placeholder="1500"
-                  />
-                </Field>
-                <Field label="Deposit (optional)">
-                  <Input
-                    className={inputClassName}
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={packageForm.deposit}
-                    onChange={(event) =>
-                      setPackageForm((current) => ({
-                        ...current,
-                        deposit: event.target.value,
-                      }))
-                    }
-                    placeholder="400"
-                  />
-                </Field>
-              </div>
+              {chargeBy === "style" ? (
+                <p className="text-xs text-muted-foreground">
+                  You charge by style, so prices are set on your styles.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Price (optional)">
+                    <Input
+                      className={inputClassName}
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={packageForm.price}
+                      onChange={(event) =>
+                        setPackageForm((current) => ({
+                          ...current,
+                          price: event.target.value,
+                        }))
+                      }
+                      placeholder="1500"
+                    />
+                  </Field>
+                  <Field label="Deposit (optional)">
+                    <Input
+                      className={inputClassName}
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={packageForm.deposit}
+                      onChange={(event) =>
+                        setPackageForm((current) => ({
+                          ...current,
+                          deposit: event.target.value,
+                        }))
+                      }
+                      placeholder="400"
+                    />
+                  </Field>
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col gap-4 px-6">
@@ -927,6 +937,12 @@ export function PackagesManager({
                   placeholder="SHAWL"
                 />
               </Field>
+
+              {chargeBy === "package" ? (
+                <p className="text-xs text-muted-foreground">
+                  You charge by event, so prices are set on your events.
+                </p>
+              ) : null}
 
               <div className="flex flex-col gap-3">
                 <div className="flex items-center justify-between">
@@ -1003,46 +1019,48 @@ export function PackagesManager({
                         </Button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3">
-                        <Field label="Price">
-                          <Input
-                            className={inputClassName}
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={variant.price}
-                            onChange={(event) =>
-                              setStyleForm((current) => ({
-                                ...current,
-                                variants: current.variants.map((item) =>
-                                  item.id === variant.id
-                                    ? { ...item, price: event.target.value }
-                                    : item
-                                ),
-                              }))
-                            }
-                          />
-                        </Field>
-                        <Field label="Deposit">
-                          <Input
-                            className={inputClassName}
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={variant.deposit}
-                            onChange={(event) =>
-                              setStyleForm((current) => ({
-                                ...current,
-                                variants: current.variants.map((item) =>
-                                  item.id === variant.id
-                                    ? { ...item, deposit: event.target.value }
-                                    : item
-                                ),
-                              }))
-                            }
-                          />
-                        </Field>
-                      </div>
+                      {chargeBy === "style" ? (
+                        <div className="grid grid-cols-2 gap-3">
+                          <Field label="Price">
+                            <Input
+                              className={inputClassName}
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={variant.price}
+                              onChange={(event) =>
+                                setStyleForm((current) => ({
+                                  ...current,
+                                  variants: current.variants.map((item) =>
+                                    item.id === variant.id
+                                      ? { ...item, price: event.target.value }
+                                      : item
+                                  ),
+                                }))
+                              }
+                            />
+                          </Field>
+                          <Field label="Deposit">
+                            <Input
+                              className={inputClassName}
+                              type="number"
+                              min="0"
+                              step="1"
+                              value={variant.deposit}
+                              onChange={(event) =>
+                                setStyleForm((current) => ({
+                                  ...current,
+                                  variants: current.variants.map((item) =>
+                                    item.id === variant.id
+                                      ? { ...item, deposit: event.target.value }
+                                      : item
+                                  ),
+                                }))
+                              }
+                            />
+                          </Field>
+                        </div>
+                      ) : null}
 
                       <VariantImageUpload
                         value={variant.image_url}

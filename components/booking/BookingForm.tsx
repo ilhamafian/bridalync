@@ -543,7 +543,7 @@ export function BookingForm({
 
   function buildPayload() {
     if (!isGoogleImport && form.packageIds.length === 0) {
-      return { error: "Select at least one package." };
+      return { error: "Select at least one event." };
     }
 
     if (!form.contact_name.trim()) {
@@ -559,7 +559,7 @@ export function BookingForm({
     }
 
     if (!isGoogleImport && form.sessions.length !== form.packageIds.length) {
-      return { error: "Each selected package needs one session." };
+      return { error: "Each selected event needs one session." };
     }
 
     for (const session of form.sessions) {
@@ -567,7 +567,7 @@ export function BookingForm({
         return { error: "Each session needs a name." };
       }
       if (!session.packageId) {
-        return { error: "Each session needs a package." };
+        return { error: "Each session needs an event." };
       }
       if (!isGoogleImport && chargeBy === "style" && !session.styleId) {
         return { error: "Each session needs a style." };
@@ -732,12 +732,12 @@ export function BookingForm({
         {isGoogleImport ? (
           <p className="text-sm text-muted-foreground">
             This booking was imported from Google Calendar. Add the session
-            location below. Packages and invoices are not attached.
+            location below. Events and invoices are not attached.
           </p>
         ) : (
           <>
             <div className="flex flex-col gap-2">
-              <Label>Packages</Label>
+              <Label>Events</Label>
               <ul className="flex flex-col gap-2">
                 {packages.map((pkg) => {
                   const checked = form.packageIds.includes(pkg._id);

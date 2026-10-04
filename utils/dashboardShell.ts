@@ -39,7 +39,7 @@ export type DashboardSection =
 
 export const SETTINGS_CATEGORIES = [
   "pricing-model",
-  "packages",
+  "events",
   "time-slots",
   "travel-fee",
   "payment-method",

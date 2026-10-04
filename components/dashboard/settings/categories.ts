@@ -17,7 +17,7 @@ import type { SettingsCategory } from "@/utils/dashboardShell";
 export const SETTINGS_GROUPS: { title: string; categories: SettingsCategory[] }[] = [
   {
     title: "Business",
-    categories: ["pricing-model", "packages", "time-slots", "travel-fee"],
+    categories: ["pricing-model", "events", "time-slots", "travel-fee"],
   },
   { title: "Payments", categories: ["payment-method", "invoice"] },
   { title: "App", categories: ["google-calendar", "theme", "notifications"] },
@@ -30,11 +30,11 @@ export const SETTINGS_CATEGORY_META: Record<
 > = {
   "pricing-model": {
     label: "Pricing model",
-    description: "Charge clients by package or by style.",
+    description: "Charge clients by event or by style.",
     icon: IconTag,
   },
-  packages: {
-    label: "Packages & styles",
+  events: {
+    label: "Events & styles",
     description: "Manage what clients can book from your profile.",
     icon: IconSparkles,
   },

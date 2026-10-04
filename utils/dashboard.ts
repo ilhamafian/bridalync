@@ -345,9 +345,9 @@ export function getSetupChecklist(input: {
   return [
     {
       id: "package",
-      label: "Add package",
+      label: "Add event",
       done: input.packageCount > 0,
-      href: "/dashboard/settings/packages",
+      href: "/dashboard/settings/events",
     },
     {
       id: "availability",
