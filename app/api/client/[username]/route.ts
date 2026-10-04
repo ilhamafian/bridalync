@@ -8,11 +8,9 @@ import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { StyleModel } from "@/models/Style";
 import { UserModel } from "@/models/User";
-import { reviewModel } from "@/models/Review";
 import { toIdString } from "@/schemas/objectId";
 import { SettingModel } from "@/models/Setting";
 import { toPublicProfile } from "@/schemas/userSchema";
-import { toPublicReview } from "@/schemas/reviewSchema";
 import { publicSettingSchema } from "@/schemas/settingSchema";
 import { bookingModel } from "@/models/Booking";
 import {
@@ -63,9 +61,6 @@ export async function GET(request: NextRequest) {
       freelancerUserId: user_id,
       status: { $in: ["pending", "confirmed", "completed"] },
     });
-    const reviewDocs = await reviewModel.findByFreelancerUserId(user_id, 20);
-    const reviews = reviewDocs.map(toPublicReview);
-
     const todayKey = toDateKey(new Date());
     const [hotDateDocs, blockedDateDocs, blockedSlotDocs] = await Promise.all([
       hotDateModel.findByUserId(user_id, {
@@ -93,7 +88,6 @@ export async function GET(request: NextRequest) {
       add_ons,
       settings: publicSettings,
       booked_slots,
-      reviews,
       hot_dates,
       blocked_dates,
     };

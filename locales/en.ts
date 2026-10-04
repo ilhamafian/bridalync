@@ -17,6 +17,8 @@ export const en: Locale = {
   reviews: "Reviews",
   clientFeedback: "Client feedback and work photos.",
   noReviews: "No reviews yet.",
+  reviewsLoadFailed: "Couldn't load reviews.",
+  tryAgain: "Try again",
   reviewDetails: "Review details",
   reviewPhotoAlt: "{name} review photo",
   viewFullSizePhoto: "View full size photo from {name}",

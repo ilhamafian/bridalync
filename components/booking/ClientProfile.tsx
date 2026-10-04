@@ -16,6 +16,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import type { PublicReviewsState } from "@/hooks/use-public-reviews";
 import type { PublicReview } from "@/schemas/reviewSchema";
 import type { PublicProfile } from "@/schemas/userSchema";
 import { formatReviewEventDate } from "@/utils/reviews";
@@ -128,17 +130,33 @@ function buildSocialEntries(user: PublicProfile): SocialEntry[] {
   return entries;
 }
 
+function ReviewCardSkeleton() {
+  return (
+    <li aria-hidden className="min-h-0 min-w-0">
+      <div className="flex flex-col gap-2 rounded-lg bg-white/30 p-3 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15">
+        <Skeleton className="h-5 w-32 bg-zinc-900/10 dark:bg-white/15" />
+        <Skeleton className="h-3 w-20 bg-zinc-900/10 dark:bg-white/15" />
+        <Skeleton className="mt-1 h-4 w-full bg-zinc-900/10 dark:bg-white/15" />
+        <Skeleton className="h-4 w-3/4 bg-zinc-900/10 dark:bg-white/15" />
+      </div>
+    </li>
+  );
+}
+
 type ClientProfileProps = {
   user: PublicProfile;
-  reviews: PublicReview[];
+  reviews: PublicReviewsState;
   onBookNow: () => void;
 };
 
 export function ClientProfile({
   user,
-  reviews,
+  reviews: reviewsState,
   onBookNow,
 }: ClientProfileProps) {
+  const { items: reviews, hasMore, loading, failed, retry, sentinelRef } =
+    reviewsState;
+  const showSkeletons = hasMore && !failed && (loading || reviews.length === 0);
   const { t, format, intlLocale } = useLocale();
   const [selectedReview, setSelectedReview] = useState<PublicReview | null>(
     null
@@ -268,12 +286,15 @@ export function ClientProfile({
             </p>
           </div>
 
-          {reviews.length === 0 ? (
+          {reviews.length === 0 && !hasMore && !failed ? (
             <p className="text-sm text-zinc-500 dark:text-zinc-500">
               {t.noReviews}
             </p>
           ) : (
-            <ul className="grid h-fit w-full grid-cols-1 content-start gap-3">
+            <ul
+              className="grid h-fit w-full grid-cols-1 content-start gap-3"
+              aria-busy={loading}
+            >
               {reviews.map((review) => (
                 <li key={review._id} className="min-h-0 min-w-0">
                   <button
@@ -325,8 +346,32 @@ export function ClientProfile({
                   </button>
                 </li>
               ))}
+              {showSkeletons ? (
+                <>
+                  <ReviewCardSkeleton />
+                  <ReviewCardSkeleton />
+                </>
+              ) : null}
             </ul>
           )}
+
+          {failed ? (
+            <div className="flex items-center justify-between gap-3 text-sm text-zinc-600 dark:text-zinc-400">
+              <span>{t.reviewsLoadFailed}</span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void retry()}
+              >
+                {t.tryAgain}
+              </Button>
+            </div>
+          ) : null}
+
+          {hasMore && !failed ? (
+            <div ref={sentinelRef} aria-hidden className="h-px w-full" />
+          ) : null}
         </section>
       </div>
 

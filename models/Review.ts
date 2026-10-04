@@ -22,6 +22,18 @@ class ReviewModel extends ModelBase<Review> {
     );
   }
 
+  /** Newest first; fetches one extra row to tell whether more pages exist. */
+  async findPageByFreelancerUserId(
+    freelancerUserId: string,
+    { offset, limit }: { offset: number; limit: number }
+  ): Promise<{ reviews: Review[]; hasMore: boolean }> {
+    const docs = await this.find(
+      { freelancerUserId },
+      { sort: { created_at: -1, _id: -1 }, skip: offset, limit: limit + 1 }
+    );
+    return { reviews: docs.slice(0, limit), hasMore: docs.length > limit };
+  }
+
   async findReviewedBookingIds(freelancerUserId: string): Promise<string[]> {
     const collection = await this.getCollection();
     const ids = await collection.distinct("bookingId", {

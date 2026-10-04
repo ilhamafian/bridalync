@@ -10,6 +10,7 @@ import {
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile } from "@/components/booking/ClientProfile";
+import { usePublicReviews } from "@/hooks/use-public-reviews";
 import { ManualPaymentStep } from "@/components/booking/ManualPaymentStep";
 import { BookingLoadingState } from "@/components/booking/BookingLoadingState";
 import { AnimatedFlow } from "@/components/animated-flow";
@@ -67,7 +68,6 @@ import {
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
 import { Client } from "@/schemas/clientSchema";
-import type { PublicReview } from "@/schemas/reviewSchema";
 import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
 import { toManualTransferDetails } from "@/schemas/settingSchema";
@@ -637,7 +637,7 @@ export default function ClientPage() {
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
   const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
   const [user, setUser] = useState<PublicProfile | null>(null);
-  const [reviews, setReviews] = useState<PublicReview[]>([]);
+  const publicReviews = usePublicReviews(client);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
   const [sameLocationForAll, setSameLocationForAll] = useState(true);
   const [sharedLocation, setSharedLocation] = useState<Address | null>(null);
@@ -936,7 +936,6 @@ export default function ClientPage() {
       const fetchedPackages = (data.packages ?? []) as ClientPackage[];
       const packageOptions = toPackageOptions(fetchedPackages);
       setUser(data.user as PublicProfile);
-      setReviews((data.reviews as PublicReview[] | undefined) ?? []);
       setClientPackages(fetchedPackages);
       setStyles((data.styles as ClientStyleCategory[] | undefined) ?? []);
       setAddOns((data.add_ons as CatalogAddOn[] | undefined) ?? []);
@@ -1492,7 +1491,11 @@ export default function ClientPage() {
         <BookingLoadingState message={t.loadingProfile} />
       )}
       {step === "intro" && user && (
-        <ClientProfile user={user} reviews={reviews} onBookNow={goToNextStep} />
+        <ClientProfile
+          user={user}
+          reviews={publicReviews}
+          onBookNow={goToNextStep}
+        />
       )}
       {step === "intro" && !user && !loading && (
         <p className="text-sm text-muted-foreground">{t.profileNotFound}</p>

@@ -15,6 +15,8 @@ export const ms = {
   reviews: "Ulasan",
   clientFeedback: "Maklum balas pelanggan dan foto hasil kerja.",
   noReviews: "Tiada ulasan lagi.",
+  reviewsLoadFailed: "Gagal memuatkan ulasan.",
+  tryAgain: "Cuba lagi",
   reviewDetails: "Butiran ulasan",
   reviewPhotoAlt: "Foto ulasan {name}",
   viewFullSizePhoto: "Lihat foto saiz penuh daripada {name}",
