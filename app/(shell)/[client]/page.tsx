@@ -40,9 +40,15 @@ import {
 import {
   isSlotTaken,
   normalizeSessionDate,
+  timeSlotsMatch,
   toDateKey,
   type PublicBookedSlot,
 } from "@/utils/booking/availability";
+import {
+  countSessionSlots,
+  mergeSlots,
+  toggleConsecutiveSlot,
+} from "@/utils/booking/slots";
 import {
   buildBlockedDateSet,
   isDateBlocked,
@@ -639,9 +645,7 @@ export default function ClientPage() {
     Record<string, SessionRoadDistance>
   >({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(
-    null
-  );
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<TimeSlot[]>([]);
   const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
   const [styleCategoryBySessionKey, setStyleCategoryBySessionKey] = useState<
     Record<string, string | null>
@@ -672,7 +676,7 @@ export default function ClientPage() {
     [selectedPackages, sessions]
   );
 
-  const timeSlots = settings?.time_slots ?? [];
+  const timeSlots = useMemo(() => settings?.time_slots ?? [], [settings]);
 
   const isDateFullyBooked = (date: Date) =>
     timeSlots.length > 0 &&
@@ -700,6 +704,14 @@ export default function ClientPage() {
   }, [bookingUntil]);
 
   const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
+  const selectedSpan =
+    selectedTimeSlots.length > 0 ? mergeSlots(selectedTimeSlots) : null;
+  const isSlotSelected = (slot: TimeSlot) =>
+    selectedTimeSlots.some((item) => timeSlotsMatch(item, slot));
+  const selectionTaken =
+    !selectedDate ||
+    !selectedSpan ||
+    isSlotTaken(selectedDate, selectedSpan, bookedSlots, sessions);
 
   const stepOrder = useMemo(() => {
     const hasStyles = styles.length > 0 && settings?.charge_by === "style";
@@ -790,10 +802,11 @@ export default function ClientPage() {
           name: `${session.name} — ${variant.categoryName} — ${variant.name}`,
           price: resolveEffectivePrice(variant.price, overridePrice),
           deposit: variant.deposit,
+          slotCount: countSessionSlots(session.time_slot, timeSlots),
         };
       })
       .filter((style): style is NonNullable<typeof style> => style !== null);
-  }, [sessions, styleVariantBySessionKey, styles, hotDatePriceMap]);
+  }, [sessions, styleVariantBySessionKey, styles, hotDatePriceMap, timeSlots]);
 
   const allSessionsStyled =
     chargeBy !== "style" ||
@@ -850,6 +863,9 @@ export default function ClientPage() {
             name: pkg.name,
             price: resolveEffectivePrice(pkg.price, overridePrice),
             deposit: chargeBy === "style" ? 0 : pkg.deposit,
+            slotCount: session
+              ? countSessionSlots(session.time_slot, timeSlots)
+              : 1,
           };
         }),
         selectedSessionStyles:
@@ -880,6 +896,7 @@ export default function ClientPage() {
       sessions,
       distanceKmBySessionKey,
       hotDatePriceMap,
+      timeSlots,
     ]
   );
 
@@ -955,7 +972,7 @@ export default function ClientPage() {
       current.filter((session) => selectedSet.has(session.packageId))
     );
     setSelectedDate(undefined);
-    setSelectedTimeSlot(null);
+    setSelectedTimeSlots([]);
     setSharedLocation(null);
     setSameLocationForAll(true);
     setStyleCategoryBySessionKey({});
@@ -1131,14 +1148,14 @@ export default function ClientPage() {
   }, [sessions, travelOrigin?.lat, travelOrigin?.lng]);
 
   function handleAddSession() {
-    if (!nextPackageToSchedule || !selectedDate || !selectedTimeSlot) return;
+    if (!nextPackageToSchedule || !selectedDate || !selectedSpan) return;
     if (isPastBookingWindow(selectedDate, bookingUntil)) {
       return;
     }
     if (isDateBlocked(selectedDate, blockedDateKeys)) {
       return;
     }
-    if (isSlotTaken(selectedDate, selectedTimeSlot, bookedSlots, sessions)) {
+    if (selectionTaken) {
       return;
     }
 
@@ -1151,11 +1168,14 @@ export default function ClientPage() {
         name: nextPackageToSchedule.name,
         packageId: nextPackageToSchedule.id,
         date: normalizeSessionDate(selectedDate),
-        time_slot: selectedTimeSlot,
+        time_slot: selectedSpan,
+        ...(selectedTimeSlots.length > 1
+          ? { slot_count: selectedTimeSlots.length }
+          : {}),
       },
     ]);
     setSelectedDate(undefined);
-    setSelectedTimeSlot(null);
+    setSelectedTimeSlots([]);
 
     if (selectedPackageIds.length === 1) {
       goToNextStep();
@@ -1586,7 +1606,7 @@ export default function ClientPage() {
                     selected={selectedDate}
                     onSelect={(date) => {
                       setSelectedDate(date);
-                      setSelectedTimeSlot(null);
+                      setSelectedTimeSlots([]);
                     }}
                     disabled={[
                       { before: new Date() },
@@ -1604,9 +1624,16 @@ export default function ClientPage() {
                   />
                 </CardContent>
                 <CardFooter className="w-full flex-col items-stretch gap-3 border-t border-white/40 bg-transparent dark:border-white/15">
-                  <p className="text-sm font-medium text-foreground">
-                    {t.availableSlots}
-                  </p>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-sm font-medium text-foreground">
+                      {t.availableSlots}
+                    </p>
+                    {timeSlots.length > 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        {t.multiSlotHint}
+                      </p>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     {timeSlots.map((slot) => {
                       const slotTaken = isSlotTaken(
@@ -1615,33 +1642,41 @@ export default function ClientPage() {
                         bookedSlots,
                         sessions
                       );
+                      const selected = isSlotSelected(slot);
 
                       return (
                       <Button
                         key={`${slot.startTime}-${slot.endTime}`}
                         type="button"
-                        variant={
-                          selectedTimeSlot?.startTime === slot.startTime &&
-                          selectedTimeSlot?.endTime === slot.endTime
-                            ? "default"
-                            : "outline"
-                        }
+                        variant={selected ? "default" : "outline"}
                         size="lg"
+                        aria-pressed={selected}
                         disabled={!selectedDate || slotTaken}
                         className={cn(
                           "h-8 w-full",
-                          selectedTimeSlot?.startTime === slot.startTime &&
-                            selectedTimeSlot?.endTime === slot.endTime &&
+                          selected &&
                             "bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white",
                           slotTaken && "opacity-50"
                         )}
-                        onClick={() => setSelectedTimeSlot(slot)}
+                        onClick={() =>
+                          setSelectedTimeSlots((current) =>
+                            toggleConsecutiveSlot(current, slot, timeSlots)
+                          )
+                        }
                       >
                         {formatTimeSlot(slot)}
                       </Button>
                       );
                     })}
                   </div>
+                  {selectedTimeSlots.length > 1 && selectedSpan && (
+                    <p className="text-sm text-foreground">
+                      {format(t.slotsSelected, {
+                        count: selectedTimeSlots.length,
+                      })}{" "}
+                      · {formatTimeSlot(selectedSpan)}
+                    </p>
+                  )}
                   {selectedDateKey &&
                     timeSlots.every((slot) =>
                       isSlotTaken(selectedDate, slot, bookedSlots, sessions)
@@ -1679,16 +1714,7 @@ export default function ClientPage() {
                       ? "bg-rose-800 text-white hover:bg-rose-800/90"
                       : undefined
                   }
-                  disabled={
-                    !selectedDate ||
-                    !selectedTimeSlot ||
-                    isSlotTaken(
-                      selectedDate,
-                      selectedTimeSlot,
-                      bookedSlots,
-                      sessions
-                    )
-                  }
+                  disabled={!selectedSpan || selectionTaken}
                   onClick={handleAddSession}
                 >
                   {format(t.addSession, {

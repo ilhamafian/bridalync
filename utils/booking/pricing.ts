@@ -33,7 +33,13 @@ export type QuotationPackageInput = QuotationLineItemInput & {
   deposit: number;
   /** `client_key` of the session this price belongs to. */
   sessionKey?: string;
+  /** Consecutive slots booked for the session; `price` is charged once per slot. */
+  slotCount?: number;
 };
+
+export function sessionLineItemLabel(name: string, slotCount = 1) {
+  return slotCount > 1 ? `${name} × ${slotCount} slots` : name;
+}
 
 export type TravelQuotationInput = {
   enabled: boolean;
@@ -179,13 +185,16 @@ export function calculateBookingQuotation(
       : (input.selectedSessionStyles ?? []);
 
   priced.forEach((item, index) => {
+    const slotCount = Math.max(1, item.slotCount ?? 1);
+    const label = sessionLineItemLabel(item.name, slotCount);
+    const price = item.price * slotCount;
     lineItems.push({
-      label: item.name,
-      amountRm: roundRm(item.price + (index === 0 ? travelFeeRm : 0)),
+      label,
+      amountRm: roundRm(price + (index === 0 ? travelFeeRm : 0)),
     });
     sessionPrices.push({
-      label: item.name,
-      amountRm: roundRm(item.price),
+      label,
+      amountRm: roundRm(price),
       ...(item.sessionKey ? { sessionKey: item.sessionKey } : {}),
     });
   });

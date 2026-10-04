@@ -132,7 +132,9 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      await assertSessionsAvailable(freelancer.userId, data.sessions);
+      await assertSessionsAvailable(freelancer.userId, data.sessions, {
+        requireListedSlots: true,
+      });
     } catch (error) {
       const message =
         error instanceof Error
@@ -141,8 +143,13 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: message }, 409);
     }
 
-    const { invoice, packageNames, resolvedSessionStyles, paymentOption } =
-      await resolveBookingQuotation(freelancer.userId, data);
+    const {
+      invoice,
+      packageNames,
+      resolvedSessionStyles,
+      slotCountBySessionKey,
+      paymentOption,
+    } = await resolveBookingQuotation(freelancer.userId, data);
 
     const isManualBooking =
       data.intent === "booking" && paymentMethod === "manual_transfer";
@@ -154,7 +161,11 @@ export async function POST(req: NextRequest) {
       packageIds: data.packageIds,
       packageNames,
       addOnIds: data.addOns.map((addOn) => addOn.id),
-      sessions: mapSessionsForStorage(data, resolvedSessionStyles),
+      sessions: mapSessionsForStorage(
+        data,
+        resolvedSessionStyles,
+        slotCountBySessionKey
+      ),
       invoice,
       paymentOption,
       status: data.intent === "booking" ? "pending" : "enquiry",

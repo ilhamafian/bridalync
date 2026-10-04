@@ -3,6 +3,7 @@ import { isSameDay } from "date-fns";
 import type { Address } from "@/schemas/addressSchema";
 import type { SessionForm } from "@/schemas/sessionSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
+import { getSlotIndexRange } from "@/utils/booking/slots";
 
 export type TravelSessionInput = Pick<
   SessionForm,
@@ -15,16 +16,6 @@ function buildLocationKey(location: Address["location"]): string {
   return `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`;
 }
 
-export function getTimeSlotIndex(
-  slot: TimeSlot,
-  timeSlots: TimeSlot[]
-): number {
-  return timeSlots.findIndex(
-    (entry) =>
-      entry.startTime === slot.startTime && entry.endTime === slot.endTime
-  );
-}
-
 function sortSessionsForTravel(
   sessions: TravelSessionInput[],
   timeSlots: TimeSlot[]
@@ -34,8 +25,8 @@ function sortSessionsForTravel(
     if (dateDiff !== 0) return dateDiff;
 
     return (
-      getTimeSlotIndex(left.time_slot, timeSlots) -
-      getTimeSlotIndex(right.time_slot, timeSlots)
+      (getSlotIndexRange(left.time_slot, timeSlots)?.first ?? -1) -
+      (getSlotIndexRange(right.time_slot, timeSlots)?.first ?? -1)
     );
   });
 }
@@ -54,12 +45,12 @@ function canShareTravelCharge(
     return false;
   }
 
-  const previousSlotIndex = getTimeSlotIndex(previous.time_slot, timeSlots);
-  const currentSlotIndex = getTimeSlotIndex(current.time_slot, timeSlots);
+  const previousRange = getSlotIndexRange(previous.time_slot, timeSlots);
+  const currentRange = getSlotIndexRange(current.time_slot, timeSlots);
 
-  if (previousSlotIndex < 0 || currentSlotIndex < 0) return false;
+  if (!previousRange || !currentRange) return false;
 
-  return currentSlotIndex === previousSlotIndex + 1;
+  return currentRange.first === previousRange.last + 1;
 }
 
 /** Sessions that share one round-trip travel charge. */

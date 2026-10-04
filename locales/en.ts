@@ -50,6 +50,10 @@ export const en: Locale = {
   sessionsScheduledCount:
     "{scheduled} of {total} {total, session, sessions} scheduled",
   availableSlots: "Available slots",
+  multiSlotHint:
+    "Need longer? Pick the slots next to it. Each extra slot is charged the session price again.",
+  slotsSelected: "{count} slots selected",
+  slotCount: "{count} consecutive slots",
   allSlotsBooked: "All time slots are booked on this date.",
   yourBookings: "Your bookings",
   noSessionsYet: "No sessions yet — pick a date and time below.",

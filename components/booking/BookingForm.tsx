@@ -32,6 +32,13 @@ import {
 } from "@/utils/booking/hotDates";
 import { formatRm, roundRm } from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
+import {
+  countSessionSlots,
+  expandSessionSlots,
+  mergeSlots,
+  sortTimeSlots,
+  toggleConsecutiveSlot,
+} from "@/utils/booking/slots";
 
 export type PackageCatalogItem = {
   _id: string;
@@ -75,7 +82,8 @@ type SessionFormRow = {
   styleId: string;
   order: number;
   date: string;
-  time_slot_key: string;
+  /** Consecutive slots for this session; saved as their merged span. */
+  time_slots: TimeSlot[];
   location: Address | null;
 };
 
@@ -113,10 +121,10 @@ function timeSlotKey(slot: TimeSlot) {
   return `${slot.startTime}|${slot.endTime}`;
 }
 
-function parseTimeSlotKey(key: string): TimeSlot | null {
-  const [startTime, endTime] = key.split("|");
-  if (!startTime || !endTime) return null;
-  return { startTime, endTime };
+function getRowSlotCount(session: SessionFormRow, timeSlots: TimeSlot[]) {
+  return session.time_slots.length > 0
+    ? countSessionSlots(mergeSlots(session.time_slots), timeSlots)
+    : 1;
 }
 
 function toDateInputValue(value: string | Date | undefined) {
@@ -157,7 +165,7 @@ function sessionsFromPackages(
       styleId: "",
       order: index,
       date: "",
-      time_slot_key: defaultSlot ? timeSlotKey(defaultSlot) : "",
+      time_slots: defaultSlot ? [defaultSlot] : [],
       location: null,
     };
   });
@@ -198,11 +206,11 @@ function bookingToForm(
       styleId: session.styleId ?? "",
       order: session.order ?? index,
       date: toDateInputValue(session.date),
-      time_slot_key: session.time_slot
-        ? timeSlotKey(session.time_slot)
+      time_slots: session.time_slot
+        ? expandSessionSlots(session.time_slot, timeSlots)
         : fallbackSlot
-          ? timeSlotKey(fallbackSlot)
-          : "",
+          ? [fallbackSlot]
+          : [],
       location: session.location ?? null,
     })),
     status: toDashboardStatus(booking.status),
@@ -340,13 +348,19 @@ export function BookingForm({
             const overridePrice = session?.date
               ? getPackageHotDatePrice(hotDatePriceMap, session.date, packageId)
               : undefined;
+            const slotCount = session ? getRowSlotCount(session, timeSlots) : 1;
             return (
-              sum + roundRm(resolveEffectivePrice(pkg.price, overridePrice))
+              sum +
+              roundRm(resolveEffectivePrice(pkg.price, overridePrice) * slotCount)
             );
           }, 0)
         : form.sessions.reduce(
             (sum, session) =>
-              sum + roundRm(resolveSessionStyle(session)?.price ?? 0),
+              sum +
+              roundRm(
+                (resolveSessionStyle(session)?.price ?? 0) *
+                  getRowSlotCount(session, timeSlots)
+              ),
             0
           );
     const addOnsRm = addOns
@@ -362,6 +376,7 @@ export function BookingForm({
     addOns,
     hotDatePriceMap,
     resolveSessionStyle,
+    timeSlots,
   ]);
 
   const editedTotalRm =
@@ -381,15 +396,15 @@ export function BookingForm({
       ? fullPriceRm - roundRm(editedTotalRm)
       : 0;
 
+  /** Settings slots plus any legacy/imported times a session already uses. */
   const availableTimeSlots = useMemo(() => {
     const byKey = new Map(timeSlots.map((slot) => [timeSlotKey(slot), slot]));
     for (const session of form.sessions) {
-      const parsed = parseTimeSlotKey(session.time_slot_key);
-      if (parsed && !byKey.has(session.time_slot_key)) {
-        byKey.set(session.time_slot_key, parsed);
+      for (const slot of session.time_slots) {
+        if (!byKey.has(timeSlotKey(slot))) byKey.set(timeSlotKey(slot), slot);
       }
     }
-    return Array.from(byKey.values());
+    return sortTimeSlots(Array.from(byKey.values()));
   }, [timeSlots, form.sessions]);
 
   function togglePackageId(packageId: string, checked: boolean) {
@@ -463,7 +478,7 @@ export function BookingForm({
       if (!session.date) {
         return { error: "Each session needs a date." };
       }
-      if (!session.time_slot_key || !parseTimeSlotKey(session.time_slot_key)) {
+      if (session.time_slots.length === 0) {
         return { error: "Each session needs a time slot." };
       }
       if (!session.location) {
@@ -498,7 +513,7 @@ export function BookingForm({
           packageId: session.packageId,
           order: index,
           date: new Date(`${session.date}T12:00:00`),
-          time_slot: parseTimeSlotKey(session.time_slot_key)!,
+          time_slot: mergeSlots(session.time_slots),
           location: session.location!,
           style: resolveSessionStyle(session),
         })),
@@ -738,27 +753,39 @@ export function BookingForm({
                   }
                 />
               </Field>
-              <Field label="Time slot">
-                <Select
-                  value={session.time_slot_key || undefined}
-                  onValueChange={(value) =>
-                    updateSession(session.client_key, { time_slot_key: value })
-                  }
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select time" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableTimeSlots.map((slot) => (
-                      <SelectItem
+              <Field label="Time slots">
+                <div className="grid grid-cols-2 gap-2">
+                  {availableTimeSlots.map((slot) => {
+                    const selected = session.time_slots.some(
+                      (item) => timeSlotKey(item) === timeSlotKey(slot)
+                    );
+                    return (
+                      <Button
                         key={timeSlotKey(slot)}
-                        value={timeSlotKey(slot)}
+                        type="button"
+                        size="sm"
+                        variant={selected ? "default" : "outline"}
+                        aria-pressed={selected}
+                        onClick={() =>
+                          updateSession(session.client_key, {
+                            time_slots: toggleConsecutiveSlot(
+                              session.time_slots,
+                              slot,
+                              availableTimeSlots
+                            ),
+                          })
+                        }
                       >
                         {slot.startTime} – {slot.endTime}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                      </Button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {session.time_slots.length > 1
+                    ? `${session.time_slots.length} consecutive slots, each charged the session price.`
+                    : "Pick neighbouring slots to book a longer session."}
+                </p>
               </Field>
               <Field label="Location">
                 <LocationMapPicker

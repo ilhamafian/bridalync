@@ -61,7 +61,13 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: message }, 409);
     }
 
-    const { invoice, packageNames, resolvedSessionStyles, paymentOption } =
+    const {
+      invoice,
+      packageNames,
+      resolvedSessionStyles,
+      slotCountBySessionKey,
+      paymentOption,
+    } =
       await resolveBookingQuotation(userId, quotationInput, {
         relaxPaymentDeadline: true,
         discountedTotalRm: data.totalRm,
@@ -74,7 +80,11 @@ export async function POST(req: NextRequest) {
       packageIds: data.packageIds,
       packageNames,
       addOnIds: data.addOns.map((addOn) => addOn.id),
-      sessions: mapSessionsForStorage(quotationInput, resolvedSessionStyles),
+      sessions: mapSessionsForStorage(
+        quotationInput,
+        resolvedSessionStyles,
+        slotCountBySessionKey
+      ),
       invoice,
       paymentOption,
       status: data.status,

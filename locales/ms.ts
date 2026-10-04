@@ -47,6 +47,10 @@ export const ms = {
   allSessionsScheduled: "Semua sesi dijadualkan",
   sessionsScheduledCount: "{scheduled} daripada {total} sesi dijadualkan",
   availableSlots: "Slot tersedia",
+  multiSlotHint:
+    "Perlukan masa lebih? Pilih slot bersebelahan. Setiap slot tambahan dicaj harga sesi sekali lagi.",
+  slotsSelected: "{count} slot dipilih",
+  slotCount: "{count} slot berturut-turut",
   allSlotsBooked: "Semua slot masa telah ditempah pada tarikh ini.",
   yourBookings: "Tempahan anda",
   noSessionsYet: "Tiada sesi lagi — pilih tarikh dan masa di bawah.",

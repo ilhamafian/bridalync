@@ -11,7 +11,10 @@ export const sessionSchema = z.object({
     styleName: z.string().optional(),
     order: z.number(),
     date: z.coerce.date(),
+    /** Merged span when the session covers several consecutive slots. */
     time_slot: timeSlotSchema,
+    /** Consecutive slots covered by `time_slot`; missing = 1. Each slot is charged the session price. */
+    slot_count: z.number().int().min(1).optional(),
     /** Optional for Google Calendar imports; stylists add it later from the dashboard. */
     location: addressSchema.optional(),
 });

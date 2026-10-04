@@ -219,7 +219,13 @@ export async function PATCH(
           paymentOption: data.paymentOption ?? existing.paymentOption,
         };
 
-        const { invoice, packageNames, resolvedSessionStyles, paymentOption } =
+        const {
+          invoice,
+          packageNames,
+          resolvedSessionStyles,
+          slotCountBySessionKey,
+          paymentOption,
+        } =
           await resolveBookingQuotation(userId, quotationInput, {
             relaxPaymentDeadline: true,
             discountedTotalRm: data.totalRm,
@@ -232,7 +238,8 @@ export async function PATCH(
           addOnIds: (data.addOns ?? []).map((addOn) => addOn.id),
           sessions: mapSessionsForStorage(
             quotationInput,
-            resolvedSessionStyles
+            resolvedSessionStyles,
+            slotCountBySessionKey
           ),
           invoice,
           paymentOption,

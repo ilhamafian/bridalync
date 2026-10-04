@@ -170,6 +170,9 @@ export function BookingDetailsSections({
                 <p className="text-muted-foreground">
                   {formatTimeLabel(session.time_slot.startTime)} –{" "}
                   {formatTimeLabel(session.time_slot.endTime)}
+                  {(session.slot_count ?? 1) > 1
+                    ? ` · ${session.slot_count} slots`
+                    : null}
                 </p>
                 {session.location ? (
                   <p className="mt-1.5 flex items-start gap-1.5 text-muted-foreground">

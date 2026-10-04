@@ -15,6 +15,7 @@ import {
   type BookingQuotationSummary,
 } from "@/utils/booking/pricing";
 import { normalizeSessionDate, toDateKey } from "@/utils/booking/availability";
+import { countSessionSlots } from "@/utils/booking/slots";
 import {
   buildHotDatePriceMap,
   getPackageHotDatePrice,
@@ -144,6 +145,7 @@ export async function resolveBookingQuotation(
   invoice: BookingQuotationSummary;
   packageNames: string;
   resolvedSessionStyles: Map<string, ResolvedSessionStyle>;
+  slotCountBySessionKey: Map<string, number>;
   paymentOption: "deposit" | "full";
 }> {
   const packageModel = new PackageModel();
@@ -188,6 +190,15 @@ export async function resolveBookingQuotation(
   const sessionByPackageId = new Map(
     input.sessions.map((session) => [session.packageId, session] as const)
   );
+  const slotCountBySessionKey = new Map(
+    input.sessions.map(
+      (session) =>
+        [
+          session.client_key,
+          countSessionSlots(session.time_slot, settings.time_slots),
+        ] as const
+    )
+  );
   const selectedPackages = input.packageIds.map((packageId) => {
     const pkg = packagesById.get(packageId)!;
     const session = sessionByPackageId.get(packageId);
@@ -201,6 +212,7 @@ export async function resolveBookingQuotation(
       price: resolveEffectivePrice(catalogPrice, overridePrice),
       deposit: chargeBy === "style" ? 0 : (pkg.deposit ?? 0),
       sessionKey: session?.client_key,
+      slotCount: session ? slotCountBySessionKey.get(session.client_key) : 1,
     };
   });
 
@@ -211,6 +223,7 @@ export async function resolveBookingQuotation(
         price: number;
         deposit: number;
         sessionKey: string;
+        slotCount?: number;
       }>
     | undefined;
 
@@ -234,6 +247,7 @@ export async function resolveBookingQuotation(
         price: resolved.price,
         deposit: resolved.deposit,
         sessionKey: session.client_key,
+        slotCount: slotCountBySessionKey.get(session.client_key),
       });
     }
   }
@@ -287,6 +301,7 @@ export async function resolveBookingQuotation(
     invoice: applyPaymentOption(discounted, paymentOption),
     packageNames: selectedPackages.map((pkg) => pkg.name).join(", "),
     resolvedSessionStyles,
+    slotCountBySessionKey,
     paymentOption,
   };
 }
@@ -313,15 +328,18 @@ export function mapSessionsForStorage(
       styleId: string;
       styleName: string;
     }
-  > = new Map()
+  > = new Map(),
+  slotCountBySessionKey: Map<string, number> = new Map()
 ) {
   return input.sessions.map((session) => {
     const resolvedStyle = resolvedSessionStyles.get(session.client_key);
+    const slotCount = slotCountBySessionKey.get(session.client_key) ?? 1;
 
     return {
       ...toDbSession({
         ...session,
         date: normalizeSessionDate(session.date),
+        ...(slotCount > 1 ? { slot_count: slotCount } : {}),
         ...(resolvedStyle
           ? {
               styleId: resolvedStyle.styleId,

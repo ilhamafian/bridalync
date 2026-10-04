@@ -458,7 +458,9 @@ export async function generateBookingInvoicePdf(
         title,
         format(sessionDate, "d/M/yyyy"),
         format(sessionDate, "EEEE"),
-        `${formatTimeLabel(session.time_slot.startTime)} – ${formatTimeLabel(session.time_slot.endTime)}`,
+        `${formatTimeLabel(session.time_slot.startTime)} – ${formatTimeLabel(session.time_slot.endTime)}${
+          (session.slot_count ?? 1) > 1 ? ` (${session.slot_count} slots)` : ""
+        }`,
       ];
 
       const blockHeight = blockPad * 2 + lines.length * 13;

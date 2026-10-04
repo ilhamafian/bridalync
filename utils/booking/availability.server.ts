@@ -20,6 +20,7 @@ import {
   getEffectiveBookingUntil,
   isPastBookingWindow,
 } from "@/utils/booking/bookingWindow";
+import { getSlotIndexRange } from "@/utils/booking/slots";
 
 type SessionSlotInput = {
   date: Date | string;
@@ -51,7 +52,8 @@ export async function getOccupiedSlotsForFreelancer(
 
 export async function assertSessionsAvailable(
   freelancerUserId: string,
-  sessions: SessionSlotInput[]
+  sessions: SessionSlotInput[],
+  options?: { requireListedSlots?: boolean }
 ): Promise<void> {
   const sessionDateKeys = sessions
     .map((session) => toDateKey(session.date))
@@ -70,6 +72,15 @@ export async function assertSessionsAvailable(
   const bookingUntil = getEffectiveBookingUntil(settings);
 
   for (const session of sessions) {
+    if (
+      options?.requireListedSlots &&
+      !getSlotIndexRange(session.time_slot, settings?.time_slots ?? [])
+    ) {
+      throw new Error(
+        `${session.time_slot.startTime} – ${session.time_slot.endTime} isn't an available time slot.`
+      );
+    }
+
     if (isPastBookingWindow(session.date, bookingUntil)) {
       throw new Error(
         `${formatDate(session.date)} is outside the open booking period.`
