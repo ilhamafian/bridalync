@@ -7,6 +7,8 @@ const hhmm = /^([01]\d|2[0-3]):([0-5]\d)$/;
 export const travelSettingSchema = z.object({
   enabled: z.boolean(),
   rate_per_km: z.number(),
+  /** Replaces `rate_per_km` for the whole trip beyond `LONG_DISTANCE_THRESHOLD_KM`; unset = same rate. */
+  long_distance_rate_per_km: z.number().min(0).optional(),
   location: addressSchema,
 });
 
@@ -142,7 +144,13 @@ export const settingSchema = z.object({
 /** Partial updates must not apply parent `.default()` values (e.g. invoice on payment-only saves). */
 export const settingUpdateSchema = z.object({
   charge_by: settingSchema.shape.charge_by.optional(),
-  travel: travelSettingSchema.partial().optional(),
+  travel: travelSettingSchema
+    .partial()
+    .extend({
+      /** `null` clears it. */
+      long_distance_rate_per_km: z.number().min(0).nullable().optional(),
+    })
+    .optional(),
   payment: paymentSettingSchema.partial().optional(),
   invoice: invoiceSettingSchema.partial().optional(),
   time_slots: z.array(timeSlotSchema).optional(),

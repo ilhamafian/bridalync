@@ -26,6 +26,8 @@ export const quotationBreakdownSchema = z.object({
   ),
   addOns: z.array(quotationAmountSchema),
   travelFeeRm: z.number(),
+  /** Taken off the subtotal by the stylist; `lineItems` lists it as a negative "Discount". */
+  discountRm: z.number().optional(),
 });
 
 export const quotationSummarySchema = z.object({
@@ -208,6 +210,8 @@ export const manualBookingInputSchema = z.object({
   distanceKmBySessionKey: z.record(z.string(), z.number()).optional(),
   paymentOption: z.enum(["deposit", "full"]).default("deposit"),
   status: bookingStatusSchema.default("confirmed"),
+  /** Discounted total; omitted = full price. Must not exceed the calculated subtotal. */
+  totalRm: z.number().min(0).optional(),
 });
 
 export type ManualBookingInput = z.infer<typeof manualBookingInputSchema>;

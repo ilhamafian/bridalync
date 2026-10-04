@@ -65,6 +65,20 @@ export class UserModel extends ModelBase<User> {
     return collection.updateOne(this.buildIdFilter(userId), update as never);
   }
 
+  async markNotificationsRead(userId: string, ids: string[]) {
+    const collection = await this.getCollection();
+    return collection.updateOne(this.buildIdFilter(userId), {
+      $addToSet: { notifications_read_ids: { $each: ids } },
+    } as never);
+  }
+
+  async markAllNotificationsRead(userId: string, seenAt = new Date()) {
+    const collection = await this.getCollection();
+    return collection.updateOne(this.buildIdFilter(userId), {
+      $set: { notifications_seen_at: seenAt, notifications_read_ids: [] },
+    } as never);
+  }
+
   async markStripeConnected(userId: string) {
     const collection = await this.getCollection();
     return collection.updateOne(this.buildIdFilter(userId), {

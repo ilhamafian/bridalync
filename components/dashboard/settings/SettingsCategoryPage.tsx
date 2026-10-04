@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { BackButton } from "@/components/dashboard/BackButton";
 import { SETTINGS_CATEGORY_META } from "@/components/dashboard/settings/categories";
 import { GoogleCalendarImport } from "@/components/dashboard/settings/GoogleCalendarImport";
+import { ResetPasswordSettings } from "@/components/dashboard/settings/ResetPasswordSettings";
 import { ThemeSettings } from "@/components/dashboard/settings/ThemeSettings";
 import { PackagesManager } from "@/components/PackagesManager";
 import { PwaSettingsCard } from "@/components/PwaSettingsCard";
@@ -24,10 +25,12 @@ export function SettingsCategoryPage({
   category,
   settings,
   packages,
+  email,
 }: {
   category: SettingsCategory | null;
   settings: DashboardData["settings"];
   packages: DashboardData["packages"];
+  email: string;
 }) {
   const meta = category ? SETTINGS_CATEGORY_META[category] : null;
   const isPackages = category === "packages";
@@ -69,6 +72,7 @@ export function SettingsCategoryPage({
         </Suspense>
         {category === "theme" ? <ThemeSettings /> : null}
         {category === "notifications" ? <PwaSettingsCard /> : null}
+        {category === "password" ? <ResetPasswordSettings email={email} /> : null}
       </div>
     </div>
   );

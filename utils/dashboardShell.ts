@@ -15,6 +15,7 @@ import type { SettingsItem } from "@/components/SettingsManager";
 import type { PublicHotDate } from "@/schemas/hotDateSchema";
 import type { DashboardReview } from "@/schemas/reviewSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
+import type { NotificationReadState } from "@/utils/activity";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
 export type DashboardSection =
@@ -45,6 +46,7 @@ export const SETTINGS_CATEGORIES = [
   "google-calendar",
   "theme",
   "notifications",
+  "password",
 ] as const;
 
 export type SettingsCategory = (typeof SETTINGS_CATEGORIES)[number];
@@ -91,6 +93,7 @@ export type DashboardData = {
   hotDates: HotDateItem[];
   /** Last date (YYYY-MM-DD, inclusive) clients can book. */
   bookingUntil: string;
+  notifications: NotificationReadState;
 };
 
 export type HotDateItem = PublicHotDate;

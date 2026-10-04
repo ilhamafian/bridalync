@@ -45,10 +45,19 @@ function mergeSettingsUpdate(
   }
 
   if (patch.travel !== undefined) {
+    const { long_distance_rate_per_km: longDistanceRate, ...travelPatch } =
+      patch.travel;
+    const { long_distance_rate_per_km: existingLongDistanceRate, ...travel } =
+      existing.travel;
+    const nextLongDistanceRate =
+      longDistanceRate === undefined ? existingLongDistanceRate : longDistanceRate;
     update.travel = {
-      ...existing.travel,
-      ...patch.travel,
-      location: patch.travel.location ?? existing.travel.location,
+      ...travel,
+      ...travelPatch,
+      location: travelPatch.location ?? existing.travel.location,
+      ...(nextLongDistanceRate != null
+        ? { long_distance_rate_per_km: nextLongDistanceRate }
+        : {}),
     };
   }
 

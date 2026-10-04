@@ -36,27 +36,6 @@ export type CompletedScheduleItem = ScheduleItem & {
   leaveReviewUrl: string | null;
 };
 
-export type ActivityKind =
-  | "new"
-  | "deposit"
-  | "paid"
-  | "completed"
-  | "cancelled";
-
-export type ActivityItem = {
-  id: string;
-  bookingId: string;
-  kind: ActivityKind;
-  label: string;
-  clientName: string;
-  packageName: string;
-  /** Amount relevant to the event (deposit for deposits, total otherwise). */
-  amountRm: number;
-  balanceRm: number;
-  bookingStatus: Booking["status"];
-  at: string;
-};
-
 export type ChecklistItem = {
   id: string;
   label: string;
@@ -339,51 +318,6 @@ export function getBookingSummary(
     thisWeek: weekIds.size,
     thisMonth: monthIds.size,
   };
-}
-
-export function getRecentActivity(
-  bookings: SerializedBooking[],
-  limit?: number
-): ActivityItem[] {
-  const sorted = [...bookings].sort((a, b) => {
-    const aTime = new Date(a.updated_at ?? a.created_at ?? 0).getTime();
-    const bTime = new Date(b.updated_at ?? b.created_at ?? 0).getTime();
-    return bTime - aTime;
-  });
-
-  return sorted.slice(0, limit).map((booking) => {
-    const kind = getActivityKind(booking);
-    return {
-      id: `${booking._id}-${kind}`,
-      bookingId: booking._id,
-      kind,
-      label: ACTIVITY_LABELS[kind],
-      clientName: booking.contact.name,
-      packageName: booking.packageNames,
-      amountRm:
-        kind === "deposit" ? booking.invoice.depositRm : booking.invoice.totalRm,
-      balanceRm: booking.invoice.balanceRm,
-      bookingStatus: booking.status,
-      at: booking.updated_at ?? booking.created_at ?? new Date().toISOString(),
-    };
-  });
-}
-
-const ACTIVITY_LABELS: Record<ActivityKind, string> = {
-  new: "New booking",
-  deposit: "Deposit received",
-  paid: "Payment received",
-  completed: "Booking completed",
-  cancelled: "Booking cancelled",
-};
-
-function getActivityKind(booking: SerializedBooking): ActivityKind {
-  if (booking.status === "cancelled") return "cancelled";
-  if (booking.status === "completed") return "completed";
-  if (booking.status === "confirmed") {
-    return booking.paymentOption === "full" ? "paid" : "deposit";
-  }
-  return "new";
 }
 
 export function bookingStatusLabel(status: Booking["status"]) {

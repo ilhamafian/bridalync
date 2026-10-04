@@ -8,8 +8,8 @@ import { BookingCarousel } from "@/components/dashboard/BookingCarousel";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { ActivityItem } from "@/utils/activity";
 import {
-  type ActivityItem,
   type CompletedScheduleItem,
   type ScheduleItem,
 } from "@/utils/dashboard";
@@ -70,7 +70,12 @@ export function DashboardHome({
   upcoming,
   completed,
   activity,
-}: DashboardHomeProps) {
+  isActivityUnread,
+  onOpenActivity,
+}: DashboardHomeProps & {
+  isActivityUnread?: (item: ActivityItem) => boolean;
+  onOpenActivity?: (item: ActivityItem) => void;
+}) {
   const showToday = todaysSchedule.length > 0;
   const bookings = showToday ? todaysSchedule : upcoming;
 
@@ -120,7 +125,11 @@ export function DashboardHome({
         {activity.length === 0 ? (
           <EmptyCard>No recent activity yet.</EmptyCard>
         ) : (
-          <ActivityList items={activity} />
+          <ActivityList
+            items={activity}
+            isUnread={isActivityUnread}
+            onOpen={onOpenActivity}
+          />
         )}
         <Link
           href="/dashboard/notifications"

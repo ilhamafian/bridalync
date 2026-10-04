@@ -38,7 +38,12 @@ export type InvoiceFreelancer = {
 export type GenerateBookingInvoicePdfInput = {
   booking: PersistedBooking;
   freelancer: InvoiceFreelancer;
-  invoiceSettings?: Pick<InvoiceSetting, "company_registration_number"> | null;
+  invoiceSettings?: Partial<
+    Pick<
+      InvoiceSetting,
+      "company_registration_number" | "company_logo" | "terms_and_conditions"
+    >
+  > | null;
   paymentSettings?: Pick<PaymentSetting, "balance_due_before"> | null;
   /** When the payment was confirmed / invoice issued. Defaults to now. */
   issuedAt?: Date;
@@ -123,6 +128,24 @@ function buildLineRows(booking: PersistedBooking): InvoiceLineRow[] {
   return rows;
 }
 
+/** PDFKit only embeds PNG/JPEG, so the logo is normalised to PNG; failures just omit it. */
+async function loadLogoPng(url: string | null | undefined): Promise<Buffer | null> {
+  const src = url?.trim();
+  if (!src) return null;
+
+  try {
+    const response = await fetch(src, { signal: AbortSignal.timeout(5000) });
+    if (!response.ok) return null;
+    const { default: sharp } = await import("sharp");
+    return await sharp(Buffer.from(await response.arrayBuffer()))
+      .png()
+      .toBuffer();
+  } catch (error) {
+    console.error("Failed to load invoice logo:", error);
+    return null;
+  }
+}
+
 function drawRule(
   doc: PDFKit.PDFDocument,
   y: number,
@@ -198,11 +221,18 @@ export async function generateBookingInvoicePdf(
   const dueDays = paymentSettings?.balance_due_before ?? 3;
   const dayLabel = dueDays === 1 ? "day" : "days";
   const termsText = `The remaining balance must be paid no later than ${dueDays} ${dayLabel} before the scheduled session. Services will not be carried out without full payment. The booking fee will be considered non-refundable.`;
+  const stylistTerms = invoiceSettings?.terms_and_conditions?.trim() ?? "";
+  const logo = await loadLogoPng(invoiceSettings?.company_logo);
 
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({
       size: "A4",
-      margin: MARGIN,
+      margins: {
+        top: MARGIN,
+        left: MARGIN,
+        right: MARGIN,
+        bottom: PAGE_HEIGHT - (FOOTER_Y - 24),
+      },
       bufferPages: true,
       info: {
         Title: `Invoice ${invoiceNo}`,
@@ -220,18 +250,14 @@ export async function generateBookingInvoicePdf(
     doc.rect(0, 0, PAGE_WIDTH, 6).fill(INK);
 
     let y = MARGIN + 8;
+    const bottomLimit = FOOTER_Y - 28;
+    const ensureSpace = (height: number) => {
+      if (y + height <= bottomLimit) return;
+      doc.addPage();
+      y = MARGIN;
+    };
 
     // --- Header ---
-    doc
-      .font("Helvetica-Bold")
-      .fontSize(10)
-      .fillColor(INK)
-      .text(BRIDALYNC_COMPANY_NAME, MARGIN, y, {
-        width: CONTENT_WIDTH * 0.52,
-        characterSpacing: 0.8,
-        lineBreak: false,
-      });
-
     doc
       .font("Helvetica")
       .fontSize(28)
@@ -240,6 +266,28 @@ export async function generateBookingInvoicePdf(
         width: CONTENT_WIDTH * 0.6,
         align: "right",
         characterSpacing: 2,
+        lineBreak: false,
+      });
+
+    if (logo) {
+      try {
+        const logoHeight = 44;
+        doc.image(logo, MARGIN, y - 4, {
+          fit: [CONTENT_WIDTH * 0.32, logoHeight],
+        });
+        y += logoHeight + 6;
+      } catch (error) {
+        console.error("Failed to draw invoice logo:", error);
+      }
+    }
+
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(10)
+      .fillColor(INK)
+      .text(BRIDALYNC_COMPANY_NAME, MARGIN, y, {
+        width: CONTENT_WIDTH * 0.52,
+        characterSpacing: 0.8,
         lineBreak: false,
       });
 
@@ -355,6 +403,7 @@ export async function generateBookingInvoicePdf(
         width: CONTENT_WIDTH * 0.46,
       });
       const rowHeight = Math.max(labelHeight, 12) + rowPadY * 2;
+      ensureSpace(rowHeight);
 
       if (index % 2 === 1) {
         doc.rect(MARGIN, y, CONTENT_WIDTH, rowHeight).fill("#fafaf9");
@@ -459,7 +508,15 @@ export async function generateBookingInvoicePdf(
       rightY += 16;
     };
 
-    drawMoneyRow("Subtotal", formatRm(totalRm), { muted: true });
+    const discountRm = roundRm(
+      -booking.invoice.lineItems
+        .filter((item) => item.amountRm < 0)
+        .reduce((sum, item) => sum + item.amountRm, 0)
+    );
+    drawMoneyRow("Subtotal", formatRm(totalRm + discountRm), { muted: true });
+    if (discountRm > 0) {
+      drawMoneyRow("Discount", formatRm(-discountRm), { muted: true });
+    }
     drawMoneyRow("Total", formatRm(totalRm), { strong: true });
     rightY += 6;
     doc
@@ -528,6 +585,7 @@ export async function generateBookingInvoicePdf(
     doc.font("Helvetica").fontSize(8);
     const bodyH = doc.heightOfString(termsText, { width: termsInnerW });
     const termsBoxH = termsPad * 2 + bannerH + 8 + bodyH;
+    ensureSpace(termsBoxH);
 
     doc.rect(MARGIN, y, CONTENT_WIDTH, termsBoxH).fill(WASH);
     doc.rect(MARGIN, y, CONTENT_WIDTH, termsBoxH).strokeColor(WASH_DARK).lineWidth(1).stroke();
@@ -552,24 +610,43 @@ export async function generateBookingInvoicePdf(
         width: termsInnerW,
         lineGap: 2,
       });
+    y += termsBoxH + 22;
 
-    // --- Footer ---
+    // --- Stylist's own terms (Settings > Invoice); long text flows onto new pages ---
+    if (stylistTerms) {
+      ensureSpace(40);
+      drawLabel(doc, "Terms and conditions", MARGIN, y);
+      y += 14;
+      doc
+        .font("Helvetica")
+        .fontSize(8)
+        .fillColor(MUTED)
+        .text(stylistTerms, MARGIN, y, {
+          width: CONTENT_WIDTH,
+          lineGap: 2,
+        });
+    }
+
+    // --- Footer (every page) ---
     const range = doc.bufferedPageRange();
-    doc.switchToPage(range.start);
-    drawRule(doc, FOOTER_Y - 16, RULE, 0.6);
-    doc
-      .font("Helvetica")
-      .fontSize(7.5)
-      .fillColor(FAINT)
-      .text(registration, MARGIN, FOOTER_Y - 8, {
-        width: CONTENT_WIDTH * 0.75,
+    for (let page = range.start; page < range.start + range.count; page += 1) {
+      doc.switchToPage(page);
+      doc.page.margins.bottom = 0;
+      drawRule(doc, FOOTER_Y - 16, RULE, 0.6);
+      doc
+        .font("Helvetica")
+        .fontSize(7.5)
+        .fillColor(FAINT)
+        .text(registration, MARGIN, FOOTER_Y - 8, {
+          width: CONTENT_WIDTH * 0.75,
+          lineBreak: false,
+        });
+      doc.text("bridalync.com", PAGE_WIDTH - MARGIN - 120, FOOTER_Y - 8, {
+        width: 120,
+        align: "right",
         lineBreak: false,
       });
-    doc.text("bridalync.com", PAGE_WIDTH - MARGIN - 120, FOOTER_Y - 8, {
-      width: 120,
-      align: "right",
-      lineBreak: false,
-    });
+    }
 
     doc.end();
   });

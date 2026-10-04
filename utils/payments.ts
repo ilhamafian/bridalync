@@ -74,7 +74,7 @@ function isValidDate(value: string | undefined): value is string {
 }
 
 /** Payments received for one booking, derived from its invoice state. */
-function getBookingPayments(booking: SerializedBooking): PaymentRecord[] {
+export function getBookingPayments(booking: SerializedBooking): PaymentRecord[] {
   if (!isPaidBooking(booking)) return [];
 
   const base = {

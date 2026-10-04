@@ -854,6 +854,8 @@ export default function ClientPage() {
             ? {
                 enabled: true,
                 ratePerKm: settings.travel.rate_per_km,
+                longDistanceRatePerKm:
+                  settings.travel.long_distance_rate_per_km,
                 timeSlots: settings.time_slots,
                 sessions,
                 distanceKmBySessionKey,

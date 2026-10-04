@@ -41,6 +41,7 @@ import {
   type PaymentMethod,
   type TimeSlot,
 } from "@/schemas/settingSchema";
+import { LONG_DISTANCE_THRESHOLD_KM } from "@/utils/booking/travel";
 import type { SettingsCategory } from "@/utils/dashboardShell";
 
 export type SettingsItem = {
@@ -49,6 +50,7 @@ export type SettingsItem = {
   travel: {
     enabled: boolean;
     rate_per_km: number;
+    long_distance_rate_per_km?: number;
     location: Address;
   };
   payment: {
@@ -206,6 +208,9 @@ export function SettingsManager({
   const [ratePerKm, setRatePerKm] = useState(
     String(initialSettings.travel.rate_per_km || "")
   );
+  const [longDistanceRatePerKm, setLongDistanceRatePerKm] = useState(
+    String(initialSettings.travel.long_distance_rate_per_km ?? "")
+  );
   const [travelLocation, setTravelLocation] = useState<Address | null>(
     initialSettings.travel.enabled ? initialSettings.travel.location : null
   );
@@ -307,6 +312,9 @@ export function SettingsManager({
     setChargeBy(next.charge_by);
     setTravelEnabled(next.travel.enabled);
     setRatePerKm(String(next.travel.rate_per_km || ""));
+    setLongDistanceRatePerKm(
+      String(next.travel.long_distance_rate_per_km ?? "")
+    );
     setTravelLocation(next.travel.enabled ? next.travel.location : null);
     setBalanceDueBefore(String(next.payment.balance_due_before));
     setPaymentMethod(next.payment.method ?? "manual_transfer");
@@ -377,6 +385,19 @@ export function SettingsManager({
         }));
         return;
       }
+      const longDistanceRaw = longDistanceRatePerKm.trim();
+      const parsedLongDistanceRate =
+        longDistanceRaw === "" ? null : Number.parseFloat(longDistanceRaw);
+      if (
+        parsedLongDistanceRate !== null &&
+        (Number.isNaN(parsedLongDistanceRate) || parsedLongDistanceRate < 0)
+      ) {
+        setSectionError((current) => ({
+          ...current,
+          travel: `Enter a valid rate for trips over ${LONG_DISTANCE_THRESHOLD_KM} km.`,
+        }));
+        return;
+      }
       if (!travelLocation) {
         setSectionError((current) => ({
           ...current,
@@ -389,6 +410,7 @@ export function SettingsManager({
         travel: {
           enabled: true,
           rate_per_km: parsedRate,
+          long_distance_rate_per_km: parsedLongDistanceRate,
           location: travelLocation,
         },
       });
@@ -680,6 +702,29 @@ export function SettingsManager({
                   Travel is charged as a round trip — to the client and back to
                   your base. For example, 10 km away at RM 1/km adds RM 20 to
                   the booking.
+                </p>
+              </div>
+            </SettingsSection>
+            <SettingsSection title={`Over ${LONG_DISTANCE_THRESHOLD_KM} km`}>
+              <div className={settingsCardClassName}>
+                <Field label="Rate per km (RM)">
+                  <Input
+                    className={inputClassName}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={longDistanceRatePerKm}
+                    onChange={(event) =>
+                      setLongDistanceRatePerKm(event.target.value)
+                    }
+                    placeholder={ratePerKm || "1.50"}
+                  />
+                </Field>
+                <p className="text-xs text-muted-foreground">
+                  When the client is more than {LONG_DISTANCE_THRESHOLD_KM} km
+                  away, this rate is used for the whole trip instead. For
+                  example, 120 km away at RM 1.50/km adds RM 360. Leave blank to
+                  use your normal rate.
                 </p>
               </div>
             </SettingsSection>

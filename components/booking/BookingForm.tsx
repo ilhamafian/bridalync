@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import {
@@ -25,11 +25,12 @@ import type { Booking } from "@/schemas/bookingSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
 import {
   buildHotDatePriceMap,
+  getPackageHotDatePrice,
   getStyleHotDatePrice,
   resolveEffectivePrice,
   type HotDateLookup,
 } from "@/utils/booking/hotDates";
-import { formatRm } from "@/utils/booking/pricing";
+import { formatRm, roundRm } from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
 export type PackageCatalogItem = {
@@ -88,6 +89,8 @@ type BookingFormState = {
   sessions: SessionFormRow[];
   status: DashboardStatus;
   paymentOption: "deposit" | "full";
+  /** Edited (discounted) total as typed; null = use the full price. */
+  totalRm: string | null;
 };
 
 const STATUS_OPTIONS: { value: DashboardStatus; label: string }[] = [
@@ -171,6 +174,7 @@ function emptyForm(): BookingFormState {
     sessions: [],
     status: "confirmed",
     paymentOption: "deposit",
+    totalRm: null,
   };
 }
 
@@ -203,6 +207,9 @@ function bookingToForm(
     })),
     status: toDashboardStatus(booking.status),
     paymentOption: booking.paymentOption,
+    totalRm: booking.invoice.breakdown?.discountRm
+      ? String(booking.invoice.totalRm)
+      : null,
   };
 }
 
@@ -286,6 +293,93 @@ export function BookingForm({
       ),
     [styles]
   );
+
+  const resolveSessionStyle = useCallback(
+    (session: SessionFormRow) => {
+      const selectedStyle = styleOptions.find(
+        (option) => option.id === session.styleId
+      );
+      if (!selectedStyle) return undefined;
+
+      const separatorIndex = selectedStyle.id.lastIndexOf(":");
+      const styleDocId = selectedStyle.id.slice(0, separatorIndex);
+      const variantOrder = Number.parseInt(
+        selectedStyle.id.slice(separatorIndex + 1),
+        10
+      );
+      const overridePrice =
+        session.date && styleDocId && !Number.isNaN(variantOrder)
+          ? getStyleHotDatePrice(
+              hotDatePriceMap,
+              session.date,
+              styleDocId,
+              variantOrder
+            )
+          : undefined;
+
+      return {
+        id: selectedStyle.id,
+        name: selectedStyle.name,
+        price: resolveEffectivePrice(selectedStyle.price, overridePrice),
+        deposit: selectedStyle.deposit,
+        categoryName: selectedStyle.categoryName,
+      };
+    },
+    [styleOptions, hotDatePriceMap]
+  );
+
+  const fullPriceRm = useMemo(() => {
+    const sessionsRm =
+      chargeBy === "package"
+        ? form.packageIds.reduce((sum, packageId) => {
+            const pkg = packages.find((item) => item._id === packageId);
+            if (!pkg) return sum;
+            const session = form.sessions.find(
+              (item) => item.packageId === packageId
+            );
+            const overridePrice = session?.date
+              ? getPackageHotDatePrice(hotDatePriceMap, session.date, packageId)
+              : undefined;
+            return (
+              sum + roundRm(resolveEffectivePrice(pkg.price, overridePrice))
+            );
+          }, 0)
+        : form.sessions.reduce(
+            (sum, session) =>
+              sum + roundRm(resolveSessionStyle(session)?.price ?? 0),
+            0
+          );
+    const addOnsRm = addOns
+      .filter((addOn) => form.addOnIds.includes(addOn._id))
+      .reduce((sum, addOn) => sum + roundRm(addOn.price), 0);
+    return sessionsRm + addOnsRm;
+  }, [
+    chargeBy,
+    form.packageIds,
+    form.sessions,
+    form.addOnIds,
+    packages,
+    addOns,
+    hotDatePriceMap,
+    resolveSessionStyle,
+  ]);
+
+  const editedTotalRm =
+    form.totalRm === null || form.totalRm.trim() === ""
+      ? null
+      : Number(form.totalRm);
+  const totalError =
+    editedTotalRm === null
+      ? null
+      : !Number.isFinite(editedTotalRm) || editedTotalRm < 0
+        ? "Enter a valid total."
+        : roundRm(editedTotalRm) > fullPriceRm
+          ? `Total can't be more than the full price of ${formatRm(fullPriceRm)}.`
+          : null;
+  const discountRm =
+    editedTotalRm !== null && !totalError
+      ? fullPriceRm - roundRm(editedTotalRm)
+      : 0;
 
   const availableTimeSlots = useMemo(() => {
     const byKey = new Map(timeSlots.map((slot) => [timeSlotKey(slot), slot]));
@@ -377,6 +471,10 @@ export function BookingForm({
       }
     }
 
+    if (!isGoogleImport && totalError) {
+      return { error: totalError };
+    }
+
     const selectedAddOns = addOns
       .filter((addOn) => form.addOnIds.includes(addOn._id))
       .map((addOn) => ({
@@ -393,59 +491,17 @@ export function BookingForm({
           mobile: form.contact_mobile.trim() || undefined,
           country_code: form.contact_country_code || undefined,
         },
-        sessions: form.sessions.map((session, index) => {
-          const selectedStyle = styleOptions.find(
-            (option) => option.id === session.styleId
-          );
-
-          let stylePayload:
-            | {
-                id: string;
-                name: string;
-                price: number;
-                deposit: number;
-                categoryName: string;
-              }
-            | undefined;
-
-          if (selectedStyle) {
-            const separatorIndex = selectedStyle.id.lastIndexOf(":");
-            const styleDocId = selectedStyle.id.slice(0, separatorIndex);
-            const variantOrder = Number.parseInt(
-              selectedStyle.id.slice(separatorIndex + 1),
-              10
-            );
-            const overridePrice =
-              session.date && styleDocId && !Number.isNaN(variantOrder)
-                ? getStyleHotDatePrice(
-                    hotDatePriceMap,
-                    session.date,
-                    styleDocId,
-                    variantOrder
-                  )
-                : undefined;
-
-            stylePayload = {
-              id: selectedStyle.id,
-              name: selectedStyle.name,
-              price: resolveEffectivePrice(selectedStyle.price, overridePrice),
-              deposit: selectedStyle.deposit,
-              categoryName: selectedStyle.categoryName,
-            };
-          }
-
-          return {
-            client_key: session.client_key,
-            status: "scheduled" as const,
-            name: session.name.trim(),
-            packageId: session.packageId,
-            order: index,
-            date: new Date(`${session.date}T12:00:00`),
-            time_slot: parseTimeSlotKey(session.time_slot_key)!,
-            location: session.location!,
-            style: stylePayload,
-          };
-        }),
+        sessions: form.sessions.map((session, index) => ({
+          client_key: session.client_key,
+          status: "scheduled" as const,
+          name: session.name.trim(),
+          packageId: session.packageId,
+          order: index,
+          date: new Date(`${session.date}T12:00:00`),
+          time_slot: parseTimeSlotKey(session.time_slot_key)!,
+          location: session.location!,
+          style: resolveSessionStyle(session),
+        })),
         status: form.status,
         ...(isGoogleImport
           ? {}
@@ -453,6 +509,9 @@ export function BookingForm({
               packageIds: form.packageIds,
               addOns: selectedAddOns,
               paymentOption: form.paymentOption,
+              ...(discountRm > 0 && editedTotalRm !== null
+                ? { totalRm: roundRm(editedTotalRm) }
+                : {}),
             }),
       },
     };
@@ -765,6 +824,78 @@ export function BookingForm({
             </Field>
           )}
         </div>
+
+        {isGoogleImport ? null : (
+          <>
+            <Separator />
+
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Full price</span>
+                <span className="tabular-nums">{formatRm(fullPriceRm)}</span>
+              </div>
+              {discountRm > 0 ? (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Discount</span>
+                  <span className="text-primary tabular-nums">
+                    {formatRm(-discountRm)}
+                  </span>
+                </div>
+              ) : null}
+
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="booking-total">Total</Label>
+                  {form.totalRm !== null ? (
+                    <button
+                      type="button"
+                      className="text-xs font-medium text-primary hover:underline"
+                      onClick={() =>
+                        setForm((current) => ({ ...current, totalRm: null }))
+                      }
+                    >
+                      Reset to full price
+                    </button>
+                  ) : null}
+                </div>
+                <div className="relative">
+                  <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
+                    RM
+                  </span>
+                  <Input
+                    id="booking-total"
+                    className={cn(
+                      inputClassName,
+                      "pl-11 text-base font-semibold tabular-nums"
+                    )}
+                    type="number"
+                    inputMode="numeric"
+                    min={0}
+                    max={fullPriceRm}
+                    step={1}
+                    value={form.totalRm ?? String(fullPriceRm)}
+                    onChange={(event) =>
+                      setForm((current) => ({
+                        ...current,
+                        totalRm: event.target.value,
+                      }))
+                    }
+                    aria-invalid={totalError ? true : undefined}
+                  />
+                </div>
+                <p
+                  className={cn(
+                    "text-xs",
+                    totalError ? "text-destructive" : "text-muted-foreground"
+                  )}
+                >
+                  {totalError ??
+                    "Lower the total to give the client a discount."}
+                </p>
+              </div>
+            </div>
+          </>
+        )}
 
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </div>

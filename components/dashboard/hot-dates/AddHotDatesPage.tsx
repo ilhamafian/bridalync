@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { DateRange } from "react-day-picker";
 
 import { BackButton } from "@/components/dashboard/BackButton";
 import { SummaryRow } from "@/components/dashboard/blocked/SummaryRow";
@@ -23,9 +22,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { toDateKey } from "@/utils/booking/availability";
 import {
-  dateKeysFromRange,
-  formatDateRangeLabel,
+  formatDateKeysLabel,
   MAX_DATE_RANGE_DAYS,
 } from "@/utils/booking/dateRange";
 import {
@@ -69,31 +68,39 @@ function buildDraft(
   return draft;
 }
 
+function toSortedDateKeys(dates: Date[] | undefined) {
+  return [...new Set((dates ?? []).map((date) => toDateKey(date)))]
+    .filter(Boolean)
+    .sort();
+}
+
 export function AddHotDatesPage({
   hotDates,
   catalog,
   chargeBy,
-  initialRange,
+  initialDates,
   onSaved,
 }: {
   hotDates: HotDateItem[];
   catalog: HotDateCatalogRow[];
   chargeBy: "package" | "style";
-  /** Set when editing an existing hot date range from the list. */
-  initialRange?: DateRange;
+  /** YYYY-MM-DD keys, set when editing existing hot dates from the list. */
+  initialDates?: string[];
   onSaved: (hotDates: HotDateItem[]) => void;
 }) {
   const router = useRouter();
-  const editing = Boolean(initialRange);
+  const editing = Boolean(initialDates?.length);
   const priceMap = useMemo(() => buildHotDateRowPriceMap(hotDates), [hotDates]);
-  const [range, setRange] = useState<DateRange | undefined>(initialRange);
+  const [dates, setDates] = useState<Date[] | undefined>(() =>
+    initialDates?.map(parseDateKey)
+  );
   const [draft, setDraft] = useState(() =>
-    buildDraft(catalog, priceMap, dateKeysFromRange(initialRange))
+    buildDraft(catalog, priceMap, [...(initialDates ?? [])].sort())
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedKeys = useMemo(() => dateKeysFromRange(range), [range]);
+  const selectedKeys = useMemo(() => toSortedDateKeys(dates), [dates]);
   const hotKeys = useMemo(() => {
     const keys = new Set<string>();
     for (const item of hotDates) {
@@ -131,16 +138,16 @@ export function AddHotDatesPage({
         ? `Remove ${dateLabel}`
         : `Save ${dateLabel}`;
 
-  function handleRangeChange(next: DateRange | undefined) {
-    setRange(next);
-    setDraft(buildDraft(catalog, priceMap, dateKeysFromRange(next)));
+  function handleDatesChange(next: Date[] | undefined) {
+    setDates(next);
+    setDraft(buildDraft(catalog, priceMap, toSortedDateKeys(next)));
     setError(null);
   }
 
   async function handleSubmit() {
     if (count === 0) return;
     if (tooMany) {
-      setError(`Choose up to ${MAX_DATE_RANGE_DAYS} days at a time.`);
+      setError(`Choose up to ${MAX_DATE_RANGE_DAYS} dates at a time.`);
       return;
     }
 
@@ -212,17 +219,17 @@ export function AddHotDatesPage({
       <SettingsSection title="Pick dates">
         <div className={cn(glassCardClassName, "overflow-hidden")}>
           <DashboardCalendar
-            mode="range"
-            selected={range}
-            onSelect={handleRangeChange}
-            defaultMonth={initialRange?.from}
+            mode="multiple"
+            selected={dates}
+            onSelect={handleDatesChange}
+            defaultMonth={dates?.[0]}
             disabled={{ before: startOfToday() }}
             modifiers={{ hot: hotDays }}
             modifiersClassNames={{ hot: hotDayClassName }}
           />
           <p className="flex items-center gap-2 border-t border-white/50 px-4 py-3 text-xs text-muted-foreground dark:border-white/10">
             <span className="size-2.5 rounded-full bg-amber-500/50" />
-            Hot date · tap a start and end date
+            Hot date · tap dates to select or unselect them
           </p>
         </div>
       </SettingsSection>
@@ -291,7 +298,7 @@ export function AddHotDatesPage({
         <div className={settingsListClassName}>
           <SummaryRow
             label="Dates"
-            value={formatDateRangeLabel(range) ?? "None selected"}
+            value={formatDateKeysLabel(selectedKeys) ?? "None selected"}
           />
           <SummaryRow label="Days" value={count === 0 ? "—" : String(count)} />
           <SummaryRow label="Status" value={statusText} />
@@ -301,7 +308,7 @@ export function AddHotDatesPage({
       <SettingsFeedback
         error={
           error ??
-          (tooMany ? `Choose up to ${MAX_DATE_RANGE_DAYS} days at a time.` : null)
+          (tooMany ? `Choose up to ${MAX_DATE_RANGE_DAYS} dates at a time.` : null)
         }
       />
       <Button

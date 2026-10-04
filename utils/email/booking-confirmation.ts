@@ -144,7 +144,12 @@ export async function sendBookingPaymentConfirmationEmail(
   options?: {
     freelancerName?: string | null;
     freelancer?: InvoiceFreelancer | null;
-    invoiceSettings?: Pick<InvoiceSetting, "company_registration_number"> | null;
+    invoiceSettings?: Partial<
+      Pick<
+        InvoiceSetting,
+        "company_registration_number" | "company_logo" | "terms_and_conditions"
+      >
+    > | null;
     paymentSettings?: Pick<PaymentSetting, "balance_due_before"> | null;
   }
 ) {

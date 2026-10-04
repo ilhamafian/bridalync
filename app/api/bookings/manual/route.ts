@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
     const { invoice, packageNames, resolvedSessionStyles, paymentOption } =
       await resolveBookingQuotation(userId, quotationInput, {
         relaxPaymentDeadline: true,
+        discountedTotalRm: data.totalRm,
       });
 
     const booking = await createBooking({

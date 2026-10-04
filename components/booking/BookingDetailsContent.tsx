@@ -275,6 +275,9 @@ function PriceBreakdown({ booking }: { booking: SerializedBooking }) {
             />
           ))}
           <PriceRow label="Travel fee" amountRm={breakdown.travelFeeRm} />
+          {breakdown.discountRm ? (
+            <PriceRow label="Discount" amountRm={-breakdown.discountRm} />
+          ) : null}
         </div>
       ) : (
         <div className="flex flex-col gap-2">

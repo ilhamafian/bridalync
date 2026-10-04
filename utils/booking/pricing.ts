@@ -12,6 +12,7 @@ export type BookingQuotationBreakdown = {
   sessions: Array<QuotationLineItem & { sessionKey?: string }>;
   addOns: QuotationLineItem[];
   travelFeeRm: number;
+  discountRm?: number;
 };
 
 export type BookingQuotationSummary = {
@@ -37,6 +38,7 @@ export type QuotationPackageInput = QuotationLineItemInput & {
 export type TravelQuotationInput = {
   enabled: boolean;
   ratePerKm: number;
+  longDistanceRatePerKm?: number;
   timeSlots: TimeSlot[];
   sessions: Pick<SessionForm, "client_key" | "date" | "time_slot" | "location">[];
   distanceKmBySessionKey: Record<string, number | undefined>;
@@ -65,10 +67,11 @@ export function calculateProcessingFeeRm(amountRm: number) {
 }
 
 export function formatRm(amount: number) {
-  return `RM${roundRm(amount).toLocaleString("en-MY", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
+  const rounded = roundRm(amount);
+  return `${rounded < 0 ? "-" : ""}RM${Math.abs(rounded).toLocaleString(
+    "en-MY",
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+  )}`;
 }
 
 export function getEarliestSessionDate(
@@ -124,6 +127,35 @@ export function applyPaymentOption(
   return quotation;
 }
 
+/** Lowers the total to `totalRm`, recording the difference as a discount. */
+export function applyDiscountedTotal(
+  quotation: BookingQuotationSummary,
+  totalRm: number
+): BookingQuotationSummary {
+  const discountedTotalRm = roundRm(totalRm);
+  if (discountedTotalRm > quotation.totalRm) {
+    throw new Error(
+      `Total can't be more than the full price of ${formatRm(quotation.totalRm)}.`
+    );
+  }
+  const discountRm = quotation.totalRm - discountedTotalRm;
+  if (discountRm <= 0) return quotation;
+
+  const depositRm = Math.min(quotation.depositRm, discountedTotalRm);
+  return {
+    lineItems: [
+      ...quotation.lineItems,
+      { label: "Discount", amountRm: -discountRm },
+    ],
+    totalRm: discountedTotalRm,
+    depositRm,
+    balanceRm: discountedTotalRm - depositRm,
+    ...(quotation.breakdown
+      ? { breakdown: { ...quotation.breakdown, discountRm } }
+      : {}),
+  };
+}
+
 export function calculateBookingQuotation(
   input: CalculateQuotationInput
 ): BookingQuotationSummary {
@@ -136,6 +168,7 @@ export function calculateBookingQuotation(
           sessions: input.travel.sessions,
           timeSlots: input.travel.timeSlots,
           ratePerKm: input.travel.ratePerKm,
+          longDistanceRatePerKm: input.travel.longDistanceRatePerKm,
           distanceKmBySessionKey: input.travel.distanceKmBySessionKey,
         })
       : 0;

@@ -68,6 +68,10 @@ export const userSchema = z.object({
     defaultDeferredOnboarding()
   ),
   onboarding: onboardingProgressSchema.default(() => defaultOnboardingProgress()),
+  /** Dashboard notifications at or before this time count as read. */
+  notifications_seen_at: z.coerce.date().optional(),
+  /** Notification ids read individually after `notifications_seen_at`. */
+  notifications_read_ids: z.array(z.string()).optional(),
   created_at: z.coerce.date().optional(),
   updated_at: z.coerce.date().optional(),
 });

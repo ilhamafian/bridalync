@@ -1,20 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { IconChecks } from "@tabler/icons-react";
 
 import { ActivityList } from "@/components/dashboard/ActivityList";
 import { BackButton } from "@/components/dashboard/BackButton";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { FilterPills } from "@/components/dashboard/FilterPills";
-import type { SerializedBooking } from "@/utils/booking/serializeBooking";
-import { getRecentActivity, type ActivityKind } from "@/utils/dashboard";
+import { Button } from "@/components/ui/button";
+import type { ActivityItem, ActivityKind } from "@/utils/activity";
 
-type NotificationFilter = "all" | "deposit" | "paid" | "cancelled";
+type NotificationFilter = "all" | "deposit" | "balance" | "full" | "cancelled";
 
 const NOTIFICATION_FILTERS: { value: NotificationFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "deposit", label: "Deposit" },
-  { value: "paid", label: "Full payment" },
+  { value: "balance", label: "Balance payment" },
+  { value: "full", label: "Full payment" },
   { value: "cancelled", label: "Cancelled" },
 ];
 
@@ -25,15 +27,22 @@ function matchesFilter(kind: ActivityKind, filter: NotificationFilter) {
 }
 
 export function NotificationsPage({
-  bookings,
+  activity,
+  unreadCount,
+  isUnread,
+  onOpen,
+  onMarkAllRead,
 }: {
-  bookings: SerializedBooking[];
+  activity: ActivityItem[];
+  unreadCount: number;
+  isUnread: (item: ActivityItem) => boolean;
+  onOpen: (item: ActivityItem) => void;
+  onMarkAllRead: () => void;
 }) {
   const [filter, setFilter] = useState<NotificationFilter>("all");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  const activity = useMemo(() => getRecentActivity(bookings), [bookings]);
   const filtered = useMemo(
     () => activity.filter((item) => matchesFilter(item.kind, filter)),
     [activity, filter]
@@ -73,11 +82,26 @@ export function NotificationsPage({
     <div className="flex flex-col gap-4 px-4 lg:px-6">
       <BackButton />
 
-      <div>
-        <h2 className="text-lg font-semibold">Notifications</h2>
-        <p className="text-sm text-muted-foreground">
-          All recent booking and payment activity
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Notifications</h2>
+          <p className="text-sm text-muted-foreground">
+            {unreadCount > 0
+              ? `${unreadCount} unread`
+              : "All recent booking and payment activity"}
+          </p>
+        </div>
+        {unreadCount > 0 ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="shrink-0 gap-1.5"
+            onClick={onMarkAllRead}
+          >
+            <IconChecks className="size-4" aria-hidden />
+            Mark all as read
+          </Button>
+        ) : null}
       </div>
 
       <FilterPills
@@ -95,7 +119,7 @@ export function NotificationsPage({
         </EmptyCard>
       ) : (
         <>
-          <ActivityList items={visible} />
+          <ActivityList items={visible} isUnread={isUnread} onOpen={onOpen} />
           {hasMore ? (
             <div
               ref={sentinelRef}

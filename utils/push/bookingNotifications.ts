@@ -1,4 +1,5 @@
 import type { Booking, PersistedBooking } from "@/schemas/bookingSchema";
+import { formatRm } from "@/utils/booking/pricing";
 import { sendPushToUser } from "@/utils/push/webPush";
 
 function formatSessionSummary(booking: Booking): string {
@@ -17,6 +18,14 @@ function formatSessionSummary(booking: Booking): string {
     : `${booking.packageNames} · ${dateLabel}`;
 }
 
+function bookingDetailsUrl(booking: PersistedBooking) {
+  return `/dashboard/bookings/${encodeURIComponent(String(booking._id))}`;
+}
+
+function isFullPayment(booking: Booking) {
+  return booking.paymentOption === "full" || booking.invoice.balanceRm <= 0;
+}
+
 export async function notifyNewClientBooking(booking: PersistedBooking) {
   if (!booking.freelancerUserId) return;
 
@@ -24,6 +33,10 @@ export async function notifyNewClientBooking(booking: PersistedBooking) {
   const awaitingVerification =
     booking.paymentChannel === "manual_transfer" &&
     booking.depositVerificationStatus === "pending";
+  const paymentLabel = isFullPayment(booking) ? "Full payment" : "Deposit";
+  const verifyNote = awaitingVerification
+    ? ` · ${paymentLabel} ${formatRm(booking.invoice.depositRm)} to verify`
+    : "";
 
   await sendPushToUser(booking.freelancerUserId, {
     title: isEnquiry
@@ -31,18 +44,39 @@ export async function notifyNewClientBooking(booking: PersistedBooking) {
       : awaitingVerification
         ? "New booking — payment pending"
         : "New booking",
-    body: `${booking.contact.name} — ${formatSessionSummary(booking)}`,
-    url: "/dashboard/bookings",
+    body: `${booking.contact.name} — ${formatSessionSummary(booking)}${verifyNote}`,
+    url: bookingDetailsUrl(booking),
   });
 }
 
 export async function notifyBookingConfirmed(booking: PersistedBooking) {
   if (!booking.freelancerUserId) return;
 
+  const paymentLabel = isFullPayment(booking)
+    ? "Full payment received"
+    : "Deposit received";
+  const balanceNote =
+    !isFullPayment(booking) && booking.invoice.balanceRm > 0
+      ? ` · ${formatRm(booking.invoice.balanceRm)} balance due`
+      : "";
+
   await sendPushToUser(booking.freelancerUserId, {
-    title: "Booking confirmed",
-    body: `${booking.contact.name} paid — ${formatSessionSummary(booking)}`,
-    url: "/dashboard/bookings",
+    title: `${paymentLabel} — ${formatRm(booking.invoice.depositRm)}`,
+    body: `${booking.contact.name} — ${formatSessionSummary(booking)}${balanceNote}`,
+    url: bookingDetailsUrl(booking),
+  });
+}
+
+export async function notifyBalancePaymentReceived(
+  booking: PersistedBooking,
+  amountRm: number
+) {
+  if (!booking.freelancerUserId) return;
+
+  await sendPushToUser(booking.freelancerUserId, {
+    title: `Balance payment received — ${formatRm(amountRm)}`,
+    body: `${booking.contact.name} — ${formatSessionSummary(booking)} · Fully paid`,
+    url: bookingDetailsUrl(booking),
   });
 }
 

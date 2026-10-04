@@ -171,7 +171,8 @@ export async function PATCH(
         (data.packageIds !== undefined ||
           data.addOns !== undefined ||
           data.sessions !== undefined ||
-          data.paymentOption !== undefined);
+          data.paymentOption !== undefined ||
+          data.totalRm !== undefined);
 
       let updatePayload: Parameters<typeof updateDashboardBooking>[1] = {};
 
@@ -221,6 +222,7 @@ export async function PATCH(
         const { invoice, packageNames, resolvedSessionStyles, paymentOption } =
           await resolveBookingQuotation(userId, quotationInput, {
             relaxPaymentDeadline: true,
+            discountedTotalRm: data.totalRm,
           });
 
         updatePayload = {

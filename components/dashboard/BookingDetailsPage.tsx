@@ -1,7 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { IconPencil } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
+import {
+  IconCheck,
+  IconCopy,
+  IconPencil,
+  IconTrash,
+} from "@tabler/icons-react";
 
 import {
   BookingDetailsSections,
@@ -10,10 +17,137 @@ import {
 } from "@/components/booking/BookingDetailsContent";
 import { BackButton } from "@/components/dashboard/BackButton";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
+
+function BookingIdRow({ id }: { id: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copyId() {
+    try {
+      await navigator.clipboard.writeText(id);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard can be unavailable (e.g. insecure context); the ID stays selectable.
+    }
+  }
+
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span>Booking ID</span>
+      <span className="font-mono text-foreground select-all">{id}</span>
+      <button
+        type="button"
+        onClick={() => void copyId()}
+        className="flex size-6 items-center justify-center rounded-md transition-colors hover:bg-white/40 hover:text-foreground dark:hover:bg-white/10"
+        aria-label={copied ? "Booking ID copied" : "Copy booking ID"}
+      >
+        {copied ? (
+          <IconCheck className="size-3.5 text-primary" aria-hidden />
+        ) : (
+          <IconCopy className="size-3.5" aria-hidden />
+        )}
+      </button>
+    </div>
+  );
+}
+
+function DeleteBookingButton({ booking }: { booking: SerializedBooking }) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDelete(event: React.MouseEvent) {
+    event.preventDefault();
+    if (deleting) return;
+
+    setDeleting(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `/api/bookings/${encodeURIComponent(booking._id)}`,
+        { method: "DELETE" }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(
+          typeof data.error === "string"
+            ? data.error
+            : "Failed to delete booking."
+        );
+        return;
+      }
+
+      setOpen(false);
+      router.replace("/dashboard/bookings", { scroll: false });
+      router.refresh();
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(next) => {
+        if (deleting) return;
+        setOpen(next);
+        if (!next) setError(null);
+      }}
+    >
+      <AlertDialogTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="lg"
+          className="min-h-11 gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+        >
+          <IconTrash className="size-5" />
+          Delete booking
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this booking?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {booking.contact.name}&apos;s booking and its sessions will be
+            permanently removed. Payments already received are not refunded.
+            This can&apos;t be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {error ? <p className="text-xs text-destructive">{error}</p> : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleting}
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
 
 export function BookingDetailsPage({
   booking,
@@ -50,6 +184,7 @@ export function BookingDetailsPage({
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">{booking.packageNames}</p>
+        <BookingIdRow id={booking._id} />
         {booking.source === "google_calendar" ? (
           <p className="text-xs text-muted-foreground">
             Imported from Google Calendar
@@ -65,15 +200,18 @@ export function BookingDetailsPage({
         />
       </div>
 
-      <Button asChild variant="outline" size="lg" className="min-h-11 gap-2">
-        <Link
-          href={`/dashboard/bookings/${encodeURIComponent(booking._id)}/edit`}
-          scroll={false}
-        >
-          <IconPencil className="size-5" />
-          Edit booking
-        </Link>
-      </Button>
+      <div className="flex flex-col gap-2">
+        <Button asChild variant="outline" size="lg" className="min-h-11 gap-2">
+          <Link
+            href={`/dashboard/bookings/${encodeURIComponent(booking._id)}/edit`}
+            scroll={false}
+          >
+            <IconPencil className="size-5" />
+            Edit booking
+          </Link>
+        </Button>
+        <DeleteBookingButton booking={booking} />
+      </div>
     </div>
   );
 }

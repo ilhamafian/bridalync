@@ -8,6 +8,7 @@ import { toIdString } from "@/schemas/objectId";
 import { toDbSession } from "@/schemas/sessionSchema";
 import { getFreelancerByUsername } from "@/utils/users";
 import {
+  applyDiscountedTotal,
   applyPaymentOption,
   calculateBookingQuotation,
   requiresFullPayment,
@@ -138,7 +139,7 @@ function validatePackageSelection(
 export async function resolveBookingQuotation(
   freelancerUserId: string,
   input: CreateBookingRequest,
-  options?: { relaxPaymentDeadline?: boolean }
+  options?: { relaxPaymentDeadline?: boolean; discountedTotalRm?: number }
 ): Promise<{
   invoice: BookingQuotationSummary;
   packageNames: string;
@@ -249,6 +250,7 @@ export async function resolveBookingQuotation(
       ? {
           enabled: true,
           ratePerKm: settings.travel.rate_per_km,
+          longDistanceRatePerKm: settings.travel.long_distance_rate_per_km,
           timeSlots: settings.time_slots,
           sessions: input.sessions,
           distanceKmBySessionKey: input.distanceKmBySessionKey ?? {},
@@ -276,8 +278,13 @@ export async function resolveBookingQuotation(
     );
   }
 
+  const discounted =
+    options?.discountedTotalRm !== undefined
+      ? applyDiscountedTotal(quotation, options.discountedTotalRm)
+      : quotation;
+
   return {
-    invoice: applyPaymentOption(quotation, paymentOption),
+    invoice: applyPaymentOption(discounted, paymentOption),
     packageNames: selectedPackages.map((pkg) => pkg.name).join(", "),
     resolvedSessionStyles,
     paymentOption,

@@ -14,6 +14,7 @@ import { PackageModel } from "@/models/Package";
 import { reviewModel } from "@/models/Review";
 import { SettingModel } from "@/models/Setting";
 import { StyleModel } from "@/models/Style";
+import { UserModel } from "@/models/User";
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Package } from "@/schemas/packageSchema";
 import { toIdString } from "@/schemas/objectId";
@@ -39,13 +40,13 @@ import {
 import { getEffectiveBookingUntil } from "@/utils/booking/bookingWindow";
 import { toHotDateItem } from "@/utils/booking/hotDates";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
+import { getRecentActivity } from "@/utils/activity";
 import {
   countUpcomingThisWeek,
   type CompletedScheduleItem,
   flattenScheduleItems,
   getFirstName,
   getGreeting,
-  getRecentActivity,
   getRecentCompletedBookings,
   getTodaysSchedule,
   getUpcomingBookings,
@@ -166,6 +167,12 @@ export async function loadDashboardData(
 
   const payments = getPayments(serializedBookings);
   const outstanding = getOutstandingThisMonth(serializedBookings, now);
+
+  let notificationsSeenAt = user.notifications_seen_at;
+  if (!notificationsSeenAt) {
+    notificationsSeenAt = now;
+    await new UserModel().markAllNotificationsRead(userId, now);
+  }
 
   return {
     home: {
@@ -290,5 +297,9 @@ export async function loadDashboardData(
     },
     hotDates: hotDateDocs.map(toHotDateItem),
     bookingUntil: getEffectiveBookingUntil(settings, now),
+    notifications: {
+      seenAt: new Date(notificationsSeenAt).toISOString(),
+      readIds: user.notifications_read_ids ?? [],
+    },
   };
 }

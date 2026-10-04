@@ -136,12 +136,9 @@ export function SettingsPage() {
               );
             })}
           </nav>
+          {group.title === "Account" ? <LogoutButton /> : null}
         </SettingsSection>
       ))}
-
-      <SettingsSection title="Account">
-        <LogoutButton />
-      </SettingsSection>
     </div>
   );
 }

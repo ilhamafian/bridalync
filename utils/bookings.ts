@@ -10,7 +10,10 @@ import {
 } from "@/schemas/bookingSchema";
 import { sendBalancePaymentReceivedEmail } from "@/utils/email/balance-payment-received";
 import { sendBookingPaymentConfirmationEmail } from "@/utils/email/booking-confirmation";
-import { notifyBookingConfirmed } from "@/utils/push/bookingNotifications";
+import {
+  notifyBalancePaymentReceived,
+  notifyBookingConfirmed,
+} from "@/utils/push/bookingNotifications";
 
 export async function getBookingById(
   id: string
@@ -164,6 +167,12 @@ export async function confirmBookingBalancePayment(
   }
 
   if (booking) {
+    try {
+      await notifyBalancePaymentReceived(booking, existing.invoice.balanceRm);
+    } catch (error) {
+      console.error("Failed to send balance received push:", error);
+    }
+
     try {
       const freelancer = booking.freelancerUserId
         ? await new UserModel().findById(booking.freelancerUserId)

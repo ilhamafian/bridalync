@@ -7,7 +7,6 @@ import type { DateRange } from "react-day-picker";
 import { IconFlame, IconPlus, IconTrash } from "@tabler/icons-react";
 
 import { BackButton } from "@/components/dashboard/BackButton";
-import { parseDateKey } from "@/components/dashboard/DashboardCalendar";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import {
   DateRangeChip,
@@ -113,8 +112,8 @@ export function HotDatesPage({
   hotDates: HotDateItem[];
   catalog: HotDateCatalogRow[];
   onHotDatesChange: (hotDates: HotDateItem[]) => void;
-  /** Prepares the add page, optionally preselecting an existing range to edit. */
-  onOpenDraft: (range?: DateRange) => void;
+  /** Prepares the add page, optionally preselecting existing dates (YYYY-MM-DD) to edit. */
+  onOpenDraft: (dates?: string[]) => void;
 }) {
   const router = useRouter();
   const [range, setRange] = useState<DateRange | undefined>();
@@ -134,10 +133,7 @@ export function HotDatesPage({
   }, [hotDates, catalog, range]);
 
   function handleEdit(hotRange: HotDateRange) {
-    onOpenDraft({
-      from: parseDateKey(hotRange.start),
-      to: parseDateKey(hotRange.end),
-    });
+    onOpenDraft(hotRange.dates);
     router.push("/dashboard/hot-dates/new", { scroll: false });
   }
 

@@ -9,8 +9,6 @@ import {
   Fragment,
 } from "react";
 import { usePathname } from "next/navigation";
-import type { DateRange } from "react-day-picker";
-
 import { BookingsManager } from "@/components/BookingsManager";
 import { BlockDatesPage } from "@/components/dashboard/blocked/BlockDatesPage";
 import {
@@ -30,8 +28,10 @@ import { PaymentsPage } from "@/components/dashboard/payments/PaymentsPage";
 import { SettingsCategoryPage } from "@/components/dashboard/settings/SettingsCategoryPage";
 import { SettingsPage } from "@/components/dashboard/settings/SettingsPage";
 import { ProfileManager } from "@/components/profile/ProfileManager";
+import { useNotificationReads } from "@/components/dashboard/useNotificationReads";
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
 import { cn } from "@/lib/utils";
+import { getRecentActivity } from "@/utils/activity";
 import { buildHotDateCatalog } from "@/utils/booking/hotDates";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
@@ -80,8 +80,13 @@ export function DashboardShell({ data }: { data: DashboardData }) {
   const [bookingUntil, setBookingUntil] = useState(data.bookingUntil);
   const [hotDateDraft, setHotDateDraft] = useState<{
     id: number;
-    range?: DateRange;
+    dates?: string[];
   }>({ id: 0 });
+  const activity = useMemo(
+    () => getRecentActivity(data.bookings.initialBookings),
+    [data.bookings.initialBookings]
+  );
+  const notifications = useNotificationReads(activity, data.notifications);
   const hotDateCatalog = useMemo(
     () =>
       buildHotDateCatalog(
@@ -120,7 +125,11 @@ export function DashboardShell({ data }: { data: DashboardData }) {
   return (
     <Fragment key={refreshVersion}>
       <Section id="home" active={active}>
-        <DashboardHome {...data.home} />
+        <DashboardHome
+          {...data.home}
+          isActivityUnread={notifications.isUnread}
+          onOpenActivity={notifications.markRead}
+        />
       </Section>
 
       <Section id="payments" active={active}>
@@ -128,7 +137,13 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       </Section>
 
       <Section id="notifications" active={active}>
-        <NotificationsPage bookings={data.bookings.initialBookings} />
+        <NotificationsPage
+          activity={activity}
+          unreadCount={notifications.unreadCount}
+          isUnread={notifications.isUnread}
+          onOpen={notifications.markRead}
+          onMarkAllRead={notifications.markAllRead}
+        />
       </Section>
 
       <Section id="blocked" active={active}>
@@ -170,8 +185,8 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           hotDates={hotDates}
           catalog={hotDateCatalog}
           onHotDatesChange={setHotDates}
-          onOpenDraft={(range) =>
-            setHotDateDraft((current) => ({ id: current.id + 1, range }))
+          onOpenDraft={(dates) =>
+            setHotDateDraft((current) => ({ id: current.id + 1, dates }))
           }
         />
       </Section>
@@ -182,7 +197,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           hotDates={hotDates}
           catalog={hotDateCatalog}
           chargeBy={data.bookings.chargeBy}
-          initialRange={hotDateDraft.range}
+          initialDates={hotDateDraft.dates}
           onSaved={(next) => {
             setHotDates(next);
             setHotDateDraft((current) => ({ id: current.id + 1 }));
@@ -235,6 +250,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           category={settingsCategory}
           settings={data.settings}
           packages={data.packages}
+          email={data.profile.initialProfile.email}
         />
       </Section>
 

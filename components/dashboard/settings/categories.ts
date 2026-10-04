@@ -5,6 +5,7 @@ import {
   IconClock,
   IconCreditCard,
   IconFileInvoice,
+  IconLock,
   IconPalette,
   IconSparkles,
   IconTag,
@@ -20,6 +21,7 @@ export const SETTINGS_GROUPS: { title: string; categories: SettingsCategory[] }[
   },
   { title: "Payments", categories: ["payment-method", "invoice"] },
   { title: "App", categories: ["google-calendar", "theme", "notifications"] },
+  { title: "Account", categories: ["password"] },
 ];
 
 export const SETTINGS_CATEGORY_META: Record<
@@ -70,5 +72,10 @@ export const SETTINGS_CATEGORY_META: Record<
     label: "App & notifications",
     description: "Install the app and get alerts for new and upcoming bookings.",
     icon: IconBell,
+  },
+  password: {
+    label: "Reset password",
+    description: "Get a code by email and set a new password.",
+    icon: IconLock,
   },
 };

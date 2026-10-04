@@ -92,14 +92,29 @@ function roundUpTravelFeeRm(amount: number): number {
   return Math.ceil(amount * 10) / 10;
 }
 
+/** One-way distance above which `longDistanceRatePerKm` applies to the whole trip. */
+export const LONG_DISTANCE_THRESHOLD_KM = 100;
+
 export type CalculateTravelFeeInput = {
   sessions: TravelSessionInput[];
   timeSlots: TimeSlot[];
   ratePerKm: number;
+  longDistanceRatePerKm?: number;
   distanceKmBySessionKey: Record<string, number | undefined>;
 };
 
-/** Round-trip travel fee: distanceKm × 2 × ratePerKm, grouped by slot/location rules. */
+export function getTravelRatePerKm(
+  distanceKm: number,
+  ratePerKm: number,
+  longDistanceRatePerKm?: number
+) {
+  return distanceKm > LONG_DISTANCE_THRESHOLD_KM &&
+    longDistanceRatePerKm != null
+    ? longDistanceRatePerKm
+    : ratePerKm;
+}
+
+/** Round-trip travel fee: distanceKm × 2 × rate, grouped by slot/location rules. */
 export function calculateTravelFeeRm(input: CalculateTravelFeeInput): number {
   const groups = groupSessionsForTravelCharge(
     input.sessions,
@@ -112,7 +127,14 @@ export function calculateTravelFeeRm(input: CalculateTravelFeeInput): number {
     const distanceKm = input.distanceKmBySessionKey[group[0].client_key];
     if (distanceKm == null) continue;
 
-    total += distanceKm * 2 * input.ratePerKm;
+    total +=
+      distanceKm *
+      2 *
+      getTravelRatePerKm(
+        distanceKm,
+        input.ratePerKm,
+        input.longDistanceRatePerKm
+      );
   }
 
   return roundUpTravelFeeRm(total);

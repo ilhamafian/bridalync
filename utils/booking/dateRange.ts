@@ -30,6 +30,17 @@ export function formatDateRangeLabel(range: DateRange | undefined): string | nul
   return `${format(range.from, "d MMM")} – ${format(range.to, "d MMM yyyy")}`;
 }
 
+/** Sorted YYYY-MM-DD keys as "3 Oct, 10 Oct, 24 Oct" (extra dates as "+N more"). */
+export function formatDateKeysLabel(dateKeys: string[], maxShown = 3) {
+  if (dateKeys.length === 0) return null;
+  const shown = dateKeys
+    .slice(0, maxShown)
+    .map((key) => format(parseKey(key), "d MMM"))
+    .join(", ");
+  const extra = dateKeys.length - maxShown;
+  return extra > 0 ? `${shown} +${extra} more` : shown;
+}
+
 function parseKey(dateKey: string) {
   const [year, month, day] = dateKey.split("-").map(Number);
   return new Date(year, month - 1, day, 12);
