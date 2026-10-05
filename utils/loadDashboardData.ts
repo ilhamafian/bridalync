@@ -159,6 +159,7 @@ export async function loadDashboardData(
               clientName: item.clientName,
               freelancerName,
               reviewUrl: buildReviewUrl(appUrl, username, item.bookingId),
+              template: settings.messages?.review_request,
             })
           )
         : null;
@@ -271,8 +272,10 @@ export async function loadDashboardData(
           terms_and_conditions: invoice.terms_and_conditions,
         },
         time_slots: timeSlots,
+        messages: { review_request: settings.messages?.review_request ?? "" },
         max_booking_year: settings.max_booking_year,
       },
+      freelancerName,
       isStripeConnected: Boolean(user.is_stripe_connected),
       hasStripeAccount: Boolean(user.stripe_account_id),
     },

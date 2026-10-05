@@ -27,6 +27,7 @@ function serializeSetting(setting: WithId<Setting>) {
     payment: setting.payment,
     invoice: setting.invoice,
     time_slots: setting.time_slots,
+    messages: setting.messages ?? {},
     max_booking_year: setting.max_booking_year,
     booking_until: setting.booking_until,
     created_at: setting.created_at,
@@ -77,6 +78,13 @@ function mergeSettingsUpdate(
 
   if (patch.time_slots !== undefined) {
     update.time_slots = patch.time_slots;
+  }
+
+  if (patch.messages !== undefined) {
+    update.messages = {
+      ...existing.messages,
+      ...patch.messages,
+    };
   }
 
   if (patch.max_booking_year !== undefined) {

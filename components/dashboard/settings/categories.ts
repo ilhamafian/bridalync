@@ -6,6 +6,7 @@ import {
   IconCreditCard,
   IconFileInvoice,
   IconLock,
+  IconMessage,
   IconPalette,
   IconSparkles,
   IconTag,
@@ -17,7 +18,7 @@ import type { SettingsCategory } from "@/utils/dashboardShell";
 export const SETTINGS_GROUPS: { title: string; categories: SettingsCategory[] }[] = [
   {
     title: "Business",
-    categories: ["pricing-model", "events", "time-slots", "travel-fee"],
+    categories: ["pricing-model", "events", "time-slots", "travel-fee", "messages"],
   },
   { title: "Payments", categories: ["payment-method", "invoice"] },
   { title: "App", categories: ["google-calendar", "theme", "notifications"] },
@@ -57,6 +58,11 @@ export const SETTINGS_CATEGORY_META: Record<
     label: "Invoice",
     description: "Company details and terms shown on your invoices.",
     icon: IconFileInvoice,
+  },
+  messages: {
+    label: "Message templates",
+    description: "WhatsApp messages you send to clients.",
+    icon: IconMessage,
   },
   "google-calendar": {
     label: "Google Calendar",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   IconBrandStripe,
@@ -41,6 +41,12 @@ import {
   type PaymentMethod,
   type TimeSlot,
 } from "@/schemas/settingSchema";
+import {
+  buildReviewRequestMessage,
+  DEFAULT_REVIEW_REQUEST_TEMPLATE,
+  REVIEW_REQUEST_PLACEHOLDERS,
+  REVIEW_REQUEST_TEMPLATE_MAX_LENGTH,
+} from "@/utils/booking/messages";
 import { LONG_DISTANCE_THRESHOLD_KM } from "@/utils/booking/travel";
 import type { SettingsCategory } from "@/utils/dashboardShell";
 
@@ -68,6 +74,7 @@ export type SettingsItem = {
     terms_and_conditions: string;
   };
   time_slots: TimeSlot[];
+  messages: { review_request?: string };
   max_booking_year?: number;
 };
 
@@ -95,6 +102,7 @@ type SectionKey =
   | "payment"
   | "invoice"
   | "time_slots"
+  | "messages"
   | "payouts";
 
 type StripeSetupPhase = "verifying" | "incomplete" | null;
@@ -194,12 +202,14 @@ export function SettingsManager({
   initialSettings,
   isStripeConnected,
   hasStripeAccount,
+  freelancerName,
   onChargeByChange,
 }: {
   category: SettingsCategory | null;
   initialSettings: SettingsItem;
   isStripeConnected: boolean;
   hasStripeAccount: boolean;
+  freelancerName: string;
   onChargeByChange?: (chargeBy: SettingsItem["charge_by"]) => void;
 }) {
   const [settings, setSettings] = useState(initialSettings);
@@ -250,6 +260,11 @@ export function SettingsManager({
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(
     initialSettings.time_slots
   );
+  const [reviewTemplate, setReviewTemplate] = useState(
+    initialSettings.messages?.review_request?.trim() ||
+      DEFAULT_REVIEW_REQUEST_TEMPLATE
+  );
+  const reviewTemplateRef = useRef<HTMLTextAreaElement>(null);
 
   const [savingSection, setSavingSection] = useState<SectionKey | null>(null);
   const [sectionError, setSectionError] = useState<Partial<Record<SectionKey, string>>>({});
@@ -329,6 +344,9 @@ export function SettingsManager({
     setCompanyLogo(next.invoice.company_logo ?? "");
     setTerms(next.invoice.terms_and_conditions);
     setTimeSlots(next.time_slots);
+    setReviewTemplate(
+      next.messages?.review_request?.trim() || DEFAULT_REVIEW_REQUEST_TEMPLATE
+    );
   }
 
   async function patchSettings(
@@ -573,6 +591,40 @@ export function SettingsManager({
     }
 
     await patchSettings("time_slots", { time_slots: timeSlots });
+  }
+
+  async function saveMessages() {
+    const template = reviewTemplate.trim();
+    if (template.length > REVIEW_REQUEST_TEMPLATE_MAX_LENGTH) {
+      setSectionError((current) => ({
+        ...current,
+        messages: `Keep the message under ${REVIEW_REQUEST_TEMPLATE_MAX_LENGTH} characters.`,
+      }));
+      return;
+    }
+
+    const saved = await patchSettings("messages", {
+      messages: {
+        review_request:
+          template === DEFAULT_REVIEW_REQUEST_TEMPLATE ? "" : template,
+      },
+    });
+    if (saved) router.refresh();
+  }
+
+  function insertPlaceholder(token: string) {
+    const textarea = reviewTemplateRef.current;
+    const start = textarea?.selectionStart ?? reviewTemplate.length;
+    const end = textarea?.selectionEnd ?? reviewTemplate.length;
+    setReviewTemplate(
+      (current) => current.slice(0, start) + token + current.slice(end)
+    );
+    requestAnimationFrame(() => {
+      if (!textarea) return;
+      textarea.focus();
+      const caret = start + token.length;
+      textarea.setSelectionRange(caret, caret);
+    });
   }
 
   async function handleStripeConnect() {
@@ -935,6 +987,72 @@ export function SettingsManager({
               onChange={(event) => setTerms(event.target.value)}
               aria-label="Terms and conditions"
             />
+          </div>
+        </SettingsSection>
+      </SettingsPanel>
+    );
+  }
+
+  if (category === "messages") {
+    const isDefault = reviewTemplate.trim() === DEFAULT_REVIEW_REQUEST_TEMPLATE;
+    const preview = buildReviewRequestMessage({
+      clientName: "Aisyah Rahman",
+      freelancerName,
+      reviewUrl: "https://bridalync.com/you/review/…",
+      template: reviewTemplate,
+    });
+
+    return (
+      <SettingsPanel
+        error={sectionError.messages}
+        success={sectionSuccess.messages}
+        saving={savingSection === "messages"}
+        onSave={saveMessages}
+      >
+        <SettingsSection title="Leave review">
+          <div className={settingsCardClassName}>
+            <p className="text-xs text-muted-foreground">
+              Sent on WhatsApp when you tap Leave Review on a completed booking.
+            </p>
+            <Textarea
+              ref={reviewTemplateRef}
+              className={textareaClassName}
+              value={reviewTemplate}
+              maxLength={REVIEW_REQUEST_TEMPLATE_MAX_LENGTH}
+              onChange={(event) => setReviewTemplate(event.target.value)}
+              aria-label="Leave review message"
+            />
+            <div className="flex flex-wrap gap-2">
+              {REVIEW_REQUEST_PLACEHOLDERS.map(({ token, description }) => (
+                <button
+                  key={token}
+                  type="button"
+                  title={description}
+                  onClick={() => insertPlaceholder(token)}
+                  className="rounded-full border border-zinc-900/10 bg-white/40 px-2.5 py-1 font-mono text-xs backdrop-blur-sm hover:bg-white/60 dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/15"
+                >
+                  {token}
+                </button>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Tap a placeholder to insert it. If you leave out {"{review_link}"},
+              the link is added at the end.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="self-start"
+              disabled={isDefault}
+              onClick={() => setReviewTemplate(DEFAULT_REVIEW_REQUEST_TEMPLATE)}
+            >
+              Reset to default
+            </Button>
+          </div>
+        </SettingsSection>
+        <SettingsSection title="Preview">
+          <div className={settingsCardClassName}>
+            <p className="text-sm break-words whitespace-pre-wrap">{preview}</p>
           </div>
         </SettingsSection>
       </SettingsPanel>

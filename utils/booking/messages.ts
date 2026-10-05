@@ -17,18 +17,46 @@ export function buildWhatsAppUrl(
   return `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
 }
 
+export const REVIEW_REQUEST_PLACEHOLDERS = [
+  { token: "{first_name}", description: "Client's first name" },
+  { token: "{client_name}", description: "Client's full name" },
+  { token: "{business_name}", description: "Your name" },
+  { token: "{review_link}", description: "Review page link" },
+] as const;
+
+export const REVIEW_LINK_PLACEHOLDER = "{review_link}";
+
+export const DEFAULT_REVIEW_REQUEST_TEMPLATE = [
+  "Hi {first_name}, thank you so much for hiring me on your big day!",
+  "",
+  "Kalau ada masa, boleh tak share review kat sini:",
+  REVIEW_LINK_PLACEHOLDER,
+].join("\n");
+
+export const REVIEW_REQUEST_TEMPLATE_MAX_LENGTH = 1000;
+
+/** Blank template = default. The review link is appended when the template omits it. */
 export function buildReviewRequestMessage(input: {
   clientName: string;
   freelancerName: string;
   reviewUrl: string;
+  template?: string | null;
 }) {
-  const firstName = input.clientName.trim().split(/\s+/)[0] || "there";
-  return [
-    `Hi ${firstName}, thank you so much for hiring me on your big day!`,
-    "",
-    `Kalau ada masa, boleh tak share review kat sini:`,
-    input.reviewUrl,
-  ].join("\n");
+  const template = input.template?.trim() || DEFAULT_REVIEW_REQUEST_TEMPLATE;
+  const withLink = template.includes(REVIEW_LINK_PLACEHOLDER)
+    ? template
+    : `${template}\n\n${REVIEW_LINK_PLACEHOLDER}`;
+  const clientName = input.clientName.trim();
+  const values: Record<string, string> = {
+    "{first_name}": clientName.split(/\s+/)[0] || "there",
+    "{client_name}": clientName || "there",
+    "{business_name}": input.freelancerName,
+    [REVIEW_LINK_PLACEHOLDER]: input.reviewUrl,
+  };
+  return withLink.replace(
+    /\{(first_name|client_name|business_name|review_link)\}/g,
+    (token) => values[token] ?? token
+  );
 }
 
 export function buildBalanceReminderMessage(input: {

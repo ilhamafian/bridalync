@@ -85,6 +85,11 @@ export const invoiceSettingSchema = z.object({
   company_logo: z.string().optional(),
 });
 
+export const messageSettingSchema = z.object({
+  /** WhatsApp "Leave Review" template; blank/unset = `DEFAULT_REVIEW_REQUEST_TEMPLATE`. */
+  review_request: z.string().max(1000).optional(),
+});
+
 export const timeSlotSchema = z
   .object({
     startTime: z.string().regex(hhmm, "Expected HH:mm"),
@@ -133,6 +138,7 @@ export const settingSchema = z.object({
   payment: paymentSettingSchema.default(() => paymentSettingSchema.parse({})),
   invoice: invoiceSettingSchema.default(() => invoiceSettingSchema.parse({})),
   time_slots: timeSlotSettingSchema,
+  messages: messageSettingSchema.optional(),
   /** Legacy: highest calendar year clients may book. Superseded by `booking_until`. */
   max_booking_year: z.number().int().optional(),
   /** Last date (YYYY-MM-DD, inclusive) clients may book. Unset = 31 Dec of `max_booking_year`. */
@@ -154,6 +160,7 @@ export const settingUpdateSchema = z.object({
   payment: paymentSettingSchema.partial().optional(),
   invoice: invoiceSettingSchema.partial().optional(),
   time_slots: z.array(timeSlotSchema).optional(),
+  messages: messageSettingSchema.partial().optional(),
   max_booking_year: z.number().int().optional(),
   booking_until: bookingUntilSchema.optional(),
 });
@@ -170,3 +177,4 @@ export type PublicSetting = z.infer<typeof publicSettingSchema>;
 export type TravelSetting = z.infer<typeof travelSettingSchema>;
 export type PaymentSetting = z.infer<typeof paymentSettingSchema>;
 export type InvoiceSetting = z.infer<typeof invoiceSettingSchema>;
+export type MessageSetting = z.infer<typeof messageSettingSchema>;

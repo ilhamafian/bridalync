@@ -68,6 +68,7 @@ export function SettingsCategoryPage({
             initialSettings={settings.initialSettings}
             isStripeConnected={settings.isStripeConnected}
             hasStripeAccount={settings.hasStripeAccount}
+            freelancerName={settings.freelancerName}
             onChargeByChange={setChargeBy}
           />
           {category === "google-calendar" ? <GoogleCalendarImport /> : null}

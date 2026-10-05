@@ -44,6 +44,7 @@ export const SETTINGS_CATEGORIES = [
   "travel-fee",
   "payment-method",
   "invoice",
+  "messages",
   "google-calendar",
   "theme",
   "notifications",
@@ -82,6 +83,8 @@ export type DashboardData = {
     initialSettings: SettingsItem;
     isStripeConnected: boolean;
     hasStripeAccount: boolean;
+    /** Name used for `{business_name}` in message templates. */
+    freelancerName: string;
   };
   profile: {
     initialProfile: ProfileItem;
