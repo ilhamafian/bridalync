@@ -503,7 +503,7 @@ export default function AuthPage() {
         {!isAlternateStep && (
         <>
         <div className="flex w-full flex-col gap-3">
-          <Button
+          {/* <Button
             type="button"
             variant="outline"
             size="lg"
@@ -511,7 +511,7 @@ export default function AuthPage() {
           >
             <AppleIcon />
             Continue with Apple
-          </Button>
+          </Button> */}
 
           <Button
             type="button"
