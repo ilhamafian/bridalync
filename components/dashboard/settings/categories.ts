@@ -10,6 +10,7 @@ import {
   IconPalette,
   IconSparkles,
   IconTag,
+  IconUserCircle,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -19,7 +20,14 @@ import type { StyleTerms } from "@/utils/styleTerms";
 export const SETTINGS_GROUPS: { title: string; categories: SettingsCategory[] }[] = [
   {
     title: "Business",
-    categories: ["pricing-model", "events", "time-slots", "travel-fee", "messages"],
+    categories: [
+      "pricing-model",
+      "events",
+      "time-slots",
+      "travel-fee",
+      "client-info",
+      "messages",
+    ],
   },
   { title: "Payments", categories: ["payment-method", "invoice"] },
   { title: "App", categories: ["google-calendar", "theme", "notifications"] },
@@ -49,6 +57,11 @@ export const SETTINGS_CATEGORY_META: Record<
     label: "Travel fee",
     description: "Charge for travel by distance or by state.",
     icon: IconCar,
+  },
+  "client-info": {
+    label: "Client information",
+    description: "What clients fill in on the final details step of booking.",
+    icon: IconUserCircle,
   },
   "payment-method": {
     label: "Payment method",

@@ -114,6 +114,16 @@ export const ms = {
   phoneNumber: "Nombor telefon",
   email: "E-mel",
   emailPlaceholder: "emel@anda.com",
+  instagramUsername: "Nama pengguna Instagram",
+  instagramPlaceholder: "namapengguna",
+  invalidInstagram: "Masukkan nama pengguna Instagram yang sah.",
+  optionalLabel: "Pilihan",
+  typeYourAnswer: "Taip jawapan anda",
+  moodboard: "Moodboard",
+  moodboardHelper: "Kongsi sehingga {max} gambar atau PDF inspirasi.",
+  addFiles: "Tambah gambar atau PDF",
+  removePhoto: "Buang fail {index}",
+  moodboardPdfTooLarge: "Saiz PDF mestilah {size} MB atau kurang.",
 
   // Review
   reviewBookingTitle: "Semak tempahan anda",

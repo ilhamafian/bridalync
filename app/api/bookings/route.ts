@@ -8,6 +8,7 @@ import { createBookingRequestSchema } from "@/schemas/bookingSchema";
 import { paymentSettingSchema, hasManualTransferDetails } from "@/schemas/settingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { assertSessionsAvailable } from "@/utils/booking/availability.server";
+import { resolveClientDetails } from "@/utils/booking/clientInfo";
 import {
   resolveBookingQuotation,
   resolveFreelancerForBooking,
@@ -130,6 +131,22 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    let clientDetails: ReturnType<typeof resolveClientDetails>;
+    try {
+      clientDetails = resolveClientDetails(
+        settings?.client_info,
+        data.clientDetails
+      );
+    } catch (error) {
+      return createResponse(
+        {
+          error:
+            error instanceof Error ? error.message : "Check your details and try again.",
+        },
+        400
+      );
+    }
+
     try {
       await assertSessionsAvailable(freelancer.userId, data.sessions, {
         requireListedSlots: true,
@@ -152,6 +169,7 @@ export async function POST(req: NextRequest) {
       freelancerUsername: data.freelancerUsername.toLowerCase(),
       freelancerUserId: freelancer.userId,
       contact: data.contact,
+      ...(clientDetails ? { clientDetails } : {}),
       packageIds: data.packageIds,
       packageNames,
       dayMode,

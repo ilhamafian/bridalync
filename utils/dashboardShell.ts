@@ -42,6 +42,7 @@ export const SETTINGS_CATEGORIES = [
   "events",
   "time-slots",
   "travel-fee",
+  "client-info",
   "payment-method",
   "invoice",
   "messages",

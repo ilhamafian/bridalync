@@ -305,6 +305,7 @@ export async function loadDashboardData(
         },
         time_slots: timeSlots,
         messages: { review_request: settings.messages?.review_request ?? "" },
+        client_info: settings.client_info ?? {},
         max_booking_year: settings.max_booking_year,
       },
       freelancerName,

@@ -29,6 +29,7 @@ function serializeSetting(setting: WithId<Setting>) {
     time_slots: setting.time_slots,
     messages: setting.messages ?? {},
     show_add_on_prices: setting.show_add_on_prices ?? true,
+    client_info: setting.client_info ?? {},
     max_booking_year: setting.max_booking_year,
     booking_until: setting.booking_until,
     created_at: setting.created_at,
@@ -90,6 +91,13 @@ function mergeSettingsUpdate(
 
   if (patch.show_add_on_prices !== undefined) {
     update.show_add_on_prices = patch.show_add_on_prices;
+  }
+
+  if (patch.client_info !== undefined) {
+    update.client_info = {
+      ...existing.client_info,
+      ...patch.client_info,
+    };
   }
 
   if (patch.max_booking_year !== undefined) {
@@ -210,6 +218,11 @@ export async function PATCH(req: NextRequest) {
         { error: "Booking period can't end before today." },
         400
       );
+    }
+
+    const questionIds = parsed.data.client_info?.questions?.map((q) => q.id) ?? [];
+    if (new Set(questionIds).size !== questionIds.length) {
+      return createResponse({ error: "Each question needs a unique id." }, 400);
     }
 
     const update = mergeSettingsUpdate(existing, parsed.data);

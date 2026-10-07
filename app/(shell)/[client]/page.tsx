@@ -2,6 +2,11 @@
 
 import { BookingAddOnPicker } from "@/components/BookingAddOnPicker";
 import { BookingContactForm } from "@/components/BookingContactForm";
+import {
+  BookingClientInfoForm,
+  type MoodboardPhoto,
+} from "@/components/booking/BookingClientInfoForm";
+import { isClientInfoComplete } from "@/utils/booking/clientInfo";
 import { BookingQuotation } from "@/components/BookingQuotation";
 import {
   BookingPackagePicker,
@@ -657,6 +662,9 @@ export default function ClientPage() {
   );
   const [readyBy, setReadyBy] = useState("");
   const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
+  const [instagram, setInstagram] = useState("");
+  const [clientAnswers, setClientAnswers] = useState<Record<string, string>>({});
+  const [moodboard, setMoodboard] = useState<MoodboardPhoto[]>([]);
   const [styleCategoryBySessionKey, setStyleCategoryBySessionKey] = useState<
     Record<string, string | null>
   >({});
@@ -1032,8 +1040,11 @@ export default function ClientPage() {
     }
   }, [mustPayFull, paymentOption]);
 
+  const clientInfo = settings?.client_info;
   const contactDetailsValid =
-    contact.name.trim().length > 0 && contact.email.trim().length > 0;
+    contact.name.trim().length > 0 &&
+    contact.email.trim().length > 0 &&
+    isClientInfoComplete(clientInfo, { instagram, answers: clientAnswers });
 
   const fetchClient = async () => {
     setLoading(true);
@@ -1434,6 +1445,26 @@ export default function ClientPage() {
     }
   }
 
+  /** Sequential so the server appends each URL; a failed photo doesn't block the booking. */
+  async function uploadMoodboard(bookingId: string) {
+    for (const photo of moodboard) {
+      try {
+        const formData = new FormData();
+        formData.append("file", photo.file);
+        formData.append("client", client);
+        const response = await fetch(
+          `/api/bookings/${encodeURIComponent(bookingId)}/moodboard`,
+          { method: "POST", body: formData }
+        );
+        if (!response.ok) {
+          console.error("Moodboard upload failed:", await response.text());
+        }
+      } catch (error) {
+        console.error("Moodboard upload failed:", error);
+      }
+    }
+  }
+
   async function handlePay(receipt?: File | null) {
     if (isPaying || !selectedPackageId || !allSessionsScheduled) {
       return;
@@ -1455,6 +1486,12 @@ export default function ClientPage() {
         freelancerUsername: client,
         intent: "booking",
         contact,
+        clientDetails: {
+          instagram: instagram.trim() || undefined,
+          answers: Object.entries(clientAnswers)
+            .filter(([, answer]) => answer.trim())
+            .map(([questionId, answer]) => ({ questionId, answer })),
+        },
         packageIds: [selectedPackageId],
         addOns: selectedAddOnItems,
         sessions: sessions.map((session) => {
@@ -1533,6 +1570,10 @@ export default function ClientPage() {
 
       if (!bookingId) {
         throw new Error(t.couldNotCreateBooking);
+      }
+
+      if (clientInfo?.moodboard) {
+        await uploadMoodboard(bookingId);
       }
 
       const requiresCheckout =
@@ -2127,6 +2168,15 @@ export default function ClientPage() {
             />
           <div className="flex w-full flex-col items-end gap-4">
             <BookingContactForm value={contact} onChange={setContact} />
+            <BookingClientInfoForm
+              clientInfo={clientInfo}
+              instagram={instagram}
+              onInstagramChange={setInstagram}
+              answers={clientAnswers}
+              onAnswersChange={setClientAnswers}
+              moodboard={moodboard}
+              onMoodboardChange={setMoodboard}
+            />
             <Button
               size="lg"
               className="mt-2 bg-rose-800 text-white hover:bg-rose-800/90"

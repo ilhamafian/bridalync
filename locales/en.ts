@@ -118,6 +118,16 @@ export const en: Locale = {
   phoneNumber: "Phone number",
   email: "Email",
   emailPlaceholder: "your@email.com",
+  instagramUsername: "Instagram username",
+  instagramPlaceholder: "yourusername",
+  invalidInstagram: "Enter a valid Instagram username.",
+  optionalLabel: "Optional",
+  typeYourAnswer: "Type your answer",
+  moodboard: "Moodboard",
+  moodboardHelper: "Share up to {max} inspiration photos or PDFs.",
+  addFiles: "Add photos or PDFs",
+  removePhoto: "Remove file {index}",
+  moodboardPdfTooLarge: "PDFs must be {size} MB or smaller.",
 
   // Review
   reviewBookingTitle: "Review your booking",

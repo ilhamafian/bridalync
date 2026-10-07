@@ -8,6 +8,7 @@ export type SerializedBooking = {
   freelancerUsername: string;
   freelancerUserId: string;
   contact: Booking["contact"];
+  clientDetails?: Booking["clientDetails"];
   packageIds: string[];
   packageNames: string;
   dayMode?: Booking["dayMode"];
@@ -58,6 +59,7 @@ export function serializeBooking(
     freelancerUsername: booking.freelancerUsername,
     freelancerUserId: booking.freelancerUserId,
     contact: booking.contact,
+    ...(booking.clientDetails ? { clientDetails: booking.clientDetails } : {}),
     packageIds: booking.packageIds,
     packageNames: booking.packageNames,
     ...(booking.dayMode ? { dayMode: booking.dayMode } : {}),

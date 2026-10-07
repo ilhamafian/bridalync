@@ -1,11 +1,21 @@
 "use client";
 
 import { format } from "date-fns";
-import { IconMail, IconMapPin, IconPhone } from "@tabler/icons-react";
+import {
+  IconBrandInstagram,
+  IconFileTypePdf,
+  IconMail,
+  IconMapPin,
+  IconPhone,
+} from "@tabler/icons-react";
 
 import { InvoiceDownloadButton } from "@/components/dashboard/InvoiceDownloadButton";
 import { NavigateButton } from "@/components/dashboard/NavigateButton";
 import { cn } from "@/lib/utils";
+import {
+  buildInstagramProfileUrl,
+  isMoodboardPdfUrl,
+} from "@/utils/booking/clientInfo";
 import { formatRm } from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import { GOOGLE_IMPORT_CONTACT_EMAIL } from "@/utils/google/calendar";
@@ -118,6 +128,9 @@ export function BookingDetailsSections({
     booking.contact.country_code,
     booking.contact.mobile
   );
+  const clientDetails = booking.clientDetails;
+  const answers = clientDetails?.answers ?? [];
+  const moodboardUrls = clientDetails?.moodboardUrls ?? [];
 
   return (
     <>
@@ -147,8 +160,65 @@ export function BookingDetailsSections({
               {booking.contact.email}
             </a>
           ) : null}
+          {clientDetails?.instagram ? (
+            <a
+              href={buildInstagramProfileUrl(clientDetails.instagram)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 hover:text-foreground"
+            >
+              <IconBrandInstagram className="size-4 shrink-0" />@
+              {clientDetails.instagram}
+            </a>
+          ) : null}
         </div>
       </div>
+
+      {answers.length > 0 || moodboardUrls.length > 0 ? (
+        <div className={sectionClassName}>
+          <SectionLabel>Client details</SectionLabel>
+          {answers.length > 0 ? (
+            <dl className="mt-2 flex flex-col gap-2">
+              {answers.map((item) => (
+                <div key={item.questionId}>
+                  <dt className="text-muted-foreground">{item.title}</dt>
+                  <dd className="break-words whitespace-pre-wrap">{item.answer}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+          {moodboardUrls.length > 0 ? (
+            <div className="mt-3">
+              <p className="text-muted-foreground">Moodboard</p>
+              <div className="mt-1.5 grid grid-cols-3 gap-2">
+                {moodboardUrls.map((url, index) => (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block aspect-square overflow-hidden rounded-md bg-muted"
+                  >
+                    {isMoodboardPdfUrl(url) ? (
+                      <span className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                        <IconFileTypePdf className="size-7 text-rose-900 dark:text-rose-400" />
+                        <span className="text-xs">PDF {index + 1}</span>
+                      </span>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={url}
+                        alt={`Moodboard photo ${index + 1}`}
+                        className="size-full object-cover"
+                      />
+                    )}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className={sectionClassName}>
         <SectionLabel>Sessions</SectionLabel>

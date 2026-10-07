@@ -48,6 +48,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
+import type { ClientInfoSetting } from "@/schemas/clientInfoSchema";
 import {
   getDefaultTimeSlots,
   hasManualTransferDetails,
@@ -105,6 +106,7 @@ export type SettingsItem = {
   };
   time_slots: TimeSlot[];
   messages: { review_request?: string };
+  client_info: ClientInfoSetting;
   max_booking_year?: number;
 };
 

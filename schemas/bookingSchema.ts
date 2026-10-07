@@ -1,6 +1,10 @@
 import { z } from "zod";
 
 import { addressSchema } from "@/schemas/addressSchema";
+import {
+  bookingClientDetailsSchema,
+  clientDetailsInputSchema,
+} from "@/schemas/clientInfoSchema";
 import { packageDayModeSchema } from "@/schemas/packageSchema";
 import { sessionSchema } from "@/schemas/sessionSchema";
 import {
@@ -61,6 +65,8 @@ export const bookingSchema = z.object({
   freelancerUsername: z.string(),
   freelancerUserId: z.string(),
   contact: bookingContactSchema,
+  /** Instagram, moodboard and requested info from the client booking wizard. */
+  clientDetails: bookingClientDetailsSchema.optional(),
   packageIds: z.array(z.string()).default([]),
   packageNames: z.string(),
   /**
@@ -132,6 +138,7 @@ export const createBookingRequestSchema = z.object({
   freelancerUsername: z.string().min(1),
   intent: z.enum(["booking", "enquiry"]).default("booking"),
   contact: bookingContactSchema,
+  clientDetails: clientDetailsInputSchema.optional(),
   packageIds: z.array(z.string()).min(1),
   addOns: z.array(bookingLineItemInputSchema).default([]),
   /** Clients must give every session a ready-by time. */
