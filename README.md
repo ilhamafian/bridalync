@@ -65,6 +65,8 @@ Early development. The app currently includes a calendar date picker as the firs
 | `NEXT_PUBLIC_VAPID_PUBLIC_KEY` | Yes (PWA push) | Web Push VAPID public key |
 | `VAPID_PRIVATE_KEY` | Yes (PWA push) | Web Push VAPID private key |
 | `VAPID_SUBJECT` | No | `mailto:` or `https:` contact for VAPID (default `mailto:hello@bridalync.app`) |
+| `WHATSAPP_VERIFY_TOKEN` | Yes (WhatsApp) | Verify token entered in the Meta app's WhatsApp webhook config (callback `{APP_URL}/api/whatsapp/webhook`) |
+| `WHATSAPP_APP_SECRET` | No | Meta app secret; when set, `POST` webhooks must carry a valid `X-Hub-Signature-256` |
 | `CRON_SECRET` | Yes (reminders) | Bearer token for `/api/cron/booking-reminders` and `/api/cron/balance-reminders` (Vercel Cron uses this automatically) |
 
 Generate VAPID keys with:
