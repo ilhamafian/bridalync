@@ -38,6 +38,7 @@ import {
   buildWhatsAppUrl,
 } from "@/utils/booking/messages";
 import { getEffectiveBookingUntil } from "@/utils/booking/bookingWindow";
+import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
 import { toHotDateItem } from "@/utils/booking/hotDates";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import { getRecentActivity } from "@/utils/activity";
@@ -64,8 +65,11 @@ function serializePackage(pkg: WithId<Package>): PackageItem {
   return {
     _id: toIdString(pkg._id),
     name: pkg.name,
+    description: pkg.description,
     price: pkg.price,
     deposit: pkg.deposit,
+    sessions: pkg.sessions,
+    day_mode: pkg.day_mode,
     order: pkg.order,
   };
 }
@@ -226,6 +230,8 @@ export async function loadDashboardData(
         name: pkg.name,
         price: pkg.price ?? 0,
         deposit: pkg.deposit ?? 0,
+        sessions: getEventSessions(pkg),
+        dayMode: getEventDayMode(pkg),
       })),
       styles: styles.map((style) => ({
         _id: toIdString(style._id),

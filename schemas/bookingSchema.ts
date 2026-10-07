@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { addressSchema } from "@/schemas/addressSchema";
+import { packageDayModeSchema } from "@/schemas/packageSchema";
 import { sessionSchema } from "@/schemas/sessionSchema";
 import {
   type ManualTransferDetails,
@@ -61,6 +62,11 @@ export const bookingSchema = z.object({
   contact: bookingContactSchema,
   packageIds: z.array(z.string()).default([]),
   packageNames: z.string(),
+  /**
+   * The event's day rule when booked. Missing = booked before multi-session events
+   * (several events, one session each, multi-slot sessions); those keep their old rules when edited.
+   */
+  dayMode: packageDayModeSchema.optional(),
   addOnIds: z.array(z.string()),
   sessions: z.array(bookingSessionSchema),
   invoice: quotationSummarySchema,

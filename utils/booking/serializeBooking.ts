@@ -10,6 +10,7 @@ export type SerializedBooking = {
   contact: Booking["contact"];
   packageIds: string[];
   packageNames: string;
+  dayMode?: Booking["dayMode"];
   addOnIds: string[];
   sessions: Array<{
     status: Booking["sessions"][number]["status"];
@@ -58,6 +59,7 @@ export function serializeBooking(
     contact: booking.contact,
     packageIds: booking.packageIds,
     packageNames: booking.packageNames,
+    ...(booking.dayMode ? { dayMode: booking.dayMode } : {}),
     addOnIds: booking.addOnIds,
     sessions: booking.sessions.map((session) => ({
       ...session,

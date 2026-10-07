@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   IconGift,
@@ -38,14 +39,20 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
+import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
 import { formatRm } from "@/utils/booking/pricing";
 
 export type PackageItem = {
   _id: string;
   name: string;
+  description?: string;
   price?: number;
   deposit?: number;
+  sessions?: PackageSession[];
+  day_mode?: PackageDayMode;
   order: number;
 };
 
@@ -81,10 +88,18 @@ type VariantRow = {
   image_url: string;
 };
 
+type SessionRow = {
+  id: string;
+  name: string;
+};
+
 type PackageFormState = {
   name: string;
+  description: string;
   price: string;
   deposit: string;
+  sessions: SessionRow[];
+  dayMode: PackageDayMode;
 };
 
 type StyleFormState = {
@@ -102,6 +117,11 @@ type DeleteTarget = {
   id: string;
   name: string;
 };
+
+const DAY_MODE_OPTIONS: { value: PackageDayMode; label: string }[] = [
+  { value: "same_day", label: "Same day" },
+  { value: "different_day", label: "Different days" },
+];
 
 const DELETE_LABELS: Record<SheetType, string> = {
   package: "package",
@@ -134,17 +154,34 @@ function parseRequiredNumber(value: string) {
 function emptyPackageForm(): PackageFormState {
   return {
     name: "",
+    description: "",
     price: "",
     deposit: "",
+    sessions: [{ id: createRowId(), name: "" }],
+    dayMode: "same_day",
   };
 }
 
 function packageToForm(pkg: PackageItem): PackageFormState {
   return {
     name: pkg.name,
+    description: pkg.description ?? "",
     price: pkg.price?.toString() ?? "",
     deposit: pkg.deposit?.toString() ?? "",
+    sessions: getEventSessions(pkg).map((session) => ({
+      id: createRowId(),
+      name: session.name,
+    })),
+    dayMode: getEventDayMode(pkg),
   };
+}
+
+function describeEventSessions(pkg: PackageItem) {
+  const sessions = getEventSessions(pkg);
+  if (sessions.length === 1) return sessions[0].name;
+  const days =
+    getEventDayMode(pkg) === "same_day" ? "Same day" : "Different days";
+  return `${sessions.map((session) => session.name).join(", ")} · ${days}`;
 }
 
 function emptyStyleForm(): StyleFormState {
@@ -219,6 +256,7 @@ function CatalogItemCard({
   icon,
   title,
   description,
+  footer,
   onEdit,
   onDelete,
   children,
@@ -226,6 +264,7 @@ function CatalogItemCard({
   icon: Icon;
   title: string;
   description: string;
+  footer?: string;
   onEdit: () => void;
   onDelete: () => void;
   children?: React.ReactNode;
@@ -234,7 +273,12 @@ function CatalogItemCard({
     <div className={cn(glassCardClassName, "overflow-hidden")}>
       <div className="flex items-center gap-3 py-3 pr-2 pl-4">
         <IconBadge icon={icon} />
-        <RowText title={title} description={description} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <RowText title={title} description={description} />
+          {footer ? (
+            <p className="truncate text-xs text-muted-foreground">{footer}</p>
+          ) : null}
+        </div>
         <div className="flex shrink-0 gap-1">
           <Button
             variant="ghost"
@@ -270,6 +314,7 @@ export function PackagesManager({
   initialAddOns: AddOnItem[];
   chargeBy: "package" | "style";
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("packages");
   const [packages, setPackages] = useState(initialPackages);
   const [styles, setStyles] = useState(initialStyles);
@@ -448,6 +493,7 @@ export function PackagesManager({
       setPackages((current) =>
         current.filter((pkg) => pkg._id !== deleteTarget.id)
       );
+      router.refresh();
     } else if (deleteTarget.type === "style") {
       setStyles((current) =>
         current.filter((style) => style._id !== deleteTarget.id)
@@ -462,15 +508,31 @@ export function PackagesManager({
   }
 
   async function handleSavePackage() {
-    if (!packageForm.name.trim()) {
+    const name = packageForm.name.trim();
+    if (!name) {
       setError("Event name is required.");
       return;
     }
 
+    const sessionNames = packageForm.sessions.map((session) => session.name.trim());
+    if (sessionNames.length === 1 && !sessionNames[0]) {
+      sessionNames[0] = name;
+    }
+    if (sessionNames.some((sessionName) => !sessionName)) {
+      setError("Name every session.");
+      return;
+    }
+
     const payload = {
-      name: packageForm.name.trim(),
+      name,
+      description: packageForm.description.trim(),
       price: parseOptionalNumber(packageForm.price),
       deposit: parseOptionalNumber(packageForm.deposit),
+      sessions: sessionNames.map((sessionName, index) => ({
+        name: sessionName,
+        order: index,
+      })),
+      day_mode: packageForm.dayMode,
       order: editingPackageId
         ? packages.find((pkg) => pkg._id === editingPackageId)?.order ?? packages.length
         : packages.length,
@@ -505,6 +567,7 @@ export function PackagesManager({
         return [...current, saved].sort((a, b) => a.order - b.order);
       });
       setSheetOpen(false);
+      router.refresh();
     } finally {
       setSaving(false);
     }
@@ -709,6 +772,7 @@ export function PackagesManager({
                           ? ` · ${formatRm(pkg.deposit)} deposit`
                           : "")
                   }
+                  footer={describeEventSessions(pkg)}
                   onEdit={() => openEditPackage(pkg)}
                   onDelete={() =>
                     setDeleteTarget({
@@ -880,6 +944,140 @@ export function PackagesManager({
                   placeholder="Nikah & Sanding"
                 />
               </Field>
+
+              <Field label="Description (optional)">
+                <Textarea
+                  className="min-h-20 bg-background text-sm"
+                  value={packageForm.description}
+                  onChange={(event) =>
+                    setPackageForm((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                  placeholder="Same day"
+                />
+              </Field>
+
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <Label>Sessions</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setPackageForm((current) => ({
+                        ...current,
+                        sessions: [
+                          ...current.sessions,
+                          { id: createRowId(), name: "" },
+                        ],
+                      }))
+                    }
+                  >
+                    <IconPlus />
+                    Add session
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Clients book one time slot for each session.
+                </p>
+
+                <SortableList
+                  items={packageForm.sessions}
+                  getItemId={(session) => session.id}
+                  onReorder={(nextSessions) =>
+                    setPackageForm((current) => ({
+                      ...current,
+                      sessions: nextSessions,
+                    }))
+                  }
+                  className="gap-2"
+                  renderItem={(session, index) => (
+                    <div className="flex items-center gap-2">
+                      <Input
+                        className={inputClassName}
+                        value={session.name}
+                        onChange={(event) =>
+                          setPackageForm((current) => ({
+                            ...current,
+                            sessions: current.sessions.map((item) =>
+                              item.id === session.id
+                                ? { ...item, name: event.target.value }
+                                : item
+                            ),
+                          }))
+                        }
+                        placeholder={
+                          packageForm.sessions.length === 1
+                            ? packageForm.name.trim() || "Session name"
+                            : index === 0
+                              ? "Nikah"
+                              : index === 1
+                                ? "Sanding"
+                                : `Session ${index + 1}`
+                        }
+                        aria-label={`Session ${index + 1} name`}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon-sm"
+                        disabled={packageForm.sessions.length === 1}
+                        onClick={() =>
+                          setPackageForm((current) => ({
+                            ...current,
+                            sessions: current.sessions.filter(
+                              (item) => item.id !== session.id
+                            ),
+                          }))
+                        }
+                        aria-label={`Remove session ${index + 1}`}
+                      >
+                        <IconTrash />
+                      </Button>
+                    </div>
+                  )}
+                />
+
+                {packageForm.sessions.length > 1 ? (
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Sessions are on</Label>
+                    <div
+                      className="grid grid-cols-2 gap-2"
+                      role="radiogroup"
+                      aria-label="Sessions are on"
+                    >
+                      {DAY_MODE_OPTIONS.map((option) => {
+                        const selected = packageForm.dayMode === option.value;
+                        return (
+                          <Button
+                            key={option.value}
+                            type="button"
+                            role="radio"
+                            aria-checked={selected}
+                            variant={selected ? "default" : "outline"}
+                            onClick={() =>
+                              setPackageForm((current) => ({
+                                ...current,
+                                dayMode: option.value,
+                              }))
+                            }
+                          >
+                            {option.label}
+                          </Button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {packageForm.dayMode === "same_day"
+                        ? "Clients book every session on the same date."
+                        : "Clients book each session on a different date."}
+                    </p>
+                  </div>
+                ) : null}
+              </div>
 
               {chargeBy === "style" ? (
                 <p className="text-xs text-muted-foreground">

@@ -9,7 +9,6 @@ import { paymentSettingSchema, hasManualTransferDetails } from "@/schemas/settin
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { assertSessionsAvailable } from "@/utils/booking/availability.server";
 import {
-  mapSessionsForStorage,
   resolveBookingQuotation,
   resolveFreelancerForBooking,
 } from "@/utils/booking/createBooking";
@@ -143,13 +142,8 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: message }, 409);
     }
 
-    const {
-      invoice,
-      packageNames,
-      resolvedSessionStyles,
-      slotCountBySessionKey,
-      paymentOption,
-    } = await resolveBookingQuotation(freelancer.userId, data);
+    const { invoice, packageNames, sessions, dayMode, paymentOption } =
+      await resolveBookingQuotation(freelancer.userId, data);
 
     const isManualBooking =
       data.intent === "booking" && paymentMethod === "manual_transfer";
@@ -160,12 +154,9 @@ export async function POST(req: NextRequest) {
       contact: data.contact,
       packageIds: data.packageIds,
       packageNames,
+      dayMode,
       addOnIds: data.addOns.map((addOn) => addOn.id),
-      sessions: mapSessionsForStorage(
-        data,
-        resolvedSessionStyles,
-        slotCountBySessionKey
-      ),
+      sessions,
       invoice,
       paymentOption,
       status: data.intent === "booking" ? "pending" : "enquiry",

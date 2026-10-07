@@ -39,7 +39,7 @@ export const ms = {
 
   // Events / packages
   eventQuestion: "Majlis apa yang anda ingin tempah?",
-  eventHelper: "Pilih satu atau lebih pakej untuk tempahan awak.",
+  eventHelper: "Pilih satu majlis untuk tempahan awak.",
   loadingPackages: "Memuatkan pakej...",
   noPackagesAvailable: "Tiada pakej tersedia.",
   sessionCount: "{count} sesi",
@@ -49,9 +49,8 @@ export const ms = {
   allSessionsScheduled: "Semua sesi dijadualkan",
   sessionsScheduledCount: "{scheduled} daripada {total} sesi dijadualkan",
   availableSlots: "Slot tersedia",
-  multiSlotHint:
-    "Perlukan masa lebih? Pilih slot bersebelahan. Setiap slot tambahan dicaj harga sesi sekali lagi.",
-  slotsSelected: "{count} slot dipilih",
+  sameDayHint: "Semua sesi majlis ini pada hari yang sama.",
+  differentDayHint: "Setiap sesi majlis ini pada hari yang berbeza.",
   slotCount: "{count} slot berturut-turut",
   allSlotsBooked: "Semua slot masa telah ditempah pada tarikh ini.",
   yourBookings: "Tempahan anda",

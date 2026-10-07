@@ -46,10 +46,10 @@ import {
   type PublicBookedSlot,
 } from "@/utils/booking/availability";
 import {
-  countSessionSlots,
-  mergeSlots,
-  toggleConsecutiveSlot,
-} from "@/utils/booking/slots";
+  getEventDayMode,
+  getEventSessions,
+  isDateAllowedForEvent,
+} from "@/utils/booking/events";
 import {
   buildBlockedDateSet,
   isDateBlocked,
@@ -60,13 +60,14 @@ import {
 } from "@/utils/booking/bookingWindow";
 import {
   buildHotDatePriceMap,
-  getPackageHotDatePrice,
+  getEventHotDatePrice,
   getStyleHotDatePrice,
   resolveEffectivePrice,
   type HotDateLookup,
 } from "@/utils/booking/hotDates";
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
+import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
 import { Client } from "@/schemas/clientSchema";
 import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
@@ -373,17 +374,12 @@ function DraggableWhatsAppButton({ href }: { href: string }) {
 type ClientPackage = {
   _id?: unknown;
   name: string;
+  description?: string;
   price?: number;
   deposit?: number;
+  sessions?: PackageSession[];
+  day_mode?: PackageDayMode;
   order: number;
-};
-
-type SelectedPackage = {
-  id: string;
-  name: string;
-  order: number;
-  price: number;
-  deposit: number;
 };
 
 type StyleVariant = {
@@ -516,34 +512,10 @@ function toPackageOptions(packages: ClientPackage[]): PackageOption[] {
       id: normalizePackageId(pkg._id),
       name: pkg.name,
       price: pkg.price ?? 0,
+      description: pkg.description?.trim() || undefined,
+      sessionNames: getEventSessions(pkg).map((session) => session.name),
     }))
     .filter((pkg) => pkg.id.length > 0);
-}
-
-function toSelectedPackages(
-  packages: ClientPackage[],
-  selectedPackageIds: string[]
-): SelectedPackage[] {
-  const selectedSet = new Set(selectedPackageIds);
-
-  return sortPackages(packages)
-    .map((pkg) => ({
-      id: normalizePackageId(pkg._id),
-      name: pkg.name,
-      order: pkg.order,
-      price: pkg.price ?? 0,
-      deposit: pkg.deposit ?? 0,
-    }))
-    .filter((pkg) => pkg.id.length > 0 && selectedSet.has(pkg.id))
-    .map((pkg, index) => ({ ...pkg, order: index }));
-}
-
-function getNextPackageToSchedule(
-  packages: SelectedPackage[],
-  scheduled: SessionForm[]
-): SelectedPackage | null {
-  const scheduledPackageIds = new Set(scheduled.map((session) => session.packageId));
-  return packages.find((pkg) => !scheduledPackageIds.has(pkg.id)) ?? null;
 }
 
 function resolveStyleVariant(
@@ -635,7 +607,9 @@ export default function ClientPage() {
   const [bookedSlots, setBookedSlots] = useState<PublicBookedSlot[]>([]);
   const [hotDates, setHotDates] = useState<HotDateLookup[]>([]);
   const [blockedDates, setBlockedDates] = useState<string[]>([]);
-  const [selectedPackageIds, setSelectedPackageIds] = useState<string[]>([]);
+  const [selectedPackageId, setSelectedPackageId] = useState<string | null>(
+    null
+  );
   const [user, setUser] = useState<PublicProfile | null>(null);
   const publicReviews = usePublicReviews(client);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
@@ -645,7 +619,9 @@ export default function ClientPage() {
     Record<string, SessionRoadDistance>
   >({});
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedTimeSlots, setSelectedTimeSlots] = useState<TimeSlot[]>([]);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(
+    null
+  );
   const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
   const [styleCategoryBySessionKey, setStyleCategoryBySessionKey] = useState<
     Record<string, string | null>
@@ -666,14 +642,31 @@ export default function ClientPage() {
     [clientPackages]
   );
 
-  const selectedPackages = useMemo(
-    () => toSelectedPackages(clientPackages, selectedPackageIds),
-    [clientPackages, selectedPackageIds]
+  const selectedEvent = useMemo(
+    () =>
+      clientPackages.find(
+        (pkg) => normalizePackageId(pkg._id) === selectedPackageId
+      ) ?? null,
+    [clientPackages, selectedPackageId]
   );
 
-  const nextPackageToSchedule = useMemo(
-    () => getNextPackageToSchedule(selectedPackages, sessions),
-    [selectedPackages, sessions]
+  const eventSessions = useMemo(
+    () => (selectedEvent ? getEventSessions(selectedEvent) : []),
+    [selectedEvent]
+  );
+  const dayMode = selectedEvent ? getEventDayMode(selectedEvent) : "same_day";
+
+  const nextSessionToSchedule = useMemo(() => {
+    const scheduledOrders = new Set(sessions.map((session) => session.order));
+    return (
+      eventSessions.find((session) => !scheduledOrders.has(session.order)) ??
+      null
+    );
+  }, [eventSessions, sessions]);
+
+  const scheduledDates = useMemo(
+    () => sessions.map((session) => session.date),
+    [sessions]
   );
 
   const timeSlots = useMemo(() => settings?.time_slots ?? [], [settings]);
@@ -704,14 +697,12 @@ export default function ClientPage() {
   }, [bookingUntil]);
 
   const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null;
-  const selectedSpan =
-    selectedTimeSlots.length > 0 ? mergeSlots(selectedTimeSlots) : null;
   const isSlotSelected = (slot: TimeSlot) =>
-    selectedTimeSlots.some((item) => timeSlotsMatch(item, slot));
+    selectedTimeSlot !== null && timeSlotsMatch(selectedTimeSlot, slot);
   const selectionTaken =
     !selectedDate ||
-    !selectedSpan ||
-    isSlotTaken(selectedDate, selectedSpan, bookedSlots, sessions);
+    !selectedTimeSlot ||
+    isSlotTaken(selectedDate, selectedTimeSlot, bookedSlots, sessions);
 
   const stepOrder = useMemo(() => {
     const hasStyles = styles.length > 0 && settings?.charge_by === "style";
@@ -802,11 +793,10 @@ export default function ClientPage() {
           name: `${session.name} — ${variant.categoryName} — ${variant.name}`,
           price: resolveEffectivePrice(variant.price, overridePrice),
           deposit: variant.deposit,
-          slotCount: countSessionSlots(session.time_slot, timeSlots),
         };
       })
       .filter((style): style is NonNullable<typeof style> => style !== null);
-  }, [sessions, styleVariantBySessionKey, styles, hotDatePriceMap, timeSlots]);
+  }, [sessions, styleVariantBySessionKey, styles, hotDatePriceMap]);
 
   const allSessionsStyled =
     chargeBy !== "style" ||
@@ -851,23 +841,24 @@ export default function ClientPage() {
     () =>
       calculateBookingQuotation({
         chargeBy,
-        selectedPackages: selectedPackages.map((pkg) => {
-          const session = sessions.find(
-            (item) => item.packageId === pkg.id
-          );
-          const overridePrice = session
-            ? getPackageHotDatePrice(hotDatePriceMap, session.date, pkg.id)
-            : undefined;
-
-          return {
-            name: pkg.name,
-            price: resolveEffectivePrice(pkg.price, overridePrice),
-            deposit: chargeBy === "style" ? 0 : pkg.deposit,
-            slotCount: session
-              ? countSessionSlots(session.time_slot, timeSlots)
-              : 1,
-          };
-        }),
+        selectedPackages:
+          selectedEvent && selectedPackageId
+            ? [
+                {
+                  name: selectedEvent.name,
+                  price: resolveEffectivePrice(
+                    selectedEvent.price ?? 0,
+                    getEventHotDatePrice(
+                      hotDatePriceMap,
+                      scheduledDates,
+                      selectedPackageId
+                    )
+                  ),
+                  deposit:
+                    chargeBy === "style" ? 0 : (selectedEvent.deposit ?? 0),
+                },
+              ]
+            : [],
         selectedSessionStyles:
           chargeBy === "style" ? selectedSessionStyles : undefined,
         selectedAddOns: selectedAddOnItems.map((addOn) => ({
@@ -890,13 +881,14 @@ export default function ClientPage() {
     [
       settings,
       chargeBy,
-      selectedPackages,
+      selectedEvent,
+      selectedPackageId,
+      scheduledDates,
       selectedSessionStyles,
       selectedAddOnItems,
       sessions,
       distanceKmBySessionKey,
       hotDatePriceMap,
-      timeSlots,
     ]
   );
 
@@ -947,8 +939,8 @@ export default function ClientPage() {
       setBlockedDates(
         (data.blocked_dates as string[] | undefined) ?? []
       );
-      setSelectedPackageIds((current) =>
-        current.length > 0 ? current : packageOptions[0]?.id ? [packageOptions[0].id] : []
+      setSelectedPackageId(
+        (current) => current ?? packageOptions[0]?.id ?? null
       );
       setStyleCategoryBySessionKey({});
       setStyleVariantBySessionKey({});
@@ -966,19 +958,18 @@ export default function ClientPage() {
   }, [client]);
 
   useEffect(() => {
-    const selectedSet = new Set(selectedPackageIds);
     setSessions((current) =>
-      current.filter((session) => selectedSet.has(session.packageId))
+      current.filter((session) => session.packageId === selectedPackageId)
     );
     setSelectedDate(undefined);
-    setSelectedTimeSlots([]);
+    setSelectedTimeSlot(null);
     setSharedLocation(null);
     setSameLocationForAll(true);
     setStyleCategoryBySessionKey({});
     setStyleVariantBySessionKey({});
     setSelectedAddOnIds([]);
     setTermsAccepted(false);
-  }, [selectedPackageIds]);
+  }, [selectedPackageId]);
 
   useEffect(() => {
     // Keep session locations in sync whenever the shared picker is in use
@@ -1147,36 +1138,49 @@ export default function ClientPage() {
   }, [sessions, travelOrigin?.lat, travelOrigin?.lng]);
 
   function handleAddSession() {
-    if (!nextPackageToSchedule || !selectedDate || !selectedSpan) return;
+    if (
+      !nextSessionToSchedule ||
+      !selectedPackageId ||
+      !selectedDate ||
+      !selectedTimeSlot
+    ) {
+      return;
+    }
     if (isPastBookingWindow(selectedDate, bookingUntil)) {
       return;
     }
     if (isDateBlocked(selectedDate, blockedDateKeys)) {
       return;
     }
+    if (!isDateAllowedForEvent(dayMode, selectedDate, scheduledDates)) {
+      return;
+    }
     if (selectionTaken) {
       return;
     }
 
-    setSessions((current) => [
-      ...current,
+    const nextSessions: SessionForm[] = [
+      ...sessions,
       {
         client_key: crypto.randomUUID(),
-        status: "scheduled",
-        order: nextPackageToSchedule.order,
-        name: nextPackageToSchedule.name,
-        packageId: nextPackageToSchedule.id,
+        status: "scheduled" as const,
+        order: nextSessionToSchedule.order,
+        name: nextSessionToSchedule.name,
+        packageId: selectedPackageId,
         date: normalizeSessionDate(selectedDate),
-        time_slot: selectedSpan,
-        ...(selectedTimeSlots.length > 1
-          ? { slot_count: selectedTimeSlots.length }
-          : {}),
+        time_slot: selectedTimeSlot,
       },
-    ]);
-    setSelectedDate(undefined);
-    setSelectedTimeSlots([]);
+    ].sort((a, b) => a.order - b.order);
+    setSessions(nextSessions);
+    setSelectedTimeSlot(null);
+    // Same-day events: the remaining sessions can only go on this date.
+    setSelectedDate(
+      dayMode === "same_day" && nextSessions.length < eventSessions.length
+        ? selectedDate
+        : undefined
+    );
 
-    if (selectedPackageIds.length === 1) {
+    if (eventSessions.length === 1) {
       goToNextStep();
     }
   }
@@ -1197,11 +1201,10 @@ export default function ClientPage() {
     });
   }
 
-  const isSinglePackageSelection = selectedPackageIds.length === 1;
+  const isSingleSessionEvent = eventSessions.length === 1;
 
   const allSessionsScheduled =
-    selectedPackageIds.length > 0 &&
-    sessions.length === selectedPackageIds.length;
+    eventSessions.length > 0 && sessions.length === eventSessions.length;
 
   const allLocationsSet =
     sessions.length > 0 && sessions.every((session) => session.location);
@@ -1268,7 +1271,7 @@ export default function ClientPage() {
   }
 
   async function handlePay(receipt?: File | null) {
-    if (isPaying || selectedPackageIds.length === 0 || sessions.length === 0) {
+    if (isPaying || !selectedPackageId || !allSessionsScheduled) {
       return;
     }
 
@@ -1288,7 +1291,7 @@ export default function ClientPage() {
         freelancerUsername: client,
         intent: "booking",
         contact,
-        packageIds: selectedPackageIds,
+        packageIds: [selectedPackageId],
         addOns: selectedAddOnItems,
         sessions: sessions.map((session) => {
           const variantId = styleVariantBySessionKey[session.client_key];
@@ -1563,8 +1566,8 @@ export default function ClientPage() {
               <div className="mx-auto w-full max-w-xs px-2">
                 <BookingPackagePicker
                   packages={packages}
-                  selectedPackageIds={selectedPackageIds}
-                  onPackageChange={setSelectedPackageIds}
+                  selectedPackageId={selectedPackageId}
+                  onPackageChange={setSelectedPackageId}
                   showPrice={chargeBy === "package"}
                 />
               </div>
@@ -1572,7 +1575,7 @@ export default function ClientPage() {
             <Button
               size="lg"
               className="mt-4 bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={selectedPackageIds.length === 0}
+              disabled={!selectedEvent}
               onClick={goToNextStep}
             >
               {t.next}
@@ -1587,24 +1590,26 @@ export default function ClientPage() {
           <h1
             className={cn(
               "max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50",
-              isSinglePackageSelection ? "mb-6" : "mb-2"
+              isSingleSessionEvent ? "mb-6" : "mb-2"
             )}
           >
-            {nextPackageToSchedule
-              ? format(t.bookSession, { sessionName: nextPackageToSchedule.name })
+            {nextSessionToSchedule
+              ? format(t.bookSession, { sessionName: nextSessionToSchedule.name })
               : t.allSessionsScheduled}
           </h1>
-          {!isSinglePackageSelection && (
+          {!isSingleSessionEvent && (
             <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
               {format(t.sessionsScheduledCount, {
                 scheduled: sessions.length,
-                total: selectedPackageIds.length,
+                total: eventSessions.length,
               })}
+              {" · "}
+              {dayMode === "same_day" ? t.sameDayHint : t.differentDayHint}
             </p>
           )}
 
           <div className="flex w-full flex-col items-end gap-4">
-            {nextPackageToSchedule && (
+            {nextSessionToSchedule && (
               <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
                 <CardContent className="flex flex-col items-center gap-4 pt-1">
                   <Calendar
@@ -1613,13 +1618,15 @@ export default function ClientPage() {
                     selected={selectedDate}
                     onSelect={(date) => {
                       setSelectedDate(date);
-                      setSelectedTimeSlots([]);
+                      setSelectedTimeSlot(null);
                     }}
                     disabled={[
                       { before: new Date() },
                       (date) => isDateFullyBooked(date),
                       (date) => isDateBlocked(date, blockedDateKeys),
                       (date) => isPastBookingWindow(date, bookingUntil),
+                      (date) =>
+                        !isDateAllowedForEvent(dayMode, date, scheduledDates),
                     ]}
                     endMonth={bookingCalendarEndMonth}
                     captionLayout="dropdown"
@@ -1631,16 +1638,9 @@ export default function ClientPage() {
                   />
                 </CardContent>
                 <CardFooter className="w-full flex-col items-stretch gap-3 border-t border-white/40 bg-transparent dark:border-white/15">
-                  <div className="flex flex-col gap-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {t.availableSlots}
-                    </p>
-                    {timeSlots.length > 1 && (
-                      <p className="text-xs text-muted-foreground">
-                        {t.multiSlotHint}
-                      </p>
-                    )}
-                  </div>
+                  <p className="text-sm font-medium text-foreground">
+                    {t.availableSlots}
+                  </p>
                   <div className="grid grid-cols-2 gap-3">
                     {timeSlots.map((slot) => {
                       const slotTaken = isSlotTaken(
@@ -1666,9 +1666,7 @@ export default function ClientPage() {
                           slotTaken && "opacity-50"
                         )}
                         onClick={() =>
-                          setSelectedTimeSlots((current) =>
-                            toggleConsecutiveSlot(current, slot, timeSlots)
-                          )
+                          setSelectedTimeSlot(selected ? null : slot)
                         }
                       >
                         {formatTimeSlot(slot)}
@@ -1676,14 +1674,6 @@ export default function ClientPage() {
                       );
                     })}
                   </div>
-                  {selectedTimeSlots.length > 1 && selectedSpan && (
-                    <p className="text-sm text-foreground">
-                      {format(t.slotsSelected, {
-                        count: selectedTimeSlots.length,
-                      })}{" "}
-                      · {formatTimeSlot(selectedSpan)}
-                    </p>
-                  )}
                   {selectedDateKey &&
                     timeSlots.every((slot) =>
                       isSlotTaken(selectedDate, slot, bookedSlots, sessions)
@@ -1696,7 +1686,7 @@ export default function ClientPage() {
               </Card>
             )}
 
-            {(!isSinglePackageSelection || allSessionsScheduled) && (
+            {(!isSingleSessionEvent || allSessionsScheduled) && (
               <div className="w-full space-y-2">
                 <p className="text-sm font-medium text-foreground">
                   {t.yourBookings}
@@ -1711,25 +1701,25 @@ export default function ClientPage() {
             )}
 
             <div className="flex w-full justify-end gap-2">
-              {nextPackageToSchedule && (
+              {nextSessionToSchedule && (
                 <Button
                   type="button"
-                  variant={isSinglePackageSelection ? "default" : "outline"}
+                  variant={isSingleSessionEvent ? "default" : "outline"}
                   size="lg"
                   className={
-                    isSinglePackageSelection
+                    isSingleSessionEvent
                       ? "bg-rose-800 text-white hover:bg-rose-800/90"
                       : undefined
                   }
-                  disabled={!selectedSpan || selectionTaken}
+                  disabled={!selectedTimeSlot || selectionTaken}
                   onClick={handleAddSession}
                 >
                   {format(t.addSession, {
-                    sessionName: nextPackageToSchedule.name,
+                    sessionName: nextSessionToSchedule.name,
                   })}
                 </Button>
               )}
-              {(!isSinglePackageSelection || allSessionsScheduled) && (
+              {(!isSingleSessionEvent || allSessionsScheduled) && (
                 <Button
                   size="lg"
                   className="bg-rose-800 text-white hover:bg-rose-800/90"

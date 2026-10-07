@@ -262,13 +262,22 @@ function PriceBreakdown({ booking }: { booking: SerializedBooking }) {
     <div className="mt-2 flex flex-col gap-3">
       {breakdown ? (
         <div className="flex flex-col gap-2">
+          {breakdown.sessions
+            .filter((item) => item.sessionKey == null)
+            .map((item, index) => (
+              <PriceRow
+                key={`${item.label}-${index}`}
+                label={item.label}
+                detail="Event"
+                amountRm={item.amountRm}
+              />
+            ))}
           {booking.sessions.map((session, index) => {
-            const price =
-              breakdown.sessions.find(
-                (item) =>
-                  item.sessionKey != null &&
-                  item.sessionKey === session.client_key
-              ) ?? breakdown.sessions[index];
+            const price = breakdown.sessions.find(
+              (item) =>
+                item.sessionKey != null &&
+                item.sessionKey === session.client_key
+            );
             if (!price) return null;
             const name = session.name || `Session ${index + 1}`;
             return (

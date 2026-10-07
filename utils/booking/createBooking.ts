@@ -3,9 +3,10 @@ import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
 import { StyleModel } from "@/models/Style";
 import type { CreateBookingRequest } from "@/schemas/bookingSchema";
-import type { Package } from "@/schemas/packageSchema";
+import type { Package, PackageDayMode } from "@/schemas/packageSchema";
 import { toIdString } from "@/schemas/objectId";
 import { toDbSession } from "@/schemas/sessionSchema";
+import type { TimeSlot } from "@/schemas/settingSchema";
 import { getFreelancerByUsername } from "@/utils/users";
 import {
   applyDiscountedTotal,
@@ -15,15 +16,24 @@ import {
   type BookingQuotationSummary,
 } from "@/utils/booking/pricing";
 import { normalizeSessionDate, toDateKey } from "@/utils/booking/availability";
+import {
+  getDayModeError,
+  getEventDayMode,
+  getEventSessions,
+  hasOverlappingSessions,
+} from "@/utils/booking/events";
 import { resolveSessionDistancesKm } from "@/utils/booking/roadDistance.server";
 import { countSessionSlots } from "@/utils/booking/slots";
 import {
   buildHotDatePriceMap,
+  getEventHotDatePrice,
   getPackageHotDatePrice,
   getStyleHotDatePrice,
   resolveEffectivePrice,
   toHotDateLookup,
 } from "@/utils/booking/hotDates";
+
+type BookingSessionInput = CreateBookingRequest["sessions"][number];
 
 function parseStyleVariantId(id: string): {
   styleDocId: string;
@@ -51,7 +61,7 @@ async function resolveSessionStyle(
   styleModel: StyleModel,
   freelancerUserId: string,
   sessionName: string,
-  styleInput: NonNullable<CreateBookingRequest["sessions"][number]["style"]>,
+  styleInput: NonNullable<BookingSessionInput["style"]>,
   sessionDate: Date | string,
   hotDatePriceMap: Map<string, number>
 ): Promise<ResolvedSessionStyle> {
@@ -100,7 +110,8 @@ async function resolveSessionStyle(
   };
 }
 
-function validatePackageSelection(
+/** Bookings made before multi-session events: several events, one session each. */
+function validateLegacyPackageSelection(
   input: CreateBookingRequest,
   packagesById: Map<string, Package>
 ) {
@@ -138,17 +149,98 @@ function validatePackageSelection(
   }
 }
 
+/**
+ * One event per booking: every session of the event scheduled once, one time slot each,
+ * dates following the event's day rule. Returns the sessions in event order, named by the event.
+ */
+function validateEventSessions(
+  input: CreateBookingRequest,
+  packageId: string,
+  pkg: Package,
+  timeSlots: TimeSlot[]
+): BookingSessionInput[] {
+  const eventSessions = getEventSessions(pkg);
+  if (input.sessions.length !== eventSessions.length) {
+    throw new Error("Schedule every session of this event.");
+  }
+
+  const ordered = [...input.sessions].sort((a, b) => a.order - b.order);
+  for (const session of ordered) {
+    if (session.packageId !== packageId) {
+      throw new Error("Session event mismatch");
+    }
+    if (countSessionSlots(session.time_slot, timeSlots) > 1) {
+      throw new Error("Each session can only use one time slot.");
+    }
+  }
+
+  const dayModeError = getDayModeError(
+    getEventDayMode(pkg),
+    ordered.map((session) => session.date)
+  );
+  if (dayModeError) {
+    throw new Error(dayModeError);
+  }
+  if (hasOverlappingSessions(ordered)) {
+    throw new Error("Sessions in the same booking can't overlap.");
+  }
+
+  return ordered.map((session, index) => ({
+    ...session,
+    name: eventSessions[index].name,
+    order: index,
+  }));
+}
+
+function mapSessionsForStorage(
+  sessions: BookingSessionInput[],
+  resolvedSessionStyles: Map<string, Pick<ResolvedSessionStyle, "styleId" | "styleName">>,
+  slotCountBySessionKey: Map<string, number>
+) {
+  return sessions.map((session) => {
+    const resolvedStyle = resolvedSessionStyles.get(session.client_key);
+    const slotCount = slotCountBySessionKey.get(session.client_key) ?? 1;
+
+    return {
+      ...toDbSession({
+        ...session,
+        date: normalizeSessionDate(session.date),
+        ...(slotCount > 1 ? { slot_count: slotCount } : {}),
+        ...(resolvedStyle
+          ? {
+              styleId: resolvedStyle.styleId,
+              styleName: resolvedStyle.styleName,
+            }
+          : {}),
+      }),
+      client_key: session.client_key,
+    };
+  });
+}
+
 export async function resolveBookingQuotation(
   freelancerUserId: string,
   input: CreateBookingRequest,
-  options?: { relaxPaymentDeadline?: boolean; discountedTotalRm?: number }
+  options?: {
+    relaxPaymentDeadline?: boolean;
+    discountedTotalRm?: number;
+    /** Editing a booking made before multi-session events: keep its old rules and pricing. */
+    legacy?: boolean;
+  }
 ): Promise<{
   invoice: BookingQuotationSummary;
   packageNames: string;
-  resolvedSessionStyles: Map<string, ResolvedSessionStyle>;
-  slotCountBySessionKey: Map<string, number>;
+  /** Ready to store on the booking. */
+  sessions: ReturnType<typeof mapSessionsForStorage>;
+  /** Missing for legacy bookings. */
+  dayMode?: PackageDayMode;
   paymentOption: "deposit" | "full";
 }> {
+  const legacy = options?.legacy === true;
+  if (!legacy && input.packageIds.length !== 1) {
+    throw new Error("Choose one event per booking.");
+  }
+
   const packageModel = new PackageModel();
   const settingsModel = new SettingModel();
   const styleModel = new StyleModel();
@@ -174,9 +266,20 @@ export async function resolveBookingQuotation(
     packagesById.set(id, pkg);
   }
 
-  validatePackageSelection(input, packagesById);
+  const eventId = input.packageIds[0];
+  const event = packagesById.get(eventId);
+  let sessions: BookingSessionInput[];
+  if (legacy) {
+    validateLegacyPackageSelection(input, packagesById);
+    sessions = input.sessions;
+  } else {
+    if (!event) {
+      throw new Error("Package not found");
+    }
+    sessions = validateEventSessions(input, eventId, event, settings.time_slots);
+  }
 
-  const sessionDateKeys = input.sessions
+  const sessionDateKeys = sessions
     .map((session) => toDateKey(session.date))
     .filter(Boolean);
   const hotDateDocs = await hotDateModel.findByUserIdAndDates(
@@ -188,11 +291,8 @@ export async function resolveBookingQuotation(
   );
 
   const chargeBy = settings.charge_by ?? "package";
-  const sessionByPackageId = new Map(
-    input.sessions.map((session) => [session.packageId, session] as const)
-  );
   const slotCountBySessionKey = new Map(
-    input.sessions.map(
+    sessions.map(
       (session) =>
         [
           session.client_key,
@@ -200,22 +300,49 @@ export async function resolveBookingQuotation(
         ] as const
     )
   );
-  const selectedPackages = input.packageIds.map((packageId) => {
-    const pkg = packagesById.get(packageId)!;
-    const session = sessionByPackageId.get(packageId);
-    const catalogPrice = pkg.price ?? 0;
-    const overridePrice = session
-      ? getPackageHotDatePrice(hotDatePriceMap, session.date, packageId)
-      : undefined;
 
-    return {
-      name: pkg.name,
-      price: resolveEffectivePrice(catalogPrice, overridePrice),
-      deposit: chargeBy === "style" ? 0 : (pkg.deposit ?? 0),
-      sessionKey: session?.client_key,
-      slotCount: session ? slotCountBySessionKey.get(session.client_key) : 1,
-    };
-  });
+  let selectedPackages: Array<{
+    name: string;
+    price: number;
+    deposit: number;
+    sessionKey?: string;
+    slotCount?: number;
+  }>;
+  if (legacy) {
+    const sessionByPackageId = new Map(
+      sessions.map((session) => [session.packageId, session] as const)
+    );
+    selectedPackages = input.packageIds.map((packageId) => {
+      const pkg = packagesById.get(packageId)!;
+      const session = sessionByPackageId.get(packageId);
+      const overridePrice = session
+        ? getPackageHotDatePrice(hotDatePriceMap, session.date, packageId)
+        : undefined;
+
+      return {
+        name: pkg.name,
+        price: resolveEffectivePrice(pkg.price ?? 0, overridePrice),
+        deposit: chargeBy === "style" ? 0 : (pkg.deposit ?? 0),
+        sessionKey: session?.client_key,
+        slotCount: session ? slotCountBySessionKey.get(session.client_key) : 1,
+      };
+    });
+  } else {
+    selectedPackages = [
+      {
+        name: event!.name,
+        price: resolveEffectivePrice(
+          event!.price ?? 0,
+          getEventHotDatePrice(
+            hotDatePriceMap,
+            sessions.map((session) => session.date),
+            eventId
+          )
+        ),
+        deposit: chargeBy === "style" ? 0 : (event!.deposit ?? 0),
+      },
+    ];
+  }
 
   const resolvedSessionStyles = new Map<string, ResolvedSessionStyle>();
   let selectedSessionStyles:
@@ -230,7 +357,7 @@ export async function resolveBookingQuotation(
 
   if (chargeBy === "style") {
     selectedSessionStyles = [];
-    for (const session of input.sessions) {
+    for (const session of sessions) {
       if (!session.style) {
         throw new Error("Style is required for each session");
       }
@@ -258,7 +385,7 @@ export async function resolveBookingQuotation(
     try {
       distanceKmBySessionKey = await resolveSessionDistancesKm(
         settings.travel.location.location,
-        input.sessions
+        sessions
       );
     } catch (error) {
       console.error("Travel distance lookup failed:", error);
@@ -282,17 +409,14 @@ export async function resolveBookingQuotation(
           ratePerKm: settings.travel.rate_per_km,
           longDistanceRatePerKm: settings.travel.long_distance_rate_per_km,
           timeSlots: settings.time_slots,
-          sessions: input.sessions,
+          sessions,
           distanceKmBySessionKey,
         }
       : undefined,
   });
 
   const balanceDueBeforeDays = settings.payment?.balance_due_before ?? 3;
-  const mustPayFull = requiresFullPayment(
-    input.sessions,
-    balanceDueBeforeDays
-  );
+  const mustPayFull = requiresFullPayment(sessions, balanceDueBeforeDays);
   const paymentOption: "deposit" | "full" =
     mustPayFull || input.paymentOption === "full" ? "full" : "deposit";
 
@@ -316,8 +440,12 @@ export async function resolveBookingQuotation(
   return {
     invoice: applyPaymentOption(discounted, paymentOption),
     packageNames: selectedPackages.map((pkg) => pkg.name).join(", "),
-    resolvedSessionStyles,
-    slotCountBySessionKey,
+    sessions: mapSessionsForStorage(
+      sessions,
+      resolvedSessionStyles,
+      slotCountBySessionKey
+    ),
+    ...(legacy || !event ? {} : { dayMode: getEventDayMode(event) }),
     paymentOption,
   };
 }
@@ -334,36 +462,4 @@ export async function resolveFreelancerForBooking(username: string) {
   }
 
   return { user, userId };
-}
-
-export function mapSessionsForStorage(
-  input: CreateBookingRequest,
-  resolvedSessionStyles: Map<
-    string,
-    {
-      styleId: string;
-      styleName: string;
-    }
-  > = new Map(),
-  slotCountBySessionKey: Map<string, number> = new Map()
-) {
-  return input.sessions.map((session) => {
-    const resolvedStyle = resolvedSessionStyles.get(session.client_key);
-    const slotCount = slotCountBySessionKey.get(session.client_key) ?? 1;
-
-    return {
-      ...toDbSession({
-        ...session,
-        date: normalizeSessionDate(session.date),
-        ...(slotCount > 1 ? { slot_count: slotCount } : {}),
-        ...(resolvedStyle
-          ? {
-              styleId: resolvedStyle.styleId,
-              styleName: resolvedStyle.styleName,
-            }
-          : {}),
-      }),
-      client_key: session.client_key,
-    };
-  });
 }

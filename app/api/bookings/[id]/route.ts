@@ -21,10 +21,7 @@ import {
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
-import {
-  mapSessionsForStorage,
-  resolveBookingQuotation,
-} from "@/utils/booking/createBooking";
+import { resolveBookingQuotation } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import { normalizeSessionDate } from "@/utils/booking/availability";
 import { GOOGLE_IMPORT_PACKAGE_ID } from "@/utils/google/calendar";
@@ -218,28 +215,25 @@ export async function PATCH(
           paymentOption: data.paymentOption ?? existing.paymentOption,
         };
 
-        const {
-          invoice,
-          packageNames,
-          resolvedSessionStyles,
-          slotCountBySessionKey,
-          paymentOption,
-        } =
+        const isLegacyBooking =
+          !existing.dayMode &&
+          existing.packageIds.length === packageIds.length &&
+          existing.packageIds.every((id, index) => id === packageIds[index]);
+
+        const { invoice, packageNames, sessions: storedSessions, dayMode, paymentOption } =
           await resolveBookingQuotation(userId, quotationInput, {
             relaxPaymentDeadline: true,
             discountedTotalRm: data.totalRm,
+            legacy: isLegacyBooking,
           });
 
         updatePayload = {
           ...updatePayload,
           packageIds,
           packageNames,
+          ...(dayMode ? { dayMode } : {}),
           addOnIds: (data.addOns ?? []).map((addOn) => addOn.id),
-          sessions: mapSessionsForStorage(
-            quotationInput,
-            resolvedSessionStyles,
-            slotCountBySessionKey
-          ),
+          sessions: storedSessions,
           invoice,
           paymentOption,
         };

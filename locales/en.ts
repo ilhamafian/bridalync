@@ -41,7 +41,7 @@ export const en: Locale = {
 
   // Events / packages
   eventQuestion: "What event are you booking for?",
-  eventHelper: "Choose one or more packages for your booking.",
+  eventHelper: "Choose one event for your booking.",
   loadingPackages: "Loading packages...",
   noPackagesAvailable: "No packages available.",
   sessionCount: "{count} {count, session, sessions}",
@@ -52,9 +52,8 @@ export const en: Locale = {
   sessionsScheduledCount:
     "{scheduled} of {total} {total, session, sessions} scheduled",
   availableSlots: "Available slots",
-  multiSlotHint:
-    "Need longer? Pick the slots next to it. Each extra slot is charged the session price again.",
-  slotsSelected: "{count} slots selected",
+  sameDayHint: "All sessions of this event are on the same day.",
+  differentDayHint: "Each session of this event is on a different day.",
   slotCount: "{count} consecutive slots",
   allSlotsBooked: "All time slots are booked on this date.",
   yourBookings: "Your bookings",

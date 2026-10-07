@@ -264,6 +264,7 @@ const bookingDashboardFieldsSchema = bookingSchema.pick({
   contact: true,
   packageIds: true,
   packageNames: true,
+  dayMode: true,
   addOnIds: true,
   sessions: true,
   invoice: true,

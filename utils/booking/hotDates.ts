@@ -81,6 +81,18 @@ export function getPackageHotDatePrice(
   return priceMap.get(packageHotDateKey(dateKey, packageId));
 }
 
+/** Highest hot date price set for the event on any of its session dates. */
+export function getEventHotDatePrice(
+  priceMap: Map<string, number>,
+  dates: Array<Date | string>,
+  packageId: string
+): number | undefined {
+  const prices = dates
+    .map((date) => getPackageHotDatePrice(priceMap, date, packageId))
+    .filter((price): price is number => price !== undefined);
+  return prices.length > 0 ? Math.max(...prices) : undefined;
+}
+
 export function getStyleHotDatePrice(
   priceMap: Map<string, number>,
   date: Date | string,

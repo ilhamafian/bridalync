@@ -10,10 +10,7 @@ import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
 import { assertSessionsAvailable } from "@/utils/booking/availability.server";
-import {
-  mapSessionsForStorage,
-  resolveBookingQuotation,
-} from "@/utils/booking/createBooking";
+import { resolveBookingQuotation } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import { scheduleBookingCalendarSync } from "@/utils/google/syncBookingCalendar";
 
@@ -61,13 +58,7 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: message }, 409);
     }
 
-    const {
-      invoice,
-      packageNames,
-      resolvedSessionStyles,
-      slotCountBySessionKey,
-      paymentOption,
-    } =
+    const { invoice, packageNames, sessions, dayMode, paymentOption } =
       await resolveBookingQuotation(userId, quotationInput, {
         relaxPaymentDeadline: true,
         discountedTotalRm: data.totalRm,
@@ -79,12 +70,9 @@ export async function POST(req: NextRequest) {
       contact: data.contact,
       packageIds: data.packageIds,
       packageNames,
+      dayMode,
       addOnIds: data.addOns.map((addOn) => addOn.id),
-      sessions: mapSessionsForStorage(
-        quotationInput,
-        resolvedSessionStyles,
-        slotCountBySessionKey
-      ),
+      sessions,
       invoice,
       paymentOption,
       status: data.status,

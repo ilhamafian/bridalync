@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -22,9 +23,15 @@ import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import type { Address, LatLng } from "@/schemas/addressSchema";
 import type { Booking } from "@/schemas/bookingSchema";
+import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
 import {
+  getDayModeError,
+  hasOverlappingSessions,
+} from "@/utils/booking/events";
+import {
   buildHotDatePriceMap,
+  getEventHotDatePrice,
   getPackageHotDatePrice,
   getStyleHotDatePrice,
   resolveEffectivePrice,
@@ -46,6 +53,8 @@ export type PackageCatalogItem = {
   name: string;
   price: number;
   deposit: number;
+  sessions: PackageSession[];
+  dayMode: PackageDayMode;
 };
 
 export type StyleCatalogItem = {
@@ -160,33 +169,37 @@ function toDashboardStatus(status: Booking["status"]): DashboardStatus {
   return "confirmed";
 }
 
-function sessionsFromPackages(
-  packageIds: string[],
-  packageCatalog: PackageCatalogItem[],
+/** One row per session of the event, keeping the date, slot, style and venue already entered at each position. */
+function sessionsFromEvent(
+  event: PackageCatalogItem,
   existingSessions: SessionFormRow[],
   timeSlots: TimeSlot[]
 ): SessionFormRow[] {
   const defaultSlot = timeSlots[0];
-  const existingByPackageId = new Map(
-    existingSessions.map((session) => [session.packageId, session])
-  );
 
-  return packageIds.map((packageId, index) => {
-    const existing = existingByPackageId.get(packageId);
-    if (existing) return existing;
-
-    const pkg = packageCatalog.find((item) => item._id === packageId);
+  return event.sessions.map((session, index) => {
+    const existing = existingSessions[index];
     return {
-      client_key: createRowId(),
-      name: pkg?.name ?? `Session ${index + 1}`,
-      packageId,
-      styleId: "",
+      client_key: existing?.client_key ?? createRowId(),
+      name: session.name,
+      packageId: event._id,
+      styleId: existing?.styleId ?? "",
       order: index,
-      date: "",
-      time_slots: defaultSlot ? [defaultSlot] : [],
-      location: null,
+      date: existing?.date ?? "",
+      time_slots: existing?.time_slots.length
+        ? [existing.time_slots[0]]
+        : defaultSlot
+          ? [defaultSlot]
+          : [],
+      location: existing?.location ?? null,
     };
   });
+}
+
+function sameIds(left: string[], right: string[]) {
+  return (
+    left.length === right.length && left.every((id, index) => id === right[index])
+  );
 }
 
 function emptyForm(): BookingFormState {
@@ -282,6 +295,19 @@ export function BookingForm({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hotDates, setHotDates] = useState<HotDateLookup[]>([]);
+
+  /** Booked before multi-session events and its events are unchanged: keeps its old sessions and pricing. */
+  const isLegacy =
+    booking !== null &&
+    !booking.dayMode &&
+    !isGoogleImport &&
+    booking.packageIds.length > 0 &&
+    sameIds(form.packageIds, booking.packageIds);
+  const selectedEvent =
+    !isLegacy && form.packageIds.length === 1
+      ? packages.find((pkg) => pkg._id === form.packageIds[0]) ?? null
+      : null;
+  const dayMode = selectedEvent?.dayMode ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -434,7 +460,20 @@ export function BookingForm({
 
   const fullPriceRm = useMemo(() => {
     const sessionsRm =
-      chargeBy === "package"
+      chargeBy === "package" && selectedEvent
+        ? roundRm(
+            resolveEffectivePrice(
+              selectedEvent.price,
+              getEventHotDatePrice(
+                hotDatePriceMap,
+                form.sessions
+                  .filter((session) => session.date)
+                  .map((session) => `${session.date}T12:00:00`),
+                selectedEvent._id
+              )
+            )
+          )
+        : chargeBy === "package"
         ? form.packageIds.reduce((sum, packageId) => {
             const pkg = packages.find((item) => item._id === packageId);
             if (!pkg) return sum;
@@ -466,6 +505,7 @@ export function BookingForm({
   }, [
     travelQuote.feeRm,
     chargeBy,
+    selectedEvent,
     form.packageIds,
     form.sessions,
     form.addOnIds,
@@ -504,22 +544,44 @@ export function BookingForm({
     return sortTimeSlots(Array.from(byKey.values()));
   }, [timeSlots, form.sessions]);
 
-  function togglePackageId(packageId: string, checked: boolean) {
+  function selectEvent(packageId: string) {
+    const event = packages.find((pkg) => pkg._id === packageId);
+    if (!event) return;
     setForm((current) => {
-      const packageIds = checked
-        ? [...current.packageIds, packageId]
-        : current.packageIds.filter((id) => id !== packageId);
-
+      const sessions = sessionsFromEvent(event, current.sessions, timeSlots);
+      const sharedDate = sessions.find((session) => session.date)?.date ?? "";
       return {
         ...current,
-        packageIds,
-        sessions: sessionsFromPackages(
-          packageIds,
-          packages,
-          current.sessions,
-          timeSlots
-        ),
+        packageIds: [packageId],
+        sessions:
+          event.dayMode === "same_day"
+            ? sessions.map((session) => ({ ...session, date: sharedDate }))
+            : sessions,
       };
+    });
+  }
+
+  function updateSessionDate(clientKey: string, date: string) {
+    if (dayMode === "same_day") {
+      setForm((current) => ({
+        ...current,
+        sessions: current.sessions.map((session) => ({ ...session, date })),
+      }));
+      return;
+    }
+    updateSession(clientKey, { date });
+  }
+
+  function toggleSessionSlot(session: SessionFormRow, slot: TimeSlot) {
+    const selected = session.time_slots.some(
+      (item) => timeSlotKey(item) === timeSlotKey(slot)
+    );
+    updateSession(session.client_key, {
+      time_slots: isLegacy
+        ? toggleConsecutiveSlot(session.time_slots, slot, availableTimeSlots)
+        : selected
+          ? []
+          : [slot],
     });
   }
 
@@ -542,8 +604,8 @@ export function BookingForm({
   }
 
   function buildPayload() {
-    if (!isGoogleImport && form.packageIds.length === 0) {
-      return { error: "Select at least one event." };
+    if (!isGoogleImport && !isLegacy && !selectedEvent) {
+      return { error: "Choose an event." };
     }
 
     if (!form.contact_name.trim()) {
@@ -558,7 +620,7 @@ export function BookingForm({
       return { error: "Add at least one session." };
     }
 
-    if (!isGoogleImport && form.sessions.length !== form.packageIds.length) {
+    if (isLegacy && form.sessions.length !== form.packageIds.length) {
       return { error: "Each selected event needs one session." };
     }
 
@@ -580,6 +642,24 @@ export function BookingForm({
       }
       if (!session.location) {
         return { error: "Each session needs a location." };
+      }
+    }
+
+    if (dayMode) {
+      const sessionDates = form.sessions.map(
+        (session) => `${session.date}T12:00:00`
+      );
+      const dayModeError = getDayModeError(dayMode, sessionDates);
+      if (dayModeError) return { error: dayModeError };
+      if (
+        hasOverlappingSessions(
+          form.sessions.map((session, index) => ({
+            date: sessionDates[index],
+            time_slot: mergeSlots(session.time_slots),
+          }))
+        )
+      ) {
+        return { error: "Sessions in the same booking can't overlap." };
       }
     }
 
@@ -737,37 +817,46 @@ export function BookingForm({
         ) : (
           <>
             <div className="flex flex-col gap-2">
-              <Label>Events</Label>
-              <ul className="flex flex-col gap-2">
-                {packages.map((pkg) => {
-                  const checked = form.packageIds.includes(pkg._id);
-                  return (
-                    <li
-                      key={pkg._id}
-                      className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
-                    >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={(value) =>
-                          togglePackageId(pkg._id, value === true)
-                        }
-                        id={`package-${pkg._id}`}
-                      />
-                      <label
-                        htmlFor={`package-${pkg._id}`}
-                        className="flex flex-1 cursor-pointer items-center justify-between gap-2 text-sm"
-                      >
-                        <span>{pkg.name}</span>
-                        {chargeBy === "package" ? (
-                          <span className="text-muted-foreground">
-                            {formatRm(pkg.price)}
-                          </span>
-                        ) : null}
-                      </label>
-                    </li>
-                  );
-                })}
-              </ul>
+              <Label>Event</Label>
+              {isLegacy ? (
+                <p className="text-xs text-muted-foreground">
+                  Booked before multi-session events
+                  {booking?.packageNames ? ` (${booking.packageNames})` : ""}.
+                  Choosing an event replaces its sessions.
+                </p>
+              ) : null}
+              <RadioGroup
+                value={selectedEvent?._id ?? ""}
+                onValueChange={selectEvent}
+                className="gap-2"
+              >
+                {packages.map((pkg) => (
+                  <label
+                    key={pkg._id}
+                    htmlFor={`package-${pkg._id}`}
+                    className="flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2 text-sm"
+                  >
+                    <RadioGroupItem value={pkg._id} id={`package-${pkg._id}`} />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span>{pkg.name}</span>
+                      {pkg.sessions.length > 1 ? (
+                        <span className="text-xs text-muted-foreground">
+                          {pkg.sessions.map((session) => session.name).join(", ")}
+                          {" · "}
+                          {pkg.dayMode === "same_day"
+                            ? "Same day"
+                            : "Different days"}
+                        </span>
+                      ) : null}
+                    </span>
+                    {chargeBy === "package" ? (
+                      <span className="shrink-0 text-muted-foreground">
+                        {formatRm(pkg.price)}
+                      </span>
+                    ) : null}
+                  </label>
+                ))}
+              </RadioGroup>
             </div>
 
             {addOns.length > 0 ? (
@@ -810,23 +899,43 @@ export function BookingForm({
 
         <div className="flex flex-col gap-4">
           <Label>Sessions</Label>
+          {dayMode && form.sessions.length > 1 ? (
+            <p className="text-xs text-muted-foreground">
+              {dayMode === "same_day"
+                ? "All sessions are on the same day."
+                : "Each session is on a different day."}
+            </p>
+          ) : null}
+          {form.sessions.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Choose an event to add its sessions.
+            </p>
+          ) : null}
           {form.sessions.map((session, index) => (
             <div
               key={session.client_key}
               className="flex flex-col gap-3 rounded-lg border border-border p-3"
             >
-              <p className="text-sm font-medium">Session {index + 1}</p>
-              <Field label="Name">
-                <Input
-                  className={inputClassName}
-                  value={session.name}
-                  onChange={(event) =>
-                    updateSession(session.client_key, {
-                      name: event.target.value,
-                    })
-                  }
-                />
-              </Field>
+              {isGoogleImport ? (
+                <>
+                  <p className="text-sm font-medium">Session {index + 1}</p>
+                  <Field label="Name">
+                    <Input
+                      className={inputClassName}
+                      value={session.name}
+                      onChange={(event) =>
+                        updateSession(session.client_key, {
+                          name: event.target.value,
+                        })
+                      }
+                    />
+                  </Field>
+                </>
+              ) : (
+                <p className="text-sm font-medium">
+                  {session.name || `Session ${index + 1}`}
+                </p>
+              )}
               {chargeBy === "style" && !isGoogleImport ? (
                 <Field label="Style">
                   <Select
@@ -854,13 +963,11 @@ export function BookingForm({
                   type="date"
                   value={session.date}
                   onChange={(event) =>
-                    updateSession(session.client_key, {
-                      date: event.target.value,
-                    })
+                    updateSessionDate(session.client_key, event.target.value)
                   }
                 />
               </Field>
-              <Field label="Time slots">
+              <Field label={isLegacy ? "Time slots" : "Time slot"}>
                 <div className="grid grid-cols-2 gap-2">
                   {availableTimeSlots.map((slot) => {
                     const selected = session.time_slots.some(
@@ -873,26 +980,20 @@ export function BookingForm({
                         size="sm"
                         variant={selected ? "default" : "outline"}
                         aria-pressed={selected}
-                        onClick={() =>
-                          updateSession(session.client_key, {
-                            time_slots: toggleConsecutiveSlot(
-                              session.time_slots,
-                              slot,
-                              availableTimeSlots
-                            ),
-                          })
-                        }
+                        onClick={() => toggleSessionSlot(session, slot)}
                       >
                         {slot.startTime} – {slot.endTime}
                       </Button>
                     );
                   })}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {session.time_slots.length > 1
-                    ? `${session.time_slots.length} consecutive slots, each charged the session price.`
-                    : "Pick neighbouring slots to book a longer session."}
-                </p>
+                {isLegacy ? (
+                  <p className="text-xs text-muted-foreground">
+                    {session.time_slots.length > 1
+                      ? `${session.time_slots.length} consecutive slots, each charged the session price.`
+                      : "Pick neighbouring slots to book a longer session."}
+                  </p>
+                ) : null}
               </Field>
               <Field label="Location">
                 <LocationMapPicker
