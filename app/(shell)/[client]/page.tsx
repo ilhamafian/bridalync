@@ -511,9 +511,7 @@ function toPackageOptions(packages: ClientPackage[]): PackageOption[] {
     .map((pkg) => ({
       id: normalizePackageId(pkg._id),
       name: pkg.name,
-      price: pkg.price ?? 0,
       description: pkg.description?.trim() || undefined,
-      sessionNames: getEventSessions(pkg).map((session) => session.name),
     }))
     .filter((pkg) => pkg.id.length > 0);
 }
@@ -1568,7 +1566,6 @@ export default function ClientPage() {
                   packages={packages}
                   selectedPackageId={selectedPackageId}
                   onPackageChange={setSelectedPackageId}
-                  showPrice={chargeBy === "package"}
                 />
               </div>
             )}

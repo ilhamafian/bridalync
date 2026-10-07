@@ -2,29 +2,24 @@
 
 import { useLocale } from "@/components/LocaleProvider"
 import { Button } from "@/components/ui/button"
-import { formatRm } from "@/utils/booking/pricing"
 import { cn } from "@/lib/utils"
 
 export type PackageOption = {
   id: string
   name: string
-  price: number
   description?: string
-  sessionNames: string[]
 }
 
 type BookingPackagePickerProps = {
   packages: PackageOption[]
   selectedPackageId: string | null
   onPackageChange: (packageId: string) => void
-  showPrice?: boolean
 }
 
 export function BookingPackagePicker({
   packages,
   selectedPackageId,
   onPackageChange,
-  showPrice = true,
 }: BookingPackagePickerProps) {
   const { t } = useLocale()
 
@@ -81,23 +76,8 @@ export function BookingPackagePicker({
                     {pkg.description}
                   </span>
                 ) : null}
-                {pkg.sessionNames.length > 1 ? (
-                  <span
-                    className={cn(
-                      "block text-xs font-normal",
-                      isSelected ? "text-white/80" : "text-muted-foreground"
-                    )}
-                  >
-                    {pkg.sessionNames.join(" · ")}
-                  </span>
-                ) : null}
               </span>
             </span>
-            {showPrice && pkg.price > 0 ? (
-              <span className="shrink-0 pl-3 font-medium">
-                {formatRm(pkg.price)}
-              </span>
-            ) : null}
           </Button>
         )
       })}
