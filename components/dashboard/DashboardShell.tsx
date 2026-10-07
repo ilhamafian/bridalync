@@ -33,6 +33,7 @@ import { useNotificationReads } from "@/components/dashboard/useNotificationRead
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
 import { cn } from "@/lib/utils";
 import { getRecentActivity } from "@/utils/activity";
+import { bookingSessionsOverlap } from "@/utils/booking/availability";
 import { buildHotDateCatalog } from "@/utils/booking/hotDates";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
@@ -44,6 +45,13 @@ import {
   type DashboardData,
   type DashboardSection,
 } from "@/utils/dashboardShell";
+
+function firstSessionTime(booking: SerializedBooking) {
+  const times = booking.sessions
+    .map((session) => new Date(session.date).getTime())
+    .filter((time) => !Number.isNaN(time));
+  return times.length > 0 ? Math.min(...times) : Number.POSITIVE_INFINITY;
+}
 
 function Section({
   id,
@@ -122,6 +130,57 @@ export function DashboardShell({ data }: { data: DashboardData }) {
     setSavedBookings((current) => ({ ...current, [saved._id]: saved }));
   }, []);
 
+  const handleRequestsDeclined = useCallback(
+    (ids: string[]) => {
+      const declinedAt = new Date().toISOString();
+      setSavedBookings((current) => {
+        const next = { ...current };
+        for (const id of ids) {
+          const booking =
+            current[id] ??
+            data.bookings.initialBookings.find((item) => item._id === id);
+          if (booking) {
+            next[id] = { ...booking, status: "cancelled", requestDeclinedAt: declinedAt };
+          }
+        }
+        return next;
+      });
+    },
+    [data.bookings.initialBookings]
+  );
+
+  const allBookings = data.bookings.initialBookings.map(
+    (booking) => savedBookings[booking._id] ?? booking
+  );
+  const openRequests = allBookings.filter(
+    (booking) => booking.status === "requested"
+  );
+  const findCompetingRequests = (booking: SerializedBooking) =>
+    openRequests.filter(
+      (other) =>
+        other._id !== booking._id && bookingSessionsOverlap(other, booking)
+    );
+
+  const detailsBooking = findBooking(bookingDetailsId);
+  const competingRequests =
+    detailsBooking?.status === "requested"
+      ? findCompetingRequests(detailsBooking)
+      : [];
+
+  const homeRequests =
+    data.settings.initialSettings.booking_requests || openRequests.length > 0
+      ? {
+          total: openRequests.length,
+          items: [...openRequests]
+            .sort((a, b) => firstSessionTime(a) - firstSessionTime(b))
+            .slice(0, 3)
+            .map((booking) => ({
+              booking,
+              competingCount: findCompetingRequests(booking).length,
+            })),
+        }
+      : null;
+
   useEffect(() => {
     document
       .querySelector<HTMLElement>("[data-dashboard-scroll]")
@@ -134,8 +193,11 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       <Section id="home" active={active}>
         <DashboardHome
           {...data.home}
+          requests={homeRequests}
           isActivityUnread={notifications.isUnread}
           onOpenActivity={notifications.markRead}
+          onBookingUpdated={handleBookingSaved}
+          onBookingsDeclined={handleRequestsDeclined}
         />
       </Section>
 
@@ -230,7 +292,12 @@ export function DashboardShell({ data }: { data: DashboardData }) {
 
       <Section id="booking-details" active={active}>
         {bookingDetailsId ? (
-          <BookingDetailsPage booking={findBooking(bookingDetailsId)} />
+          <BookingDetailsPage
+            booking={detailsBooking}
+            competingRequests={competingRequests}
+            onBookingUpdated={handleBookingSaved}
+            onBookingsDeclined={handleRequestsDeclined}
+          />
         ) : null}
       </Section>
 

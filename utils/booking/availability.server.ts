@@ -9,6 +9,7 @@ import { formatDate } from "@/utils/utils";
 import {
   getOccupiedSlotsFromBookings,
   isSessionSlotTaken,
+  SLOT_HOLDING_STATUSES,
   toDateKey,
   type PublicBookedSlot,
 } from "@/utils/booking/availability";
@@ -27,11 +28,7 @@ type SessionSlotInput = {
   time_slot: TimeSlot;
 };
 
-const BLOCKING_BOOKING_STATUSES: Booking["status"][] = [
-  "pending",
-  "confirmed",
-  "completed",
-];
+const BLOCKING_BOOKING_STATUSES: Booking["status"][] = SLOT_HOLDING_STATUSES;
 
 export function toPublicBlockedSlot(
   slot: Pick<BlockedSlot, "date" | "startTime" | "endTime">

@@ -49,6 +49,7 @@ import {
 type BookingFilter =
   | "all"
   | "active"
+  | "requests"
   | "needs_verification"
   | "deposit"
   | "full"
@@ -61,6 +62,7 @@ type BookingSort = "upcoming" | "latest";
 const BOOKING_FILTERS: { value: BookingFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "active", label: "Not completed" },
+  { value: "requests", label: "Requests" },
   { value: "needs_verification", label: "Needs verification" },
   { value: "deposit", label: "Deposit paid" },
   { value: "full", label: "Fully paid" },
@@ -106,7 +108,8 @@ function needsPaymentVerification(booking: SerializedBooking) {
 
 function verificationAmountRm(booking: SerializedBooking): number | null {
   if (isDepositVerificationPending(booking)) {
-    return booking.paymentOption === "full"
+    return booking.paymentOption === "full" ||
+      booking.requestPaymentOption === "full"
       ? booking.invoice.totalRm
       : booking.invoice.depositRm;
   }
@@ -141,6 +144,8 @@ function matchesBookingFilter(
         booking.status !== "cancelled" &&
         booking.status !== "failed"
       );
+    case "requests":
+      return booking.status === "requested";
     case "needs_verification":
       return needsPaymentVerification(booking);
     case "deposit":
@@ -242,14 +247,18 @@ function statusLabel(booking: SerializedBooking) {
   }
 
   switch (booking.status) {
+    case "requested":
+      return "Booking request";
     case "confirmed":
       return "Confirmed";
     case "completed":
       return "Completed";
     case "cancelled":
-      return "Cancelled";
+      return booking.requestDeclinedAt ? "Request declined" : "Cancelled";
     case "pending":
-      return "Awaiting payment";
+      return booking.requestApprovedAt
+        ? "Approved · awaiting payment"
+        : "Awaiting payment";
     case "enquiry":
       return "Enquiry";
     case "failed":
@@ -303,6 +312,7 @@ function bookingBadgeVariant(
   booking: SerializedBooking
 ): "default" | "success" | "destructive" | "outline" {
   if (needsPaymentVerification(booking)) return "destructive";
+  if (booking.status === "requested") return "destructive";
   if (booking.depositVerificationStatus === "rejected") return "destructive";
   return statusBadgeVariant(booking.status);
 }
@@ -390,6 +400,11 @@ export function BookingsManager({
     [bookings]
   );
 
+  const requestCount = useMemo(
+    () => bookings.filter((booking) => booking.status === "requested").length,
+    [bookings]
+  );
+
   const filteredBookings = useMemo(() => {
     const filtered = bookings.filter(
       (booking) =>
@@ -402,8 +417,10 @@ export function BookingsManager({
       return sorted;
     }
 
-    const needsReview = sorted.filter(needsPaymentVerification);
-    const rest = sorted.filter((booking) => !needsPaymentVerification(booking));
+    const needsAction = (booking: SerializedBooking) =>
+      booking.status === "requested" || needsPaymentVerification(booking);
+    const needsReview = sorted.filter(needsAction);
+    const rest = sorted.filter((booking) => !needsAction(booking));
     return [...needsReview, ...rest];
   }, [bookings, statusFilter, sortOrder, searchQuery]);
 
@@ -491,7 +508,9 @@ export function BookingsManager({
                 {filter.value === "needs_verification" &&
                 pendingVerificationCount > 0
                   ? `${filter.label} (${pendingVerificationCount})`
-                  : filter.label}
+                  : filter.value === "requests" && requestCount > 0
+                    ? `${filter.label} (${requestCount})`
+                    : filter.label}
               </button>
             );
           })}

@@ -8,6 +8,8 @@ import {
   type Booking,
   type PersistedBooking,
 } from "@/schemas/bookingSchema";
+import { bookingSessionsOverlap } from "@/utils/booking/availability";
+import { applyPaymentOption } from "@/utils/booking/pricing";
 import { sendBalancePaymentReceivedEmail } from "@/utils/email/balance-payment-received";
 import { sendBookingPaymentConfirmationEmail } from "@/utils/email/booking-confirmation";
 import {
@@ -60,13 +62,26 @@ export async function updateBookingStatus(
 
 export async function confirmBookingPayment(
   bookingId: string,
-  paymentIntentId?: string | null
+  paymentIntentId?: string | null,
+  /** Approved booking requests pick deposit/full when paying; "full" settles the invoice here. */
+  options?: { paymentOption?: "deposit" | "full" }
 ) {
   if (!ObjectId.isValid(bookingId)) return null;
 
   const existing = await getBookingById(bookingId);
   if (!existing) return null;
   if (existing.status === "confirmed") return existing;
+
+  if (options?.paymentOption === "full" && existing.paymentOption !== "full") {
+    await bookingModel.update(
+      bookingId,
+      {
+        paymentOption: "full",
+        invoice: applyPaymentOption(existing.invoice, "full"),
+      },
+      bookingSchema.pick({ paymentOption: true, invoice: true })
+    );
+  }
 
   await bookingModel.update(
     bookingId,
@@ -196,10 +211,12 @@ export async function confirmBookingBalancePayment(
 export async function rejectManualDepositPayment(bookingId: string) {
   if (!ObjectId.isValid(bookingId)) return null;
 
+  const existing = await getBookingById(bookingId);
   await bookingModel.update(
     bookingId,
     {
-      status: "failed",
+      // Approved requests stay payable so the client can upload another receipt.
+      status: existing?.requestApprovedAt ? "pending" : "failed",
       depositVerificationStatus: "rejected",
     },
     bookingSchema.pick({
@@ -221,6 +238,73 @@ export async function rejectManualBalancePayment(bookingId: string) {
     },
     bookingSchema.pick({
       balanceVerificationStatus: true,
+    })
+  );
+
+  return getBookingById(bookingId);
+}
+
+export async function approveBookingRequest(bookingId: string) {
+  if (!ObjectId.isValid(bookingId)) return null;
+
+  await bookingModel.update(
+    bookingId,
+    { status: "pending", requestApprovedAt: new Date() },
+    bookingSchema.pick({ status: true, requestApprovedAt: true })
+  );
+  return getBookingById(bookingId);
+}
+
+/** Other open requests for this freelancer that share a slot with `booking`. */
+export async function findOverlappingBookingRequests(
+  booking: PersistedBooking
+): Promise<PersistedBooking[]> {
+  if (!booking.freelancerUserId) return [];
+
+  const requests = (await bookingModel.find({
+    freelancerUserId: booking.freelancerUserId,
+    status: "requested",
+  })) as PersistedBooking[];
+
+  return requests.filter(
+    (request) =>
+      String(request._id) !== String(booking._id) &&
+      bookingSessionsOverlap(request, booking)
+  );
+}
+
+export async function declineBookingRequest(bookingId: string) {
+  if (!ObjectId.isValid(bookingId)) return null;
+
+  await bookingModel.update(
+    bookingId,
+    { status: "cancelled", requestDeclinedAt: new Date() },
+    bookingSchema.pick({ status: true, requestDeclinedAt: true })
+  );
+  return getBookingById(bookingId);
+}
+
+/** Receipt for an approved booking request (bookings paid at creation attach theirs in `POST /api/bookings`). */
+export async function attachManualDepositReceipt(
+  bookingId: string,
+  receiptUrl: string,
+  paymentOption: "deposit" | "full"
+) {
+  if (!ObjectId.isValid(bookingId)) return null;
+
+  await bookingModel.update(
+    bookingId,
+    {
+      paymentChannel: "manual_transfer",
+      depositReceiptUrl: receiptUrl,
+      depositVerificationStatus: "pending",
+      requestPaymentOption: paymentOption,
+    },
+    bookingSchema.pick({
+      paymentChannel: true,
+      depositReceiptUrl: true,
+      depositVerificationStatus: true,
+      requestPaymentOption: true,
     })
   );
 
@@ -250,6 +334,12 @@ export async function attachManualBalanceReceipt(
 
 export async function markBookingPaymentFailed(bookingId: string) {
   if (!ObjectId.isValid(bookingId)) return null;
+
+  const existing = await getBookingById(bookingId);
+  // An approved request keeps its slot when a checkout expires or fails; the client can pay again.
+  if (existing?.requestApprovedAt && existing.status === "pending") {
+    return existing;
+  }
 
   await bookingModel.update(
     bookingId,

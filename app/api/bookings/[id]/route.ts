@@ -11,6 +11,7 @@ import {
   rescheduleSessionSchema,
   toPublicBooking,
   updateBookingStatusSchema,
+  type Booking,
   type CreateBookingRequest,
 } from "@/schemas/bookingSchema";
 import { toIdString } from "@/schemas/objectId";
@@ -27,6 +28,13 @@ import { normalizeSessionDate } from "@/utils/booking/availability";
 import { GOOGLE_IMPORT_PACKAGE_ID } from "@/utils/google/calendar";
 import { SettingModel } from "@/models/Setting";
 import { getFreelancerByUsername } from "@/utils/users";
+
+const UNPAID_STATUSES = new Set<Booking["status"]>([
+  "requested",
+  "pending",
+  "failed",
+  "enquiry",
+]);
 
 function toPublicBookingFreelancer(
   freelancer: NonNullable<Awaited<ReturnType<typeof getFreelancerByUsername>>>
@@ -86,7 +94,8 @@ export async function GET(
         booking,
         freelancer ? toPublicBookingFreelancer(freelancer) : null,
         paymentMethod,
-        manualTransfer
+        manualTransfer,
+        paymentSettings.balance_due_before
       )
     );
   } catch (error) {
@@ -160,6 +169,22 @@ export async function PATCH(
       }
 
       const data = parsed.data;
+      if (
+        data.status &&
+        data.status !== existing.status &&
+        UNPAID_STATUSES.has(existing.status) &&
+        data.status !== "cancelled"
+      ) {
+        return createResponse(
+          {
+            error:
+              existing.status === "requested"
+                ? "Approve or decline this booking request instead."
+                : "Unpaid bookings can only be cancelled here. They're confirmed once the payment is received.",
+          },
+          409
+        );
+      }
       const packageIds = data.packageIds ?? existing.packageIds;
       const isGoogleImportWithoutPackages =
         existing.source === "google_calendar" && packageIds.length === 0;

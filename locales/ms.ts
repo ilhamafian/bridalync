@@ -30,6 +30,7 @@ export const ms = {
   stepLocation: "Lokasi",
   stepStyle: "Gaya",
   stepPayment: "Bayaran",
+  stepRequest: "Permohonan",
 
   // Name
   nameQuestion: "Sebelum tu,\nBoleh kami tahu nama anda?",
@@ -164,6 +165,27 @@ export const ms = {
   bookingPendingVerification:
     "Terima kasih! Tempahan anda ditahan sementara stylist mengesahkan resit pembayaran anda.",
   couldNotCreateBooking: "Tempahan tidak dapat dibuat.",
+
+  // Booking requests
+  requestBooking: "Mohon tempahan",
+  requestDialogTitle: "Tempahan anda belum disahkan",
+  requestDialogBody:
+    "{name} perlu meluluskan permohonan anda dahulu, dan slot ini masih terbuka kepada pelanggan lain sehingga itu. Selepas diluluskan, kami akan emel pautan ke {email} untuk membayar deposit atau jumlah penuh.",
+  requestDialogCancel: "Kembali",
+  requestDialogConfirm: "Hantar permohonan",
+  sendingRequest: "Menghantar permohonan…",
+  requestSentTitle: "Permohonan dihantar",
+  requestSentBody:
+    "{name} akan menyemak permohonan anda. Kami akan e-mel ke {email} sebaik sahaja ia diluluskan, bersama pautan untuk membayar dan mengesahkan tempahan.",
+  requestApprovedTitle: "Permohonan diluluskan",
+  requestApprovedBody:
+    "{name} telah meluluskan permohonan anda. Bayar {amount} untuk mengesahkan tempahan.",
+  requestDeclinedTitle: "Permohonan ditolak",
+  requestDeclinedBody:
+    "Maaf, {name} tidak dapat menerima tempahan ini. Anda tidak dicaj.",
+  requestReceiptRejected:
+    "Resit bayaran anda tidak dapat disahkan. Sila muat naik resit baharu.",
+  submitReceiptConfirm: "Hantar resit & sahkan",
   couldNotStartCheckout: "Tidak dapat memulakan Stripe Checkout.",
   paymentCouldNotStart: "Pembayaran tidak dapat dimulakan.",
 

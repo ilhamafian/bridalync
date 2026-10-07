@@ -1,23 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { Fragment, useRef, useState } from "react";
 import Link from "next/link";
 
 import { HomeBookingCard } from "@/components/dashboard/HomeBookingCard";
 import { cn } from "@/lib/utils";
 import type { ScheduleItem } from "@/utils/dashboard";
 
-export function BookingCarousel<T extends ScheduleItem>({
+/** Swipeable one-card-per-slide row (CSS scroll-snap) with dots and a "See more" link. */
+export function CardCarousel<T>({
   items,
-  showDate = false,
+  getKey,
+  renderItem,
   seeMoreHref,
-  renderAction,
 }: {
   items: T[];
-  showDate?: boolean;
+  getKey: (item: T) => string;
+  /** Rendered as a slide; must accept the slide sizing `className`. */
+  renderItem: (item: T, className: string) => React.ReactNode;
   seeMoreHref: string;
-  /** Replaces the default Navigate button on each card. */
-  renderAction?: (item: T) => React.ReactNode;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -44,13 +45,9 @@ export function BookingCarousel<T extends ScheduleItem>({
         className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 no-scrollbar py-1 lg:-mx-6 lg:scroll-px-6 lg:px-6"
       >
         {items.map((item) => (
-          <HomeBookingCard
-            key={`${item.bookingId}-${item.startsAtMs}`}
-            item={item}
-            showDate={showDate}
-            action={renderAction?.(item)}
-            className="w-full shrink-0 snap-start"
-          />
+          <Fragment key={getKey(item)}>
+            {renderItem(item, "w-full shrink-0 snap-start")}
+          </Fragment>
         ))}
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center">
@@ -59,10 +56,10 @@ export function BookingCarousel<T extends ScheduleItem>({
           <div className="flex items-center gap-1.5">
             {items.map((item, index) => (
               <button
-                key={`${item.bookingId}-${item.startsAtMs}`}
+                key={getKey(item)}
                 type="button"
                 onClick={() => scrollToIndex(index)}
-                aria-label={`Show booking ${index + 1} of ${items.length}`}
+                aria-label={`Show item ${index + 1} of ${items.length}`}
                 aria-current={index === activeIndex}
                 className={cn(
                   "h-1.5 rounded-full transition-all",
@@ -85,5 +82,34 @@ export function BookingCarousel<T extends ScheduleItem>({
         </Link>
       </div>
     </div>
+  );
+}
+
+export function BookingCarousel<T extends ScheduleItem>({
+  items,
+  showDate = false,
+  seeMoreHref,
+  renderAction,
+}: {
+  items: T[];
+  showDate?: boolean;
+  seeMoreHref: string;
+  /** Replaces the default Navigate button on each card. */
+  renderAction?: (item: T) => React.ReactNode;
+}) {
+  return (
+    <CardCarousel
+      items={items}
+      getKey={(item) => `${item.bookingId}-${item.startsAtMs}`}
+      seeMoreHref={seeMoreHref}
+      renderItem={(item, className) => (
+        <HomeBookingCard
+          item={item}
+          showDate={showDate}
+          action={renderAction?.(item)}
+          className={className}
+        />
+      )}
+    />
   );
 }

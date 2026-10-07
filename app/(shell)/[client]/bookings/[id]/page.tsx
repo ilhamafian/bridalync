@@ -1,6 +1,11 @@
 "use client";
 
-import { CheckCircle2Icon, MessageCircleIcon, XCircleIcon } from "lucide-react";
+import {
+  CheckCircle2Icon,
+  HourglassIcon,
+  MessageCircleIcon,
+  XCircleIcon,
+} from "lucide-react";
 import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 
@@ -12,7 +17,13 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { useLocale } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import type { PublicBooking } from "@/schemas/bookingSchema";
-import { calculateProcessingFeeRm, formatRm } from "@/utils/booking/pricing";
+import {
+  applyPaymentOption,
+  calculateProcessingFeeRm,
+  formatRm,
+  resolveRequestPaymentOption,
+} from "@/utils/booking/pricing";
+import { cn } from "@/lib/utils";
 import {
   buildBookingResultMessage,
   buildWhatsAppUrl,
@@ -87,6 +98,9 @@ function BookingResultPageContent() {
   const [payingBalance, setPayingBalance] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [showManualBalance, setShowManualBalance] = useState(false);
+  const [requestPayOption, setRequestPayOption] = useState<"deposit" | "full">(
+    "full"
+  );
 
   useEffect(() => {
     const waitingOnDeposit =
@@ -255,6 +269,101 @@ function BookingResultPageContent() {
     }
   }
 
+  async function refreshBooking() {
+    const refresh = await fetch(
+      `/api/bookings/${bookingId}?client=${encodeURIComponent(client)}`
+    );
+    if (refresh.ok) setBooking((await refresh.json()) as PublicBooking);
+  }
+
+  /** Approved booking request, stylist on Stripe. */
+  async function handlePayRequest(paymentOption: "deposit" | "full") {
+    if (payingBalance || !booking) return;
+
+    setPayingBalance(true);
+    setPayError(null);
+    try {
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId,
+          freelancerUsername: client,
+          purpose: "deposit",
+          paymentOption,
+        }),
+      });
+      const payload: unknown = await response.json();
+      if (
+        response.ok &&
+        payload &&
+        typeof payload === "object" &&
+        "url" in payload &&
+        typeof payload.url === "string"
+      ) {
+        window.location.href = payload.url;
+        return;
+      }
+      throw new Error(
+        payload &&
+          typeof payload === "object" &&
+          "error" in payload &&
+          typeof payload.error === "string"
+          ? payload.error
+          : t.couldNotStartCheckout
+      );
+    } catch (requestPayError) {
+      setPayError(
+        requestPayError instanceof Error
+          ? requestPayError.message
+          : t.couldNotStartCheckout
+      );
+    } finally {
+      setPayingBalance(false);
+    }
+  }
+
+  /** Approved booking request, stylist on manual transfer. */
+  async function handleRequestReceipt(
+    receipt: File,
+    paymentOption: "deposit" | "full"
+  ) {
+    if (payingBalance || !booking) return;
+
+    setPayingBalance(true);
+    setPayError(null);
+    try {
+      const formData = new FormData();
+      formData.append("receipt", receipt);
+      formData.append("client", client);
+      formData.append("paymentOption", paymentOption);
+      const response = await fetch(`/api/bookings/${bookingId}/manual-deposit`, {
+        method: "POST",
+        body: formData,
+      });
+      const payload: unknown = await response.json();
+      if (!response.ok) {
+        throw new Error(
+          payload &&
+            typeof payload === "object" &&
+            "error" in payload &&
+            typeof payload.error === "string"
+            ? payload.error
+            : t.paymentCouldNotStart
+        );
+      }
+      await refreshBooking();
+    } catch (receiptError) {
+      setPayError(
+        receiptError instanceof Error
+          ? receiptError.message
+          : t.paymentCouldNotStart
+      );
+    } finally {
+      setPayingBalance(false);
+    }
+  }
+
   async function handleManualBalanceReceipt(receipt: File) {
     if (payingBalance || !booking) return;
 
@@ -339,6 +448,36 @@ function BookingResultPageContent() {
   const balanceProcessingFeeRm = usesManualBalance
     ? 0
     : calculateProcessingFeeRm(booking.invoice.totalRm);
+  const isRequested = booking.status === "requested";
+  const isDeclinedRequest =
+    booking.status === "cancelled" && Boolean(booking.requestDeclinedAt);
+  const awaitingRequestPayment =
+    isPending &&
+    Boolean(booking.requestApprovedAt) &&
+    !awaitingManualVerification &&
+    !isConfirmingDeposit;
+  const requestState = isRequested
+    ? "requested"
+    : isDeclinedRequest
+      ? "declined"
+      : awaitingRequestPayment
+        ? "approved"
+        : null;
+  const balanceDueBeforeDays = booking.balanceDueBeforeDays ?? 3;
+  const requestCanPayDeposit =
+    resolveRequestPaymentOption(
+      booking.invoice,
+      booking.sessions,
+      balanceDueBeforeDays,
+      "deposit"
+    ) === "deposit";
+  const requestOption = requestCanPayDeposit ? requestPayOption : "full";
+  const requestPaysInFull = requestOption === "full";
+  const requestAmountDueRm = requestPaysInFull
+    ? booking.invoice.totalRm +
+      (usesManualBalance ? 0 : calculateProcessingFeeRm(booking.invoice.totalRm))
+    : booking.invoice.depositRm;
+  const freelancerName = booking.freelancer?.name ?? t.stylist;
   const whatsAppUrl =
     booking.freelancer?.mobile && booking.freelancer.country_code
       ? buildWhatsAppUrl(
@@ -351,6 +490,44 @@ function BookingResultPageContent() {
   return (
     <BookingResultLayout>
       <div className="flex w-full max-w-md flex-col items-center gap-6">
+        {requestState ? (
+          <div className="flex flex-col items-center gap-3 text-center">
+            {requestState === "requested" && (
+              <HourglassIcon className="size-12 text-rose-900 dark:text-rose-400" />
+            )}
+            {requestState === "approved" && (
+              <CheckCircle2Icon className="size-12 text-rose-900 dark:text-rose-400" />
+            )}
+            {requestState === "declined" && (
+              <XCircleIcon className="size-12 text-rose-900 dark:text-rose-400" />
+            )}
+            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              {requestState === "requested" && t.requestSentTitle}
+              {requestState === "approved" && t.requestApprovedTitle}
+              {requestState === "declined" && t.requestDeclinedTitle}
+            </h1>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              {requestState === "requested" &&
+                format(t.requestSentBody, {
+                  name: freelancerName,
+                  email: booking.contact.email,
+                })}
+              {requestState === "approved" &&
+                format(t.requestApprovedBody, {
+                  name: freelancerName,
+                  amount: formatRm(requestAmountDueRm),
+                })}
+              {requestState === "declined" &&
+                format(t.requestDeclinedBody, { name: freelancerName })}
+            </p>
+            {requestState === "approved" &&
+            booking.depositVerificationStatus === "rejected" ? (
+              <p className="text-sm text-destructive" role="alert">
+                {t.requestReceiptRejected}
+              </p>
+            ) : null}
+          </div>
+        ) : (
         <div className="flex flex-col items-center gap-3 text-center">
           {(isFullyPaid || isCompleted) && (
             <CheckCircle2Icon className="size-12 text-rose-900 dark:text-rose-400" />
@@ -430,6 +607,7 @@ function BookingResultPageContent() {
             {balanceReceiptPending && t.balanceReceiptPending}
           </p>
         </div>
+        )}
 
         <div className="w-full space-y-2">
           <p className="text-sm font-medium text-foreground">
@@ -454,10 +632,106 @@ function BookingResultPageContent() {
           />
         </div>
 
+        {requestState === "approved" && requestCanPayDeposit ? (
+          <div
+            className="flex w-full flex-col gap-2"
+            role="radiogroup"
+            aria-label={t.paymentOptionLabel}
+          >
+            {(["full", "deposit"] as const).map((option) => {
+              const selected = requestOption === option;
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setRequestPayOption(option)}
+                  className={cn(
+                    "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
+                    selected
+                      ? "bg-rose-800 text-white shadow-sm"
+                      : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
+                  )}
+                >
+                  <span className="font-medium">
+                    {option === "full"
+                      ? format(t.payFullOption, {
+                          amount: formatRm(booking.invoice.totalRm),
+                        })
+                      : format(t.payDepositOption, {
+                          amount: formatRm(booking.invoice.depositRm),
+                        })}
+                  </span>
+                  <span
+                    className={cn(
+                      "text-xs",
+                      selected ? "text-white/80" : "text-muted-foreground"
+                    )}
+                  >
+                    {option === "full"
+                      ? t.noBalanceLater
+                      : format(t.balanceDue, {
+                          amount: formatRm(booking.invoice.balanceRm),
+                          days: balanceDueBeforeDays,
+                        })}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        ) : null}
+
         <BookingInvoice
-          invoice={booking.invoice}
-          paymentOption={booking.paymentOption}
+          invoice={
+            requestState === "approved" && requestPaysInFull
+              ? applyPaymentOption(booking.invoice, "full")
+              : booking.invoice
+          }
+          paymentOption={
+            requestState === "approved" ? requestOption : booking.paymentOption
+          }
         />
+
+        {requestState === "approved" &&
+          (usesManualBalance ? (
+            booking.manualTransfer ? (
+              <ManualPaymentStep
+                amountLabel={format(t.transferAmountDue, {
+                  amount: formatRm(requestAmountDueRm),
+                })}
+                submitLabel={t.submitReceiptConfirm}
+                submittingLabel={t.submittingReceipt}
+                isSubmitting={payingBalance}
+                error={payError}
+                transfer={booking.manualTransfer}
+                onSubmit={(file) => void handleRequestReceipt(file, requestOption)}
+              />
+            ) : (
+              <p className="text-center text-sm text-destructive" role="alert">
+                This stylist has not set up payment details yet. Please contact
+                them to complete your booking.
+              </p>
+            )
+          ) : (
+            <div className="flex w-full flex-col gap-2">
+              <Button
+                size="lg"
+                className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
+                disabled={payingBalance}
+                onClick={() => void handlePayRequest(requestOption)}
+              >
+                {payingBalance
+                  ? t.redirectingStripe
+                  : format(requestPaysInFull ? t.payNow : t.payDepositNow, {
+                      amount: formatRm(requestAmountDueRm),
+                    })}
+              </Button>
+              {payError && (
+                <p className="text-center text-sm text-destructive">{payError}</p>
+              )}
+            </div>
+          ))}
 
         {outstandingBalance &&
           !isConfirmingBalance &&

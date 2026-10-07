@@ -149,10 +149,15 @@ const BASE_STEP_ORDER: BookingStep[] = [
   "payment",
 ];
 
-function buildStepOrder(hasStyles: boolean, hasAddOns: boolean): BookingStep[] {
+function buildStepOrder(
+  hasStyles: boolean,
+  hasAddOns: boolean,
+  requestMode: boolean
+): BookingStep[] {
   return BASE_STEP_ORDER.filter((step) => {
     if (step === "style" && !hasStyles) return false;
     if (step === "addons" && !hasAddOns) return false;
+    if (step === "payment" && requestMode) return false;
     return true;
   });
 }
@@ -677,6 +682,7 @@ export default function ClientPage() {
   const stepScrollRef = useRef<HTMLDivElement>(null);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [requestDialogOpen, setRequestDialogOpen] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentOption, setPaymentOption] = useState<"deposit" | "full">(
@@ -756,8 +762,13 @@ export default function ClientPage() {
     styles.length > 0 && (settings?.charge_by === "style" || usesLooks);
 
   const stepOrder = useMemo(
-    () => buildStepOrder(showStyleStep, addOns.length > 0),
-    [showStyleStep, addOns]
+    () =>
+      buildStepOrder(
+        showStyleStep,
+        addOns.length > 0,
+        settings?.booking_requests === true
+      ),
+    [showStyleStep, addOns, settings?.booking_requests]
   );
 
   const styleText = usesLooks
@@ -1036,7 +1047,13 @@ export default function ClientPage() {
     () => requiresFullPayment(sessions, balanceDueBeforeDays),
     [sessions, balanceDueBeforeDays]
   );
-  const effectivePaymentOption = mustPayFull ? "full" : paymentOption;
+  /** The stylist approves first; the client picks deposit or full on the booking page after approval. */
+  const requestMode = settings?.booking_requests === true;
+  const effectivePaymentOption = mustPayFull
+    ? "full"
+    : requestMode
+      ? "deposit"
+      : paymentOption;
   const payableQuotation = useMemo(
     () => applyPaymentOption(quotation, effectivePaymentOption),
     [quotation, effectivePaymentOption]
@@ -1484,7 +1501,7 @@ export default function ClientPage() {
     }
 
     const paymentMethod = settings?.payment.method ?? "manual_transfer";
-    const isManual = paymentMethod === "manual_transfer";
+    const isManual = !requestMode && paymentMethod === "manual_transfer";
 
     if (isManual && !receipt) {
       setPaymentError(t.receiptRequired);
@@ -1596,7 +1613,16 @@ export default function ClientPage() {
         bookingPayload.requiresCheckout === true;
 
       if (!requiresCheckout) {
-        window.location.href = `/${client}/bookings/${bookingId}?payment=manual-submitted`;
+        const status =
+          bookingPayload &&
+          typeof bookingPayload === "object" &&
+          "status" in bookingPayload
+            ? bookingPayload.status
+            : null;
+        window.location.href =
+          status === "requested"
+            ? `/${client}/bookings/${bookingId}`
+            : `/${client}/bookings/${bookingId}?payment=manual-submitted`;
         return;
       }
 
@@ -1681,7 +1707,9 @@ export default function ClientPage() {
                     <StepperTitle className="text-start text-[10px] font-semibold leading-tight group-data-[state=inactive]/step:text-muted-foreground sm:text-xs">
                       {progressStep.key === "style"
                         ? styleText.step
-                        : t[progressStep.titleKey]}
+                        : progressStep.key === "payment" && requestMode
+                          ? t.stepRequest
+                          : t[progressStep.titleKey]}
                     </StepperTitle>
                   </StepperTrigger>
                 </StepperItem>
@@ -2262,23 +2290,76 @@ export default function ClientPage() {
                 </label>
               </CardContent>
             </Card>
-            <Button
-              size="lg"
-              className="bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={!termsAccepted}
-              onClick={goToNextStep}
-            >
-              {t.agreeContinue}
-              <ChevronRightIcon />
-            </Button>
+            {requestMode ? (
+              <Button
+                size="lg"
+                className="bg-rose-800 text-white hover:bg-rose-800/90"
+                disabled={!termsAccepted}
+                onClick={() => {
+                  setPaymentError(null);
+                  setRequestDialogOpen(true);
+                }}
+              >
+                {t.requestBooking}
+                <ChevronRightIcon />
+              </Button>
+            ) : (
+              <Button
+                size="lg"
+                className="bg-rose-800 text-white hover:bg-rose-800/90"
+                disabled={!termsAccepted}
+                onClick={goToNextStep}
+              >
+                {t.agreeContinue}
+                <ChevronRightIcon />
+              </Button>
+            )}
           </div>
-    
+          <AlertDialog
+            open={requestDialogOpen}
+            onOpenChange={(open) => {
+              if (!isPaying) setRequestDialogOpen(open);
+            }}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t.requestDialogTitle}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {format(t.requestDialogBody, {
+                    name: user?.name?.trim() || t.stylist,
+                    email: contact.email.trim(),
+                  })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {paymentError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {paymentError}
+                </p>
+              )}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={isPaying}>
+                  {t.requestDialogCancel}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={isPaying}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void handlePay();
+                  }}
+                >
+                  {isPaying ? t.sendingRequest : t.requestDialogConfirm}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
       {step === "payment" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {effectivePaymentOption === "full" ? t.payInFull : t.choosePayment}
+            {effectivePaymentOption === "full"
+              ? t.payInFull
+              : t.choosePayment}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
             {mustPayFull

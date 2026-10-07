@@ -84,7 +84,9 @@ export async function syncBookingCheckoutFromStripe(input: {
   if (input.purpose === "balance") {
     await confirmBookingBalancePayment(input.bookingId, paymentIntentId);
   } else {
-    await confirmBookingPayment(input.bookingId, paymentIntentId);
+    await confirmBookingPayment(input.bookingId, paymentIntentId, {
+      paymentOption: session.metadata?.paymentOption === "full" ? "full" : undefined,
+    });
   }
 
   const updated = await getBookingById(input.bookingId);

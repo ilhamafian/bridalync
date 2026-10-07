@@ -1,6 +1,7 @@
 import {
   IconBell,
   IconBrandGoogle,
+  IconCalendarQuestion,
   IconCar,
   IconClock,
   IconCreditCard,
@@ -26,6 +27,7 @@ export const SETTINGS_GROUPS: { title: string; categories: SettingsCategory[] }[
       "time-slots",
       "travel-fee",
       "client-info",
+      "booking-requests",
       "messages",
     ],
   },
@@ -62,6 +64,11 @@ export const SETTINGS_CATEGORY_META: Record<
     label: "Client information",
     description: "What clients fill in on the final details step of booking.",
     icon: IconUserCircle,
+  },
+  "booking-requests": {
+    label: "Booking requests",
+    description: "Approve each booking before the client pays.",
+    icon: IconCalendarQuestion,
   },
   "payment-method": {
     label: "Payment method",

@@ -43,6 +43,7 @@ export const SETTINGS_CATEGORIES = [
   "time-slots",
   "travel-fee",
   "client-info",
+  "booking-requests",
   "payment-method",
   "invoice",
   "messages",

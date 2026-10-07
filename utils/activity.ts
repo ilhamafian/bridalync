@@ -3,6 +3,7 @@ import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import { getBookingPayments } from "@/utils/payments";
 
 export type ActivityKind =
+  | "request"
   | "new"
   | "deposit"
   | "balance"
@@ -33,6 +34,7 @@ export type NotificationReadState = {
 };
 
 const ACTIVITY_LABELS: Record<ActivityKind, string> = {
+  request: "Booking request",
   new: "New booking",
   deposit: "Deposit received",
   balance: "Balance payment received",
@@ -67,6 +69,15 @@ function getBookingActivity(booking: SerializedBooking): ActivityItem[] {
   });
 
   if (booking.status === "failed") return [];
+  if (booking.status === "requested") {
+    return [
+      event(
+        "request",
+        booking.invoice.totalRm,
+        booking.created_at ?? bookingUpdatedAt(booking)
+      ),
+    ];
+  }
   if (booking.status === "cancelled") {
     return [
       event("cancelled", booking.invoice.totalRm, bookingUpdatedAt(booking)),

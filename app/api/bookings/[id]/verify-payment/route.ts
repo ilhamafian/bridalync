@@ -65,7 +65,9 @@ export async function POST(
 
       const updated =
         action === "approve"
-          ? await confirmBookingPayment(id)
+          ? await confirmBookingPayment(id, undefined, {
+              paymentOption: booking.requestPaymentOption,
+            })
           : await rejectManualDepositPayment(id);
 
       return createResponse({

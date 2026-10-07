@@ -158,7 +158,8 @@ export function flattenScheduleItems(
     if (
       booking.status === "cancelled" ||
       booking.status === "failed" ||
-      booking.status === "enquiry"
+      booking.status === "enquiry" ||
+      booking.status === "requested"
     ) {
       continue;
     }
@@ -322,6 +323,8 @@ export function getBookingSummary(
 
 export function bookingStatusLabel(status: Booking["status"]) {
   switch (status) {
+    case "requested":
+      return "Request";
     case "pending":
       return "Pending";
     case "confirmed":

@@ -3,12 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  IconCheck,
-  IconCopy,
-  IconPencil,
-  IconTrash,
-} from "@tabler/icons-react";
+import { IconCheck, IconCopy, IconPencil, IconTrash } from "@tabler/icons-react";
 
 import {
   BookingDetailsSections,
@@ -16,6 +11,10 @@ import {
   bookingStatusText,
 } from "@/components/booking/BookingDetailsContent";
 import { BackButton } from "@/components/dashboard/BackButton";
+import {
+  BookingRequestButtons,
+  formatCompetingRequests,
+} from "@/components/dashboard/BookingRequestButtons";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
   AlertDialog,
@@ -149,10 +148,62 @@ function DeleteBookingButton({ booking }: { booking: SerializedBooking }) {
   );
 }
 
+function BookingRequestActions({
+  booking,
+  competingRequests,
+  onBookingUpdated,
+  onBookingsDeclined,
+}: {
+  booking: SerializedBooking;
+  competingRequests: SerializedBooking[];
+  onBookingUpdated?: (booking: SerializedBooking) => void;
+  onBookingsDeclined?: (ids: string[]) => void;
+}) {
+  const competingCount = competingRequests.length;
+
+  return (
+    <div className={cn(glassCardClassName, "flex flex-col gap-3 p-4 text-sm")}>
+      <div>
+        <p className="font-medium">Booking request</p>
+        <p className="mt-0.5 text-muted-foreground">
+          Approving emails {booking.contact.name} a link to pay and keeps the
+          slot for them. Until you approve someone, other clients can request
+          it too.
+        </p>
+        {competingCount > 0 ? (
+          <p className="mt-2 text-muted-foreground">
+            <span className="font-medium text-foreground">
+              {formatCompetingRequests(competingCount)}
+            </span>{" "}
+            for this slot (
+            {competingRequests
+              .map((request) => request.contact.name)
+              .join(", ")}
+            ) will be declined if you approve this one.
+          </p>
+        ) : null}
+      </div>
+      <BookingRequestButtons
+        booking={booking}
+        competingCount={competingCount}
+        onBookingUpdated={onBookingUpdated}
+        onBookingsDeclined={onBookingsDeclined}
+      />
+    </div>
+  );
+}
+
 export function BookingDetailsPage({
   booking,
+  competingRequests = [],
+  onBookingUpdated,
+  onBookingsDeclined,
 }: {
   booking: SerializedBooking | null;
+  /** Other open requests that share a slot with this booking (declined if it's approved). */
+  competingRequests?: SerializedBooking[];
+  onBookingUpdated?: (booking: SerializedBooking) => void;
+  onBookingsDeclined?: (ids: string[]) => void;
 }) {
   if (!booking) {
     return (
@@ -191,6 +242,15 @@ export function BookingDetailsPage({
           </p>
         ) : null}
       </section>
+
+      {booking.status === "requested" ? (
+        <BookingRequestActions
+          booking={booking}
+          competingRequests={competingRequests}
+          onBookingUpdated={onBookingUpdated}
+          onBookingsDeclined={onBookingsDeclined}
+        />
+      ) : null}
 
       <div className="flex flex-col gap-3 text-sm">
         <BookingDetailsSections

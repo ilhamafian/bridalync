@@ -78,7 +78,9 @@ export const bookingSchema = z.object({
   sessions: z.array(bookingSessionSchema),
   invoice: quotationSummarySchema,
   paymentOption: z.enum(["deposit", "full"]).default("deposit"),
+  /** `requested` = waiting for the stylist to approve (booking requests setting); approving makes it `pending`. */
   status: z.enum([
+    "requested",
     "pending",
     "confirmed",
     "completed",
@@ -86,6 +88,12 @@ export const bookingSchema = z.object({
     "enquiry",
     "cancelled",
   ]),
+  /** Set when the stylist approved a booking request; the client then pays from the booking page. */
+  requestApprovedAt: z.coerce.date().optional(),
+  /** Deposit/full picked with a transfer receipt on an approved request; applied when the receipt is approved. */
+  requestPaymentOption: z.enum(["deposit", "full"]).optional(),
+  /** Set when the stylist declined a booking request (status becomes `cancelled`). */
+  requestDeclinedAt: z.coerce.date().optional(),
   source: z.enum(["bridalync", "google_calendar"]).default("bridalync"),
   googleEventId: z.string().min(1).optional(),
   paymentChannel: paymentChannelSchema.optional(),
@@ -171,6 +179,8 @@ export const publicBookingSchema = bookingSchema
     _id: z.string(),
     freelancer: publicBookingFreelancerSchema.optional(),
     stylistPaymentMethod: paymentChannelSchema.optional(),
+    /** Stylist's balance-due window (days before the first session); decides if an approved request can pay a deposit. */
+    balanceDueBeforeDays: z.number().optional(),
     manualTransfer: z
       .object({
         qrImageUrl: z.string(),
@@ -188,7 +198,8 @@ export function toPublicBooking(
   booking: PersistedBooking,
   freelancer?: PublicBookingFreelancer | null,
   stylistPaymentMethod?: z.infer<typeof paymentChannelSchema> | null,
-  manualTransfer?: ManualTransferDetails | null
+  manualTransfer?: ManualTransferDetails | null,
+  balanceDueBeforeDays?: number
 ): PublicBooking {
   const {
     freelancerUserId,
@@ -212,6 +223,7 @@ export function toPublicBooking(
       ? { stylistPaymentMethod }
       : {}),
     ...(manualTransfer ? { manualTransfer } : {}),
+    ...(balanceDueBeforeDays != null ? { balanceDueBeforeDays } : {}),
   });
 }
 

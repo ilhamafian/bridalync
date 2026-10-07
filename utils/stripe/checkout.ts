@@ -140,7 +140,9 @@ export async function createDepositCheckoutSession(input: {
         description: paymentDescription,
       },
       success_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=success`,
-      cancel_url: `${appUrl}/${input.freelancerUsername}?payment=cancelled`,
+      cancel_url: input.booking.requestApprovedAt
+        ? `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=cancelled`
+        : `${appUrl}/${input.freelancerUsername}?payment=cancelled`,
     },
     input.stripeAccountId,
     account

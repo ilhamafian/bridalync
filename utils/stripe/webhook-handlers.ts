@@ -41,7 +41,9 @@ export async function handleBookingPaymentConfirmed(
     return;
   }
 
-  await confirmBookingPayment(bookingId, paymentIntentId);
+  await confirmBookingPayment(bookingId, paymentIntentId, {
+    paymentOption: metadata?.paymentOption === "full" ? "full" : undefined,
+  });
 }
 
 export async function handleBookingPaymentFailed(metadata: StripeMetadata) {

@@ -87,6 +87,9 @@ export async function POST(req: NextRequest) {
     );
     const paymentSettings = paymentSettingSchema.parse(settings?.payment ?? {});
     const paymentMethod = paymentSettings.method;
+    /** The stylist approves first; the client pays from the booking page afterwards. */
+    const isRequest =
+      data.intent === "booking" && settings?.booking_requests === true;
 
     if (data.intent === "booking") {
       if (paymentMethod === "payment_gateway") {
@@ -114,7 +117,7 @@ export async function POST(req: NextRequest) {
           },
           503
         );
-      } else if (!receipt) {
+      } else if (!receipt && !isRequest) {
         return createResponse(
           { error: "Payment receipt is required for manual transfer." },
           400
@@ -122,7 +125,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    if (receipt) {
+    if (receipt && !isRequest) {
       if (!RECEIPT_ALLOWED_TYPES.has(receipt.type)) {
         return createResponse(
           { error: "Upload a JPEG, PNG, WebP, or GIF receipt." },
@@ -163,7 +166,9 @@ export async function POST(req: NextRequest) {
       await resolveBookingQuotation(freelancer.userId, data);
 
     const isManualBooking =
-      data.intent === "booking" && paymentMethod === "manual_transfer";
+      data.intent === "booking" &&
+      !isRequest &&
+      paymentMethod === "manual_transfer";
 
     const booking = await createBooking({
       freelancerUsername: data.freelancerUsername.toLowerCase(),
@@ -177,8 +182,12 @@ export async function POST(req: NextRequest) {
       sessions,
       invoice,
       paymentOption,
-      status: data.intent === "booking" ? "pending" : "enquiry",
-      ...(data.intent === "booking"
+      status: isRequest
+        ? "requested"
+        : data.intent === "booking"
+          ? "pending"
+          : "enquiry",
+      ...(data.intent === "booking" && !isRequest
         ? {
             paymentChannel: paymentMethod,
             ...(isManualBooking
@@ -212,7 +221,7 @@ export async function POST(req: NextRequest) {
     const persisted = await getBookingById(createdBookingId);
     if (
       persisted &&
-      (persisted.status === "enquiry" || isManualBooking)
+      (persisted.status === "enquiry" || isRequest || isManualBooking)
     ) {
       try {
         await notifyNewClientBooking(persisted);
@@ -227,7 +236,8 @@ export async function POST(req: NextRequest) {
         status: booking.status,
         invoice: booking.invoice,
         paymentChannel: paymentMethod,
-        requiresCheckout: data.intent === "booking" && !isManualBooking,
+        requiresCheckout:
+          data.intent === "booking" && !isRequest && !isManualBooking,
       },
       201
     );

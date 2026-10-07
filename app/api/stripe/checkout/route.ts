@@ -7,6 +7,10 @@ import { SettingModel } from "@/models/Setting";
 import { toIdString } from "@/schemas/objectId";
 import { paymentSettingSchema } from "@/schemas/settingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
+import {
+  applyPaymentOption,
+  resolveRequestPaymentOption,
+} from "@/utils/booking/pricing";
 import { getBookingById, markBookingPaymentFailed } from "@/utils/bookings";
 import {
   createBalanceCheckoutSession,
@@ -18,6 +22,8 @@ const checkoutRequestSchema = z.object({
   bookingId: z.string().min(1),
   freelancerUsername: z.string().min(1),
   purpose: z.enum(["deposit", "balance"]).default("deposit"),
+  /** Approved booking requests only: what the client chose to pay now. */
+  paymentOption: z.enum(["deposit", "full"]).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -87,6 +93,24 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Approved requests keep the deposit invoice until paid; paying in full is applied on confirmation.
+    const requestOption = booking.requestApprovedAt
+      ? resolveRequestPaymentOption(
+          booking.invoice,
+          booking.sessions,
+          paymentSettingSchema.parse(settings?.payment ?? {}).balance_due_before,
+          parsed.data.paymentOption ?? booking.paymentOption
+        )
+      : null;
+    const chargeBooking =
+      requestOption === "full"
+        ? {
+            ...booking,
+            paymentOption: "full" as const,
+            invoice: applyPaymentOption(booking.invoice, "full"),
+          }
+        : booking;
+
     const session =
       purpose === "balance"
         ? await createBalanceCheckoutSession({
@@ -95,7 +119,7 @@ export async function POST(req: NextRequest) {
             stripeAccountId: freelancer.stripe_account_id,
           })
         : await createDepositCheckoutSession({
-            booking,
+            booking: chargeBooking,
             freelancerUsername: freelancerUsername.toLowerCase(),
             stripeAccountId: freelancer.stripe_account_id,
           });

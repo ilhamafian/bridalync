@@ -41,10 +41,28 @@ export async function notifyNewClientBooking(booking: PersistedBooking) {
   await sendPushToUser(booking.freelancerUserId, {
     title: isEnquiry
       ? "New enquiry"
-      : awaitingVerification
+      : booking.status === "requested"
+        ? "New booking request — approve or decline"
+        : awaitingVerification
         ? "New booking — payment pending"
         : "New booking",
     body: `${booking.contact.name} — ${formatSessionSummary(booking)}${verifyNote}`,
+    url: bookingDetailsUrl(booking),
+  });
+}
+
+/** A client uploaded a transfer receipt for an approved booking request. */
+export async function notifyDepositReceiptSubmitted(
+  booking: PersistedBooking,
+  amountRm: number,
+  paysInFull: boolean
+) {
+  if (!booking.freelancerUserId) return;
+
+  const paymentLabel = paysInFull ? "Full payment" : "Deposit";
+  await sendPushToUser(booking.freelancerUserId, {
+    title: "Payment receipt to verify",
+    body: `${booking.contact.name} — ${formatSessionSummary(booking)} · ${paymentLabel} ${formatRm(amountRm)}`,
     url: bookingDetailsUrl(booking),
   });
 }

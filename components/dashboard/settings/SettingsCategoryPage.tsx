@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { BackButton } from "@/components/dashboard/BackButton";
+import { BookingRequestSettings } from "@/components/dashboard/settings/BookingRequestSettings";
 import { ClientInfoSettings } from "@/components/dashboard/settings/ClientInfoSettings";
 import { getSettingsCategoryMeta } from "@/components/dashboard/settings/categories";
 import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
@@ -98,6 +99,12 @@ export function SettingsCategoryPage({
       <div className={cn("px-4 lg:px-6", category !== "client-info" && "hidden")}>
         <ClientInfoSettings
           initialClientInfo={settings.initialSettings.client_info}
+        />
+      </div>
+
+      <div className={cn("px-4 lg:px-6", category !== "booking-requests" && "hidden")}>
+        <BookingRequestSettings
+          initialEnabled={settings.initialSettings.booking_requests}
         />
       </div>
     </div>

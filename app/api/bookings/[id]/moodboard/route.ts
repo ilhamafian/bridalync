@@ -57,7 +57,9 @@ export async function POST(
       ? new Date(booking.created_at).getTime()
       : 0;
     if (
-      (booking.status !== "pending" && booking.status !== "enquiry") ||
+      (booking.status !== "pending" &&
+        booking.status !== "enquiry" &&
+        booking.status !== "requested") ||
       Date.now() - createdAt > UPLOAD_WINDOW_MS
     ) {
       return createResponse(

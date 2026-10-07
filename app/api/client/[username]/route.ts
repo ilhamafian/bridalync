@@ -16,6 +16,7 @@ import { publicSettingSchema } from "@/schemas/settingSchema";
 import { bookingModel } from "@/models/Booking";
 import {
   getOccupiedSlotsFromBookings,
+  SLOT_HOLDING_STATUSES,
   toDateKey,
 } from "@/utils/booking/availability";
 import {
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     const bookings = await bookingModel.find({
       freelancerUserId: user_id,
-      status: { $in: ["pending", "confirmed", "completed"] },
+      status: { $in: SLOT_HOLDING_STATUSES },
     });
     const todayKey = toDateKey(new Date());
     const [hotDateDocs, blockedDateDocs, blockedSlotDocs] = await Promise.all([

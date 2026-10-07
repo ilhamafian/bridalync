@@ -30,6 +30,7 @@ function serializeSetting(setting: WithId<Setting>) {
     messages: setting.messages ?? {},
     show_add_on_prices: setting.show_add_on_prices ?? true,
     client_info: setting.client_info ?? {},
+    booking_requests: setting.booking_requests ?? false,
     max_booking_year: setting.max_booking_year,
     booking_until: setting.booking_until,
     created_at: setting.created_at,
@@ -98,6 +99,10 @@ function mergeSettingsUpdate(
       ...existing.client_info,
       ...patch.client_info,
     };
+  }
+
+  if (patch.booking_requests !== undefined) {
+    update.booking_requests = patch.booking_requests;
   }
 
   if (patch.max_booking_year !== undefined) {

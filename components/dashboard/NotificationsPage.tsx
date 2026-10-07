@@ -10,10 +10,17 @@ import { FilterPills } from "@/components/dashboard/FilterPills";
 import { Button } from "@/components/ui/button";
 import type { ActivityItem, ActivityKind } from "@/utils/activity";
 
-type NotificationFilter = "all" | "deposit" | "balance" | "full" | "cancelled";
+type NotificationFilter =
+  | "all"
+  | "request"
+  | "deposit"
+  | "balance"
+  | "full"
+  | "cancelled";
 
 const NOTIFICATION_FILTERS: { value: NotificationFilter; label: string }[] = [
   { value: "all", label: "All" },
+  { value: "request", label: "Requests" },
   { value: "deposit", label: "Deposit" },
   { value: "balance", label: "Balance payment" },
   { value: "full", label: "Full payment" },

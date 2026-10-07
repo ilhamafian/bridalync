@@ -4,11 +4,19 @@ import Link from "next/link";
 import { IconBrandWhatsapp } from "@tabler/icons-react";
 
 import { ActivityList } from "@/components/dashboard/ActivityList";
-import { BookingCarousel } from "@/components/dashboard/BookingCarousel";
+import {
+  BookingCarousel,
+  CardCarousel,
+} from "@/components/dashboard/BookingCarousel";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import {
+  HomeRequestCard,
+  type HomeRequestItem,
+} from "@/components/dashboard/HomeRequestCard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { ActivityItem } from "@/utils/activity";
+import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
   type CompletedScheduleItem,
   type ScheduleItem,
@@ -70,11 +78,18 @@ export function DashboardHome({
   upcoming,
   completed,
   activity,
+  requests,
   isActivityUnread,
   onOpenActivity,
+  onBookingUpdated,
+  onBookingsDeclined,
 }: DashboardHomeProps & {
+  /** Open booking requests (first 3) and the total; `null` hides the section. */
+  requests: { items: HomeRequestItem[]; total: number } | null;
   isActivityUnread?: (item: ActivityItem) => boolean;
   onOpenActivity?: (item: ActivityItem) => void;
+  onBookingUpdated?: (booking: SerializedBooking) => void;
+  onBookingsDeclined?: (ids: string[]) => void;
 }) {
   const showToday = todaysSchedule.length > 0;
   const bookings = showToday ? todaysSchedule : upcoming;
@@ -90,6 +105,34 @@ export function DashboardHome({
           {upcomingThisWeek === 1 ? "" : "s"} this week.
         </p>
       </section>
+
+      {requests ? (
+        <section className="flex flex-col gap-3">
+          <h3 className="text-sm font-medium">
+            Booking requests
+            {requests.total > 0 ? (
+              <span className="text-muted-foreground"> · {requests.total}</span>
+            ) : null}
+          </h3>
+          {requests.items.length === 0 ? (
+            <EmptyCard>No booking requests waiting.</EmptyCard>
+          ) : (
+            <CardCarousel
+              items={requests.items}
+              getKey={(item) => item.booking._id}
+              seeMoreHref="/dashboard/bookings?filter=requests"
+              renderItem={(item, className) => (
+                <HomeRequestCard
+                  item={item}
+                  className={className}
+                  onBookingUpdated={onBookingUpdated}
+                  onBookingsDeclined={onBookingsDeclined}
+                />
+              )}
+            />
+          )}
+        </section>
+      ) : null}
 
       <section className="flex flex-col gap-3">
         <h3 className="text-sm font-medium">

@@ -94,6 +94,8 @@ function formatBookingStatusIntro(
   status: PublicBooking["status"]
 ) {
   switch (status) {
+    case "requested":
+      return `Hi ${freelancerName}, I sent you a booking request.`;
     case "confirmed":
       return `Hi ${freelancerName}, my booking is confirmed.`;
     case "completed":

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   IconCalendarPlus,
+  IconCalendarQuestion,
   IconCalendarX,
   IconCash,
   IconCashBanknote,
@@ -28,6 +29,7 @@ function formatActivityTime(value: string) {
 }
 
 const activityIcons: Record<ActivityKind, Icon> = {
+  request: IconCalendarQuestion,
   new: IconCalendarPlus,
   deposit: IconCash,
   balance: IconCashBanknote,

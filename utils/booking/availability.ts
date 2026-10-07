@@ -14,11 +14,16 @@ type SessionSlotInput = {
 
 export const BOOKING_TIMEZONE = "Asia/Kuala_Lumpur";
 
-const BLOCKING_BOOKING_STATUSES = new Set<Booking["status"]>([
+/** `requested` is left out: several clients can request the same slot until the stylist approves one. */
+export const SLOT_HOLDING_STATUSES: Booking["status"][] = [
   "pending",
   "confirmed",
   "completed",
-]);
+];
+
+const BLOCKING_BOOKING_STATUSES = new Set<Booking["status"]>(
+  SLOT_HOLDING_STATUSES
+);
 
 export function toDateKey(date: Date | string): string {
   const value = date instanceof Date ? date : new Date(date);
@@ -105,6 +110,25 @@ export function isSessionSlotTaken(
   return occupiedSlots.some(
     (slot) =>
       slot.date === dateKey && timeRangesOverlap(slot, session.time_slot)
+  );
+}
+
+/** True when any active session of one booking shares a date and overlapping time with the other's. */
+export function bookingSessionsOverlap(
+  left: { sessions: Array<SessionSlotInput & { status?: string }> },
+  right: { sessions: Array<SessionSlotInput & { status?: string }> }
+): boolean {
+  const rightSlots = right.sessions
+    .filter((session) => session.status !== "cancelled")
+    .map((session) => ({
+      date: toDateKey(session.date),
+      startTime: session.time_slot.startTime,
+      endTime: session.time_slot.endTime,
+    }));
+
+  return left.sessions.some(
+    (session) =>
+      session.status !== "cancelled" && isSessionSlotTaken(session, rightSlots)
   );
 }
 

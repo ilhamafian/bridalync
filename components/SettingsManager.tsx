@@ -107,6 +107,7 @@ export type SettingsItem = {
   time_slots: TimeSlot[];
   messages: { review_request?: string };
   client_info: ClientInfoSetting;
+  booking_requests: boolean;
   max_booking_year?: number;
 };
 

@@ -32,6 +32,7 @@ export const en: Locale = {
   stepLocation: "Location",
   stepStyle: "Style",
   stepPayment: "Payment",
+  stepRequest: "Request",
 
   // Name
   nameQuestion: "But first,\nWhat should I call you?",
@@ -169,6 +170,27 @@ export const en: Locale = {
   bookingPendingVerification:
     "Thanks! Your booking is held while the stylist verifies your payment receipt.",
   couldNotCreateBooking: "Could not create booking.",
+
+  // Booking requests (stylist approves before the client pays)
+  requestBooking: "Request booking",
+  requestDialogTitle: "Your booking isn't confirmed yet",
+  requestDialogBody:
+    "{name} needs to approve your request first, and this slot stays open to other clients until then. Once it's approved we'll email {email} a link to pay a deposit or the full amount.",
+  requestDialogCancel: "Go back",
+  requestDialogConfirm: "Send request",
+  sendingRequest: "Sending request…",
+  requestSentTitle: "Request sent",
+  requestSentBody:
+    "{name} will review your request. We'll email you at {email} once it's approved, with a link to pay and confirm your booking.",
+  requestApprovedTitle: "Request approved",
+  requestApprovedBody:
+    "{name} approved your request. Pay {amount} to confirm your booking.",
+  requestDeclinedTitle: "Request declined",
+  requestDeclinedBody:
+    "Sorry, {name} can't take this booking. You haven't been charged.",
+  requestReceiptRejected:
+    "Your payment receipt couldn't be verified. Please upload a new one.",
+  submitReceiptConfirm: "Submit receipt & confirm",
   couldNotStartCheckout: "Could not start Stripe Checkout.",
   paymentCouldNotStart: "Payment could not be started.",
 

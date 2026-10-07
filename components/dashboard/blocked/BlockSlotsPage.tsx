@@ -27,14 +27,18 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import type { TimeSlot } from "@/schemas/settingSchema";
-import { timeRangesOverlap, toDateKey } from "@/utils/booking/availability";
+import {
+  SLOT_HOLDING_STATUSES,
+  timeRangesOverlap,
+  toDateKey,
+} from "@/utils/booking/availability";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import type {
   BlockedDateItem,
   BlockedSlotItem,
 } from "@/utils/dashboardShell";
 
-const OCCUPYING_STATUSES = new Set(["pending", "confirmed", "completed"]);
+const OCCUPYING_STATUSES = new Set<string>(SLOT_HOLDING_STATUSES);
 
 type SlotState =
   | { kind: "available" }

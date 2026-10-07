@@ -114,7 +114,7 @@ function venueKey(location: LatLng) {
   return `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`;
 }
 
-type DashboardStatus = "confirmed" | "completed" | "cancelled";
+type DashboardStatus = Booking["status"];
 
 type SessionFormRow = {
   client_key: string;
@@ -143,6 +143,30 @@ type BookingFormState = {
   /** Edited (discounted) total as typed; null = use the full price. */
   totalRm: string | null;
 };
+
+const UNPAID_STATUS_LABELS: Partial<Record<DashboardStatus, string>> = {
+  requested: "Booking request",
+  pending: "Awaiting payment",
+  failed: "Payment failed",
+  enquiry: "Enquiry",
+};
+
+/**
+ * Unpaid bookings (request, awaiting payment, failed, enquiry) keep their status or get cancelled;
+ * they're confirmed by approving the request / verifying the payment, not from this form.
+ */
+function getStatusOptions(
+  initialStatus: DashboardStatus | undefined
+): { value: DashboardStatus; label: string }[] {
+  const unpaidLabel = initialStatus ? UNPAID_STATUS_LABELS[initialStatus] : undefined;
+  if (initialStatus && unpaidLabel) {
+    return [
+      { value: initialStatus, label: unpaidLabel },
+      { value: "cancelled", label: "Cancelled" },
+    ];
+  }
+  return STATUS_OPTIONS;
+}
 
 const STATUS_OPTIONS: { value: DashboardStatus; label: string }[] = [
   { value: "confirmed", label: "Confirmed" },
@@ -178,11 +202,6 @@ function toDateInputValue(value: string | Date | undefined) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function toDashboardStatus(status: Booking["status"]): DashboardStatus {
-  if (status === "completed" || status === "cancelled") return status;
-  return "confirmed";
 }
 
 /** One row per session of the event, keeping the date, slot, style and venue already entered at each position. */
@@ -262,7 +281,7 @@ function bookingToForm(
       ready_by: session.ready_by ?? "",
       location: session.location ?? null,
     })),
-    status: toDashboardStatus(booking.status),
+    status: booking.status,
     paymentOption: booking.paymentOption,
     totalRm: booking.invoice.breakdown?.discountRm
       ? String(booking.invoice.totalRm)
@@ -1110,7 +1129,7 @@ export function BookingForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_OPTIONS.map((status) => (
+                {getStatusOptions(booking?.status).map((status) => (
                   <SelectItem key={status.value} value={status.value}>
                     {status.label}
                   </SelectItem>

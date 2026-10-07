@@ -40,6 +40,9 @@ export type SerializedBooking = {
   depositPaidAt?: string;
   balancePaidAt?: string;
   balancePaidRm?: number;
+  requestApprovedAt?: string;
+  requestDeclinedAt?: string;
+  requestPaymentOption?: Booking["requestPaymentOption"];
   created_at?: string;
   updated_at?: string;
 };
@@ -81,6 +84,13 @@ export function serializeBooking(
     depositPaidAt: toIsoDate(booking.depositPaidAt as Date | string | undefined),
     balancePaidAt: toIsoDate(booking.balancePaidAt as Date | string | undefined),
     balancePaidRm: booking.balancePaidRm,
+    requestApprovedAt: toIsoDate(
+      booking.requestApprovedAt as Date | string | undefined
+    ),
+    requestDeclinedAt: toIsoDate(
+      booking.requestDeclinedAt as Date | string | undefined
+    ),
+    requestPaymentOption: booking.requestPaymentOption,
     created_at: toIsoDate(booking.created_at as Date | string | undefined),
     updated_at: toIsoDate(booking.updated_at as Date | string | undefined),
   };

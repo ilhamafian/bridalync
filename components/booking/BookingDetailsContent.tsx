@@ -43,14 +43,18 @@ export function bookingStatusText(booking: SerializedBooking) {
   }
 
   switch (booking.status) {
+    case "requested":
+      return "Booking request";
     case "confirmed":
       return "Confirmed";
     case "completed":
       return "Completed";
     case "cancelled":
-      return "Cancelled";
+      return booking.requestDeclinedAt ? "Request declined" : "Cancelled";
     case "pending":
-      return "Awaiting payment";
+      return booking.requestApprovedAt
+        ? "Approved · awaiting payment"
+        : "Awaiting payment";
     case "enquiry":
       return "Enquiry";
     case "failed":
@@ -76,6 +80,7 @@ function statusBadgeVariant(status: SerializedBooking["status"]): BadgeVariant {
 
 export function bookingBadgeVariant(booking: SerializedBooking): BadgeVariant {
   if (
+    booking.status === "requested" ||
     (booking.depositVerificationStatus === "pending" &&
       booking.status === "pending") ||
     booking.balanceVerificationStatus === "pending" ||

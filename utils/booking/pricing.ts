@@ -146,6 +146,27 @@ export function requiresFullPayment(
   return daysUntilSessionDate(earliest) < balanceDueBeforeDays;
 }
 
+/**
+ * Option an approved booking request is paid with: the client's pick, unless there's no deposit
+ * to pay or the first session is within the balance-due window (then full).
+ */
+export function resolveRequestPaymentOption(
+  invoice: Pick<BookingQuotationSummary, "depositRm" | "balanceRm">,
+  sessions: Array<{ date: Date | string }>,
+  balanceDueBeforeDays: number,
+  requested: "deposit" | "full"
+): "deposit" | "full" {
+  if (
+    requested === "full" ||
+    invoice.depositRm <= 0 ||
+    invoice.balanceRm <= 0 ||
+    requiresFullPayment(sessions, balanceDueBeforeDays)
+  ) {
+    return "full";
+  }
+  return "deposit";
+}
+
 export function applyPaymentOption(
   quotation: BookingQuotationSummary,
   paymentOption: "deposit" | "full"
