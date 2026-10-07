@@ -6,7 +6,7 @@ import type { CreateBookingRequest } from "@/schemas/bookingSchema";
 import type { Package, PackageDayMode } from "@/schemas/packageSchema";
 import { toIdString } from "@/schemas/objectId";
 import { toDbSession } from "@/schemas/sessionSchema";
-import type { TimeSlot } from "@/schemas/settingSchema";
+import type { RegionId, TimeSlot } from "@/schemas/settingSchema";
 import { getFreelancerByUsername } from "@/utils/users";
 import {
   applyDiscountedTotal,
@@ -14,7 +14,14 @@ import {
   calculateBookingQuotation,
   requiresFullPayment,
   type BookingQuotationSummary,
+  type TravelQuotationInput,
 } from "@/utils/booking/pricing";
+import { resolveSessionRegions } from "@/utils/booking/region.server";
+import {
+  getBookingRegionPrice,
+  getRegionEventPrice,
+  getTravelPricing,
+} from "@/utils/booking/regions";
 import { normalizeSessionDate, toDateKey } from "@/utils/booking/availability";
 import {
   getDayModeError,
@@ -380,8 +387,49 @@ export async function resolveBookingQuotation(
     }
   }
 
+  const travelPricing = getTravelPricing(settings.travel, chargeBy);
+  let regionTravel: TravelQuotationInput | undefined;
+  if (
+    travelPricing.kind === "region_fixed" ||
+    travelPricing.kind === "region_per_event"
+  ) {
+    let regionsBySessionKey: Record<string, RegionId | null>;
+    try {
+      regionsBySessionKey = await resolveSessionRegions(sessions);
+    } catch (error) {
+      console.error("Venue region lookup failed:", error);
+      throw new Error(
+        "We couldn't check the venue's state right now. Please try again."
+      );
+    }
+    const regions = sessions
+      .filter((session) => session.location)
+      .map((session) => regionsBySessionKey[session.client_key] ?? null);
+
+    if (travelPricing.kind === "region_fixed") {
+      const result = getBookingRegionPrice(regions, travelPricing.prices);
+      if (result && !result.ok) throw new Error(result.error);
+      if (result?.ok) {
+        regionTravel = { kind: "region", feeRm: result.priceRm };
+      }
+    } else if (!legacy && event) {
+      const result = getBookingRegionPrice(regions, event.region_prices);
+      if (result && !result.ok) throw new Error(result.error);
+      if (result?.ok) {
+        selectedPackages[0].price = getRegionEventPrice(
+          result.priceRm,
+          getEventHotDatePrice(
+            hotDatePriceMap,
+            sessions.map((session) => session.date),
+            eventId
+          )
+        );
+      }
+    }
+  }
+
   let distanceKmBySessionKey: Record<string, number> = {};
-  if (settings.travel.enabled) {
+  if (travelPricing.kind === "distance") {
     try {
       distanceKmBySessionKey = await resolveSessionDistancesKm(
         settings.travel.location.location,
@@ -403,16 +451,17 @@ export async function resolveBookingQuotation(
       name: addOn.name,
       price: addOn.price,
     })),
-    travel: settings.travel.enabled
-      ? {
-          enabled: true,
-          ratePerKm: settings.travel.rate_per_km,
-          longDistanceRatePerKm: settings.travel.long_distance_rate_per_km,
-          timeSlots: settings.time_slots,
-          sessions,
-          distanceKmBySessionKey,
-        }
-      : undefined,
+    travel:
+      travelPricing.kind === "distance"
+        ? {
+            enabled: true,
+            ratePerKm: settings.travel.rate_per_km,
+            longDistanceRatePerKm: settings.travel.long_distance_rate_per_km,
+            timeSlots: settings.time_slots,
+            sessions,
+            distanceKmBySessionKey,
+          }
+        : regionTravel,
   });
 
   const balanceDueBeforeDays = settings.payment?.balance_due_before ?? 3;

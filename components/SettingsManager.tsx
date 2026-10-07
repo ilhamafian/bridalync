@@ -8,7 +8,10 @@ import {
   IconCar,
   IconClock,
   IconCreditCard,
+  IconMap,
+  IconMapPin,
   IconPackage,
+  IconRoute,
   IconPlus,
   IconSparkles,
   IconTrash,
@@ -39,8 +42,17 @@ import {
   getDefaultTimeSlots,
   hasManualTransferDetails,
   type PaymentMethod,
+  type RegionPrices,
   type TimeSlot,
+  type TravelMode,
+  type TravelRegionMode,
 } from "@/schemas/settingSchema";
+import { RegionPriceList } from "@/components/RegionPriceList";
+import {
+  parseRegionPriceInputs,
+  toRegionPriceInputs,
+  type RegionPriceInputs,
+} from "@/utils/booking/regions";
 import {
   buildReviewRequestMessage,
   DEFAULT_REVIEW_REQUEST_TEMPLATE,
@@ -55,9 +67,12 @@ export type SettingsItem = {
   charge_by: "package" | "style";
   travel: {
     enabled: boolean;
+    mode?: TravelMode;
     rate_per_km: number;
     long_distance_rate_per_km?: number;
     location: Address;
+    region_mode?: TravelRegionMode;
+    region_prices?: RegionPrices;
   };
   payment: {
     balance_due_before: number;
@@ -204,6 +219,7 @@ export function SettingsManager({
   hasStripeAccount,
   freelancerName,
   onChargeByChange,
+  onTravelChange,
 }: {
   category: SettingsCategory | null;
   initialSettings: SettingsItem;
@@ -211,6 +227,7 @@ export function SettingsManager({
   hasStripeAccount: boolean;
   freelancerName: string;
   onChargeByChange?: (chargeBy: SettingsItem["charge_by"]) => void;
+  onTravelChange?: (travel: SettingsItem["travel"]) => void;
 }) {
   const [settings, setSettings] = useState(initialSettings);
   const [chargeBy, setChargeBy] = useState(initialSettings.charge_by);
@@ -224,7 +241,19 @@ export function SettingsManager({
     String(initialSettings.travel.long_distance_rate_per_km ?? "")
   );
   const [travelLocation, setTravelLocation] = useState<Address | null>(
-    initialSettings.travel.enabled ? initialSettings.travel.location : null
+    initialSettings.travel.enabled &&
+      initialSettings.travel.location.placeId !== DISABLED_TRAVEL_LOCATION.placeId
+      ? initialSettings.travel.location
+      : null
+  );
+  const [travelMode, setTravelMode] = useState<TravelMode>(
+    initialSettings.travel.mode ?? "distance"
+  );
+  const [regionMode, setRegionMode] = useState<TravelRegionMode>(
+    initialSettings.travel.region_mode ?? "fixed"
+  );
+  const [regionPrices, setRegionPrices] = useState<RegionPriceInputs>(() =>
+    toRegionPriceInputs(initialSettings.travel.region_prices)
   );
   const [balanceDueBefore, setBalanceDueBefore] = useState(
     String(initialSettings.payment.balance_due_before)
@@ -332,7 +361,14 @@ export function SettingsManager({
     setLongDistanceRatePerKm(
       String(next.travel.long_distance_rate_per_km ?? "")
     );
-    setTravelLocation(next.travel.enabled ? next.travel.location : null);
+    setTravelLocation(
+      next.travel.enabled && next.travel.location.placeId !== DISABLED_TRAVEL_LOCATION.placeId
+        ? next.travel.location
+        : null
+    );
+    setTravelMode(next.travel.mode ?? "distance");
+    setRegionMode(next.travel.region_mode ?? "fixed");
+    setRegionPrices(toRegionPriceInputs(next.travel.region_prices));
     setBalanceDueBefore(String(next.payment.balance_due_before));
     setPaymentMethod(next.payment.method ?? "manual_transfer");
     setQrImageUrl(next.payment.qr_image_url ?? "");
@@ -397,6 +433,44 @@ export function SettingsManager({
   }
 
   async function saveTravel() {
+    if (travelEnabled && travelMode === "region") {
+      const parsedPrices = parseRegionPriceInputs(regionPrices);
+      if (!parsedPrices) {
+        setSectionError((current) => ({
+          ...current,
+          travel: "Enter a valid price for each state, or leave it blank.",
+        }));
+        return;
+      }
+      const effectiveRegionMode =
+        settings.charge_by === "package" ? regionMode : "fixed";
+      if (
+        effectiveRegionMode === "fixed" &&
+        Object.keys(parsedPrices).length === 0
+      ) {
+        setSectionError((current) => ({
+          ...current,
+          travel: "Enter a price for at least one state you serve.",
+        }));
+        return;
+      }
+
+      const saved = await patchSettings("travel", {
+        travel: {
+          enabled: true,
+          mode: "region",
+          region_mode: effectiveRegionMode,
+          region_prices: parsedPrices,
+          location: travelLocation ?? settings.travel.location,
+        },
+      });
+      if (saved) {
+      onTravelChange?.(saved.travel);
+      router.refresh();
+    }
+      return;
+    }
+
     if (travelEnabled) {
       const parsedRate = Number.parseFloat(ratePerKm);
       if (Number.isNaN(parsedRate) || parsedRate < 0) {
@@ -427,24 +501,33 @@ export function SettingsManager({
         return;
       }
 
-      await patchSettings("travel", {
+      const saved = await patchSettings("travel", {
         travel: {
           enabled: true,
+          mode: "distance",
           rate_per_km: parsedRate,
           long_distance_rate_per_km: parsedLongDistanceRate,
           location: travelLocation,
         },
       });
+      if (saved) {
+      onTravelChange?.(saved.travel);
+      router.refresh();
+    }
       return;
     }
 
-    await patchSettings("travel", {
+    const saved = await patchSettings("travel", {
       travel: {
         enabled: false,
         rate_per_km: 0,
         location: DISABLED_TRAVEL_LOCATION,
       },
     });
+    if (saved) {
+      onTravelChange?.(saved.travel);
+      router.refresh();
+    }
   }
 
   async function savePayment() {
@@ -728,7 +811,7 @@ export function SettingsManager({
               <IconBadge icon={IconCar} />
               <RowText
                 title="Enable travel fee"
-                description="Clients pay based on distance from your base."
+                description="Charge clients for travelling to their venue."
               />
               <Switch
                 checked={travelEnabled}
@@ -739,6 +822,92 @@ export function SettingsManager({
         </SettingsSection>
 
         {travelEnabled ? (
+          <SettingsSection title="Charge by">
+            <RadioGroup
+              value={travelMode}
+              onValueChange={(value) => setTravelMode(value as TravelMode)}
+              className={settingsListClassName}
+            >
+              <label className={cn(settingsRowClassName, "cursor-pointer")}>
+                <IconBadge icon={IconRoute} />
+                <RowText
+                  title="By distance"
+                  description="A rate per km from your base location."
+                />
+                <RadioGroupItem value="distance" aria-label="By distance" />
+              </label>
+              <label className={cn(settingsRowClassName, "cursor-pointer")}>
+                <IconBadge icon={IconMap} />
+                <RowText
+                  title="By state"
+                  description="A price for each state you serve."
+                />
+                <RadioGroupItem value="region" aria-label="By state" />
+              </label>
+            </RadioGroup>
+          </SettingsSection>
+        ) : null}
+
+        {travelEnabled && travelMode === "region" ? (
+          <>
+            {settings.charge_by === "package" ? (
+              <SettingsSection title="State pricing">
+                <RadioGroup
+                  value={regionMode}
+                  onValueChange={(value) =>
+                    setRegionMode(value as TravelRegionMode)
+                  }
+                  className={settingsListClassName}
+                >
+                  <label className={cn(settingsRowClassName, "cursor-pointer")}>
+                    <IconBadge icon={IconMapPin} />
+                    <RowText
+                      title="Fixed charge"
+                      description="One price per state, added to every event."
+                    />
+                    <RadioGroupItem value="fixed" aria-label="Fixed charge" />
+                  </label>
+                  <label className={cn(settingsRowClassName, "cursor-pointer")}>
+                    <IconBadge icon={IconPackage} />
+                    <RowText
+                      title="Different charge by event"
+                      description="Each event has its own price per state."
+                    />
+                    <RadioGroupItem
+                      value="per_event"
+                      aria-label="Different charge by event"
+                    />
+                  </label>
+                </RadioGroup>
+              </SettingsSection>
+            ) : null}
+
+            {settings.charge_by === "package" && regionMode === "per_event" ? (
+              <div className={settingsCardClassName}>
+                <p className="text-muted-foreground">
+                  Set each event&apos;s price per state in Events &amp; styles.
+                  The price already includes travel, so clients see one price
+                  for the event.
+                </p>
+              </div>
+            ) : (
+              <SettingsSection title="Prices">
+                <RegionPriceList
+                  value={regionPrices}
+                  onChange={setRegionPrices}
+                />
+                <p className="text-xs text-muted-foreground">
+                  The state&apos;s price is included in the booking price, not
+                  shown as a separate travel fee. Leave a state blank if you
+                  don&apos;t serve it. When sessions are in different states,
+                  the highest price is charged once.
+                </p>
+              </SettingsSection>
+            )}
+          </>
+        ) : null}
+
+        {travelEnabled && travelMode === "distance" ? (
           <MapsProvider>
             <SettingsSection title="Rate">
               <div className={settingsCardClassName}>

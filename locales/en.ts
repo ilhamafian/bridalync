@@ -75,6 +75,10 @@ export const en: Locale = {
   summary: "Summary",
   calculatingDistance: "Calculating road distance...",
   distanceUnavailable: "Road distance unavailable right now.",
+  checkingVenueState: "Checking the venue's state...",
+  venueStateUnavailable: "Couldn't check the venue's state right now.",
+  venueOutsideServiceArea: "This venue is outside the areas served.",
+  regionNotServed: "{region} isn't served yet. Choose a venue in another state.",
   distanceAway: "{distance} km away by road",
 
   // Style

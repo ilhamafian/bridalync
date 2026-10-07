@@ -44,6 +44,14 @@ import { cn } from "@/lib/utils";
 import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
 import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
 import { formatRm } from "@/utils/booking/pricing";
+import type { RegionPrices } from "@/schemas/settingSchema";
+import { RegionPriceList } from "@/components/RegionPriceList";
+import {
+  getRegionPriceRange,
+  parseRegionPriceInputs,
+  toRegionPriceInputs,
+  type RegionPriceInputs,
+} from "@/utils/booking/regions";
 
 export type PackageItem = {
   _id: string;
@@ -51,6 +59,7 @@ export type PackageItem = {
   description?: string;
   price?: number;
   deposit?: number;
+  region_prices?: RegionPrices;
   sessions?: PackageSession[];
   day_mode?: PackageDayMode;
   order: number;
@@ -98,6 +107,7 @@ type PackageFormState = {
   description: string;
   price: string;
   deposit: string;
+  regionPrices: RegionPriceInputs;
   sessions: SessionRow[];
   dayMode: PackageDayMode;
 };
@@ -157,6 +167,7 @@ function emptyPackageForm(): PackageFormState {
     description: "",
     price: "",
     deposit: "",
+    regionPrices: {},
     sessions: [{ id: createRowId(), name: "" }],
     dayMode: "same_day",
   };
@@ -168,12 +179,21 @@ function packageToForm(pkg: PackageItem): PackageFormState {
     description: pkg.description ?? "",
     price: pkg.price?.toString() ?? "",
     deposit: pkg.deposit?.toString() ?? "",
+    regionPrices: toRegionPriceInputs(pkg.region_prices),
     sessions: getEventSessions(pkg).map((session) => ({
       id: createRowId(),
       name: session.name,
     })),
     dayMode: getEventDayMode(pkg),
   };
+}
+
+function describeRegionPriceRange(prices: RegionPrices | undefined) {
+  const range = getRegionPriceRange(prices);
+  if (!range) return "No state prices set";
+  return range.min === range.max
+    ? formatRm(range.min)
+    : `${formatRm(range.min)} – ${formatRm(range.max)}`;
 }
 
 function describeEventSessions(pkg: PackageItem) {
@@ -308,11 +328,14 @@ export function PackagesManager({
   initialStyles,
   initialAddOns,
   chargeBy,
+  regionPricesPerEvent = false,
 }: {
   initialPackages: PackageItem[];
   initialStyles: StyleItem[];
   initialAddOns: AddOnItem[];
   chargeBy: "package" | "style";
+  /** Travel is charged by state per event: events are priced per state instead of one price. */
+  regionPricesPerEvent?: boolean;
 }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("packages");
@@ -523,10 +546,21 @@ export function PackagesManager({
       return;
     }
 
+    const regionPrices = parseRegionPriceInputs(packageForm.regionPrices);
+    if (!regionPrices) {
+      setError("Enter a valid price for each state, or leave it blank.");
+      return;
+    }
+    if (regionPricesPerEvent && Object.keys(regionPrices).length === 0) {
+      setError("Enter a price for at least one state.");
+      return;
+    }
+
     const payload = {
       name,
       description: packageForm.description.trim(),
       price: parseOptionalNumber(packageForm.price),
+      region_prices: regionPrices,
       deposit: parseOptionalNumber(packageForm.deposit),
       sessions: sessionNames.map((sessionName, index) => ({
         name: sessionName,
@@ -767,7 +801,11 @@ export function PackagesManager({
                   description={
                     chargeBy === "style"
                       ? "Priced by style"
-                      : (pkg.price != null ? formatRm(pkg.price) : "No price set") +
+                      : (regionPricesPerEvent
+                          ? describeRegionPriceRange(pkg.region_prices)
+                          : pkg.price != null
+                            ? formatRm(pkg.price)
+                            : "No price set") +
                         (pkg.deposit != null
                           ? ` · ${formatRm(pkg.deposit)} deposit`
                           : "")
@@ -1083,6 +1121,41 @@ export function PackagesManager({
                 <p className="text-xs text-muted-foreground">
                   You charge by style, so prices are set on your styles.
                 </p>
+              ) : regionPricesPerEvent ? (
+                <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Label>Price by state</Label>
+                    <RegionPriceList
+                      value={packageForm.regionPrices}
+                      onChange={(regionPrices) =>
+                        setPackageForm((current) => ({
+                          ...current,
+                          regionPrices,
+                        }))
+                      }
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      The full event price for a venue in that state, travel
+                      included. Leave a state blank if you don&apos;t serve it.
+                    </p>
+                  </div>
+                  <Field label="Deposit (optional)">
+                    <Input
+                      className={inputClassName}
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={packageForm.deposit}
+                      onChange={(event) =>
+                        setPackageForm((current) => ({
+                          ...current,
+                          deposit: event.target.value,
+                        }))
+                      }
+                      placeholder="400"
+                    />
+                  </Field>
+                </div>
               ) : (
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Price (optional)">

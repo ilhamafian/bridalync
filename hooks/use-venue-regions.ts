@@ -1,0 +1,105 @@
+"use client";
+
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import type { Address } from "@/schemas/addressSchema";
+import type { RegionId, RegionPrices } from "@/schemas/settingSchema";
+import {
+  getBookingRegionPrice,
+  type RegionPriceResult,
+} from "@/utils/booking/regions";
+
+export type VenueRegion =
+  | { status: "loading" }
+  | { status: "ready"; regionId: RegionId | null }
+  | { status: "error" };
+
+export type RegionQuote =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "ready"; result: RegionPriceResult | null };
+
+function venueKey(location: Address["location"]) {
+  return `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`;
+}
+
+/** Looks up each venue's region through `/api/venue-region` (same lookup as saving a booking). */
+export function useVenueRegions(
+  locations: Array<Address | null | undefined>,
+  enabled: boolean
+) {
+  const [regions, setRegions] = useState<Record<string, VenueRegion>>({});
+  const requestedRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    if (!enabled) return;
+
+    for (const location of locations) {
+      if (!location) continue;
+      const key = venueKey(location.location);
+      if (requestedRef.current.has(key)) continue;
+      requestedRef.current.add(key);
+
+      void fetch("/api/venue-region", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          placeId: location.placeId,
+          location: location.location,
+        }),
+      })
+        .then(async (response) => {
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !("regionId" in data)) {
+            throw new Error("Venue region request failed.");
+          }
+          setRegions((current) => ({
+            ...current,
+            [key]: {
+              status: "ready",
+              regionId: (data.regionId as RegionId | null) ?? null,
+            },
+          }));
+        })
+        .catch(() => {
+          requestedRef.current.delete(key);
+          setRegions((current) => ({ ...current, [key]: { status: "error" } }));
+        });
+    }
+  }, [enabled, locations]);
+
+  return regions;
+}
+
+/** Highest region price for the given venues, once every venue's region is known. */
+export function useRegionQuote(
+  locations: Array<Address | null | undefined>,
+  prices: RegionPrices | undefined,
+  enabled: boolean
+): RegionQuote {
+  const venueRegions = useVenueRegions(locations, enabled);
+
+  return useMemo(() => {
+    if (!enabled) return { status: "ready", result: null };
+
+    const regionIds: Array<RegionId | null> = [];
+    let status: "ready" | "loading" | "error" = "ready";
+    for (const location of locations) {
+      if (!location) continue;
+      const region = venueRegions[venueKey(location.location)];
+      if (region?.status === "ready") {
+        regionIds.push(region.regionId);
+      } else if (region?.status === "error") {
+        status = "error";
+      } else if (status !== "error") {
+        status = "loading";
+      }
+    }
+
+    if (status !== "ready") return { status };
+    return {
+      status: "ready",
+      result: getBookingRegionPrice(regionIds, prices),
+    };
+  }, [enabled, locations, prices, venueRegions]);
+}

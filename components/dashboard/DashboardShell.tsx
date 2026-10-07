@@ -197,6 +197,9 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           hotDates={hotDates}
           catalog={hotDateCatalog}
           chargeBy={data.bookings.chargeBy}
+          hotDateIsExtraCharge={
+            data.bookings.travel?.kind === "region_per_event"
+          }
           initialDates={hotDateDraft.dates}
           onSaved={(next) => {
             setHotDates(next);

@@ -4,12 +4,46 @@ import { addressSchema } from "@/schemas/addressSchema";
 
 const hhmm = /^([01]\d|2[0-3]):([0-5]\d)$/;
 
+export const MALAYSIA_REGION_IDS = [
+  "klang_valley",
+  "negeri_sembilan",
+  "melaka",
+  "johor",
+  "perak",
+  "pahang",
+  "kedah",
+  "penang",
+  "perlis",
+  "kelantan",
+  "terengganu",
+  "sabah",
+  "sarawak",
+  "labuan",
+] as const;
+
+export const regionIdSchema = z.enum(MALAYSIA_REGION_IDS);
+
+/** Price per region; a missing region isn't served. */
+export const regionPricesSchema = z.partialRecord(
+  regionIdSchema,
+  z.number().min(0)
+);
+
+export const travelModeSchema = z.enum(["distance", "region"]);
+export const travelRegionModeSchema = z.enum(["fixed", "per_event"]);
+
 export const travelSettingSchema = z.object({
   enabled: z.boolean(),
+  /** Missing = distance. */
+  mode: travelModeSchema.optional(),
   rate_per_km: z.number(),
   /** Replaces `rate_per_km` for the whole trip beyond `LONG_DISTANCE_THRESHOLD_KM`; unset = same rate. */
   long_distance_rate_per_km: z.number().min(0).optional(),
+  /** Base for distance mode; region mode keeps whatever is stored. */
   location: addressSchema,
+  /** Region mode: one price list (`fixed`) or one per event (`per_event`, package mode only). Missing = fixed. */
+  region_mode: travelRegionModeSchema.optional(),
+  region_prices: regionPricesSchema.optional(),
 });
 
 export const paymentMethodSchema = z.enum([
@@ -175,6 +209,10 @@ export type Setting = z.infer<typeof settingSchema>;
 export type SettingUpdate = z.infer<typeof settingUpdateSchema>;
 export type PublicSetting = z.infer<typeof publicSettingSchema>;
 export type TravelSetting = z.infer<typeof travelSettingSchema>;
+export type TravelMode = z.infer<typeof travelModeSchema>;
+export type TravelRegionMode = z.infer<typeof travelRegionModeSchema>;
+export type RegionId = z.infer<typeof regionIdSchema>;
+export type RegionPrices = z.infer<typeof regionPricesSchema>;
 export type PaymentSetting = z.infer<typeof paymentSettingSchema>;
 export type InvoiceSetting = z.infer<typeof invoiceSettingSchema>;
 export type MessageSetting = z.infer<typeof messageSettingSchema>;

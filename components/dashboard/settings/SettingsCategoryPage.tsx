@@ -11,6 +11,7 @@ import { PackagesManager } from "@/components/PackagesManager";
 import { PwaSettingsCard } from "@/components/PwaSettingsCard";
 import { SettingsManager } from "@/components/SettingsManager";
 import { cn } from "@/lib/utils";
+import { getTravelPricing } from "@/utils/booking/regions";
 import type {
   DashboardData,
   SettingsCategory,
@@ -33,6 +34,10 @@ export function SettingsCategoryPage({
   email: string;
 }) {
   const [chargeBy, setChargeBy] = useState(packages.chargeBy);
+  const [travel, setTravel] = useState(settings.initialSettings.travel);
+  const regionPricesPerEvent =
+    chargeBy === "package" &&
+    getTravelPricing(travel, chargeBy).kind === "region_per_event";
   const meta = category ? SETTINGS_CATEGORY_META[category] : null;
   const isPackages = category === "events";
 
@@ -58,6 +63,7 @@ export function SettingsCategoryPage({
           initialStyles={packages.initialStyles}
           initialAddOns={packages.initialAddOns}
           chargeBy={chargeBy}
+          regionPricesPerEvent={regionPricesPerEvent}
         />
       </div>
 
@@ -70,6 +76,7 @@ export function SettingsCategoryPage({
             hasStripeAccount={settings.hasStripeAccount}
             freelancerName={settings.freelancerName}
             onChargeByChange={setChargeBy}
+            onTravelChange={setTravel}
           />
           {category === "google-calendar" ? <GoogleCalendarImport /> : null}
         </Suspense>

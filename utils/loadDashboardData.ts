@@ -24,6 +24,7 @@ import {
   invoiceSettingSchema,
   paymentSettingSchema,
   type TimeSlot,
+  type TravelSetting,
 } from "@/schemas/settingSchema";
 import type { Style } from "@/schemas/styleSchema";
 import type { SessionUser } from "@/schemas/userSchema";
@@ -60,6 +61,30 @@ import {
   getPayments,
   getWeekSummary,
 } from "@/utils/payments";
+import type { BookingFormTravel } from "@/components/booking/BookingForm";
+import { getTravelPricing } from "@/utils/booking/regions";
+
+function toBookingFormTravel(
+  travel: TravelSetting,
+  chargeBy: "package" | "style"
+): BookingFormTravel | null {
+  const pricing = getTravelPricing(travel, chargeBy);
+  switch (pricing.kind) {
+    case "none":
+      return null;
+    case "distance":
+      return {
+        kind: "distance",
+        origin: travel.location.location,
+        ratePerKm: travel.rate_per_km,
+        longDistanceRatePerKm: travel.long_distance_rate_per_km,
+      };
+    case "region_fixed":
+      return { kind: "region_fixed", prices: pricing.prices };
+    case "region_per_event":
+      return { kind: "region_per_event" };
+  }
+}
 
 function serializePackage(pkg: WithId<Package>): PackageItem {
   return {
@@ -68,6 +93,7 @@ function serializePackage(pkg: WithId<Package>): PackageItem {
     description: pkg.description,
     price: pkg.price,
     deposit: pkg.deposit,
+    region_prices: pkg.region_prices,
     sessions: pkg.sessions,
     day_mode: pkg.day_mode,
     order: pkg.order,
@@ -230,6 +256,7 @@ export async function loadDashboardData(
         name: pkg.name,
         price: pkg.price ?? 0,
         deposit: pkg.deposit ?? 0,
+        regionPrices: pkg.region_prices,
         sessions: getEventSessions(pkg),
         dayMode: getEventDayMode(pkg),
       })),
@@ -251,13 +278,7 @@ export async function loadDashboardData(
       })),
       chargeBy,
       timeSlots,
-      travel: settings.travel.enabled
-        ? {
-            origin: settings.travel.location.location,
-            ratePerKm: settings.travel.rate_per_km,
-            longDistanceRatePerKm: settings.travel.long_distance_rate_per_km,
-          }
-        : null,
+      travel: toBookingFormTravel(settings.travel, chargeBy),
     },
     packages: {
       initialPackages: packages.map(serializePackage),

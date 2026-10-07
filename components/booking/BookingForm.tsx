@@ -24,7 +24,12 @@ import { cn } from "@/lib/utils";
 import type { Address, LatLng } from "@/schemas/addressSchema";
 import type { Booking } from "@/schemas/bookingSchema";
 import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
-import type { TimeSlot } from "@/schemas/settingSchema";
+import type { RegionPrices, TimeSlot } from "@/schemas/settingSchema";
+import { useRegionQuote } from "@/hooks/use-venue-regions";
+import {
+  getRegionEventPrice,
+  getRegionLabel,
+} from "@/utils/booking/regions";
 import {
   getDayModeError,
   hasOverlappingSessions,
@@ -53,6 +58,8 @@ export type PackageCatalogItem = {
   name: string;
   price: number;
   deposit: number;
+  /** Full event price per region, used when travel is charged by region per event. */
+  regionPrices?: RegionPrices;
   sessions: PackageSession[];
   dayMode: PackageDayMode;
 };
@@ -75,11 +82,17 @@ export type AddOnCatalogItem = {
   price: number;
 };
 
-export type BookingFormTravel = {
-  origin: LatLng;
-  ratePerKm: number;
-  longDistanceRatePerKm?: number;
-};
+export type BookingFormTravel =
+  | {
+      kind: "distance";
+      origin: LatLng;
+      ratePerKm: number;
+      longDistanceRatePerKm?: number;
+    }
+  /** One price per region, folded into the booking price. */
+  | { kind: "region_fixed"; prices: RegionPrices }
+  /** Each event's `regionPrices` is its full price per region. */
+  | { kind: "region_per_event" };
 
 export type BookingFormCatalog = {
   packages: PackageCatalogItem[];
@@ -337,8 +350,34 @@ export function BookingForm({
   >({});
   const requestedVenuesRef = useRef(new Set<string>());
 
+  const distanceTravel = travel?.kind === "distance" ? travel : null;
+
+  /** Region pricing applies to new-style bookings only; legacy ones keep their catalog prices. */
+  const regionPricing = useMemo(
+    () =>
+      travel?.kind === "region_fixed"
+        ? { prices: travel.prices, perEvent: false }
+        : travel?.kind === "region_per_event" && selectedEvent
+          ? { prices: selectedEvent.regionPrices, perEvent: true }
+          : null,
+    [travel, selectedEvent]
+  );
+  const venueLocations = useMemo(
+    () => form.sessions.map((session) => session.location),
+    [form.sessions]
+  );
+  const regionQuote = useRegionQuote(
+    venueLocations,
+    regionPricing?.prices,
+    regionPricing !== null && !isGoogleImport
+  );
+  const regionPriceRm =
+    regionQuote.status === "ready" && regionQuote.result?.ok
+      ? regionQuote.result.priceRm
+      : null;
+
   useEffect(() => {
-    if (!travel) return;
+    if (!distanceTravel) return;
 
     for (const session of form.sessions) {
       if (!session.location) continue;
@@ -350,7 +389,7 @@ export function BookingForm({
       void fetch("/api/travel-distance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ origin: travel.origin, destination }),
+        body: JSON.stringify({ origin: distanceTravel.origin, destination }),
       })
         .then(async (response) => {
           const data = await response.json().catch(() => ({}));
@@ -370,10 +409,10 @@ export function BookingForm({
           }));
         });
     }
-  }, [travel, form.sessions]);
+  }, [distanceTravel, form.sessions]);
 
   const travelQuote = useMemo(() => {
-    if (!travel) return { status: "ready" as const, feeRm: 0 };
+    if (!distanceTravel) return { status: "ready" as const, feeRm: 0 };
 
     const distanceKmBySessionKey: Record<string, number> = {};
     let status: VenueDistance["status"] = "ready";
@@ -400,14 +439,14 @@ export function BookingForm({
             location: session.location!,
           })),
         timeSlots,
-        ratePerKm: travel.ratePerKm,
-        longDistanceRatePerKm: travel.longDistanceRatePerKm,
+        ratePerKm: distanceTravel.ratePerKm,
+        longDistanceRatePerKm: distanceTravel.longDistanceRatePerKm,
         distanceKmBySessionKey,
       })
     );
 
     return { status, feeRm };
-  }, [travel, form.sessions, venueDistances, timeSlots]);
+  }, [distanceTravel, form.sessions, venueDistances, timeSlots]);
 
   const styleOptions = useMemo(
     () =>
@@ -459,19 +498,21 @@ export function BookingForm({
   );
 
   const fullPriceRm = useMemo(() => {
+    const eventHotDatePrice = selectedEvent
+      ? getEventHotDatePrice(
+          hotDatePriceMap,
+          form.sessions
+            .filter((session) => session.date)
+            .map((session) => `${session.date}T12:00:00`),
+          selectedEvent._id
+        )
+      : undefined;
     const sessionsRm =
       chargeBy === "package" && selectedEvent
         ? roundRm(
-            resolveEffectivePrice(
-              selectedEvent.price,
-              getEventHotDatePrice(
-                hotDatePriceMap,
-                form.sessions
-                  .filter((session) => session.date)
-                  .map((session) => `${session.date}T12:00:00`),
-                selectedEvent._id
-              )
-            )
+            regionPricing?.perEvent && regionPriceRm !== null
+              ? getRegionEventPrice(regionPriceRm, eventHotDatePrice)
+              : resolveEffectivePrice(selectedEvent.price, eventHotDatePrice)
           )
         : chargeBy === "package"
         ? form.packageIds.reduce((sum, packageId) => {
@@ -501,9 +542,15 @@ export function BookingForm({
     const addOnsRm = addOns
       .filter((addOn) => form.addOnIds.includes(addOn._id))
       .reduce((sum, addOn) => sum + roundRm(addOn.price), 0);
-    return sessionsRm + addOnsRm + travelQuote.feeRm;
+    const regionFeeRm =
+      regionPricing && !regionPricing.perEvent && regionPriceRm !== null
+        ? roundRm(regionPriceRm)
+        : 0;
+    return sessionsRm + addOnsRm + travelQuote.feeRm + regionFeeRm;
   }, [
     travelQuote.feeRm,
+    regionPricing,
+    regionPriceRm,
     chargeBy,
     selectedEvent,
     form.packageIds,
@@ -671,6 +718,20 @@ export function BookingForm({
       return {
         error: "Couldn't calculate the travel fee. Check the locations and try again.",
       };
+    }
+
+    if (regionPricing && !isGoogleImport) {
+      if (regionQuote.status === "loading") {
+        return { error: "Still checking the venue's state. Try again in a moment." };
+      }
+      if (regionQuote.status === "error") {
+        return {
+          error: "Couldn't check the venue's state. Check the locations and try again.",
+        };
+      }
+      if (regionQuote.result && !regionQuote.result.ok) {
+        return { error: regionQuote.result.error };
+      }
     }
 
     if (!isGoogleImport && totalError) {
@@ -1065,7 +1126,30 @@ export function BookingForm({
             <Separator />
 
             <div className="flex flex-col gap-3">
-              {travel ? (
+              {regionPricing ? (
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted-foreground">State pricing</span>
+                  <span
+                    className={cn(
+                      "text-right",
+                      regionQuote.status === "ready" &&
+                        regionQuote.result?.ok === false &&
+                        "text-destructive"
+                    )}
+                  >
+                    {regionQuote.status === "loading"
+                      ? "Checking…"
+                      : regionQuote.status === "error"
+                        ? "Unavailable"
+                        : !regionQuote.result
+                          ? "Pick a location"
+                          : regionQuote.result.ok
+                            ? `${getRegionLabel(regionQuote.result.regionId)} · included`
+                            : regionQuote.result.error}
+                  </span>
+                </div>
+              ) : null}
+              {distanceTravel ? (
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Travel fee</span>
                   <span className="tabular-nums">

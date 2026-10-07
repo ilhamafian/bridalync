@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { regionPricesSchema } from "@/schemas/settingSchema";
+
 export const packageDayModeSchema = z.enum(["same_day", "different_day"]);
 
 export const packageSessionSchema = z.object({
@@ -12,6 +14,8 @@ export const packageSchema = z.object({
     description: z.string().optional(),
     price: z.number().optional(),
     deposit: z.number().optional(),
+    /** Full event price per region, used when travel is charged by region per event. */
+    region_prices: regionPricesSchema.optional(),
     /** Missing on events created before multi-session events = one session named after the event. */
     sessions: z.array(packageSessionSchema).min(1).optional(),
     /** Whether every session is on the same date or each on its own date; missing = same day. */

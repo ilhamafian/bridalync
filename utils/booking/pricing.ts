@@ -41,7 +41,13 @@ export function sessionLineItemLabel(name: string, slotCount = 1) {
   return slotCount > 1 ? `${name} × ${slotCount} slots` : name;
 }
 
-export type TravelQuotationInput = {
+export type TravelQuotationInput =
+  | DistanceTravelQuotationInput
+  /** Fixed region fee, folded into the first priced item (no separate travel fee). */
+  | { kind: "region"; feeRm: number };
+
+export type DistanceTravelQuotationInput = {
+  kind?: "distance";
   enabled: boolean;
   ratePerKm: number;
   longDistanceRatePerKm?: number;
@@ -168,14 +174,16 @@ export function calculateBookingQuotation(
   const lineItems: QuotationLineItem[] = [];
   const sessionPrices: BookingQuotationBreakdown["sessions"] = [];
 
+  const travel = input.travel;
+  const regionFeeRm = travel?.kind === "region" ? travel.feeRm : 0;
   const travelFeeRm =
-    input.travel?.enabled === true
+    travel && travel.kind !== "region" && travel.enabled
       ? calculateTravelFeeRm({
-          sessions: input.travel.sessions,
-          timeSlots: input.travel.timeSlots,
-          ratePerKm: input.travel.ratePerKm,
-          longDistanceRatePerKm: input.travel.longDistanceRatePerKm,
-          distanceKmBySessionKey: input.travel.distanceKmBySessionKey,
+          sessions: travel.sessions,
+          timeSlots: travel.timeSlots,
+          ratePerKm: travel.ratePerKm,
+          longDistanceRatePerKm: travel.longDistanceRatePerKm,
+          distanceKmBySessionKey: travel.distanceKmBySessionKey,
         })
       : 0;
 
@@ -187,7 +195,7 @@ export function calculateBookingQuotation(
   priced.forEach((item, index) => {
     const slotCount = Math.max(1, item.slotCount ?? 1);
     const label = sessionLineItemLabel(item.name, slotCount);
-    const price = item.price * slotCount;
+    const price = item.price * slotCount + (index === 0 ? regionFeeRm : 0);
     lineItems.push({
       label,
       amountRm: roundRm(price + (index === 0 ? travelFeeRm : 0)),

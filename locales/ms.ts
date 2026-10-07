@@ -72,6 +72,10 @@ export const ms = {
   summary: "Ringkasan",
   calculatingDistance: "Mengira jarak jalan raya...",
   distanceUnavailable: "Jarak jalan raya tidak tersedia buat masa ini.",
+  checkingVenueState: "Menyemak negeri lokasi...",
+  venueStateUnavailable: "Tidak dapat menyemak negeri lokasi buat masa ini.",
+  venueOutsideServiceArea: "Lokasi ini di luar kawasan perkhidmatan.",
+  regionNotServed: "{region} belum disediakan. Pilih lokasi di negeri lain.",
   distanceAway: "{distance} km jauh mengikut jalan raya",
 
   // Style

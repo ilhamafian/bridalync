@@ -78,12 +78,15 @@ export function AddHotDatesPage({
   hotDates,
   catalog,
   chargeBy,
+  hotDateIsExtraCharge = false,
   initialDates,
   onSaved,
 }: {
   hotDates: HotDateItem[];
   catalog: HotDateCatalogRow[];
   chargeBy: "package" | "style";
+  /** Events are priced per state, so a hot date amount is added on top of the state price. */
+  hotDateIsExtraCharge?: boolean;
   /** YYYY-MM-DD keys, set when editing existing hot dates from the list. */
   initialDates?: string[];
   onSaved: (hotDates: HotDateItem[]) => void;
@@ -260,7 +263,11 @@ export function AddHotDatesPage({
                 >
                   <RowText
                     title={row.label}
-                    description={`Usual ${formatRm(row.catalogPrice)}`}
+                    description={
+                      hotDateIsExtraCharge
+                        ? "Extra on top of the state price"
+                        : `Usual ${formatRm(row.catalogPrice)}`
+                    }
                   />
                   <div className="relative w-28 shrink-0">
                     <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
@@ -272,7 +279,9 @@ export function AddHotDatesPage({
                       step={1}
                       inputMode="numeric"
                       className={inputClassName}
-                      placeholder={String(row.catalogPrice)}
+                      placeholder={
+                        hotDateIsExtraCharge ? "0" : String(row.catalogPrice)
+                      }
                       value={draft[row.key] ?? ""}
                       onChange={(event) =>
                         setDraft((current) => ({

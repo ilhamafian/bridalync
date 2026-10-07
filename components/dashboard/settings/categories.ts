@@ -46,7 +46,7 @@ export const SETTINGS_CATEGORY_META: Record<
   },
   "travel-fee": {
     label: "Travel fee",
-    description: "Charge for travel from your base location.",
+    description: "Charge for travel by distance or by state.",
     icon: IconCar,
   },
   "payment-method": {

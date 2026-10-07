@@ -70,7 +70,17 @@ import type { Address } from "@/schemas/addressSchema";
 import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
 import { Client } from "@/schemas/clientSchema";
 import type { SessionForm } from "@/schemas/sessionSchema";
-import type { PublicSetting, TimeSlot } from "@/schemas/settingSchema";
+import type {
+  PublicSetting,
+  RegionPrices,
+  TimeSlot,
+} from "@/schemas/settingSchema";
+import { useRegionQuote } from "@/hooks/use-venue-regions";
+import {
+  getRegionEventPrice,
+  getRegionLabel,
+  getTravelPricing,
+} from "@/utils/booking/regions";
 import { toManualTransferDetails } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import Image from "next/image";
@@ -377,6 +387,7 @@ type ClientPackage = {
   description?: string;
   price?: number;
   deposit?: number;
+  region_prices?: RegionPrices;
   sessions?: PackageSession[];
   day_mode?: PackageDayMode;
   order: number;
@@ -820,9 +831,35 @@ export default function ClientPage() {
     [addOnOptions, selectedAddOnIds]
   );
 
-  const travelOrigin = settings?.travel.enabled
-    ? settings.travel.location.location
-    : null;
+  const travelPricing = settings
+    ? getTravelPricing(settings.travel, chargeBy)
+    : ({ kind: "none" } as const);
+  const travelOrigin =
+    settings && travelPricing.kind === "distance"
+      ? settings.travel.location.location
+      : null;
+  const regionPrices =
+    travelPricing.kind === "region_fixed"
+      ? travelPricing.prices
+      : travelPricing.kind === "region_per_event"
+        ? selectedEvent?.region_prices
+        : undefined;
+  const regionPricingEnabled =
+    travelPricing.kind === "region_fixed" ||
+    (travelPricing.kind === "region_per_event" && selectedEvent !== null);
+  const venueLocations = useMemo(
+    () => sessions.map((session) => session.location),
+    [sessions]
+  );
+  const regionQuote = useRegionQuote(
+    venueLocations,
+    regionPrices,
+    regionPricingEnabled
+  );
+  const regionPriceRm =
+    regionQuote.status === "ready" && regionQuote.result?.ok
+      ? regionQuote.result.priceRm
+      : null;
 
   const distanceKmBySessionKey = useMemo(() => {
     const distances: Record<string, number | undefined> = {};
@@ -844,14 +881,25 @@ export default function ClientPage() {
             ? [
                 {
                   name: selectedEvent.name,
-                  price: resolveEffectivePrice(
-                    selectedEvent.price ?? 0,
-                    getEventHotDatePrice(
-                      hotDatePriceMap,
-                      scheduledDates,
-                      selectedPackageId
-                    )
-                  ),
+                  price:
+                    travelPricing.kind === "region_per_event" &&
+                    regionPriceRm !== null
+                      ? getRegionEventPrice(
+                          regionPriceRm,
+                          getEventHotDatePrice(
+                            hotDatePriceMap,
+                            scheduledDates,
+                            selectedPackageId
+                          )
+                        )
+                      : resolveEffectivePrice(
+                          selectedEvent.price ?? 0,
+                          getEventHotDatePrice(
+                            hotDatePriceMap,
+                            scheduledDates,
+                            selectedPackageId
+                          )
+                        ),
                   deposit:
                     chargeBy === "style" ? 0 : (selectedEvent.deposit ?? 0),
                 },
@@ -864,7 +912,7 @@ export default function ClientPage() {
           price: addOn.price,
         })),
         travel:
-          settings?.travel.enabled === true
+          settings && travelPricing.kind === "distance"
             ? {
                 enabled: true,
                 ratePerKm: settings.travel.rate_per_km,
@@ -874,10 +922,14 @@ export default function ClientPage() {
                 sessions,
                 distanceKmBySessionKey,
               }
-            : undefined,
+            : travelPricing.kind === "region_fixed" && regionPriceRm !== null
+              ? { kind: "region", feeRm: regionPriceRm }
+              : undefined,
       }),
     [
       settings,
+      travelPricing.kind,
+      regionPriceRm,
       chargeBy,
       selectedEvent,
       selectedPackageId,
@@ -1211,6 +1263,26 @@ export default function ClientPage() {
     sessions.every(
       (session) => sessionRoadDistances[session.client_key]?.status === "ready"
     );
+
+  const regionReady =
+    !regionPricingEnabled ||
+    (regionQuote.status === "ready" && regionQuote.result?.ok !== false);
+  const regionMessage = !regionPricingEnabled || !allLocationsSet
+    ? null
+    : regionQuote.status === "loading"
+      ? { text: t.checkingVenueState, isError: false }
+      : regionQuote.status === "error"
+        ? { text: t.venueStateUnavailable, isError: true }
+        : regionQuote.result && !regionQuote.result.ok
+          ? {
+              text: regionQuote.result.regionId
+                ? format(t.regionNotServed, {
+                    region: getRegionLabel(regionQuote.result.regionId),
+                  })
+                : t.venueOutsideServiceArea,
+              isError: true,
+            }
+          : null;
 
   const sessionLocationHelperTextByKey = useMemo(() => {
     const messages: Record<string, string | undefined> = {};
@@ -1770,10 +1842,23 @@ export default function ClientPage() {
               <BookingSessionList sessions={sessions} showLocation frosted />
             </div>
 
+            {regionMessage ? (
+              <p
+                className={cn(
+                  "w-full text-sm",
+                  regionMessage.isError
+                    ? "text-destructive"
+                    : "text-muted-foreground"
+                )}
+              >
+                {regionMessage.text}
+              </p>
+            ) : null}
+
             <Button
               size="lg"
               className="bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={!allLocationsSet || !allDistancesReady}
+              disabled={!allLocationsSet || !allDistancesReady || !regionReady}
               onClick={goToNextStep}
             >
               {t.next}
