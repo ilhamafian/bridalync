@@ -1,11 +1,14 @@
 import { z } from "zod";
 
+import { depositTypeSchema } from "@/schemas/packageSchema";
+
 export const styleVariantSchema = z.object({
     name: z.string().min(1),
     order: z.number(),
     image_url: z.string().optional(),
     price: z.number(),
     deposit: z.number(),
+    deposit_type: depositTypeSchema.optional(),
 });
 
 export const styleSchema = z.object({

@@ -134,8 +134,39 @@ export function getBookingFormTarget(pathname: string): BookingFormTarget | null
   return { mode: "edit", id: decodeURIComponent(match[1]) };
 }
 
-/** Category from `/dashboard/settings/[category]`, or null for other paths. */
+export type CatalogEditorTarget = {
+  type: "event" | "style";
+  /** Null = new. */
+  id: string | null;
+};
+
+export const EVENTS_SETTINGS_HREF = "/dashboard/settings/events";
+
+export function buildCatalogEditorHref(
+  type: CatalogEditorTarget["type"],
+  id: string | null
+) {
+  return `${EVENTS_SETTINGS_HREF}/${type}/${id ? encodeURIComponent(id) : "new"}`;
+}
+
+/** `/dashboard/settings/events/(event|style)/(new|[id])`, else null. */
+export function getCatalogEditorTarget(
+  pathname: string
+): CatalogEditorTarget | null {
+  const match = pathname.match(
+    /^\/dashboard\/settings\/events\/(event|style)\/([^/]+)\/?$/
+  );
+  if (!match) return null;
+  const id = decodeURIComponent(match[2]);
+  return {
+    type: match[1] as CatalogEditorTarget["type"],
+    id: id === "new" ? null : id,
+  };
+}
+
+/** Category from `/dashboard/settings/[category]` (or an events editor page), or null for other paths. */
 export function getSettingsCategory(pathname: string): SettingsCategory | null {
+  if (getCatalogEditorTarget(pathname)) return "events";
   const match = pathname.match(/^\/dashboard\/settings\/([^/]+)\/?$/);
   if (!match) return null;
   const slug = decodeURIComponent(match[1]);

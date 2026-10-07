@@ -37,6 +37,7 @@ import {
   calculateProcessingFeeRm,
   formatRm,
   requiresFullPayment,
+  resolveDepositRm,
 } from "@/utils/booking/pricing";
 import {
   isSlotTaken,
@@ -67,7 +68,11 @@ import {
 } from "@/utils/booking/hotDates";
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Address } from "@/schemas/addressSchema";
-import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
+import type {
+  DepositType,
+  PackageDayMode,
+  PackageSession,
+} from "@/schemas/packageSchema";
 import { Client } from "@/schemas/clientSchema";
 import type { SessionForm } from "@/schemas/sessionSchema";
 import type {
@@ -387,6 +392,7 @@ type ClientPackage = {
   description?: string;
   price?: number;
   deposit?: number;
+  deposit_type?: DepositType;
   region_prices?: RegionPrices;
   sessions?: PackageSession[];
   day_mode?: PackageDayMode;
@@ -398,6 +404,7 @@ type StyleVariant = {
   order: number;
   price: number;
   deposit: number;
+  deposit_type?: DepositType;
   image_url?: string;
 };
 
@@ -413,6 +420,7 @@ type SelectedStyleForBooking = {
   name: string;
   price: number;
   deposit: number;
+  depositType?: DepositType;
   categoryName: string;
 };
 
@@ -551,6 +559,7 @@ function resolveStyleVariant(
     name: variant.name,
     price: variant.price,
     deposit: variant.deposit,
+    depositType: variant.deposit_type,
     categoryName: category.name,
   };
 }
@@ -798,10 +807,11 @@ export default function ClientPage() {
               )
             : undefined;
 
+        const price = resolveEffectivePrice(variant.price, overridePrice);
         return {
           name: `${session.name} — ${variant.categoryName} — ${variant.name}`,
-          price: resolveEffectivePrice(variant.price, overridePrice),
-          deposit: variant.deposit,
+          price,
+          deposit: resolveDepositRm(variant.deposit, variant.depositType, price),
         };
       })
       .filter((style): style is NonNullable<typeof style> => style !== null);
@@ -872,6 +882,25 @@ export default function ClientPage() {
     return distances;
   }, [sessionRoadDistances]);
 
+  const eventPriceRm = useMemo(() => {
+    if (!selectedEvent || !selectedPackageId) return 0;
+    const hotDatePrice = getEventHotDatePrice(
+      hotDatePriceMap,
+      scheduledDates,
+      selectedPackageId
+    );
+    return travelPricing.kind === "region_per_event" && regionPriceRm !== null
+      ? getRegionEventPrice(regionPriceRm, hotDatePrice)
+      : resolveEffectivePrice(selectedEvent.price ?? 0, hotDatePrice);
+  }, [
+    selectedEvent,
+    selectedPackageId,
+    hotDatePriceMap,
+    scheduledDates,
+    travelPricing.kind,
+    regionPriceRm,
+  ]);
+
   const quotation = useMemo(
     () =>
       calculateBookingQuotation({
@@ -881,27 +910,15 @@ export default function ClientPage() {
             ? [
                 {
                   name: selectedEvent.name,
-                  price:
-                    travelPricing.kind === "region_per_event" &&
-                    regionPriceRm !== null
-                      ? getRegionEventPrice(
-                          regionPriceRm,
-                          getEventHotDatePrice(
-                            hotDatePriceMap,
-                            scheduledDates,
-                            selectedPackageId
-                          )
-                        )
-                      : resolveEffectivePrice(
-                          selectedEvent.price ?? 0,
-                          getEventHotDatePrice(
-                            hotDatePriceMap,
-                            scheduledDates,
-                            selectedPackageId
-                          )
-                        ),
+                  price: eventPriceRm,
                   deposit:
-                    chargeBy === "style" ? 0 : (selectedEvent.deposit ?? 0),
+                    chargeBy === "style"
+                      ? 0
+                      : resolveDepositRm(
+                          selectedEvent.deposit,
+                          selectedEvent.deposit_type,
+                          eventPriceRm
+                        ),
                 },
               ]
             : [],
@@ -933,12 +950,11 @@ export default function ClientPage() {
       chargeBy,
       selectedEvent,
       selectedPackageId,
-      scheduledDates,
+      eventPriceRm,
       selectedSessionStyles,
       selectedAddOnItems,
       sessions,
       distanceKmBySessionKey,
-      hotDatePriceMap,
     ]
   );
 

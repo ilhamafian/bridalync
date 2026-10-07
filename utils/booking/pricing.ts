@@ -69,6 +69,27 @@ export function roundRm(amount: number) {
   return Math.round(amount);
 }
 
+/** Deposit in RM for an item charged at `priceRm`; percent deposits are a share of that price. */
+export function resolveDepositRm(
+  deposit: number | undefined,
+  depositType: "fixed" | "percent" | undefined,
+  priceRm: number
+): number {
+  const value = deposit ?? 0;
+  if (depositType === "percent") {
+    return roundRm((Math.max(0, priceRm) * Math.min(100, Math.max(0, value))) / 100);
+  }
+  return value;
+}
+
+export function formatDeposit(
+  deposit: number | undefined,
+  depositType: "fixed" | "percent" | undefined
+): string | null {
+  if (deposit == null) return null;
+  return depositType === "percent" ? `${deposit}%` : formatRm(deposit);
+}
+
 export const PROCESSING_FEE_PERCENT = 3;
 
 /** Charged to clients on top of Stripe payments; rounded up to whole ringgit. */

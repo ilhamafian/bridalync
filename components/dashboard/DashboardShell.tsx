@@ -37,6 +37,7 @@ import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
   getBookingDetailsId,
   getBookingFormTarget,
+  getCatalogEditorTarget,
   getDashboardSection,
   getSettingsCategory,
   type DashboardData,
@@ -99,6 +100,10 @@ export function DashboardShell({ data }: { data: DashboardData }) {
   const bookingDetailsId = getBookingDetailsId(pathname);
   const bookingFormTarget = getBookingFormTarget(pathname);
   const settingsCategory = getSettingsCategory(pathname);
+  const catalogEditor = getCatalogEditorTarget(pathname);
+  const catalogEditorKey = catalogEditor
+    ? `${catalogEditor.type}:${catalogEditor.id ?? "new"}`
+    : null;
   const bookingFormId =
     bookingFormTarget?.mode === "edit" ? bookingFormTarget.id : null;
 
@@ -120,7 +125,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
     document
       .querySelector<HTMLElement>("[data-dashboard-scroll]")
       ?.scrollTo({ top: 0 });
-  }, [active, bookingDetailsId, bookingFormId, settingsCategory]);
+  }, [active, bookingDetailsId, bookingFormId, settingsCategory, catalogEditorKey]);
 
   return (
     <Fragment key={refreshVersion}>

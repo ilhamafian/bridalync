@@ -4,6 +4,9 @@ import { regionPricesSchema } from "@/schemas/settingSchema";
 
 export const packageDayModeSchema = z.enum(["same_day", "different_day"]);
 
+/** `fixed` = deposit in RM; `percent` = deposit is a percentage of the price charged. Missing = fixed. */
+export const depositTypeSchema = z.enum(["fixed", "percent"]);
+
 export const packageSessionSchema = z.object({
     name: z.string().trim().min(1),
     order: z.number(),
@@ -14,6 +17,7 @@ export const packageSchema = z.object({
     description: z.string().optional(),
     price: z.number().optional(),
     deposit: z.number().optional(),
+    deposit_type: depositTypeSchema.optional(),
     /** Full event price per region, used when travel is charged by region per event. */
     region_prices: regionPricesSchema.optional(),
     /** Missing on events created before multi-session events = one session named after the event. */
@@ -38,4 +42,5 @@ export type Package = z.infer<typeof packageSchema>;
 export type PackageInput = z.infer<typeof packageInputSchema>;
 export type PackageUpdate = z.infer<typeof packageUpdateSchema>;
 export type PackageDayMode = z.infer<typeof packageDayModeSchema>;
+export type DepositType = z.infer<typeof depositTypeSchema>;
 export type PackageSession = z.infer<typeof packageSessionSchema>;

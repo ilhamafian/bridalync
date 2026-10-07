@@ -13,6 +13,7 @@ import {
   applyPaymentOption,
   calculateBookingQuotation,
   requiresFullPayment,
+  resolveDepositRm,
   type BookingQuotationSummary,
   type TravelQuotationInput,
 } from "@/utils/booking/pricing";
@@ -99,10 +100,7 @@ async function resolveSessionStyle(
     )
   );
 
-  if (
-    effectivePrice !== styleInput.price ||
-    variant.deposit !== (styleInput.deposit ?? variant.deposit)
-  ) {
+  if (effectivePrice !== styleInput.price) {
     throw new Error("Style pricing mismatch");
   }
 
@@ -113,7 +111,11 @@ async function resolveSessionStyle(
     styleName,
     lineItemName: `${sessionName} — ${styleName}`,
     price: effectivePrice,
-    deposit: variant.deposit,
+    deposit: resolveDepositRm(
+      variant.deposit,
+      variant.deposit_type,
+      effectivePrice
+    ),
   };
 }
 
@@ -326,10 +328,14 @@ export async function resolveBookingQuotation(
         ? getPackageHotDatePrice(hotDatePriceMap, session.date, packageId)
         : undefined;
 
+      const price = resolveEffectivePrice(pkg.price ?? 0, overridePrice);
       return {
         name: pkg.name,
-        price: resolveEffectivePrice(pkg.price ?? 0, overridePrice),
-        deposit: chargeBy === "style" ? 0 : (pkg.deposit ?? 0),
+        price,
+        deposit:
+          chargeBy === "style"
+            ? 0
+            : resolveDepositRm(pkg.deposit, pkg.deposit_type, price),
         sessionKey: session?.client_key,
         slotCount: session ? slotCountBySessionKey.get(session.client_key) : 1,
       };
@@ -426,6 +432,14 @@ export async function resolveBookingQuotation(
         );
       }
     }
+  }
+
+  if (!legacy && event && chargeBy !== "style") {
+    selectedPackages[0].deposit = resolveDepositRm(
+      event.deposit,
+      event.deposit_type,
+      selectedPackages[0].price
+    );
   }
 
   let distanceKmBySessionKey: Record<string, number> = {};

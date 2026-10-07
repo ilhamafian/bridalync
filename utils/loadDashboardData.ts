@@ -93,6 +93,7 @@ function serializePackage(pkg: WithId<Package>): PackageItem {
     description: pkg.description,
     price: pkg.price,
     deposit: pkg.deposit,
+    deposit_type: pkg.deposit_type,
     region_prices: pkg.region_prices,
     sessions: pkg.sessions,
     day_mode: pkg.day_mode,

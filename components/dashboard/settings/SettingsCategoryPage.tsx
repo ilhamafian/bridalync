@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { usePathname } from "next/navigation";
 
 import { BackButton } from "@/components/dashboard/BackButton";
 import { SETTINGS_CATEGORY_META } from "@/components/dashboard/settings/categories";
@@ -12,6 +13,7 @@ import { PwaSettingsCard } from "@/components/PwaSettingsCard";
 import { SettingsManager } from "@/components/SettingsManager";
 import { cn } from "@/lib/utils";
 import { getTravelPricing } from "@/utils/booking/regions";
+import { getCatalogEditorTarget } from "@/utils/dashboardShell";
 import type {
   DashboardData,
   SettingsCategory,
@@ -40,11 +42,14 @@ export function SettingsCategoryPage({
     getTravelPricing(travel, chargeBy).kind === "region_per_event";
   const meta = category ? SETTINGS_CATEGORY_META[category] : null;
   const isPackages = category === "events";
+  const isCatalogEditor = getCatalogEditorTarget(usePathname()) !== null;
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
-        <BackButton fallbackHref="/dashboard/settings" />
+      <div className="flex flex-col gap-4 px-4 empty:hidden lg:px-6">
+        {isCatalogEditor ? null : (
+          <BackButton fallbackHref="/dashboard/settings" />
+        )}
         {meta && !isPackages ? (
           <section>
             <h2 className="text-xl font-semibold tracking-tight">

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   IconGift,
@@ -13,11 +13,12 @@ import {
   type Icon,
 } from "@tabler/icons-react";
 
+import { EventEditorPage } from "@/components/catalog/EventEditorPage";
+import { StyleEditorPage } from "@/components/catalog/StyleEditorPage";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { IconBadge, RowText } from "@/components/dashboard/settings/SettingsUi";
 import { SortableList } from "@/components/SortableList";
-import { VariantImageUpload } from "@/components/VariantImageUpload";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,19 +40,21 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
-import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
-import { formatRm } from "@/utils/booking/pricing";
+import type {
+  DepositType,
+  PackageDayMode,
+  PackageSession,
+} from "@/schemas/packageSchema";
 import type { RegionPrices } from "@/schemas/settingSchema";
-import { RegionPriceList } from "@/components/RegionPriceList";
+import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
+import { formatDeposit, formatRm } from "@/utils/booking/pricing";
+import { getRegionPriceRange } from "@/utils/booking/regions";
 import {
-  getRegionPriceRange,
-  parseRegionPriceInputs,
-  toRegionPriceInputs,
-  type RegionPriceInputs,
-} from "@/utils/booking/regions";
+  buildCatalogEditorHref,
+  EVENTS_SETTINGS_HREF,
+  getCatalogEditorTarget,
+} from "@/utils/dashboardShell";
 
 export type PackageItem = {
   _id: string;
@@ -59,6 +62,7 @@ export type PackageItem = {
   description?: string;
   price?: number;
   deposit?: number;
+  deposit_type?: DepositType;
   region_prices?: RegionPrices;
   sessions?: PackageSession[];
   day_mode?: PackageDayMode;
@@ -75,6 +79,7 @@ export type StyleItem = {
     image_url?: string;
     price: number;
     deposit: number;
+    deposit_type?: DepositType;
   }[];
 };
 
@@ -87,34 +92,10 @@ export type AddOnItem = {
 
 type Tab = "packages" | "styles" | "addons";
 
-type SheetType = "package" | "style" | "addon";
-
-type VariantRow = {
+type DeleteTarget = {
+  type: "package" | "style" | "addon";
   id: string;
   name: string;
-  price: string;
-  deposit: string;
-  image_url: string;
-};
-
-type SessionRow = {
-  id: string;
-  name: string;
-};
-
-type PackageFormState = {
-  name: string;
-  description: string;
-  price: string;
-  deposit: string;
-  regionPrices: RegionPriceInputs;
-  sessions: SessionRow[];
-  dayMode: PackageDayMode;
-};
-
-type StyleFormState = {
-  name: string;
-  variants: VariantRow[];
 };
 
 type AddOnFormState = {
@@ -122,19 +103,8 @@ type AddOnFormState = {
   price: string;
 };
 
-type DeleteTarget = {
-  type: SheetType;
-  id: string;
-  name: string;
-};
-
-const DAY_MODE_OPTIONS: { value: PackageDayMode; label: string }[] = [
-  { value: "same_day", label: "Same day" },
-  { value: "different_day", label: "Different days" },
-];
-
-const DELETE_LABELS: Record<SheetType, string> = {
-  package: "package",
+const DELETE_LABELS: Record<DeleteTarget["type"], string> = {
+  package: "event",
   style: "style",
   addon: "add-on",
 };
@@ -145,47 +115,11 @@ const inputClassName = cn(
   "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
 );
 
-function createRowId() {
-  return crypto.randomUUID();
-}
-
 function parseOptionalNumber(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function parseRequiredNumber(value: string) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function emptyPackageForm(): PackageFormState {
-  return {
-    name: "",
-    description: "",
-    price: "",
-    deposit: "",
-    regionPrices: {},
-    sessions: [{ id: createRowId(), name: "" }],
-    dayMode: "same_day",
-  };
-}
-
-function packageToForm(pkg: PackageItem): PackageFormState {
-  return {
-    name: pkg.name,
-    description: pkg.description ?? "",
-    price: pkg.price?.toString() ?? "",
-    deposit: pkg.deposit?.toString() ?? "",
-    regionPrices: toRegionPriceInputs(pkg.region_prices),
-    sessions: getEventSessions(pkg).map((session) => ({
-      id: createRowId(),
-      name: session.name,
-    })),
-    dayMode: getEventDayMode(pkg),
-  };
 }
 
 function describeRegionPriceRange(prices: RegionPrices | undefined) {
@@ -204,57 +138,19 @@ function describeEventSessions(pkg: PackageItem) {
   return `${sessions.map((session) => session.name).join(", ")} · ${days}`;
 }
 
-function emptyStyleForm(): StyleFormState {
-  return {
-    name: "",
-    variants: [
-      {
-        id: createRowId(),
-        name: "",
-        price: "",
-        deposit: "",
-        image_url: "",
-      },
-    ],
-  };
-}
-
-function styleToForm(style: StyleItem): StyleFormState {
-  return {
-    name: style.name,
-    variants:
-      style.variants.length > 0
-        ? style.variants.map((variant) => ({
-            id: createRowId(),
-            name: variant.name,
-            price: variant.price.toString(),
-            deposit: variant.deposit.toString(),
-            image_url: variant.image_url ?? "",
-          }))
-        : [
-            {
-              id: createRowId(),
-              name: "",
-              price: "",
-              deposit: "",
-              image_url: "",
-            },
-          ],
-  };
-}
-
-function emptyAddOnForm(): AddOnFormState {
-  return {
-    name: "",
-    price: "",
-  };
-}
-
-function addOnToForm(addOn: AddOnItem): AddOnFormState {
-  return {
-    name: addOn.name,
-    price: addOn.price.toString(),
-  };
+function describeEventPrice(
+  pkg: PackageItem,
+  chargeBy: "package" | "style",
+  regionPricesPerEvent: boolean
+) {
+  if (chargeBy === "style") return "Priced by style";
+  const price = regionPricesPerEvent
+    ? describeRegionPriceRange(pkg.region_prices)
+    : pkg.price != null
+      ? formatRm(pkg.price)
+      : "No price set";
+  const deposit = formatDeposit(pkg.deposit, pkg.deposit_type);
+  return deposit ? `${price} · ${deposit} deposit` : price;
 }
 
 function Field({
@@ -323,6 +219,11 @@ function CatalogItemCard({
   );
 }
 
+/**
+ * Events & styles list. Events and styles are added/edited on their own pages
+ * (`/dashboard/settings/events/(event|style)/(new|[id])`), rendered here so the
+ * list state is shared; add-ons use a sheet.
+ */
 export function PackagesManager({
   initialPackages,
   initialStyles,
@@ -338,69 +239,47 @@ export function PackagesManager({
   regionPricesPerEvent?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const editor = getCatalogEditorTarget(pathname);
   const [tab, setTab] = useState<Tab>("packages");
   const [packages, setPackages] = useState(initialPackages);
   const [styles, setStyles] = useState(initialStyles);
   const [addOns, setAddOns] = useState(initialAddOns);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [sheetType, setSheetType] = useState<SheetType>("package");
   const [saving, setSaving] = useState(false);
   const [reordering, setReordering] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
-  const [editingStyleId, setEditingStyleId] = useState<string | null>(null);
-  const [packageForm, setPackageForm] = useState<PackageFormState>(emptyPackageForm);
-  const [styleForm, setStyleForm] = useState<StyleFormState>(emptyStyleForm);
   const [editingAddOnId, setEditingAddOnId] = useState<string | null>(null);
-  const [addOnForm, setAddOnForm] = useState<AddOnFormState>(emptyAddOnForm);
+  const [addOnForm, setAddOnForm] = useState<AddOnFormState>({
+    name: "",
+    price: "",
+  });
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
-  function openSheet(type: SheetType) {
-    setSheetType(type);
+  function openEditor(type: "event" | "style", id: string | null) {
+    setTab(type === "event" ? "packages" : "styles");
+    setError(null);
+    router.push(buildCatalogEditorHref(type, id), { scroll: false });
+  }
+
+  function closeEditor() {
+    router.replace(EVENTS_SETTINGS_HREF, { scroll: false });
+  }
+
+  function openAddOnSheet(addOn: AddOnItem | null) {
+    setEditingAddOnId(addOn?._id ?? null);
+    setAddOnForm({
+      name: addOn?.name ?? "",
+      price: addOn ? addOn.price.toString() : "",
+    });
     setError(null);
     setSheetOpen(true);
   }
 
-  function openCreatePackage() {
-    setEditingPackageId(null);
-    setPackageForm(emptyPackageForm());
-    openSheet("package");
-  }
-
-  function openEditPackage(pkg: PackageItem) {
-    setEditingPackageId(pkg._id);
-    setPackageForm(packageToForm(pkg));
-    openSheet("package");
-  }
-
-  function openCreateStyle() {
-    setEditingStyleId(null);
-    setStyleForm(emptyStyleForm());
-    openSheet("style");
-  }
-
-  function openEditStyle(style: StyleItem) {
-    setEditingStyleId(style._id);
-    setStyleForm(styleToForm(style));
-    openSheet("style");
-  }
-
-  function openCreateAddOn() {
-    setEditingAddOnId(null);
-    setAddOnForm(emptyAddOnForm());
-    openSheet("addon");
-  }
-
-  function openEditAddOn(addOn: AddOnItem) {
-    setEditingAddOnId(addOn._id);
-    setAddOnForm(addOnToForm(addOn));
-    openSheet("addon");
-  }
-
   function openCreateForTab() {
-    if (tab === "packages") openCreatePackage();
-    else if (tab === "styles") openCreateStyle();
-    else openCreateAddOn();
+    if (tab === "packages") openEditor("event", null);
+    else if (tab === "styles") openEditor("style", null);
+    else openAddOnSheet(null);
   }
 
   async function handleReorderPackages(nextPackages: PackageItem[]) {
@@ -530,144 +409,28 @@ export function PackagesManager({
     setDeleteTarget(null);
   }
 
-  async function handleSavePackage() {
-    const name = packageForm.name.trim();
-    if (!name) {
-      setError("Event name is required.");
-      return;
-    }
-
-    const sessionNames = packageForm.sessions.map((session) => session.name.trim());
-    if (sessionNames.length === 1 && !sessionNames[0]) {
-      sessionNames[0] = name;
-    }
-    if (sessionNames.some((sessionName) => !sessionName)) {
-      setError("Name every session.");
-      return;
-    }
-
-    const regionPrices = parseRegionPriceInputs(packageForm.regionPrices);
-    if (!regionPrices) {
-      setError("Enter a valid price for each state, or leave it blank.");
-      return;
-    }
-    if (regionPricesPerEvent && Object.keys(regionPrices).length === 0) {
-      setError("Enter a price for at least one state.");
-      return;
-    }
-
-    const payload = {
-      name,
-      description: packageForm.description.trim(),
-      price: parseOptionalNumber(packageForm.price),
-      region_prices: regionPrices,
-      deposit: parseOptionalNumber(packageForm.deposit),
-      sessions: sessionNames.map((sessionName, index) => ({
-        name: sessionName,
-        order: index,
-      })),
-      day_mode: packageForm.dayMode,
-      order: editingPackageId
-        ? packages.find((pkg) => pkg._id === editingPackageId)?.order ?? packages.length
-        : packages.length,
-    };
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        editingPackageId ? `/api/packages/${editingPackageId}` : "/api/packages",
-        {
-          method: editingPackageId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const data = await response.json();
-      if (!response.ok) {
-        setError("Could not save event.");
-        return;
-      }
-
-      const saved = data.package as PackageItem;
-      setPackages((current) => {
-        if (editingPackageId) {
-          return current
-            .map((pkg) => (pkg._id === saved._id ? saved : pkg))
-            .sort((a, b) => a.order - b.order);
-        }
-        return [...current, saved].sort((a, b) => a.order - b.order);
-      });
-      setSheetOpen(false);
-      router.refresh();
-    } finally {
-      setSaving(false);
-    }
+  function handlePackageSaved(saved: PackageItem) {
+    setPackages((current) => {
+      const exists = current.some((pkg) => pkg._id === saved._id);
+      const next = exists
+        ? current.map((pkg) => (pkg._id === saved._id ? saved : pkg))
+        : [...current, saved];
+      return next.sort((a, b) => a.order - b.order);
+    });
+    closeEditor();
+    router.refresh();
   }
 
-  async function handleSaveStyle() {
-    const variants = styleForm.variants
-      .map((variant, index) => ({
-        name: variant.name.trim(),
-        order: index,
-        price: parseRequiredNumber(variant.price),
-        deposit: parseRequiredNumber(variant.deposit),
-        image_url: variant.image_url.trim() || undefined,
-      }))
-      .filter((variant) => variant.name.length > 0);
-
-    if (!styleForm.name.trim()) {
-      setError("Style name is required.");
-      return;
-    }
-
-    if (variants.length === 0) {
-      setError("Add at least one variant.");
-      return;
-    }
-
-    const payload = {
-      name: styleForm.name.trim(),
-      order: editingStyleId
-        ? styles.find((style) => style._id === editingStyleId)?.order ?? styles.length
-        : styles.length,
-      variants,
-    };
-
-    setSaving(true);
-    setError(null);
-
-    try {
-      const response = await fetch(
-        editingStyleId ? `/api/styles/${editingStyleId}` : "/api/styles",
-        {
-          method: editingStyleId ? "PATCH" : "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      const data = await response.json();
-      if (!response.ok) {
-        setError("Could not save style.");
-        return;
-      }
-
-      const saved = data.style as StyleItem;
-      setStyles((current) => {
-        if (editingStyleId) {
-          return current
-            .map((style) => (style._id === saved._id ? saved : style))
-            .sort((a, b) => a.order - b.order);
-        }
-        return [...current, saved].sort((a, b) => a.order - b.order);
-      });
-      setSheetOpen(false);
-    } finally {
-      setSaving(false);
-    }
+  function handleStyleSaved(saved: StyleItem) {
+    setStyles((current) => {
+      const exists = current.some((style) => style._id === saved._id);
+      const next = exists
+        ? current.map((style) => (style._id === saved._id ? saved : style))
+        : [...current, saved];
+      return next.sort((a, b) => a.order - b.order);
+    });
+    closeEditor();
+    router.refresh();
   }
 
   async function handleSaveAddOn() {
@@ -724,17 +487,38 @@ export function PackagesManager({
     }
   }
 
-  const sheetTitle = {
-    package: editingPackageId ? "Edit event" : "New event",
-    style: editingStyleId ? "Edit style" : "New style",
-    addon: editingAddOnId ? "Edit add-on" : "New add-on",
-  }[sheetType];
+  if (editor?.type === "event") {
+    const pkg = editor.id
+      ? (packages.find((item) => item._id === editor.id) ?? null)
+      : null;
+    return (
+      <EventEditorPage
+        key={editor.id ?? "new"}
+        pkg={pkg}
+        notFound={editor.id !== null && !pkg}
+        nextOrder={packages.length}
+        chargeBy={chargeBy}
+        regionPricesPerEvent={regionPricesPerEvent}
+        onSaved={handlePackageSaved}
+      />
+    );
+  }
 
-  const handleSave = {
-    package: handleSavePackage,
-    style: handleSaveStyle,
-    addon: handleSaveAddOn,
-  }[sheetType];
+  if (editor?.type === "style") {
+    const style = editor.id
+      ? (styles.find((item) => item._id === editor.id) ?? null)
+      : null;
+    return (
+      <StyleEditorPage
+        key={editor.id ?? "new"}
+        style={style}
+        notFound={editor.id !== null && !style}
+        nextOrder={styles.length}
+        chargeBy={chargeBy}
+        onSaved={handleStyleSaved}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
@@ -792,26 +576,19 @@ export function PackagesManager({
               items={packages}
               getItemId={(pkg) => pkg._id}
               onReorder={handleReorderPackages}
-              disabled={reordering || sheetOpen}
+              disabled={reordering}
               handleClassName="mt-4"
               renderItem={(pkg) => (
                 <CatalogItemCard
                   icon={IconPackage}
                   title={pkg.name}
-                  description={
-                    chargeBy === "style"
-                      ? "Priced by style"
-                      : (regionPricesPerEvent
-                          ? describeRegionPriceRange(pkg.region_prices)
-                          : pkg.price != null
-                            ? formatRm(pkg.price)
-                            : "No price set") +
-                        (pkg.deposit != null
-                          ? ` · ${formatRm(pkg.deposit)} deposit`
-                          : "")
-                  }
+                  description={describeEventPrice(
+                    pkg,
+                    chargeBy,
+                    regionPricesPerEvent
+                  )}
                   footer={describeEventSessions(pkg)}
-                  onEdit={() => openEditPackage(pkg)}
+                  onEdit={() => openEditor("event", pkg._id)}
                   onDelete={() =>
                     setDeleteTarget({
                       type: "package",
@@ -835,7 +612,7 @@ export function PackagesManager({
               items={styles}
               getItemId={(style) => style._id}
               onReorder={handleReorderStyles}
-              disabled={reordering || sheetOpen}
+              disabled={reordering}
               handleClassName="mt-4"
               renderItem={(style) => (
                 <CatalogItemCard
@@ -844,7 +621,7 @@ export function PackagesManager({
                   description={`${style.variants.length} variant${
                     style.variants.length === 1 ? "" : "s"
                   }`}
-                  onEdit={() => openEditStyle(style)}
+                  onEdit={() => openEditor("style", style._id)}
                   onDelete={() =>
                     setDeleteTarget({
                       type: "style",
@@ -875,8 +652,19 @@ export function PackagesManager({
                             <span className="truncate">{variant.name}</span>
                           </span>
                           {chargeBy === "style" ? (
-                            <span className="shrink-0 font-medium tabular-nums">
-                              {formatRm(variant.price)}
+                            <span className="flex shrink-0 flex-col items-end">
+                              <span className="font-medium tabular-nums">
+                                {formatRm(variant.price)}
+                              </span>
+                              {variant.deposit > 0 ? (
+                                <span className="text-xs text-muted-foreground">
+                                  {formatDeposit(
+                                    variant.deposit,
+                                    variant.deposit_type
+                                  )}{" "}
+                                  deposit
+                                </span>
+                              ) : null}
                             </span>
                           ) : null}
                         </li>
@@ -914,7 +702,7 @@ export function PackagesManager({
                   icon={IconGift}
                   title={addOn.name}
                   description={`+${formatRm(addOn.price)}`}
-                  onEdit={() => openEditAddOn(addOn)}
+                  onEdit={() => openAddOnSheet(addOn)}
                   onDelete={() =>
                     setDeleteTarget({
                       type: "addon",
@@ -932,427 +720,40 @@ export function PackagesManager({
       <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
         <SheetContent side="bottom" contained className="max-h-[85dvh] overflow-y-auto rounded-t-2xl">
           <SheetHeader>
-            <SheetTitle>{sheetTitle}</SheetTitle>
+            <SheetTitle>{editingAddOnId ? "Edit add-on" : "New add-on"}</SheetTitle>
           </SheetHeader>
 
-          {sheetType === "addon" ? (
-            <div className="flex flex-col gap-4 px-6">
-              <Field label="Name">
-                <Input
-                  className={inputClassName}
-                  value={addOnForm.name}
-                  onChange={(event) =>
-                    setAddOnForm((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                  placeholder="Jahit Accessories Baju"
-                />
-              </Field>
-              <Field label="Price">
-                <Input
-                  className={inputClassName}
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={addOnForm.price}
-                  onChange={(event) =>
-                    setAddOnForm((current) => ({
-                      ...current,
-                      price: event.target.value,
-                    }))
-                  }
-                  placeholder="30"
-                />
-              </Field>
-            </div>
-          ) : sheetType === "package" ? (
-            <div className="flex flex-col gap-4 px-6">
-              <Field label="Name">
-                <Input
-                  className={inputClassName}
-                  value={packageForm.name}
-                  onChange={(event) =>
-                    setPackageForm((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                  placeholder="Nikah & Sanding"
-                />
-              </Field>
-
-              <Field label="Description (optional)">
-                <Textarea
-                  className="min-h-20 bg-background text-sm"
-                  value={packageForm.description}
-                  onChange={(event) =>
-                    setPackageForm((current) => ({
-                      ...current,
-                      description: event.target.value,
-                    }))
-                  }
-                  placeholder="Same day"
-                />
-              </Field>
-
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <Label>Sessions</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setPackageForm((current) => ({
-                        ...current,
-                        sessions: [
-                          ...current.sessions,
-                          { id: createRowId(), name: "" },
-                        ],
-                      }))
-                    }
-                  >
-                    <IconPlus />
-                    Add session
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Clients book one time slot for each session.
-                </p>
-
-                <SortableList
-                  items={packageForm.sessions}
-                  getItemId={(session) => session.id}
-                  onReorder={(nextSessions) =>
-                    setPackageForm((current) => ({
-                      ...current,
-                      sessions: nextSessions,
-                    }))
-                  }
-                  className="gap-2"
-                  renderItem={(session, index) => (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        className={inputClassName}
-                        value={session.name}
-                        onChange={(event) =>
-                          setPackageForm((current) => ({
-                            ...current,
-                            sessions: current.sessions.map((item) =>
-                              item.id === session.id
-                                ? { ...item, name: event.target.value }
-                                : item
-                            ),
-                          }))
-                        }
-                        placeholder={
-                          packageForm.sessions.length === 1
-                            ? packageForm.name.trim() || "Session name"
-                            : index === 0
-                              ? "Nikah"
-                              : index === 1
-                                ? "Sanding"
-                                : `Session ${index + 1}`
-                        }
-                        aria-label={`Session ${index + 1} name`}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={packageForm.sessions.length === 1}
-                        onClick={() =>
-                          setPackageForm((current) => ({
-                            ...current,
-                            sessions: current.sessions.filter(
-                              (item) => item.id !== session.id
-                            ),
-                          }))
-                        }
-                        aria-label={`Remove session ${index + 1}`}
-                      >
-                        <IconTrash />
-                      </Button>
-                    </div>
-                  )}
-                />
-
-                {packageForm.sessions.length > 1 ? (
-                  <div className="flex flex-col gap-1.5">
-                    <Label>Sessions are on</Label>
-                    <div
-                      className="grid grid-cols-2 gap-2"
-                      role="radiogroup"
-                      aria-label="Sessions are on"
-                    >
-                      {DAY_MODE_OPTIONS.map((option) => {
-                        const selected = packageForm.dayMode === option.value;
-                        return (
-                          <Button
-                            key={option.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={selected}
-                            variant={selected ? "default" : "outline"}
-                            onClick={() =>
-                              setPackageForm((current) => ({
-                                ...current,
-                                dayMode: option.value,
-                              }))
-                            }
-                          >
-                            {option.label}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {packageForm.dayMode === "same_day"
-                        ? "Clients book every session on the same date."
-                        : "Clients book each session on a different date."}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-
-              {chargeBy === "style" ? (
-                <p className="text-xs text-muted-foreground">
-                  You charge by style, so prices are set on your styles.
-                </p>
-              ) : regionPricesPerEvent ? (
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <Label>Price by state</Label>
-                    <RegionPriceList
-                      value={packageForm.regionPrices}
-                      onChange={(regionPrices) =>
-                        setPackageForm((current) => ({
-                          ...current,
-                          regionPrices,
-                        }))
-                      }
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      The full event price for a venue in that state, travel
-                      included. Leave a state blank if you don&apos;t serve it.
-                    </p>
-                  </div>
-                  <Field label="Deposit (optional)">
-                    <Input
-                      className={inputClassName}
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={packageForm.deposit}
-                      onChange={(event) =>
-                        setPackageForm((current) => ({
-                          ...current,
-                          deposit: event.target.value,
-                        }))
-                      }
-                      placeholder="400"
-                    />
-                  </Field>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <Field label="Price (optional)">
-                    <Input
-                      className={inputClassName}
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={packageForm.price}
-                      onChange={(event) =>
-                        setPackageForm((current) => ({
-                          ...current,
-                          price: event.target.value,
-                        }))
-                      }
-                      placeholder="1500"
-                    />
-                  </Field>
-                  <Field label="Deposit (optional)">
-                    <Input
-                      className={inputClassName}
-                      type="number"
-                      min="0"
-                      step="1"
-                      value={packageForm.deposit}
-                      onChange={(event) =>
-                        setPackageForm((current) => ({
-                          ...current,
-                          deposit: event.target.value,
-                        }))
-                      }
-                      placeholder="400"
-                    />
-                  </Field>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-4 px-6">
-              <Field label="Category name">
-                <Input
-                  className={inputClassName}
-                  value={styleForm.name}
-                  onChange={(event) =>
-                    setStyleForm((current) => ({
-                      ...current,
-                      name: event.target.value,
-                    }))
-                  }
-                  placeholder="SHAWL"
-                />
-              </Field>
-
-              {chargeBy === "package" ? (
-                <p className="text-xs text-muted-foreground">
-                  You charge by event, so prices are set on your events.
-                </p>
-              ) : null}
-
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <Label>Variants</Label>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setStyleForm((current) => ({
-                        ...current,
-                        variants: [
-                          ...current.variants,
-                          {
-                            id: createRowId(),
-                            name: "",
-                            price: "",
-                            deposit: "",
-                            image_url: "",
-                          },
-                        ],
-                      }))
-                    }
-                  >
-                    <IconPlus />
-                    Add variant
-                  </Button>
-                </div>
-
-                <SortableList
-                  items={styleForm.variants}
-                  getItemId={(variant) => variant.id}
-                  onReorder={(nextVariants) =>
-                    setStyleForm((current) => ({
-                      ...current,
-                      variants: nextVariants,
-                    }))
-                  }
-                  className="gap-3"
-                  renderItem={(variant) => (
-                    <div className="flex flex-col gap-3 rounded-lg border p-3">
-                      <div className="flex items-center gap-2">
-                        <Input
-                          className={inputClassName}
-                          value={variant.name}
-                          onChange={(event) =>
-                            setStyleForm((current) => ({
-                              ...current,
-                              variants: current.variants.map((item) =>
-                                item.id === variant.id
-                                  ? { ...item, name: event.target.value }
-                                  : item
-                              ),
-                            }))
-                          }
-                          placeholder="Variant name"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon-sm"
-                          disabled={styleForm.variants.length === 1}
-                          onClick={() =>
-                            setStyleForm((current) => ({
-                              ...current,
-                              variants: current.variants.filter(
-                                (item) => item.id !== variant.id
-                              ),
-                            }))
-                          }
-                          aria-label="Remove variant"
-                        >
-                          <IconTrash />
-                        </Button>
-                      </div>
-
-                      {chargeBy === "style" ? (
-                        <div className="grid grid-cols-2 gap-3">
-                          <Field label="Price">
-                            <Input
-                              className={inputClassName}
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={variant.price}
-                              onChange={(event) =>
-                                setStyleForm((current) => ({
-                                  ...current,
-                                  variants: current.variants.map((item) =>
-                                    item.id === variant.id
-                                      ? { ...item, price: event.target.value }
-                                      : item
-                                  ),
-                                }))
-                              }
-                            />
-                          </Field>
-                          <Field label="Deposit">
-                            <Input
-                              className={inputClassName}
-                              type="number"
-                              min="0"
-                              step="1"
-                              value={variant.deposit}
-                              onChange={(event) =>
-                                setStyleForm((current) => ({
-                                  ...current,
-                                  variants: current.variants.map((item) =>
-                                    item.id === variant.id
-                                      ? { ...item, deposit: event.target.value }
-                                      : item
-                                  ),
-                                }))
-                              }
-                            />
-                          </Field>
-                        </div>
-                      ) : null}
-
-                      <VariantImageUpload
-                        value={variant.image_url}
-                        onChange={(url) =>
-                          setStyleForm((current) => ({
-                            ...current,
-                            variants: current.variants.map((item) =>
-                              item.id === variant.id
-                                ? { ...item, image_url: url }
-                                : item
-                            ),
-                          }))
-                        }
-                        disabled={saving}
-                      />
-                    </div>
-                  )}
-                />
-              </div>
-            </div>
-          )}
+          <div className="flex flex-col gap-4 px-6">
+            <Field label="Name">
+              <Input
+                className={inputClassName}
+                value={addOnForm.name}
+                onChange={(event) =>
+                  setAddOnForm((current) => ({
+                    ...current,
+                    name: event.target.value,
+                  }))
+                }
+                placeholder="Jahit Accessories Baju"
+              />
+            </Field>
+            <Field label="Price">
+              <Input
+                className={inputClassName}
+                type="number"
+                min="0"
+                step="1"
+                value={addOnForm.price}
+                onChange={(event) =>
+                  setAddOnForm((current) => ({
+                    ...current,
+                    price: event.target.value,
+                  }))
+                }
+                placeholder="30"
+              />
+            </Field>
+          </div>
 
           {error && sheetOpen ? (
             <p className="px-6 text-sm text-destructive">{error}</p>
@@ -1371,7 +772,7 @@ export function PackagesManager({
             <Button
               type="button"
               className="flex-1"
-              onClick={handleSave}
+              onClick={handleSaveAddOn}
               disabled={saving}
             >
               {saving ? "Saving..." : "Save"}
