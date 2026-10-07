@@ -69,6 +69,7 @@ export function SettingsCategoryPage({
           initialPackages={packages.initialPackages}
           initialStyles={packages.initialStyles}
           initialAddOns={packages.initialAddOns}
+          initialShowAddOnPrices={packages.showAddOnPrices}
           chargeBy={chargeBy}
           regionPricesPerEvent={regionPricesPerEvent}
           styleTerms={styleTerms}

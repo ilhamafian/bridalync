@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 export type AddOnOption = {
   id: string
   name: string
+  description?: string
   price: number
 }
 
@@ -15,12 +16,14 @@ type BookingAddOnPickerProps = {
   addOns: AddOnOption[]
   selectedAddOnIds: string[]
   onSelectionChange: (addOnIds: string[]) => void
+  showPrices?: boolean
 }
 
 export function BookingAddOnPicker({
   addOns,
   selectedAddOnIds,
   onSelectionChange,
+  showPrices = true,
 }: BookingAddOnPickerProps) {
   const { t } = useLocale()
 
@@ -58,10 +61,24 @@ export function BookingAddOnPicker({
             )}
             onClick={() => toggleAddOn(addOn.id)}
           >
-            <span className="min-w-0 flex-1 font-medium">{addOn.name}</span>
-            <span className="shrink-0 pl-3 font-medium">
-              {formatRm(addOn.price)}
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="font-medium">{addOn.name}</span>
+              {addOn.description ? (
+                <span
+                  className={cn(
+                    "text-xs font-normal",
+                    isSelected ? "text-white/80" : "text-muted-foreground"
+                  )}
+                >
+                  {addOn.description}
+                </span>
+              ) : null}
             </span>
+            {showPrices ? (
+              <span className="shrink-0 pl-3 font-medium">
+                {formatRm(addOn.price)}
+              </span>
+            ) : null}
           </Button>
         )
       })}

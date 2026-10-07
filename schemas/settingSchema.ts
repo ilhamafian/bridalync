@@ -180,6 +180,8 @@ export const settingSchema = z.object({
   invoice: invoiceSettingSchema.default(() => invoiceSettingSchema.parse({})),
   time_slots: timeSlotSettingSchema,
   messages: messageSettingSchema.optional(),
+  /** Whether clients see add-on prices when picking add-ons. Missing = shown. */
+  show_add_on_prices: z.boolean().optional(),
   /** Legacy: highest calendar year clients may book. Superseded by `booking_until`. */
   max_booking_year: z.number().int().optional(),
   /** Last date (YYYY-MM-DD, inclusive) clients may book. Unset = 31 Dec of `max_booking_year`. */
@@ -202,6 +204,7 @@ export const settingUpdateSchema = z.object({
   invoice: invoiceSettingSchema.partial().optional(),
   time_slots: z.array(timeSlotSchema).optional(),
   messages: messageSettingSchema.partial().optional(),
+  show_add_on_prices: z.boolean().optional(),
   max_booking_year: z.number().int().optional(),
   booking_until: bookingUntilSchema.optional(),
 });

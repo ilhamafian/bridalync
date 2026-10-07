@@ -28,6 +28,7 @@ function serializeSetting(setting: WithId<Setting>) {
     invoice: setting.invoice,
     time_slots: setting.time_slots,
     messages: setting.messages ?? {},
+    show_add_on_prices: setting.show_add_on_prices ?? true,
     max_booking_year: setting.max_booking_year,
     booking_until: setting.booking_until,
     created_at: setting.created_at,
@@ -85,6 +86,10 @@ function mergeSettingsUpdate(
       ...existing.messages,
       ...patch.messages,
     };
+  }
+
+  if (patch.show_add_on_prices !== undefined) {
+    update.show_add_on_prices = patch.show_add_on_prices;
   }
 
   if (patch.max_booking_year !== undefined) {

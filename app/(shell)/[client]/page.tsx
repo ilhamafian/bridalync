@@ -868,6 +868,7 @@ export default function ClientPage() {
         return {
           id: id.length > 0 ? id : `addon-${index}`,
           name: addOn.name,
+          description: addOn.description,
           price: addOn.price,
         };
       }),
@@ -2093,6 +2094,7 @@ export default function ClientPage() {
                 addOns={addOnOptions}
                 selectedAddOnIds={selectedAddOnIds}
                 onSelectionChange={setSelectedAddOnIds}
+                showPrices={settings?.show_add_on_prices !== false}
               />
             </div>
             <div className="mt-4 flex items-center gap-2">

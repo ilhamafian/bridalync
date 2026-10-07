@@ -3,6 +3,7 @@ import { z } from "zod";
 export const addOnSchema = z.object({
     user_id: z.string(),
     name: z.string().min(1),
+    description: z.string().max(500).optional(),
     order: z.number(),
     price: z.number().min(0),
     created_at: z.coerce.date().optional(),

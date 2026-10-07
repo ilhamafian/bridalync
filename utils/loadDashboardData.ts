@@ -116,6 +116,7 @@ function serializeAddOn(addOn: WithId<AddOn>): AddOnItem {
   return {
     _id: toIdString(addOn._id),
     name: addOn.name,
+    ...(addOn.description ? { description: addOn.description } : {}),
     price: addOn.price,
     order: addOn.order,
   };
@@ -288,6 +289,7 @@ export async function loadDashboardData(
       initialStyles: styles.map(serializeStyle),
       initialAddOns: addOns.map(serializeAddOn),
       chargeBy,
+      showAddOnPrices: settings.show_add_on_prices ?? true,
     },
     settings: {
       initialSettings: {

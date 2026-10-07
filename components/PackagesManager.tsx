@@ -4,6 +4,8 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
+  IconEye,
+  IconEyeOff,
   IconGift,
   IconPackage,
   IconPencil,
@@ -17,7 +19,13 @@ import { EventEditorPage } from "@/components/catalog/EventEditorPage";
 import { StyleEditorPage } from "@/components/catalog/StyleEditorPage";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
-import { IconBadge, RowText } from "@/components/dashboard/settings/SettingsUi";
+import {
+  IconBadge,
+  RowText,
+  SettingsSection,
+  settingsListClassName,
+  settingsRowClassName,
+} from "@/components/dashboard/settings/SettingsUi";
 import { SortableList } from "@/components/SortableList";
 import {
   AlertDialog,
@@ -32,6 +40,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Sheet,
   SheetContent,
@@ -40,6 +49,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type {
   DepositType,
@@ -108,6 +118,7 @@ export function toStyleItem(
 export type AddOnItem = {
   _id: string;
   name: string;
+  description?: string;
   price: number;
   order: number;
 };
@@ -122,6 +133,7 @@ type DeleteTarget = {
 
 type AddOnFormState = {
   name: string;
+  description: string;
   price: string;
 };
 
@@ -251,6 +263,7 @@ export function PackagesManager({
   initialPackages,
   initialStyles,
   initialAddOns,
+  initialShowAddOnPrices,
   chargeBy,
   regionPricesPerEvent = false,
   styleTerms,
@@ -258,6 +271,7 @@ export function PackagesManager({
   initialPackages: PackageItem[];
   initialStyles: StyleItem[];
   initialAddOns: AddOnItem[];
+  initialShowAddOnPrices: boolean;
   chargeBy: "package" | "style";
   /** Travel is charged by state per event: events are priced per state instead of one price. */
   regionPricesPerEvent?: boolean;
@@ -277,8 +291,11 @@ export function PackagesManager({
   const [editingAddOnId, setEditingAddOnId] = useState<string | null>(null);
   const [addOnForm, setAddOnForm] = useState<AddOnFormState>({
     name: "",
+    description: "",
     price: "",
   });
+  const [showAddOnPrices, setShowAddOnPrices] = useState(initialShowAddOnPrices);
+  const [savingShowAddOnPrices, setSavingShowAddOnPrices] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   function openEditor(type: "event" | "style", id: string | null) {
@@ -295,10 +312,35 @@ export function PackagesManager({
     setEditingAddOnId(addOn?._id ?? null);
     setAddOnForm({
       name: addOn?.name ?? "",
+      description: addOn?.description ?? "",
       price: addOn ? addOn.price.toString() : "",
     });
     setError(null);
     setSheetOpen(true);
+  }
+
+  async function handleShowAddOnPricesChange(next: boolean) {
+    const previous = showAddOnPrices;
+    setShowAddOnPrices(next);
+    setSavingShowAddOnPrices(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ show_add_on_prices: next }),
+      });
+      if (!response.ok) {
+        setShowAddOnPrices(previous);
+        setError("Could not update add-on price visibility.");
+      }
+    } catch {
+      setShowAddOnPrices(previous);
+      setError("Could not update add-on price visibility.");
+    } finally {
+      setSavingShowAddOnPrices(false);
+    }
   }
 
   function openCreateForTab() {
@@ -476,6 +518,7 @@ export function PackagesManager({
 
     const payload = {
       name: addOnForm.name.trim(),
+      description: addOnForm.description.trim(),
       price,
       order: editingAddOnId
         ? addOns.find((addOn) => addOn._id === editingAddOnId)?.order ?? addOns.length
@@ -711,12 +754,33 @@ export function PackagesManager({
         </TabsContent>
 
         <TabsContent value="addons" className="mt-0 flex flex-col gap-3">
-          {chargeBy === "package" ? (
-            <p className="text-xs text-muted-foreground">
-              Clients only see add-ons when you charge by {styleTerms.one}. You can still
-              add them to bookings you create yourself.
-            </p>
-          ) : null}
+          <SettingsSection title="Add-on prices">
+            <RadioGroup
+              value={showAddOnPrices ? "show" : "hide"}
+              onValueChange={(value) =>
+                handleShowAddOnPricesChange(value === "show")
+              }
+              disabled={savingShowAddOnPrices}
+              className={settingsListClassName}
+            >
+              <label className={cn(settingsRowClassName, "cursor-pointer")}>
+                <IconBadge icon={IconEye} />
+                <RowText
+                  title="Show prices"
+                  description="Clients see each add-on's price when picking"
+                />
+                <RadioGroupItem value="show" aria-label="Show prices" />
+              </label>
+              <label className={cn(settingsRowClassName, "cursor-pointer")}>
+                <IconBadge icon={IconEyeOff} />
+                <RowText
+                  title="Hide prices"
+                  description="Clients only see the add-on name and description"
+                />
+                <RadioGroupItem value="hide" aria-label="Hide prices" />
+              </label>
+            </RadioGroup>
+          </SettingsSection>
 
           {addOns.length === 0 ? (
             <EmptyCard>
@@ -735,6 +799,7 @@ export function PackagesManager({
                   icon={IconGift}
                   title={addOn.name}
                   description={`+${formatRm(addOn.price)}`}
+                  footer={addOn.description}
                   onEdit={() => openAddOnSheet(addOn)}
                   onDelete={() =>
                     setDeleteTarget({
@@ -768,6 +833,20 @@ export function PackagesManager({
                   }))
                 }
                 placeholder="Jahit Accessories Baju"
+              />
+            </Field>
+            <Field label="Description (optional)">
+              <Textarea
+                className="min-h-20 text-sm"
+                maxLength={500}
+                value={addOnForm.description}
+                onChange={(event) =>
+                  setAddOnForm((current) => ({
+                    ...current,
+                    description: event.target.value,
+                  }))
+                }
+                placeholder="What's included, how long it takes, etc."
               />
             </Field>
             <Field label="Price">

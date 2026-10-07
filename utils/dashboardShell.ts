@@ -78,6 +78,7 @@ export type DashboardData = {
     initialStyles: StyleItem[];
     initialAddOns: AddOnItem[];
     chargeBy: "package" | "style";
+    showAddOnPrices: boolean;
   };
   settings: {
     initialSettings: SettingsItem;
