@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
+  IconBed,
   IconBrandStripe,
   IconBuildingBank,
   IconCar,
@@ -15,6 +16,7 @@ import {
   IconPlus,
   IconSparkles,
   IconTrash,
+  IconUserHeart,
 } from "@tabler/icons-react";
 
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
@@ -34,6 +36,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -41,7 +50,9 @@ import type { Address } from "@/schemas/addressSchema";
 import {
   getDefaultTimeSlots,
   hasManualTransferDetails,
+  type AccommodationProvider,
   type PaymentMethod,
+  type RegionId,
   type RegionPrices,
   type TimeSlot,
   type TravelMode,
@@ -49,6 +60,7 @@ import {
 } from "@/schemas/settingSchema";
 import { RegionPriceList } from "@/components/RegionPriceList";
 import {
+  MALAYSIA_REGIONS,
   parseRegionPriceInputs,
   toRegionPriceInputs,
   type RegionPriceInputs,
@@ -73,6 +85,8 @@ export type SettingsItem = {
     location: Address;
     region_mode?: TravelRegionMode;
     region_prices?: RegionPrices;
+    accommodation_by?: AccommodationProvider;
+    base_region?: RegionId;
   };
   payment: {
     balance_due_before: number;
@@ -255,6 +269,12 @@ export function SettingsManager({
   const [regionPrices, setRegionPrices] = useState<RegionPriceInputs>(() =>
     toRegionPriceInputs(initialSettings.travel.region_prices)
   );
+  const [accommodationBy, setAccommodationBy] = useState<AccommodationProvider>(
+    initialSettings.travel.accommodation_by ?? "self"
+  );
+  const [baseRegion, setBaseRegion] = useState<RegionId | null>(
+    initialSettings.travel.base_region ?? null
+  );
   const [balanceDueBefore, setBalanceDueBefore] = useState(
     String(initialSettings.payment.balance_due_before)
   );
@@ -369,6 +389,8 @@ export function SettingsManager({
     setTravelMode(next.travel.mode ?? "distance");
     setRegionMode(next.travel.region_mode ?? "fixed");
     setRegionPrices(toRegionPriceInputs(next.travel.region_prices));
+    setAccommodationBy(next.travel.accommodation_by ?? "self");
+    setBaseRegion(next.travel.base_region ?? null);
     setBalanceDueBefore(String(next.payment.balance_due_before));
     setPaymentMethod(next.payment.method ?? "manual_transfer");
     setQrImageUrl(next.payment.qr_image_url ?? "");
@@ -433,6 +455,18 @@ export function SettingsManager({
   }
 
   async function saveTravel() {
+    if (accommodationBy === "client" && !baseRegion) {
+      setSectionError((current) => ({
+        ...current,
+        travel: "Pick your base state.",
+      }));
+      return;
+    }
+    const accommodation = {
+      accommodation_by: accommodationBy,
+      ...(baseRegion ? { base_region: baseRegion } : {}),
+    };
+
     if (travelEnabled && travelMode === "region") {
       const parsedPrices = parseRegionPriceInputs(regionPrices);
       if (!parsedPrices) {
@@ -462,6 +496,7 @@ export function SettingsManager({
           region_mode: effectiveRegionMode,
           region_prices: parsedPrices,
           location: travelLocation ?? settings.travel.location,
+          ...accommodation,
         },
       });
       if (saved) {
@@ -508,6 +543,7 @@ export function SettingsManager({
           rate_per_km: parsedRate,
           long_distance_rate_per_km: parsedLongDistanceRate,
           location: travelLocation,
+          ...accommodation,
         },
       });
       if (saved) {
@@ -522,6 +558,7 @@ export function SettingsManager({
         enabled: false,
         rate_per_km: 0,
         location: DISABLED_TRAVEL_LOCATION,
+        ...accommodation,
       },
     });
     if (saved) {
@@ -962,6 +999,59 @@ export function SettingsManager({
             </SettingsSection>
           </MapsProvider>
         ) : null}
+
+        <SettingsSection title="Out-of-state accommodation & transport">
+          <RadioGroup
+            value={accommodationBy}
+            onValueChange={(value) =>
+              setAccommodationBy(value as AccommodationProvider)
+            }
+            className={settingsListClassName}
+          >
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconBed} />
+              <RowText
+                title="Provided by me"
+                description="You arrange your own stay and transport."
+              />
+              <RadioGroupItem value="self" aria-label="Provided by me" />
+            </label>
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconUserHeart} />
+              <RowText
+                title="Provided by the client"
+                description="Clients outside your base state are told they must provide them."
+              />
+              <RadioGroupItem value="client" aria-label="Provided by the client" />
+            </label>
+          </RadioGroup>
+          {accommodationBy === "client" ? (
+            <div className={settingsCardClassName}>
+              <Field label="Your base state">
+                <Select
+                  value={baseRegion ?? undefined}
+                  onValueChange={(value) => setBaseRegion(value as RegionId)}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MALAYSIA_REGIONS.map((region) => (
+                      <SelectItem key={region.id} value={region.id}>
+                        {region.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <p className="text-xs text-muted-foreground">
+                When a session&apos;s venue is in another state, the client
+                must agree to provide your accommodation and transport before
+                continuing their booking.
+              </p>
+            </div>
+          ) : null}
+        </SettingsSection>
       </SettingsPanel>
     );
   }

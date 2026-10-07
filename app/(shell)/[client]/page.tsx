@@ -27,6 +27,16 @@ import {
   StepperTitle,
   StepperTrigger,
 } from "@/components/reui/stepper";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -82,7 +92,10 @@ import type {
   RegionPrices,
   TimeSlot,
 } from "@/schemas/settingSchema";
-import { useRegionQuote } from "@/hooks/use-venue-regions";
+import {
+  useOutOfStateVenues,
+  useRegionQuote,
+} from "@/hooks/use-venue-regions";
 import {
   getRegionEventPrice,
   getRegionLabel,
@@ -869,6 +882,15 @@ export default function ClientPage() {
     regionPrices,
     regionPricingEnabled
   );
+  const baseRegion = settings?.travel.base_region;
+  const accommodationByClient =
+    settings?.travel.accommodation_by === "client" && !!baseRegion;
+  const outOfStateCheck = useOutOfStateVenues(
+    venueLocations,
+    baseRegion,
+    accommodationByClient
+  );
+  const [accommodationDialogOpen, setAccommodationDialogOpen] = useState(false);
   const regionPriceRm =
     regionQuote.status === "ready" && regionQuote.result?.ok
       ? regionQuote.result.priceRm
@@ -1898,13 +1920,54 @@ export default function ClientPage() {
             <Button
               size="lg"
               className="bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={!allLocationsSet || !allDistancesReady || !regionReady}
-              onClick={goToNextStep}
+              disabled={
+                !allLocationsSet ||
+                !allDistancesReady ||
+                !regionReady ||
+                outOfStateCheck.status === "loading"
+              }
+              onClick={() => {
+                if (
+                  outOfStateCheck.status === "ready" &&
+                  outOfStateCheck.outOfState
+                ) {
+                  setAccommodationDialogOpen(true);
+                  return;
+                }
+                goToNextStep();
+              }}
             >
               {t.next}
               <ChevronRightIcon />
             </Button>
           </div>
+
+          <AlertDialog
+            open={accommodationDialogOpen}
+            onOpenChange={setAccommodationDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t.accommodationTitle}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {format(t.accommodationDescription, {
+                    state: baseRegion ? getRegionLabel(baseRegion) : "",
+                  })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t.accommodationCancel}</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => {
+                    setAccommodationDialogOpen(false);
+                    goToNextStep();
+                  }}
+                >
+                  {t.accommodationAgree}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       )}
       {step === "style" && (

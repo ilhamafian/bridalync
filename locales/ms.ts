@@ -75,6 +75,11 @@ export const ms = {
   summary: "Ringkasan",
   calculatingDistance: "Mengira jarak jalan raya...",
   distanceUnavailable: "Jarak jalan raya tidak tersedia buat masa ini.",
+  accommodationTitle: "Penginapan & pengangkutan",
+  accommodationDescription:
+    "Lokasi anda di luar {state}, tempat stylist anda berpangkalan. Anda perlu sediakan penginapan dan pengangkutan untuk stylist anda.",
+  accommodationCancel: "Tukar lokasi",
+  accommodationAgree: "Saya faham",
   checkingVenueState: "Menyemak negeri lokasi...",
   venueStateUnavailable: "Tidak dapat menyemak negeri lokasi buat masa ini.",
   venueOutsideServiceArea: "Lokasi ini di luar kawasan perkhidmatan.",

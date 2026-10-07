@@ -78,6 +78,11 @@ export const en: Locale = {
   summary: "Summary",
   calculatingDistance: "Calculating road distance...",
   distanceUnavailable: "Road distance unavailable right now.",
+  accommodationTitle: "Accommodation & transport",
+  accommodationDescription:
+    "Your venue is outside {state}, where your stylist is based. You'll need to provide accommodation and transport for your stylist.",
+  accommodationCancel: "Change location",
+  accommodationAgree: "I understand",
   checkingVenueState: "Checking the venue's state...",
   venueStateUnavailable: "Couldn't check the venue's state right now.",
   venueOutsideServiceArea: "This venue is outside the areas served.",

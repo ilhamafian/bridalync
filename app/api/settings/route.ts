@@ -208,6 +208,16 @@ export async function PATCH(req: NextRequest) {
     }
 
     const update = mergeSettingsUpdate(existing, parsed.data);
+
+    if (
+      update.travel?.accommodation_by === "client" &&
+      !update.travel.base_region
+    ) {
+      return createResponse(
+        { error: "Pick your base state for out-of-state bookings." },
+        400
+      );
+    }
     await model.updateSettingsByUserId(userId, update);
 
     const updated = await model.findSettingsByUserId(userId);

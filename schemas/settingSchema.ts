@@ -31,6 +31,7 @@ export const regionPricesSchema = z.partialRecord(
 
 export const travelModeSchema = z.enum(["distance", "region"]);
 export const travelRegionModeSchema = z.enum(["fixed", "per_event"]);
+export const accommodationProviderSchema = z.enum(["self", "client"]);
 
 export const travelSettingSchema = z.object({
   enabled: z.boolean(),
@@ -44,6 +45,10 @@ export const travelSettingSchema = z.object({
   /** Region mode: one price list (`fixed`) or one per event (`per_event`, package mode only). Missing = fixed. */
   region_mode: travelRegionModeSchema.optional(),
   region_prices: regionPricesSchema.optional(),
+  /** Who provides accommodation and transport for venues outside `base_region`. Missing = self. */
+  accommodation_by: accommodationProviderSchema.optional(),
+  /** The stylist's home state; required when `accommodation_by` is "client". */
+  base_region: regionIdSchema.optional(),
 });
 
 export const paymentMethodSchema = z.enum([
@@ -213,6 +218,7 @@ export type PublicSetting = z.infer<typeof publicSettingSchema>;
 export type TravelSetting = z.infer<typeof travelSettingSchema>;
 export type TravelMode = z.infer<typeof travelModeSchema>;
 export type TravelRegionMode = z.infer<typeof travelRegionModeSchema>;
+export type AccommodationProvider = z.infer<typeof accommodationProviderSchema>;
 export type RegionId = z.infer<typeof regionIdSchema>;
 export type RegionPrices = z.infer<typeof regionPricesSchema>;
 export type PaymentSetting = z.infer<typeof paymentSettingSchema>;

@@ -71,6 +71,42 @@ export function useVenueRegions(
   return regions;
 }
 
+export type OutOfStateCheck =
+  | { status: "loading" }
+  | { status: "ready"; outOfState: boolean };
+
+/**
+ * Whether any venue is outside `baseRegion`. Venues outside every region, or whose
+ * lookup failed, count as out of state.
+ */
+export function useOutOfStateVenues(
+  locations: Array<Address | null | undefined>,
+  baseRegion: RegionId | undefined,
+  enabled: boolean
+): OutOfStateCheck {
+  const venueRegions = useVenueRegions(locations, enabled && !!baseRegion);
+
+  return useMemo(() => {
+    if (!enabled || !baseRegion) return { status: "ready", outOfState: false };
+
+    let loading = false;
+    for (const location of locations) {
+      if (!location) continue;
+      const region = venueRegions[venueKey(location.location)];
+      if (region?.status === "error") return { status: "ready", outOfState: true };
+      if (region?.status !== "ready") {
+        loading = true;
+        continue;
+      }
+      if (region.regionId !== baseRegion) {
+        return { status: "ready", outOfState: true };
+      }
+    }
+
+    return loading ? { status: "loading" } : { status: "ready", outOfState: false };
+  }, [baseRegion, enabled, locations, venueRegions]);
+}
+
 /** Highest region price for the given venues, once every venue's region is known. */
 export function useRegionQuote(
   locations: Array<Address | null | undefined>,
