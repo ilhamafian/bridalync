@@ -53,10 +53,7 @@ export async function GET(request: NextRequest) {
       chargeBy === "style" || usesLooks(user.role)
         ? await loadStyleCatalog(user_id, user.role)
         : [];
-    const add_ons =
-      chargeBy === "style"
-        ? (await new AddOnModel().getAddOnsByUserId(user_id)) ?? []
-        : [];
+    const add_ons = (await new AddOnModel().getAddOnsByUserId(user_id)) ?? [];
 
     const bookings = await bookingModel.find({
       freelancerUserId: user_id,

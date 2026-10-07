@@ -1,3 +1,4 @@
+import { AddOnModel } from "@/models/AddOn";
 import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
@@ -254,6 +255,24 @@ function mapSessionsForStorage(
   });
 }
 
+/** Prices add-ons from the catalog; client-sent names and prices are ignored. */
+async function resolveSelectedAddOns(
+  freelancerUserId: string,
+  addOns: CreateBookingRequest["addOns"]
+) {
+  const ids = [...new Set(addOns.map((addOn) => addOn.id))];
+  if (ids.length === 0) return [];
+
+  const model = new AddOnModel();
+  const docs = await Promise.all(ids.map((id) => model.findById(id)));
+  return docs.map((doc) => {
+    if (!doc || doc.user_id !== freelancerUserId) {
+      throw new Error("Add-on not found");
+    }
+    return { name: doc.name, price: doc.price };
+  });
+}
+
 export async function resolveBookingQuotation(
   freelancerUserId: string,
   input: CreateBookingRequest,
@@ -280,9 +299,10 @@ export async function resolveBookingQuotation(
   const packageModel = new PackageModel();
   const settingsModel = new SettingModel();
 
-  const [loadedPackages, settings] = await Promise.all([
+  const [loadedPackages, settings, selectedAddOns] = await Promise.all([
     Promise.all(input.packageIds.map((id) => packageModel.findById(id))),
     settingsModel.findSettingsByUserId(freelancerUserId),
+    resolveSelectedAddOns(freelancerUserId, input.addOns),
   ]);
 
   if (!settings) {
@@ -497,10 +517,7 @@ export async function resolveBookingQuotation(
     chargeBy,
     selectedPackages,
     selectedSessionStyles,
-    selectedAddOns: input.addOns.map((addOn) => ({
-      name: addOn.name,
-      price: addOn.price,
-    })),
+    selectedAddOns,
     travel:
       travelPricing.kind === "distance"
         ? {
