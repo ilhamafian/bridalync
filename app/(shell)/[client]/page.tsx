@@ -103,7 +103,6 @@ import {
 } from "@/utils/booking/regions";
 import { toManualTransferDetails } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import Image from "next/image";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,
@@ -1559,20 +1558,6 @@ export default function ClientPage() {
               <ChevronLeftIcon />
               {t.back}
             </Button>
-            {settings?.invoice.company_logo ? (
-              <div className="pointer-events-none absolute inset-x-0 top-1/2 flex -translate-y-1/2 justify-center px-20">
-                <div className="relative aspect-video h-9">
-                  <Image
-                    src={settings.invoice.company_logo}
-                    alt={settings.invoice.company_name || "Company logo"}
-                    fill
-                    className="object-contain"
-                    sizes="144px"
-                    priority
-                  />
-                </div>
-              </div>
-            ) : null}
           </div>
           <Stepper value={progressValue} className="w-full max-w-lg px-4 sm:px-8">
             <StepperNav className="gap-2 sm:gap-4">
