@@ -7,6 +7,7 @@ import { toPublicBlockedSlot } from "@/utils/booking/availability.server";
 import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { loadStyleCatalog } from "@/utils/booking/styleCatalog.server";
+import { usesLooks } from "@/utils/styleTerms";
 import { UserModel } from "@/models/User";
 import { toIdString } from "@/schemas/objectId";
 import { SettingModel } from "@/models/Setting";
@@ -49,7 +50,9 @@ export async function GET(request: NextRequest) {
 
     const chargeBy = publicSettings.charge_by ?? "package";
     const styles =
-      chargeBy === "style" ? await loadStyleCatalog(user_id, user.role) : [];
+      chargeBy === "style" || usesLooks(user.role)
+        ? await loadStyleCatalog(user_id, user.role)
+        : [];
     const add_ons =
       chargeBy === "style"
         ? (await new AddOnModel().getAddOnsByUserId(user_id)) ?? []

@@ -118,6 +118,34 @@ async function resolveSessionStyle(
   };
 }
 
+/** A look picked while charging by event: stored on the session, not priced. */
+async function resolveUnpricedSessionStyle(
+  freelancerUserId: string,
+  styleInput: NonNullable<BookingSessionInput["style"]>
+): Promise<Pick<ResolvedSessionStyle, "styleId" | "styleName">> {
+  const parsed = parseStyleVariantId(styleInput.id);
+  if (!parsed) {
+    throw new Error("Invalid style selection");
+  }
+
+  const styleDoc = await findCatalogStyle(parsed.styleDocId);
+  if (!styleDoc || styleDoc.user_id !== freelancerUserId) {
+    throw new Error("Style not found");
+  }
+
+  const variant = styleDoc.variants.find(
+    (item) => item.order === parsed.variantOrder
+  );
+  if (!variant) {
+    throw new Error("Style variant not found");
+  }
+
+  return {
+    styleId: styleInput.id,
+    styleName: `${styleDoc.name} — ${variant.name}`,
+  };
+}
+
 /** Bookings made before multi-session events: several events, one session each. */
 function validateLegacyPackageSelection(
   input: CreateBookingRequest,
@@ -355,7 +383,10 @@ export async function resolveBookingQuotation(
     ];
   }
 
-  const resolvedSessionStyles = new Map<string, ResolvedSessionStyle>();
+  const resolvedSessionStyles = new Map<
+    string,
+    Pick<ResolvedSessionStyle, "styleId" | "styleName">
+  >();
   let selectedSessionStyles:
     | Array<{
         name: string;
@@ -387,6 +418,14 @@ export async function resolveBookingQuotation(
         sessionKey: session.client_key,
         slotCount: slotCountBySessionKey.get(session.client_key),
       });
+    }
+  } else {
+    for (const session of sessions) {
+      if (!session.style) continue;
+      resolvedSessionStyles.set(
+        session.client_key,
+        await resolveUnpricedSessionStyle(freelancerUserId, session.style)
+      );
     }
   }
 

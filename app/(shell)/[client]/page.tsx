@@ -738,13 +738,16 @@ export default function ClientPage() {
     !selectedTimeSlot ||
     isSlotTaken(selectedDate, selectedTimeSlot, bookedSlots, sessions);
 
-  const stepOrder = useMemo(() => {
-    const hasStyles = styles.length > 0 && settings?.charge_by === "style";
-    const hasAddOns = addOns.length > 0;
-    return buildStepOrder(hasStyles, hasAddOns);
-  }, [styles, addOns, settings?.charge_by]);
-
   const usesLooks = user?.role === "makeupartist";
+  // Makeup artists' clients pick a look per session even when charging by event (unpriced).
+  const showStyleStep =
+    styles.length > 0 && (settings?.charge_by === "style" || usesLooks);
+
+  const stepOrder = useMemo(
+    () => buildStepOrder(showStyleStep, addOns.length > 0),
+    [showStyleStep, addOns]
+  );
+
   const styleText = usesLooks
     ? {
         step: t.stepLook,
@@ -851,7 +854,7 @@ export default function ClientPage() {
   }, [sessions, styleVariantBySessionKey, styles, hotDatePriceMap]);
 
   const allSessionsStyled =
-    chargeBy !== "style" ||
+    (chargeBy !== "style" && !showStyleStep) ||
     (sessions.length > 0 &&
       sessions.every((session) => styleVariantBySessionKey[session.client_key]));
 
@@ -1428,7 +1431,7 @@ export default function ClientPage() {
         sessions: sessions.map((session) => {
           const variantId = styleVariantBySessionKey[session.client_key];
           const styleSelection =
-            chargeBy === "style" && variantId
+            (chargeBy === "style" || showStyleStep) && variantId
               ? resolveStyleVariant(variantId, styles)
               : null;
 

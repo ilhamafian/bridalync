@@ -1004,7 +1004,8 @@ export function BookingForm({
                   {session.name || `Session ${index + 1}`}
                 </p>
               )}
-              {chargeBy === "style" && !isGoogleImport ? (
+              {(chargeBy === "style" || styleTerms.kind === "look") &&
+              !isGoogleImport ? (
                 <Field label={styleTerms.One}>
                   <Select
                     value={session.styleId || undefined}
