@@ -90,6 +90,7 @@ export const ms = {
   chooseStyle: "Pilih gaya hijab anda",
   chooseStyleHelper: "Pilih gaya untuk setiap sesi.",
   chooseStyleForSession: "Pilih gaya untuk {sessionName}",
+  sessionOfTotal: "Sesi {current} daripada {total}",
   noStylesAvailable: "Tiada gaya tersedia.",
   stepLook: "Look",
   chooseLook: "Pilih look anda",

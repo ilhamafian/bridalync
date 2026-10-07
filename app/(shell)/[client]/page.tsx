@@ -663,6 +663,9 @@ export default function ClientPage() {
   const [styleVariantBySessionKey, setStyleVariantBySessionKey] = useState<
     Record<string, string | null>
   >({});
+  /** The style/look step picks for one session at a time. */
+  const [styleSessionIndex, setStyleSessionIndex] = useState(0);
+  const stepScrollRef = useRef<HTMLDivElement>(null);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
@@ -1391,17 +1394,42 @@ export default function ClientPage() {
       ? sessionLocationHelperTextByKey[sessions[0].client_key]
       : undefined;
 
+  const currentStyleSessionIndex = Math.min(
+    styleSessionIndex,
+    Math.max(sessions.length - 1, 0)
+  );
+  const currentStyleSession = sessions[currentStyleSessionIndex];
+
+  function showStyleSession(index: number) {
+    setStyleSessionIndex(index);
+    stepScrollRef.current?.scrollTo({ top: 0 });
+  }
+
   function goToNextStep() {
+    if (step === "style" && currentStyleSessionIndex < sessions.length - 1) {
+      showStyleSession(currentStyleSessionIndex + 1);
+      return;
+    }
     const index = stepOrder.indexOf(step);
     if (index < stepOrder.length - 1) {
-      setStep(stepOrder[index + 1]);
+      const next = stepOrder[index + 1];
+      if (next === "style") setStyleSessionIndex(0);
+      setStep(next);
     }
   }
 
   function goToPreviousStep() {
+    if (step === "style" && currentStyleSessionIndex > 0) {
+      showStyleSession(currentStyleSessionIndex - 1);
+      return;
+    }
     const index = stepOrder.indexOf(step);
     if (index > 0) {
-      setStep(stepOrder[index - 1]);
+      const previous = stepOrder[index - 1];
+      if (previous === "style") {
+        setStyleSessionIndex(Math.max(sessions.length - 1, 0));
+      }
+      setStep(previous);
     }
   }
 
@@ -1608,6 +1636,7 @@ export default function ClientPage() {
         </div>
       )}
       <div
+        ref={stepScrollRef}
         className={cn(
           "relative z-10 flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16",
           step === "intro" ? "pt-16" : "pt-4"
@@ -1987,42 +2016,60 @@ export default function ClientPage() {
             {styleText.helper}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
-            <ul className="mx-auto flex w-full max-w-sm flex-col gap-6 px-2">
-              {sessions.map((session) => (
-                <li key={session.client_key} className="flex flex-col gap-3">
-                  <p className="text-sm font-medium text-foreground">
-                    {format(styleText.forSession, { sessionName: session.name })}
+            {currentStyleSession ? (
+              <div
+                key={currentStyleSession.client_key}
+                className="mx-auto flex w-full max-w-sm flex-col gap-3 px-2"
+              >
+                {sessions.length > 1 ? (
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    {format(t.sessionOfTotal, {
+                      current: currentStyleSessionIndex + 1,
+                      total: sessions.length,
+                    })}
                   </p>
-                  <BookingStylePicker
-                    categories={styleCategories}
-                    emptyMessage={styleText.noneAvailable}
-                    selectedCategoryId={
-                      styleCategoryBySessionKey[session.client_key] ?? null
-                    }
-                    selectedVariantId={
-                      styleVariantBySessionKey[session.client_key] ?? null
-                    }
-                    onCategoryChange={(categoryId) =>
-                      setStyleCategoryBySessionKey((current) => ({
-                        ...current,
-                        [session.client_key]: categoryId,
-                      }))
-                    }
-                    onVariantChange={(variantId) =>
-                      setStyleVariantBySessionKey((current) => ({
-                        ...current,
-                        [session.client_key]: variantId,
-                      }))
-                    }
-                  />
-                </li>
-              ))}
-            </ul>
+                ) : null}
+                <p className="text-sm font-medium text-foreground">
+                  {format(styleText.forSession, {
+                    sessionName: currentStyleSession.name,
+                  })}
+                </p>
+                <BookingStylePicker
+                  categories={styleCategories}
+                  emptyMessage={styleText.noneAvailable}
+                  selectedCategoryId={
+                    styleCategoryBySessionKey[currentStyleSession.client_key] ??
+                    null
+                  }
+                  selectedVariantId={
+                    styleVariantBySessionKey[currentStyleSession.client_key] ??
+                    null
+                  }
+                  onCategoryChange={(categoryId) =>
+                    setStyleCategoryBySessionKey((current) => ({
+                      ...current,
+                      [currentStyleSession.client_key]: categoryId,
+                    }))
+                  }
+                  onVariantChange={(variantId) =>
+                    setStyleVariantBySessionKey((current) => ({
+                      ...current,
+                      [currentStyleSession.client_key]: variantId,
+                    }))
+                  }
+                />
+              </div>
+            ) : null}
             <div className="flex w-full justify-end">
               <Button
                 size="lg"
                 className="bg-rose-800 text-white hover:bg-rose-800/90"
-                disabled={!allSessionsStyled}
+                disabled={
+                  currentStyleSessionIndex < sessions.length - 1
+                    ? !currentStyleSession ||
+                      !styleVariantBySessionKey[currentStyleSession.client_key]
+                    : !allSessionsStyled
+                }
                 onClick={goToNextStep}
               >
                 {t.next}

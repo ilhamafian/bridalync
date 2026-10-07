@@ -334,6 +334,14 @@ export function BookingStylePicker({
   emptyMessage,
 }: BookingStylePickerProps) {
   const { t } = useLocale()
+  const didAutoOpenRef = useRef(false)
+
+  // Open the first category on mount only, so collapsing it afterwards sticks.
+  useEffect(() => {
+    if (didAutoOpenRef.current || categories.length === 0) return
+    didAutoOpenRef.current = true
+    if (selectedCategoryId === null) onCategoryChange(categories[0]!.id)
+  }, [categories, selectedCategoryId, onCategoryChange])
 
   if (categories.length === 0) {
     return (

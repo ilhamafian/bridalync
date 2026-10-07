@@ -93,6 +93,7 @@ export const en: Locale = {
   chooseStyle: "Choose your hijab style",
   chooseStyleHelper: "Pick a look for each session.",
   chooseStyleForSession: "Choose style for {sessionName}",
+  sessionOfTotal: "Session {current} of {total}",
   noStylesAvailable: "No styles available.",
   // Makeup artists call styles "looks"
   stepLook: "Look",
