@@ -6,6 +6,7 @@ import {
   BookingClientInfoForm,
   type MoodboardPhoto,
 } from "@/components/booking/BookingClientInfoForm";
+import { BookingReviewDetails } from "@/components/booking/BookingReviewDetails";
 import { isClientInfoComplete } from "@/utils/booking/clientInfo";
 import { BookingQuotation } from "@/components/BookingQuotation";
 import {
@@ -863,6 +864,18 @@ export default function ClientPage() {
       })
       .filter((style): style is NonNullable<typeof style> => style !== null);
   }, [sessions, styleVariantBySessionKey, styles, hotDatePriceMap]);
+
+  const reviewStyleBySessionKey = useMemo(() => {
+    const labels: Record<string, string | undefined> = {};
+    for (const session of sessions) {
+      const variantId = styleVariantBySessionKey[session.client_key];
+      const variant = variantId ? resolveStyleVariant(variantId, styles) : null;
+      if (variant) {
+        labels[session.client_key] = `${variant.categoryName} — ${variant.name}`;
+      }
+    }
+    return labels;
+  }, [sessions, styleVariantBySessionKey, styles]);
 
   const allSessionsStyled =
     (chargeBy !== "style" && !showStyleStep) ||
@@ -2195,9 +2208,20 @@ export default function ClientPage() {
             {t.reviewBookingTitle}
           </h1>
           <div className="flex w-full flex-col items-end gap-4">
+            <BookingReviewDetails
+              eventName={selectedEvent?.name}
+              sessions={sessions}
+              styleBySessionKey={reviewStyleBySessionKey}
+              styleLabel={usesLooks ? t.reviewLook : t.styleLabel}
+              addOnNames={selectedAddOnItems.map((addOn) => addOn.name)}
+              contact={contact}
+              clientInfo={clientInfo}
+              instagram={instagram}
+              answers={clientAnswers}
+              moodboard={moodboard}
+            />
             <BookingQuotation
               quotation={payableQuotation}
-              sessions={sessions}
               companyName={settings?.invoice.company_name}
               balanceDueBeforeDays={balanceDueBeforeDays}
               paymentOption={effectivePaymentOption}

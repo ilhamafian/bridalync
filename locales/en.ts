@@ -131,7 +131,14 @@ export const en: Locale = {
 
   // Review
   reviewBookingTitle: "Review your booking",
-
+  reviewDate: "Date",
+  reviewTime: "Time",
+  reviewReadyBy: "Ready by",
+  reviewLocation: "Location",
+  reviewLook: "Look",
+  reviewAddOns: "Add-ons",
+  reviewYourDetails: "Your details",
+  reviewName: "Name",
   // Terms
   termsTitle: "Terms and Conditions",
   noTermsAvailable: "No terms and conditions available.",

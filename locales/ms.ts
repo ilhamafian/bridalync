@@ -127,7 +127,14 @@ export const ms = {
 
   // Review
   reviewBookingTitle: "Semak tempahan anda",
-
+  reviewDate: "Tarikh",
+  reviewTime: "Masa",
+  reviewReadyBy: "Siap pada",
+  reviewLocation: "Lokasi",
+  reviewLook: "Look",
+  reviewAddOns: "Tambahan",
+  reviewYourDetails: "Maklumat anda",
+  reviewName: "Nama",
   // Terms
   termsTitle: "Terma dan Syarat",
   noTermsAvailable: "Tiada terma dan syarat tersedia.",
