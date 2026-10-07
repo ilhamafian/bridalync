@@ -94,11 +94,18 @@ export const en: Locale = {
   chooseStyleHelper: "Pick a look for each session.",
   chooseStyleForSession: "Choose style for {sessionName}",
   noStylesAvailable: "No styles available.",
+  // Makeup artists call styles "looks"
+  stepLook: "Look",
+  chooseLook: "Choose your look",
+  chooseLookHelper: "Pick a look for each session.",
+  chooseLookForSession: "Choose look for {sessionName}",
+  noLooksAvailable: "No looks available.",
   noVariantsAvailable: "No variants available.",
   noImage: "No image",
   previousVariant: "Previous variant",
   nextVariant: "Next variant",
   showVariant: "Show {name}",
+  showVariantImage: "Show photo {index} of {name}",
 
   // Add-ons
   addOnsTitle: "Any add-ons?",

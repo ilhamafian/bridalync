@@ -1,25 +1,25 @@
 import { NextRequest } from "next/server";
 import { WithId } from "mongodb";
 
-import { StyleModel } from "@/models/Style";
+import { LookModel } from "@/models/Look";
 import { reorderSchema } from "@/schemas/catalogSchema";
-import { styleUpdateSchema, type Style } from "@/schemas/styleSchema";
+import { lookUpdateSchema, type Look } from "@/schemas/lookSchema";
 import { toIdString } from "@/schemas/objectId";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
 import { usesLooks } from "@/utils/styleTerms";
 
-function serializeStyle(style: WithId<Style>) {
+function serializeLook(look: WithId<Look>) {
   return {
-    ...style,
-    _id: toIdString(style._id),
+    ...look,
+    _id: toIdString(look._id),
   };
 }
 
 async function getAuthorizedUserId() {
   const user = await getSessionUser();
-  if (!user || !isOnboardingComplete(user.onboarding) || usesLooks(user.role)) {
+  if (!user || !isOnboardingComplete(user.onboarding) || !usesLooks(user.role)) {
     return null;
   }
   return toIdString(user._id) || null;
@@ -38,31 +38,29 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    const styleModel = new StyleModel();
-    const ownedStyles = await styleModel.find({ user_id: userId });
-    const ownedIds = new Set(ownedStyles.map((style) => toIdString(style._id)));
+    const lookModel = new LookModel();
+    const ownedLooks = await lookModel.find({ user_id: userId });
+    const ownedIds = new Set(ownedLooks.map((look) => toIdString(look._id)));
 
     if (
-      parsed.data.ids.length !== ownedStyles.length ||
+      parsed.data.ids.length !== ownedLooks.length ||
       parsed.data.ids.some((id) => !ownedIds.has(id))
     ) {
-      return createResponse({ error: "Invalid style order." }, 400);
+      return createResponse({ error: "Invalid look order." }, 400);
     }
 
     await Promise.all(
       parsed.data.ids.map((id, index) =>
-        styleModel.update(id, { order: index }, styleUpdateSchema)
+        lookModel.update(id, { order: index }, lookUpdateSchema)
       )
     );
 
-    const styles = await styleModel.find(
+    const looks = await lookModel.find(
       { user_id: userId },
       { sort: { order: 1 } }
     );
 
-    return createResponse({
-      styles: styles.map(serializeStyle),
-    });
+    return createResponse({ looks: looks.map(serializeLook) });
   } catch (error) {
     return handleError(error);
   }

@@ -1,39 +1,35 @@
 import { NextRequest } from "next/server";
 import { WithId } from "mongodb";
 
-import { StyleModel } from "@/models/Style";
-import {
-  styleSchema,
-  styleUpdateSchema,
-  type Style,
-} from "@/schemas/styleSchema";
+import { LookModel } from "@/models/Look";
+import { lookUpdateSchema, type Look } from "@/schemas/lookSchema";
 import { toIdString } from "@/schemas/objectId";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
 import { usesLooks } from "@/utils/styleTerms";
 
-function serializeStyle(style: WithId<Style>) {
+function serializeLook(look: WithId<Look>) {
   return {
-    ...style,
-    _id: toIdString(style._id),
+    ...look,
+    _id: toIdString(look._id),
   };
 }
 
 async function getAuthorizedUserId() {
   const user = await getSessionUser();
-  if (!user || !isOnboardingComplete(user.onboarding) || usesLooks(user.role)) {
+  if (!user || !isOnboardingComplete(user.onboarding) || !usesLooks(user.role)) {
     return null;
   }
   return toIdString(user._id) || null;
 }
 
-async function getOwnedStyle(id: string, userId: string) {
-  const style = await new StyleModel().findById(id);
-  if (!style || style.user_id !== userId) {
+async function getOwnedLook(id: string, userId: string) {
+  const look = await new LookModel().findById(id);
+  if (!look || look.user_id !== userId) {
     return null;
   }
-  return style;
+  return look;
 }
 
 export async function PATCH(
@@ -47,29 +43,29 @@ export async function PATCH(
     }
 
     const { id } = await params;
-    const existing = await getOwnedStyle(id, userId);
+    const existing = await getOwnedLook(id, userId);
     if (!existing) {
-      return createResponse({ error: "Style not found" }, 404);
+      return createResponse({ error: "Look not found" }, 404);
     }
 
     const body = await req.json();
-    const parsed = styleUpdateSchema.safeParse(body);
+    const parsed = lookUpdateSchema.safeParse(body);
     if (!parsed.success) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    await new StyleModel().update(
+    await new LookModel().update(
       id,
-      parsed.data as Partial<Style>,
-      styleUpdateSchema
+      parsed.data as Partial<Look>,
+      lookUpdateSchema
     );
 
-    const updated = await new StyleModel().findById(id);
+    const updated = await new LookModel().findById(id);
     if (!updated) {
-      return createResponse({ error: "Style not found" }, 404);
+      return createResponse({ error: "Look not found" }, 404);
     }
 
-    return createResponse({ style: serializeStyle(updated) });
+    return createResponse({ look: serializeLook(updated) });
   } catch (error) {
     return handleError(error);
   }
@@ -86,12 +82,12 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const existing = await getOwnedStyle(id, userId);
+    const existing = await getOwnedLook(id, userId);
     if (!existing) {
-      return createResponse({ error: "Style not found" }, 404);
+      return createResponse({ error: "Look not found" }, 404);
     }
 
-    await new StyleModel().delete(id);
+    await new LookModel().delete(id);
     return createResponse({ ok: true });
   } catch (error) {
     return handleError(error);

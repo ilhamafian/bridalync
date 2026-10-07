@@ -6,7 +6,7 @@ import { blockedSlotModel } from "@/models/BlockedSlot";
 import { toPublicBlockedSlot } from "@/utils/booking/availability.server";
 import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
-import { StyleModel } from "@/models/Style";
+import { loadStyleCatalog } from "@/utils/booking/styleCatalog.server";
 import { UserModel } from "@/models/User";
 import { toIdString } from "@/schemas/objectId";
 import { SettingModel } from "@/models/Setting";
@@ -49,9 +49,7 @@ export async function GET(request: NextRequest) {
 
     const chargeBy = publicSettings.charge_by ?? "package";
     const styles =
-      chargeBy === "style"
-        ? (await new StyleModel().getStylesByUserId(user_id)) ?? []
-        : [];
+      chargeBy === "style" ? await loadStyleCatalog(user_id, user.role) : [];
     const add_ons =
       chargeBy === "style"
         ? (await new AddOnModel().getAddOnsByUserId(user_id)) ?? []

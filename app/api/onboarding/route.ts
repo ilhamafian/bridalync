@@ -21,6 +21,7 @@ import { packageSchema } from "@/schemas/packageSchema";
 import { styleSchema } from "@/schemas/styleSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
+import { usesLooks } from "@/utils/styleTerms";
 import { toIdString } from "@/schemas/objectId";
 import { settingSchema, getDefaultTimeSlots, type TravelSetting } from "@/schemas/settingSchema";
 import { getAppUrl } from "@/utils/appUrl";
@@ -190,14 +191,16 @@ async function seedAddOns(userId: string) {
 
 async function ensureDefaultCatalog(
   userId: string,
-  chargeBy: "package" | "style"
+  chargeBy: "package" | "style",
+  role: Parameters<typeof usesLooks>[0]
 ) {
   if (chargeBy === "package") {
     await seedPackages(userId, MUA_PACKAGES);
   } else {
     await Promise.all([
       seedPackages(userId, HS_PACKAGES),
-      seedStyles(userId),
+      // The defaults are hijab styles; makeup artists start with no looks.
+      usesLooks(role) ? Promise.resolve() : seedStyles(userId),
       seedAddOns(userId),
     ]);
   }
@@ -232,7 +235,7 @@ export async function GET() {
       !user.onboarding.createdFirstPackage
     ) {
       const chargeBy = await resolveChargeBy(userId, user);
-      await ensureDefaultCatalog(userId, chargeBy);
+      await ensureDefaultCatalog(userId, chargeBy, user.role);
       const refreshedUser = await refreshSession(userId);
       if (refreshedUser) {
         return createResponse(
@@ -309,7 +312,7 @@ export async function POST(req: NextRequest) {
           })
         );
 
-        await ensureDefaultCatalog(userId, charge_by);
+        await ensureDefaultCatalog(userId, charge_by, role);
         await refreshSession(userId);
         return createResponse({ ok: true }, 200);
       }

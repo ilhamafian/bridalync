@@ -29,6 +29,7 @@ import {
   settingsListClassName,
   settingsRowClassName,
 } from "@/components/dashboard/settings/SettingsUi";
+import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import { PaymentQrUpload } from "@/components/PaymentQrUpload";
 import { Badge } from "@/components/ui/badge";
@@ -243,6 +244,7 @@ export function SettingsManager({
   onChargeByChange?: (chargeBy: SettingsItem["charge_by"]) => void;
   onTravelChange?: (travel: SettingsItem["travel"]) => void;
 }) {
+  const styleTerms = useStyleTerms();
   const [settings, setSettings] = useState(initialSettings);
   const [chargeBy, setChargeBy] = useState(initialSettings.charge_by);
   const [travelEnabled, setTravelEnabled] = useState(
@@ -820,10 +822,14 @@ export function SettingsManager({
             <label className={cn(settingsRowClassName, "cursor-pointer")}>
               <IconBadge icon={IconSparkles} />
               <RowText
-                title="By style"
-                description="Recommended for hijab stylists"
+                title={`By ${styleTerms.one}`}
+                description={
+                  styleTerms.kind === "look"
+                    ? "Clients pick a look for each session"
+                    : "Recommended for hijab stylists"
+                }
               />
-              <RadioGroupItem value="style" aria-label="By style" />
+              <RadioGroupItem value="style" aria-label={`By ${styleTerms.one}`} />
             </label>
           </RadioGroup>
           <p className="text-xs text-muted-foreground">
@@ -922,7 +928,8 @@ export function SettingsManager({
             {settings.charge_by === "package" && regionMode === "per_event" ? (
               <div className={settingsCardClassName}>
                 <p className="text-muted-foreground">
-                  Set each event&apos;s price per state in Events &amp; styles.
+                  Set each event&apos;s price per state in Events &amp;{" "}
+                  {styleTerms.many}.
                   The price already includes travel, so clients see one price
                   for the event.
                 </p>

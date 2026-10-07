@@ -12,7 +12,7 @@ import {
   SettingsSection,
   settingsCardClassName,
 } from "@/components/dashboard/settings/SettingsUi";
-import type { StyleItem } from "@/components/PackagesManager";
+import { toStyleItem, type StyleItem } from "@/components/PackagesManager";
 import { SortableList } from "@/components/SortableList";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import { VariantImageUpload } from "@/components/VariantImageUpload";
 import { cn } from "@/lib/utils";
 import type { DepositType } from "@/schemas/packageSchema";
 import { EVENTS_SETTINGS_HREF } from "@/utils/dashboardShell";
+import type { StyleTerms } from "@/utils/styleTerms";
 
 const inputClassName = cn(
   "h-10 w-full rounded-md border border-border bg-white/60 px-3 text-sm text-foreground dark:bg-white/5",
@@ -34,7 +35,7 @@ type VariantRow = {
   price: string;
   deposit: string;
   depositType: DepositType;
-  image_url: string;
+  image_urls: string[];
 };
 
 function createRowId() {
@@ -48,7 +49,7 @@ function emptyVariant(): VariantRow {
     price: "",
     deposit: "",
     depositType: "fixed",
-    image_url: "",
+    image_urls: [],
   };
 }
 
@@ -60,7 +61,7 @@ function toRows(style: StyleItem | null): VariantRow[] {
     price: variant.price.toString(),
     deposit: variant.deposit.toString(),
     depositType: variant.deposit_type ?? "fixed",
-    image_url: variant.image_url ?? "",
+    image_urls: variant.image_urls,
   }));
 }
 
@@ -70,6 +71,7 @@ export function StyleEditorPage({
   notFound,
   nextOrder,
   chargeBy,
+  styleTerms,
   onSaved,
 }: {
   style: StyleItem | null;
@@ -77,6 +79,7 @@ export function StyleEditorPage({
   notFound: boolean;
   nextOrder: number;
   chargeBy: "package" | "style";
+  styleTerms: StyleTerms;
   onSaved: (saved: StyleItem) => void;
 }) {
   const [name, setName] = useState(style?.name ?? "");
@@ -88,7 +91,7 @@ export function StyleEditorPage({
     return (
       <div className="flex flex-col gap-4 px-4 lg:px-6">
         <BackButton fallbackHref={EVENTS_SETTINGS_HREF} />
-        <EmptyCard>Style not found.</EmptyCard>
+        <EmptyCard>{styleTerms.One} not found.</EmptyCard>
       </div>
     );
   }
@@ -101,7 +104,7 @@ export function StyleEditorPage({
 
   async function handleSave() {
     if (!name.trim()) {
-      setError("Style name is required.");
+      setError(`${styleTerms.One} name is required.`);
       return;
     }
 
@@ -133,7 +136,9 @@ export function StyleEditorPage({
         price,
         deposit: deposit ?? 0,
         deposit_type: variant.depositType,
-        image_url: variant.image_url.trim() || undefined,
+        ...(styleTerms.kind === "look"
+          ? { image_urls: variant.image_urls }
+          : { image_url: variant.image_urls[0] }),
       });
     }
 
@@ -147,7 +152,7 @@ export function StyleEditorPage({
     setError(null);
     try {
       const response = await fetch(
-        style ? `/api/styles/${style._id}` : "/api/styles",
+        style ? `${styleTerms.apiPath}/${style._id}` : styleTerms.apiPath,
         {
           method: style ? "PATCH" : "POST",
           headers: { "Content-Type": "application/json" },
@@ -156,10 +161,10 @@ export function StyleEditorPage({
       );
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setError("Could not save style.");
+        setError(`Could not save ${styleTerms.one}.`);
         return;
       }
-      onSaved(data.style as StyleItem);
+      onSaved(toStyleItem(data[styleTerms.kind]));
     } finally {
       setSaving(false);
     }
@@ -170,10 +175,10 @@ export function StyleEditorPage({
       <BackButton fallbackHref={EVENTS_SETTINGS_HREF} />
       <section>
         <h2 className="text-xl font-semibold tracking-tight">
-          {style ? "Edit style" : "New style"}
+          {style ? `Edit ${styleTerms.one}` : `New ${styleTerms.one}`}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          A style category and the variants clients pick from.
+          A {styleTerms.one} category and the variants clients pick from.
         </p>
       </section>
 
@@ -276,8 +281,9 @@ export function StyleEditorPage({
               ) : null}
 
               <VariantImageUpload
-                value={variant.image_url}
-                onChange={(url) => updateVariant(variant.id, { image_url: url })}
+                value={variant.image_urls}
+                max={styleTerms.maxImages}
+                onChange={(urls) => updateVariant(variant.id, { image_urls: urls })}
                 disabled={saving}
               />
             </div>

@@ -7,9 +7,10 @@ import { IconChevronRight, IconLogout } from "@tabler/icons-react";
 
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
-  SETTINGS_CATEGORY_META,
+  getSettingsCategoryMeta,
   SETTINGS_GROUPS,
 } from "@/components/dashboard/settings/categories";
+import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import {
   IconBadge,
   RowText,
@@ -107,6 +108,8 @@ function LogoutButton() {
 }
 
 export function SettingsPage() {
+  const styleTerms = useStyleTerms();
+
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
       <section className="pr-12">
@@ -120,8 +123,10 @@ export function SettingsPage() {
         <SettingsSection key={group.title} title={group.title}>
           <nav aria-label={group.title} className={settingsListClassName}>
             {group.categories.map((category) => {
-              const { label, description, icon } =
-                SETTINGS_CATEGORY_META[category];
+              const { label, description, icon } = getSettingsCategoryMeta(
+                category,
+                styleTerms
+              );
               return (
                 <Link
                   key={category}

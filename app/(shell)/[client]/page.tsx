@@ -419,7 +419,8 @@ type StyleVariant = {
   price: number;
   deposit: number;
   deposit_type?: DepositType;
-  image_url?: string;
+  /** Styles have at most one; makeup artists' looks up to five. */
+  image_urls: string[];
 };
 
 type ClientStyleCategory = {
@@ -743,6 +744,23 @@ export default function ClientPage() {
     return buildStepOrder(hasStyles, hasAddOns);
   }, [styles, addOns, settings?.charge_by]);
 
+  const usesLooks = user?.role === "makeupartist";
+  const styleText = usesLooks
+    ? {
+        step: t.stepLook,
+        choose: t.chooseLook,
+        helper: t.chooseLookHelper,
+        forSession: t.chooseLookForSession,
+        noneAvailable: t.noLooksAvailable,
+      }
+    : {
+        step: t.stepStyle,
+        choose: t.chooseStyle,
+        helper: t.chooseStyleHelper,
+        forSession: t.chooseStyleForSession,
+        noneAvailable: t.noStylesAvailable,
+      };
+
   const progressSteps = useMemo(
     () =>
       PROGRESS_STEPS.filter(
@@ -782,7 +800,7 @@ export default function ClientPage() {
                 name: variant.name,
                 price: variant.price,
                 deposit: variant.deposit,
-                imageSrc: variant.image_url,
+                imageSrcs: variant.image_urls,
               })),
           };
         })
@@ -1575,7 +1593,9 @@ export default function ClientPage() {
                       <span className="sr-only">{index + 1}</span>
                     </StepperIndicator>
                     <StepperTitle className="text-start text-[10px] font-semibold leading-tight group-data-[state=inactive]/step:text-muted-foreground sm:text-xs">
-                      {t[progressStep.titleKey]}
+                      {progressStep.key === "style"
+                        ? styleText.step
+                        : t[progressStep.titleKey]}
                     </StepperTitle>
                   </StepperTrigger>
                 </StepperItem>
@@ -1958,20 +1978,21 @@ export default function ClientPage() {
       {step === "style" && (
         <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
           <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {t.chooseStyle}
+            {styleText.choose}
           </h1>
           <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {t.chooseStyleHelper}
+            {styleText.helper}
           </p>
           <div className="flex w-full flex-col items-end gap-4">
             <ul className="mx-auto flex w-full max-w-sm flex-col gap-6 px-2">
               {sessions.map((session) => (
                 <li key={session.client_key} className="flex flex-col gap-3">
                   <p className="text-sm font-medium text-foreground">
-                    {format(t.chooseStyleForSession, { sessionName: session.name })}
+                    {format(styleText.forSession, { sessionName: session.name })}
                   </p>
                   <BookingStylePicker
                     categories={styleCategories}
+                    emptyMessage={styleText.noneAvailable}
                     selectedCategoryId={
                       styleCategoryBySessionKey[session.client_key] ?? null
                     }

@@ -1,28 +1,25 @@
 import { NextRequest } from "next/server";
 import { WithId } from "mongodb";
 
-import { StyleModel } from "@/models/Style";
-import {
-  styleInputSchema,
-  styleSchema,
-  type Style,
-} from "@/schemas/styleSchema";
+import { LookModel } from "@/models/Look";
+import { lookInputSchema, lookSchema, type Look } from "@/schemas/lookSchema";
 import { toIdString } from "@/schemas/objectId";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
 import { usesLooks } from "@/utils/styleTerms";
 
-function serializeStyle(style: WithId<Style>) {
+function serializeLook(look: WithId<Look>) {
   return {
-    ...style,
-    _id: toIdString(style._id),
+    ...look,
+    _id: toIdString(look._id),
   };
 }
 
+/** Looks belong to makeup artists only. */
 async function getAuthorizedUserId() {
   const user = await getSessionUser();
-  if (!user || !isOnboardingComplete(user.onboarding) || usesLooks(user.role)) {
+  if (!user || !isOnboardingComplete(user.onboarding) || !usesLooks(user.role)) {
     return null;
   }
   return toIdString(user._id) || null;
@@ -35,14 +32,12 @@ export async function GET() {
       return createResponse({ error: "Unauthorized" }, 401);
     }
 
-    const styles = await new StyleModel().find(
+    const looks = await new LookModel().find(
       { user_id: userId },
       { sort: { order: 1 } }
     );
 
-    return createResponse({
-      styles: styles.map(serializeStyle),
-    });
+    return createResponse({ looks: looks.map(serializeLook) });
   } catch (error) {
     return handleError(error);
   }
@@ -56,19 +51,19 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const parsed = styleInputSchema.safeParse(body);
+    const parsed = lookInputSchema.safeParse(body);
     if (!parsed.success) {
       return createResponse({ error: parsed.error.format() }, 400);
     }
 
-    const created = await new StyleModel().create(
-      styleSchema.parse({
+    const created = await new LookModel().create(
+      lookSchema.parse({
         ...parsed.data,
         user_id: userId,
       })
     );
 
-    return createResponse({ style: serializeStyle(created) }, 201);
+    return createResponse({ look: serializeLook(created) }, 201);
   } catch (error) {
     return handleError(error);
   }

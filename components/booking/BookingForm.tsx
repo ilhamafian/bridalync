@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import {
   DEFAULT_COUNTRY_CODE,
@@ -72,7 +73,7 @@ export type StyleCatalogItem = {
     order: number;
     price: number;
     deposit: number;
-    image_url?: string;
+    image_urls: string[];
   }[];
 };
 
@@ -304,6 +305,7 @@ export function BookingForm({
   className?: string;
   actionsClassName?: string;
 }) {
+  const styleTerms = useStyleTerms();
   const editingId = booking?._id ?? null;
   const isGoogleImport = booking?.source === "google_calendar";
   const [form, setForm] = useState<BookingFormState>(() =>
@@ -683,7 +685,7 @@ export function BookingForm({
         return { error: "Each session needs an event." };
       }
       if (!isGoogleImport && chargeBy === "style" && !session.styleId) {
-        return { error: "Each session needs a style." };
+        return { error: `Each session needs a ${styleTerms.one}.` };
       }
       if (!session.date) {
         return { error: "Each session needs a date." };
@@ -1003,7 +1005,7 @@ export function BookingForm({
                 </p>
               )}
               {chargeBy === "style" && !isGoogleImport ? (
-                <Field label="Style">
+                <Field label={styleTerms.One}>
                   <Select
                     value={session.styleId || undefined}
                     onValueChange={(value) =>
@@ -1011,7 +1013,7 @@ export function BookingForm({
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select style" />
+                      <SelectValue placeholder={`Select ${styleTerms.one}`} />
                     </SelectTrigger>
                     <SelectContent>
                       {styleOptions.map((option) => (

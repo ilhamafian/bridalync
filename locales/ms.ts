@@ -91,11 +91,17 @@ export const ms = {
   chooseStyleHelper: "Pilih gaya untuk setiap sesi.",
   chooseStyleForSession: "Pilih gaya untuk {sessionName}",
   noStylesAvailable: "Tiada gaya tersedia.",
+  stepLook: "Look",
+  chooseLook: "Pilih look anda",
+  chooseLookHelper: "Pilih look untuk setiap sesi.",
+  chooseLookForSession: "Pilih look untuk {sessionName}",
+  noLooksAvailable: "Tiada look tersedia.",
   noVariantsAvailable: "Tiada variasi tersedia.",
   noImage: "Tiada gambar",
   previousVariant: "Variasi sebelumnya",
   nextVariant: "Variasi seterusnya",
   showVariant: "Tunjuk {name}",
+  showVariantImage: "Tunjuk gambar {index} bagi {name}",
 
   // Add-ons
   addOnsTitle: "Ada tambahan?",

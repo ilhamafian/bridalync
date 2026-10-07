@@ -6,7 +6,7 @@ import { motion } from "motion/react"
 import { useEffect, useRef, useState } from "react"
 
 import { useLocale } from "@/components/LocaleProvider"
-import { Button } from "@/components/ui/button"
+import { Button, buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export type StyleVariantOption = {
@@ -14,7 +14,8 @@ export type StyleVariantOption = {
   name: string
   price: number
   deposit: number
-  imageSrc?: string
+  /** Styles have at most one; looks up to five. */
+  imageSrcs: string[]
 }
 
 export type StyleCategoryOption = {
@@ -29,6 +30,7 @@ type BookingStylePickerProps = {
   selectedVariantId: string | null
   onCategoryChange: (categoryId: string | null) => void
   onVariantChange: (variantId: string | null) => void
+  emptyMessage?: string
 }
 
 const CARD_WIDTH_RATIO = 0.82
@@ -239,26 +241,44 @@ function VariantCard({
   dimmed?: boolean
   onSelect: () => void
 }) {
+  const { t, format } = useLocale()
+  const [imageIndex, setImageIndex] = useState(0)
+  const images = variant.imageSrcs
+  const imageSrc = images[imageIndex] ?? images[0]
+
+  useEffect(() => {
+    setImageIndex(0)
+  }, [variant.id])
+
+  // A div with button semantics, so the photo thumbnails can be buttons of their own.
   return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="lg"
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isSelected}
       aria-current={isActive ? "true" : undefined}
       className={cn(
-        "h-auto w-full overflow-hidden rounded-lg p-0 text-left whitespace-normal transition-[opacity,transform] duration-300",
+        buttonVariants({ variant: "ghost", size: "lg" }),
+        "h-auto w-full cursor-pointer overflow-hidden rounded-lg p-0 text-left whitespace-normal transition-[opacity,transform] duration-300",
         isSelected
           ? "bg-rose-800 text-white ring-2 ring-rose-800 hover:bg-rose-800/90 hover:text-white"
           : "border-transparent bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 hover:text-foreground dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15",
         dimmed && "opacity-55"
       )}
       onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          onSelect()
+        }
+      }}
     >
       <span className="flex w-full flex-col">
-        {variant.imageSrc ? (
+        {imageSrc ? (
           <span className="relative aspect-square w-full overflow-hidden bg-muted">
             <Image
-              src={variant.imageSrc}
+              src={imageSrc}
               alt={variant.name}
               fill
               className="object-cover"
@@ -266,9 +286,42 @@ function VariantCard({
             />
           </span>
         ) : null}
+        {images.length > 1 ? (
+          <span className="flex gap-1.5 px-3 pt-2.5">
+            {images.map((src, index) => (
+              <button
+                key={src}
+                type="button"
+                aria-label={format(t.showVariantImage, {
+                  index: index + 1,
+                  name: variant.name,
+                })}
+                aria-pressed={index === imageIndex}
+                className={cn(
+                  "relative size-10 shrink-0 overflow-hidden rounded-md bg-muted ring-offset-1 transition-opacity",
+                  index === imageIndex
+                    ? "ring-2 ring-current"
+                    : "opacity-60 hover:opacity-100"
+                )}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  setImageIndex(index)
+                }}
+              >
+                <Image
+                  src={src}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="40px"
+                />
+              </button>
+            ))}
+          </span>
+        ) : null}
         <span className="px-3 py-2.5 font-medium">{variant.name}</span>
       </span>
-    </Button>
+    </div>
   )
 }
 
@@ -278,13 +331,14 @@ export function BookingStylePicker({
   selectedVariantId,
   onCategoryChange,
   onVariantChange,
+  emptyMessage,
 }: BookingStylePickerProps) {
   const { t } = useLocale()
 
   if (categories.length === 0) {
     return (
       <p className="mx-auto w-full max-w-xs px-4 text-center text-sm text-muted-foreground">
-        {t.noStylesAvailable}
+        {emptyMessage ?? t.noStylesAvailable}
       </p>
     )
   }

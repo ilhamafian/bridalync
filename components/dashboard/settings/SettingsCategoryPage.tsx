@@ -4,7 +4,8 @@ import { Suspense, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { BackButton } from "@/components/dashboard/BackButton";
-import { SETTINGS_CATEGORY_META } from "@/components/dashboard/settings/categories";
+import { getSettingsCategoryMeta } from "@/components/dashboard/settings/categories";
+import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import { GoogleCalendarImport } from "@/components/dashboard/settings/GoogleCalendarImport";
 import { ResetPasswordSettings } from "@/components/dashboard/settings/ResetPasswordSettings";
 import { ThemeSettings } from "@/components/dashboard/settings/ThemeSettings";
@@ -35,12 +36,13 @@ export function SettingsCategoryPage({
   packages: DashboardData["packages"];
   email: string;
 }) {
+  const styleTerms = useStyleTerms();
   const [chargeBy, setChargeBy] = useState(packages.chargeBy);
   const [travel, setTravel] = useState(settings.initialSettings.travel);
   const regionPricesPerEvent =
     chargeBy === "package" &&
     getTravelPricing(travel, chargeBy).kind === "region_per_event";
-  const meta = category ? SETTINGS_CATEGORY_META[category] : null;
+  const meta = category ? getSettingsCategoryMeta(category, styleTerms) : null;
   const isPackages = category === "events";
   const isCatalogEditor = getCatalogEditorTarget(usePathname()) !== null;
 
@@ -69,6 +71,7 @@ export function SettingsCategoryPage({
           initialAddOns={packages.initialAddOns}
           chargeBy={chargeBy}
           regionPricesPerEvent={regionPricesPerEvent}
+          styleTerms={styleTerms}
         />
       </div>
 

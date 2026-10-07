@@ -14,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 
 import type { SettingsCategory } from "@/utils/dashboardShell";
+import type { StyleTerms } from "@/utils/styleTerms";
 
 export const SETTINGS_GROUPS: { title: string; categories: SettingsCategory[] }[] = [
   {
@@ -86,3 +87,18 @@ export const SETTINGS_CATEGORY_META: Record<
     icon: IconLock,
   },
 };
+
+/** `SETTINGS_CATEGORY_META` with "style" wording swapped for the user's role (makeup artists say "look"). */
+export function getSettingsCategoryMeta(
+  category: SettingsCategory,
+  styleTerms: StyleTerms
+) {
+  const meta = SETTINGS_CATEGORY_META[category];
+  if (category === "pricing-model") {
+    return { ...meta, description: `Charge clients by event or by ${styleTerms.one}.` };
+  }
+  if (category === "events") {
+    return { ...meta, label: `Events & ${styleTerms.many}` };
+  }
+  return meta;
+}

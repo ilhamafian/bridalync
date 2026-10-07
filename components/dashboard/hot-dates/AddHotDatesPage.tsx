@@ -12,6 +12,7 @@ import {
   parseDateKey,
 } from "@/components/dashboard/DashboardCalendar";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
+import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
   RowText,
@@ -92,6 +93,7 @@ export function AddHotDatesPage({
   onSaved: (hotDates: HotDateItem[]) => void;
 }) {
   const router = useRouter();
+  const styleTerms = useStyleTerms();
   const editing = Boolean(initialDates?.length);
   const priceMap = useMemo(() => buildHotDateRowPriceMap(hotDates), [hotDates]);
   const [dates, setDates] = useState<Date[] | undefined>(() =>
@@ -242,7 +244,7 @@ export function AddHotDatesPage({
           <EmptyCard>
             {chargeBy === "package"
               ? "You have no events yet."
-              : "You have no styles yet."}{" "}
+              : `You have no ${styleTerms.many} yet.`}{" "}
             <Link
               href="/dashboard/settings/events"
               scroll={false}

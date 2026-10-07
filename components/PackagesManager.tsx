@@ -50,6 +50,7 @@ import type { RegionPrices } from "@/schemas/settingSchema";
 import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
 import { formatDeposit, formatRm } from "@/utils/booking/pricing";
 import { getRegionPriceRange } from "@/utils/booking/regions";
+import type { StyleTerms } from "@/utils/styleTerms";
 import {
   buildCatalogEditorHref,
   EVENTS_SETTINGS_HREF,
@@ -76,12 +77,33 @@ export type StyleItem = {
   variants: {
     name: string;
     order: number;
-    image_url?: string;
+    /** Styles have at most one; looks up to five. */
+    image_urls: string[];
     price: number;
     deposit: number;
     deposit_type?: DepositType;
   }[];
 };
+
+type RawStyleVariant = Omit<StyleItem["variants"][number], "image_urls"> & {
+  image_url?: string;
+  image_urls?: string[];
+};
+
+/** Normalizes a `/api/styles` or `/api/looks` document. */
+export function toStyleItem(
+  raw: Omit<StyleItem, "variants"> & { variants: RawStyleVariant[] }
+): StyleItem {
+  return {
+    _id: raw._id,
+    name: raw.name,
+    order: raw.order,
+    variants: raw.variants.map(({ image_url, image_urls, ...variant }) => ({
+      ...variant,
+      image_urls: image_urls ?? (image_url ? [image_url] : []),
+    })),
+  };
+}
 
 export type AddOnItem = {
   _id: string;
@@ -103,11 +125,11 @@ type AddOnFormState = {
   price: string;
 };
 
-const DELETE_LABELS: Record<DeleteTarget["type"], string> = {
-  package: "event",
-  style: "style",
-  addon: "add-on",
-};
+function getDeleteLabel(type: DeleteTarget["type"], styleTerms: StyleTerms) {
+  if (type === "package") return "event";
+  if (type === "style") return styleTerms.one;
+  return "add-on";
+}
 
 const inputClassName = cn(
   "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground",
@@ -141,9 +163,10 @@ function describeEventSessions(pkg: PackageItem) {
 function describeEventPrice(
   pkg: PackageItem,
   chargeBy: "package" | "style",
-  regionPricesPerEvent: boolean
+  regionPricesPerEvent: boolean,
+  styleTerms: StyleTerms
 ) {
-  if (chargeBy === "style") return "Priced by style";
+  if (chargeBy === "style") return `Priced by ${styleTerms.one}`;
   const price = regionPricesPerEvent
     ? describeRegionPriceRange(pkg.region_prices)
     : pkg.price != null
@@ -230,6 +253,7 @@ export function PackagesManager({
   initialAddOns,
   chargeBy,
   regionPricesPerEvent = false,
+  styleTerms,
 }: {
   initialPackages: PackageItem[];
   initialStyles: StyleItem[];
@@ -237,6 +261,7 @@ export function PackagesManager({
   chargeBy: "package" | "style";
   /** Travel is charged by state per event: events are priced per state instead of one price. */
   regionPricesPerEvent?: boolean;
+  styleTerms: StyleTerms;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -325,7 +350,7 @@ export function PackagesManager({
     setError(null);
 
     try {
-      const response = await fetch("/api/styles/reorder", {
+      const response = await fetch(`${styleTerms.apiPath}/reorder`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: reordered.map((style) => style._id) }),
@@ -333,12 +358,16 @@ export function PackagesManager({
 
       if (!response.ok) {
         setStyles(previous);
-        setError("Failed to reorder styles.");
+        setError(`Failed to reorder ${styleTerms.many}.`);
         return;
       }
 
       const data = await response.json();
-      setStyles(data.styles as StyleItem[]);
+      setStyles(
+        (data[`${styleTerms.kind}s`] as Parameters<typeof toStyleItem>[0][]).map(
+          toStyleItem
+        )
+      );
     } finally {
       setReordering(false);
     }
@@ -380,13 +409,13 @@ export function PackagesManager({
 
     const endpoint = {
       package: `/api/packages/${deleteTarget.id}`,
-      style: `/api/styles/${deleteTarget.id}`,
+      style: `${styleTerms.apiPath}/${deleteTarget.id}`,
       addon: `/api/add-ons/${deleteTarget.id}`,
     }[deleteTarget.type];
 
     const response = await fetch(endpoint, { method: "DELETE" });
     if (!response.ok) {
-      setError(`Failed to delete ${DELETE_LABELS[deleteTarget.type]}.`);
+      setError(`Failed to delete ${getDeleteLabel(deleteTarget.type, styleTerms)}.`);
       setDeleteTarget(null);
       return;
     }
@@ -499,6 +528,7 @@ export function PackagesManager({
         nextOrder={packages.length}
         chargeBy={chargeBy}
         regionPricesPerEvent={regionPricesPerEvent}
+        styleTerms={styleTerms}
         onSaved={handlePackageSaved}
       />
     );
@@ -515,6 +545,7 @@ export function PackagesManager({
         notFound={editor.id !== null && !style}
         nextOrder={styles.length}
         chargeBy={chargeBy}
+        styleTerms={styleTerms}
         onSaved={handleStyleSaved}
       />
     );
@@ -525,7 +556,7 @@ export function PackagesManager({
       <div className="flex items-start justify-between gap-3">
         <section>
           <h2 className="text-xl font-semibold tracking-tight">
-            Events & styles
+            Events & {styleTerms.many}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
             Drag to reorder. Manage what clients can book from your profile.
@@ -539,7 +570,7 @@ export function PackagesManager({
             tab === "packages"
               ? "Add event"
               : tab === "styles"
-                ? "Add style"
+                ? `Add ${styleTerms.one}`
                 : "Add add-on"
           }
         >
@@ -557,7 +588,7 @@ export function PackagesManager({
             Events
           </TabsTrigger>
           <TabsTrigger value="styles" className="text-sm">
-            Styles
+            {styleTerms.Many}
           </TabsTrigger>
           <TabsTrigger value="addons" className="text-sm">
             Add-ons
@@ -585,7 +616,8 @@ export function PackagesManager({
                   description={describeEventPrice(
                     pkg,
                     chargeBy,
-                    regionPricesPerEvent
+                    regionPricesPerEvent,
+                    styleTerms
                   )}
                   footer={describeEventSessions(pkg)}
                   onEdit={() => openEditor("event", pkg._id)}
@@ -605,7 +637,8 @@ export function PackagesManager({
         <TabsContent value="styles" className="mt-0">
           {styles.length === 0 ? (
             <EmptyCard>
-              No styles yet. Tap + to add your first style category.
+              No {styleTerms.many} yet. Tap + to add your first{" "}
+              {styleTerms.one} category.
             </EmptyCard>
           ) : (
             <SortableList
@@ -638,10 +671,10 @@ export function PackagesManager({
                           className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
                         >
                           <span className="flex min-w-0 items-center gap-2">
-                            {variant.image_url ? (
+                            {variant.image_urls[0] ? (
                               <span className="relative size-8 shrink-0 overflow-hidden rounded-md bg-white/50 dark:bg-white/10">
                                 <Image
-                                  src={variant.image_url}
+                                  src={variant.image_urls[0]}
                                   alt={variant.name}
                                   fill
                                   className="object-cover"
@@ -680,7 +713,7 @@ export function PackagesManager({
         <TabsContent value="addons" className="mt-0 flex flex-col gap-3">
           {chargeBy === "package" ? (
             <p className="text-xs text-muted-foreground">
-              Clients only see add-ons when you charge by style. You can still
+              Clients only see add-ons when you charge by {styleTerms.one}. You can still
               add them to bookings you create yourself.
             </p>
           ) : null}
@@ -790,7 +823,8 @@ export function PackagesManager({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              Delete {deleteTarget ? DELETE_LABELS[deleteTarget.type] : ""}?
+              Delete{" "}
+              {deleteTarget ? getDeleteLabel(deleteTarget.type, styleTerms) : ""}?
             </AlertDialogTitle>
             <AlertDialogDescription>
               This will permanently delete &quot;{deleteTarget?.name}&quot;. This

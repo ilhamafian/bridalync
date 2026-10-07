@@ -27,6 +27,7 @@ import {
   type RegionPriceInputs,
 } from "@/utils/booking/regions";
 import { EVENTS_SETTINGS_HREF } from "@/utils/dashboardShell";
+import type { StyleTerms } from "@/utils/styleTerms";
 
 const inputClassName = cn(
   "h-10 w-full rounded-md border border-border bg-white/60 px-3 text-sm text-foreground dark:bg-white/5",
@@ -98,6 +99,7 @@ export function EventEditorPage({
   nextOrder,
   chargeBy,
   regionPricesPerEvent,
+  styleTerms,
   onSaved,
 }: {
   pkg: PackageItem | null;
@@ -106,6 +108,7 @@ export function EventEditorPage({
   nextOrder: number;
   chargeBy: "package" | "style";
   regionPricesPerEvent: boolean;
+  styleTerms: StyleTerms;
   onSaved: (saved: PackageItem) => void;
 }) {
   const [form, setForm] = useState(() => toForm(pkg));
@@ -358,7 +361,8 @@ export function EventEditorPage({
         <SettingsSection title="Pricing">
           <div className={settingsCardClassName}>
             <p className="text-muted-foreground">
-              You charge by style, so prices are set on your styles.
+              You charge by {styleTerms.one}, so prices are set on your{" "}
+              {styleTerms.many}.
             </p>
           </div>
         </SettingsSection>

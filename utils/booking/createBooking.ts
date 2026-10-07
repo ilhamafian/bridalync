@@ -1,7 +1,6 @@
 import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
-import { StyleModel } from "@/models/Style";
 import type { CreateBookingRequest } from "@/schemas/bookingSchema";
 import type { Package, PackageDayMode } from "@/schemas/packageSchema";
 import { toIdString } from "@/schemas/objectId";
@@ -32,6 +31,7 @@ import {
 } from "@/utils/booking/events";
 import { resolveSessionDistancesKm } from "@/utils/booking/roadDistance.server";
 import { countSessionSlots } from "@/utils/booking/slots";
+import { findCatalogStyle } from "@/utils/booking/styleCatalog.server";
 import {
   buildHotDatePriceMap,
   getEventHotDatePrice,
@@ -66,7 +66,6 @@ type ResolvedSessionStyle = {
 };
 
 async function resolveSessionStyle(
-  styleModel: StyleModel,
   freelancerUserId: string,
   sessionName: string,
   styleInput: NonNullable<BookingSessionInput["style"]>,
@@ -78,8 +77,8 @@ async function resolveSessionStyle(
     throw new Error("Invalid style selection");
   }
 
-  const styleDoc = await styleModel.findById(parsed.styleDocId);
-  if (!styleDoc || toIdString(styleDoc.user_id as never) !== freelancerUserId) {
+  const styleDoc = await findCatalogStyle(parsed.styleDocId);
+  if (!styleDoc || styleDoc.user_id !== freelancerUserId) {
     throw new Error("Style not found");
   }
 
@@ -252,7 +251,6 @@ export async function resolveBookingQuotation(
 
   const packageModel = new PackageModel();
   const settingsModel = new SettingModel();
-  const styleModel = new StyleModel();
 
   const [loadedPackages, settings] = await Promise.all([
     Promise.all(input.packageIds.map((id) => packageModel.findById(id))),
@@ -375,7 +373,6 @@ export async function resolveBookingQuotation(
         throw new Error("Style is required for each session");
       }
       const resolved = await resolveSessionStyle(
-        styleModel,
         freelancerUserId,
         session.name,
         session.style,

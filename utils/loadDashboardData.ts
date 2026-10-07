@@ -13,7 +13,6 @@ import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { reviewModel } from "@/models/Review";
 import { SettingModel } from "@/models/Setting";
-import { StyleModel } from "@/models/Style";
 import { UserModel } from "@/models/User";
 import type { AddOn } from "@/schemas/addOnSchema";
 import type { Package } from "@/schemas/packageSchema";
@@ -26,7 +25,6 @@ import {
   type TimeSlot,
   type TravelSetting,
 } from "@/schemas/settingSchema";
-import type { Style } from "@/schemas/styleSchema";
 import type { SessionUser } from "@/schemas/userSchema";
 import {
   buildClientBookingUrl,
@@ -42,6 +40,10 @@ import { getEffectiveBookingUntil } from "@/utils/booking/bookingWindow";
 import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
 import { toHotDateItem } from "@/utils/booking/hotDates";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
+import {
+  loadStyleCatalog,
+  type CatalogStyle,
+} from "@/utils/booking/styleCatalog.server";
 import { getRecentActivity } from "@/utils/activity";
 import {
   countUpcomingThisWeek,
@@ -101,9 +103,9 @@ function serializePackage(pkg: WithId<Package>): PackageItem {
   };
 }
 
-function serializeStyle(style: WithId<Style>): StyleItem {
+function serializeStyle(style: CatalogStyle): StyleItem {
   return {
-    _id: toIdString(style._id),
+    _id: style._id,
     name: style.name,
     order: style.order,
     variants: style.variants,
@@ -142,7 +144,7 @@ export async function loadDashboardData(
         { sort: { created_at: -1 } }
       ),
       new PackageModel().find({ user_id: userId }, { sort: { order: 1 } }),
-      new StyleModel().find({ user_id: userId }, { sort: { order: 1 } }),
+      loadStyleCatalog(userId, user.role),
       new AddOnModel().find({ user_id: userId }, { sort: { order: 1 } }),
       new SettingModel().findSettingsByUserId(userId),
       reviewModel.findByFreelancerUserId(userId, 100),
@@ -262,14 +264,14 @@ export async function loadDashboardData(
         dayMode: getEventDayMode(pkg),
       })),
       styles: styles.map((style) => ({
-        _id: toIdString(style._id),
+        _id: style._id,
         name: style.name,
         variants: style.variants.map((variant) => ({
           name: variant.name,
           order: variant.order,
           price: variant.price,
           deposit: variant.deposit,
-          image_url: variant.image_url,
+          image_urls: variant.image_urls,
         })),
       })),
       addOns: addOns.map((addOn) => ({
