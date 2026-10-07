@@ -175,6 +175,14 @@ export function BookingDetailsSections({
                     ? ` · ${session.slot_count} slots`
                     : null}
                 </p>
+                {session.ready_by ? (
+                  <p className="text-muted-foreground">
+                    Ready by{" "}
+                    <span className="font-medium text-foreground">
+                      {formatTimeLabel(session.ready_by)}
+                    </span>
+                  </p>
+                ) : null}
                 {session.location ? (
                   <p className="mt-1.5 flex items-start gap-1.5 text-muted-foreground">
                     <IconMapPin className="mt-0.5 size-4 shrink-0" />

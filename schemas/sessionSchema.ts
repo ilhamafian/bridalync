@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { addressSchema } from "@/schemas/addressSchema";
-import { timeSlotSchema } from "./settingSchema";
+import { timeOfDaySchema, timeSlotSchema } from "./settingSchema";
 
 export const sessionSchema = z.object({
     status: z.enum(["scheduled", "completed", "cancelled", "rescheduled"]),
@@ -15,6 +15,8 @@ export const sessionSchema = z.object({
     time_slot: timeSlotSchema,
     /** Consecutive slots covered by `time_slot`; missing = 1. Each slot is charged the session price. */
     slot_count: z.number().int().min(1).optional(),
+    /** HH:mm the client must be ready by; required on public bookings, missing on older/imported ones. */
+    ready_by: timeOfDaySchema.optional(),
     /** Optional for Google Calendar imports; stylists add it later from the dashboard. */
     location: addressSchema.optional(),
 });

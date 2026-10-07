@@ -124,6 +124,8 @@ type SessionFormRow = {
   date: string;
   /** Consecutive slots for this session; saved as their merged span. */
   time_slots: TimeSlot[];
+  /** HH:mm the client must be ready by; blank = not set. */
+  ready_by: string;
   location: Address | null;
 };
 
@@ -204,6 +206,7 @@ function sessionsFromEvent(
         : defaultSlot
           ? [defaultSlot]
           : [],
+      ready_by: existing?.ready_by ?? "",
       location: existing?.location ?? null,
     };
   });
@@ -255,6 +258,7 @@ function bookingToForm(
         : fallbackSlot
           ? [fallbackSlot]
           : [],
+      ready_by: session.ready_by ?? "",
       location: session.location ?? null,
     })),
     status: toDashboardStatus(booking.status),
@@ -762,6 +766,7 @@ export function BookingForm({
           order: index,
           date: new Date(`${session.date}T12:00:00`),
           time_slot: mergeSlots(session.time_slots),
+          ready_by: session.ready_by || undefined,
           location: session.location!,
           style: resolveSessionStyle(session),
         })),
@@ -1055,6 +1060,18 @@ export function BookingForm({
                       : "Pick neighbouring slots to book a longer session."}
                   </p>
                 ) : null}
+              </Field>
+              <Field label="Ready by">
+                <Input
+                  className={inputClassName}
+                  type="time"
+                  value={session.ready_by}
+                  onChange={(event) =>
+                    updateSession(session.client_key, {
+                      ready_by: event.target.value,
+                    })
+                  }
+                />
               </Field>
               <Field label="Location">
                 <LocationMapPicker

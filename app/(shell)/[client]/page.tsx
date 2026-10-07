@@ -30,6 +30,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
   applyPaymentOption,
@@ -640,6 +642,7 @@ export default function ClientPage() {
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<TimeSlot | null>(
     null
   );
+  const [readyBy, setReadyBy] = useState("");
   const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
   const [styleCategoryBySessionKey, setStyleCategoryBySessionKey] = useState<
     Record<string, string | null>
@@ -1029,6 +1032,7 @@ export default function ClientPage() {
     );
     setSelectedDate(undefined);
     setSelectedTimeSlot(null);
+    setReadyBy("");
     setSharedLocation(null);
     setSameLocationForAll(true);
     setStyleCategoryBySessionKey({});
@@ -1208,7 +1212,8 @@ export default function ClientPage() {
       !nextSessionToSchedule ||
       !selectedPackageId ||
       !selectedDate ||
-      !selectedTimeSlot
+      !selectedTimeSlot ||
+      !readyBy
     ) {
       return;
     }
@@ -1235,10 +1240,12 @@ export default function ClientPage() {
         packageId: selectedPackageId,
         date: normalizeSessionDate(selectedDate),
         time_slot: selectedTimeSlot,
+        ready_by: readyBy,
       },
     ].sort((a, b) => a.order - b.order);
     setSessions(nextSessions);
     setSelectedTimeSlot(null);
+    setReadyBy("");
     // Same-day events: the remaining sessions can only go on this date.
     setSelectedDate(
       dayMode === "same_day" && nextSessions.length < eventSessions.length
@@ -1767,6 +1774,23 @@ export default function ClientPage() {
                         {t.allSlotsBooked}
                       </p>
                     )}
+                  {selectedTimeSlot && (
+                    <div className="flex flex-col gap-1.5 pt-1">
+                      <Label htmlFor="ready-by" className="text-sm font-medium">
+                        {t.readyByLabel}
+                      </Label>
+                      <Input
+                        id="ready-by"
+                        type="time"
+                        value={readyBy}
+                        onChange={(event) => setReadyBy(event.target.value)}
+                        className="bg-white/50 dark:bg-white/10"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {t.readyByHelper}
+                      </p>
+                    </div>
+                  )}
                 </CardFooter>
               </Card>
             )}
@@ -1796,7 +1820,7 @@ export default function ClientPage() {
                       ? "bg-rose-800 text-white hover:bg-rose-800/90"
                       : undefined
                   }
-                  disabled={!selectedTimeSlot || selectionTaken}
+                  disabled={!selectedTimeSlot || !readyBy || selectionTaken}
                   onClick={handleAddSession}
                 >
                   {format(t.addSession, {

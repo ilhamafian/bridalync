@@ -13,7 +13,13 @@ const frostedPanelClassName =
 
 type SessionListItem = Pick<
   SessionForm,
-  "name" | "date" | "time_slot" | "slot_count" | "location" | "order"
+  | "name"
+  | "date"
+  | "time_slot"
+  | "slot_count"
+  | "ready_by"
+  | "location"
+  | "order"
 > & {
   client_key?: string
 }
@@ -74,6 +80,11 @@ export function BookingSessionList({
             {(session.slot_count ?? 1) > 1 && (
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {format(t.slotCount, { count: session.slot_count ?? 1 })}
+              </p>
+            )}
+            {session.ready_by && (
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {format(t.readyBy, { time: session.ready_by })}
               </p>
             )}
             {showLocation && session.location && (

@@ -188,6 +188,7 @@ export async function PATCH(
           order: session.order ?? index,
           date: normalizeSessionDate(session.date),
           time_slot: session.time_slot,
+          ...(session.ready_by ? { ready_by: session.ready_by } : {}),
           location: session.location,
           client_key: session.client_key,
         }));

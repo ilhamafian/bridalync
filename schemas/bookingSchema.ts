@@ -5,6 +5,7 @@ import { packageDayModeSchema } from "@/schemas/packageSchema";
 import { sessionSchema } from "@/schemas/sessionSchema";
 import {
   type ManualTransferDetails,
+  timeOfDaySchema,
   timeSlotSchema,
 } from "@/schemas/settingSchema";
 
@@ -122,6 +123,7 @@ const bookingSessionInputSchema = z.object({
   order: z.number(),
   date: z.coerce.date(),
   time_slot: timeSlotSchema,
+  ready_by: timeOfDaySchema.optional(),
   location: addressSchema,
   style: bookingLineItemInputSchema.optional(),
 });
@@ -132,7 +134,13 @@ export const createBookingRequestSchema = z.object({
   contact: bookingContactSchema,
   packageIds: z.array(z.string()).min(1),
   addOns: z.array(bookingLineItemInputSchema).default([]),
-  sessions: z.array(bookingSessionInputSchema).min(1),
+  /** Clients must give every session a ready-by time. */
+  sessions: z
+    .array(bookingSessionInputSchema)
+    .min(1)
+    .refine((sessions) => sessions.every((session) => session.ready_by), {
+      message: "Every session needs a ready-by time.",
+    }),
   paymentOption: z.enum(["deposit", "full"]).default("deposit"),
 });
 

@@ -113,6 +113,7 @@ function buildEventBody(
     email ? `Email: ${email}` : null,
     `Package: ${booking.packageNames}`,
     session.styleName ? `Style: ${session.styleName}` : null,
+    session.ready_by ? `Ready by: ${session.ready_by}` : null,
     (session.slot_count ?? 1) > 1 ? `${session.slot_count} slots` : null,
     `Total: ${formatRm(booking.invoice.totalRm)}${
       booking.invoice.balanceRm > 0

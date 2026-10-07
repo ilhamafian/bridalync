@@ -124,6 +124,8 @@ export const messageSettingSchema = z.object({
   review_request: z.string().max(1000).optional(),
 });
 
+export const timeOfDaySchema = z.string().regex(hhmm, "Expected HH:mm");
+
 export const timeSlotSchema = z
   .object({
     startTime: z.string().regex(hhmm, "Expected HH:mm"),

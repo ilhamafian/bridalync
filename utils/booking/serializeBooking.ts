@@ -22,6 +22,7 @@ export type SerializedBooking = {
     date: string;
     time_slot: Booking["sessions"][number]["time_slot"];
     slot_count?: number;
+    ready_by?: string;
     location?: Booking["sessions"][number]["location"];
     client_key?: string;
   }>;
