@@ -24,6 +24,7 @@ import {
   getEffectiveMaxBookingYear,
 } from "@/utils/booking/bookingWindow";
 import { toHotDateLookup } from "@/utils/booking/hotDates";
+import { getTravelBufferDateKeys } from "@/utils/booking/travelBuffer";
 
 export async function GET(request: NextRequest) {
   try {
@@ -78,7 +79,13 @@ export async function GET(request: NextRequest) {
       ...blockedSlotDocs.map(toPublicBlockedSlot),
     ];
     const hot_dates = hotDateDocs.map((doc) => toHotDateLookup(doc));
-    const blocked_dates = blockedDateDocs.map((doc) => doc.date);
+    // Travel buffer days look like any other blocked date to clients.
+    const bufferDates = [
+      ...getTravelBufferDateKeys(bookings, settings.travel.travel_buffer_regions),
+    ].filter((dateKey) => !todayKey || dateKey >= todayKey);
+    const blocked_dates = [
+      ...new Set([...blockedDateDocs.map((doc) => doc.date), ...bufferDates]),
+    ];
 
     const response = {
       user: publicUser,

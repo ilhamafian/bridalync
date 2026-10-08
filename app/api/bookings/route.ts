@@ -153,6 +153,7 @@ export async function POST(req: NextRequest) {
     try {
       await assertSessionsAvailable(freelancer.userId, data.sessions, {
         requireListedSlots: true,
+        applyTravelBuffers: true,
       });
     } catch (error) {
       const message =

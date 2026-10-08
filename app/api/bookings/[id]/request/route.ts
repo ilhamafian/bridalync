@@ -13,6 +13,7 @@ import { serializeBooking } from "@/utils/booking/serializeBooking";
 import {
   approveBookingRequest,
   declineBookingRequest,
+  ensureSessionRegions,
   findOverlappingBookingRequests,
   getBookingById,
 } from "@/utils/bookings";
@@ -61,6 +62,8 @@ export async function POST(
     }
 
     const approve = parsed.data.action === "approve";
+    const settings = await new SettingModel().findSettingsByUserId(userId);
+    const bufferRegions = settings?.travel.travel_buffer_regions;
 
     if (approve) {
       const occupied = await getOccupiedSlotsForFreelancer(userId);
@@ -76,6 +79,17 @@ export async function POST(
           },
           409
         );
+      }
+      if (bufferRegions?.length) {
+        try {
+          await ensureSessionRegions(booking);
+        } catch (error) {
+          console.error("Venue region lookup failed:", error);
+          return createResponse(
+            { error: "We couldn't check the venue's state right now. Please try again." },
+            503
+          );
+        }
       }
     }
 
@@ -101,7 +115,6 @@ export async function POST(
     if (updated) {
       try {
         if (approve) {
-          const settings = await new SettingModel().findSettingsByUserId(userId);
           await sendBookingRequestApprovedEmail(
             updated,
             user.name,

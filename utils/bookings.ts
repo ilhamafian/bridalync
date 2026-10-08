@@ -9,6 +9,7 @@ import {
   type PersistedBooking,
 } from "@/schemas/bookingSchema";
 import { bookingSessionsOverlap } from "@/utils/booking/availability";
+import { resolveSessionRegions } from "@/utils/booking/region.server";
 import { applyPaymentOption } from "@/utils/booking/pricing";
 import { sendBalancePaymentReceivedEmail } from "@/utils/email/balance-payment-received";
 import { sendBookingPaymentConfirmationEmail } from "@/utils/email/booking-confirmation";
@@ -255,7 +256,32 @@ export async function approveBookingRequest(bookingId: string) {
   return getBookingById(bookingId);
 }
 
-/** Other open requests for this freelancer that share a slot with `booking`. */
+/** Looks up and stores the venue state of sessions that don't have one yet (e.g. booked before travel buffers). */
+export async function ensureSessionRegions(booking: PersistedBooking) {
+  const missing = booking.sessions
+    .map((session, index) => ({ session, index }))
+    .filter(({ session }) => session.location && session.region === undefined);
+  if (missing.length === 0) return;
+
+  const regions = await resolveSessionRegions(
+    missing.map(({ session, index }) => ({
+      client_key: String(index),
+      location: session.location,
+    }))
+  );
+  const regionsByIndex = new Map(
+    missing.map(({ index }) => [index, regions[String(index)] ?? null] as const)
+  );
+  await bookingModel.setSessionRegions(String(booking._id), regionsByIndex);
+  for (const [index, region] of regionsByIndex) {
+    booking.sessions[index].region = region;
+  }
+}
+
+/**
+ * Other open requests sharing a slot with `booking` (declined when it's approved). Travel-day clashes are only warned
+ * about on the dashboard, never declined.
+ */
 export async function findOverlappingBookingRequests(
   booking: PersistedBooking
 ): Promise<PersistedBooking[]> {

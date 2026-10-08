@@ -10,7 +10,9 @@ import {
 
 import {
   BookingRequestButtons,
+  formatBookedClashes,
   formatCompetingRequests,
+  type BookedClash,
 } from "@/components/dashboard/BookingRequestButtons";
 import {
   formatScheduleDate,
@@ -24,8 +26,10 @@ import { formatLocationAddress } from "@/utils/session";
 
 export type HomeRequestItem = {
   booking: SerializedBooking;
-  /** Other open requests sharing a slot; approving this one declines them. */
+  /** Other open requests that clash; approving this one declines them. */
   competingCount: number;
+  /** Booked clients on this request's travel days; approving keeps them. */
+  bookedClashes: BookedClash[];
 };
 
 export function HomeRequestCard({
@@ -39,7 +43,7 @@ export function HomeRequestCard({
   onBookingUpdated?: (booking: SerializedBooking) => void;
   onBookingsDeclined?: (ids: string[]) => void;
 }) {
-  const { booking, competingCount } = item;
+  const { booking, competingCount, bookedClashes } = item;
   const sessions = booking.sessions.filter(
     (session) => session.status !== "cancelled"
   );
@@ -111,16 +115,26 @@ export function HomeRequestCard({
           {competingCount > 0 ? (
             <span className="pointer-events-none inline-flex items-center gap-1 text-xs text-muted-foreground">
               <IconAlertTriangle className="size-3.5 shrink-0 text-amber-600" />
-              {formatCompetingRequests(competingCount)} for this slot
+              {formatCompetingRequests(competingCount)} for the same slot
             </span>
           ) : null}
         </div>
+      ) : null}
+
+      {bookedClashes.length > 0 ? (
+        <p className="pointer-events-none relative flex gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+          <IconAlertTriangle className="mt-0.5 size-3.5 shrink-0" />
+          <span>
+            Might clash (travel day): {formatBookedClashes(bookedClashes)}
+          </span>
+        </p>
       ) : null}
 
       <BookingRequestButtons
         className="relative mt-auto"
         booking={booking}
         competingCount={competingCount}
+        bookedClashes={bookedClashes}
         onBookingUpdated={onBookingUpdated}
         onBookingsDeclined={onBookingsDeclined}
       />

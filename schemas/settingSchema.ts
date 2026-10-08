@@ -50,6 +50,8 @@ export const travelSettingSchema = z.object({
   accommodation_by: accommodationProviderSchema.optional(),
   /** The stylist's home state; required when `accommodation_by` is "client". */
   base_region: regionIdSchema.optional(),
+  /** States where a slot-holding booking blocks the day before and after each session for clients. Missing = none. */
+  travel_buffer_regions: z.array(regionIdSchema).optional(),
 });
 
 export const paymentMethodSchema = z.enum([

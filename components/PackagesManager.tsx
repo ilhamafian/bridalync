@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   IconEye,
   IconEyeOff,
@@ -297,15 +297,28 @@ export function PackagesManager({
   const [showAddOnPrices, setShowAddOnPrices] = useState(initialShowAddOnPrices);
   const [savingShowAddOnPrices, setSavingShowAddOnPrices] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const openedEditorFromList = useRef(false);
 
   function openEditor(type: "event" | "style", id: string | null) {
     setTab(type === "event" ? "packages" : "styles");
     setError(null);
+    openedEditorFromList.current = true;
     router.push(buildCatalogEditorHref(type, id), { scroll: false });
   }
 
-  function closeEditor() {
+  /**
+   * Returns to the list and refreshes server data. An editor opened from the list goes back in history, so the list
+   * isn't stacked twice (which made the list's Back button land on the list again).
+   */
+  function closeEditorAndRefresh() {
+    if (openedEditorFromList.current) {
+      openedEditorFromList.current = false;
+      window.addEventListener("popstate", () => router.refresh(), { once: true });
+      router.back();
+      return;
+    }
     router.replace(EVENTS_SETTINGS_HREF, { scroll: false });
+    router.refresh();
   }
 
   function openAddOnSheet(addOn: AddOnItem | null) {
@@ -488,8 +501,7 @@ export function PackagesManager({
         : [...current, saved];
       return next.sort((a, b) => a.order - b.order);
     });
-    closeEditor();
-    router.refresh();
+    closeEditorAndRefresh();
   }
 
   function handleStyleSaved(saved: StyleItem) {
@@ -500,8 +512,7 @@ export function PackagesManager({
         : [...current, saved];
       return next.sort((a, b) => a.order - b.order);
     });
-    closeEditor();
-    router.refresh();
+    closeEditorAndRefresh();
   }
 
   async function handleSaveAddOn() {

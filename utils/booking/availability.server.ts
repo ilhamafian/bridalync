@@ -5,6 +5,7 @@ import { SettingModel } from "@/models/Setting";
 import type { BlockedSlot } from "@/schemas/blockedSlotSchema";
 import type { Booking } from "@/schemas/bookingSchema";
 import type { TimeSlot } from "@/schemas/settingSchema";
+import { getTravelBufferDateKeys } from "@/utils/booking/travelBuffer";
 import { formatDate } from "@/utils/utils";
 import {
   getOccupiedSlotsFromBookings,
@@ -36,36 +37,53 @@ export function toPublicBlockedSlot(
   return { date: slot.date, startTime: slot.startTime, endTime: slot.endTime };
 }
 
-export async function getOccupiedSlotsForFreelancer(
-  freelancerUserId: string
-): Promise<PublicBookedSlot[]> {
-  const bookings = await bookingModel.find({
+async function findSlotHoldingBookings(freelancerUserId: string) {
+  return bookingModel.find({
     freelancerUserId,
     status: { $in: BLOCKING_BOOKING_STATUSES },
   });
+}
 
-  return getOccupiedSlotsFromBookings(bookings);
+export async function getOccupiedSlotsForFreelancer(
+  freelancerUserId: string
+): Promise<PublicBookedSlot[]> {
+  return getOccupiedSlotsFromBookings(
+    await findSlotHoldingBookings(freelancerUserId)
+  );
 }
 
 export async function assertSessionsAvailable(
   freelancerUserId: string,
   sessions: SessionSlotInput[],
-  options?: { requireListedSlots?: boolean }
+  options?: {
+    requireListedSlots?: boolean;
+    /** Client bookings: also reject the travel buffer days around out-of-state bookings. */
+    applyTravelBuffers?: boolean;
+  }
 ): Promise<void> {
   const sessionDateKeys = sessions
     .map((session) => toDateKey(session.date))
     .filter(Boolean);
-  const [bookedSlots, blockedDocs, blockedSlotDocs, settings] =
+  const [holdingBookings, blockedDocs, blockedSlotDocs, settings] =
     await Promise.all([
-      getOccupiedSlotsForFreelancer(freelancerUserId),
+      findSlotHoldingBookings(freelancerUserId),
       blockedDateModel.findByUserIdAndDates(freelancerUserId, sessionDateKeys),
       blockedSlotModel.findByUserIdAndDates(freelancerUserId, sessionDateKeys),
       new SettingModel().findSettingsByUserId(freelancerUserId),
     ]);
-  const occupied = [...bookedSlots, ...blockedSlotDocs.map(toPublicBlockedSlot)];
+  const occupied = [
+    ...getOccupiedSlotsFromBookings(holdingBookings),
+    ...blockedSlotDocs.map(toPublicBlockedSlot),
+  ];
   const blockedKeys = buildBlockedDateSet(
     blockedDocs.map((doc) => doc.date)
   );
+  const bufferKeys = options?.applyTravelBuffers
+    ? getTravelBufferDateKeys(
+        holdingBookings,
+        settings?.travel.travel_buffer_regions
+      )
+    : new Set<string>();
   const bookingUntil = getEffectiveBookingUntil(settings);
 
   for (const session of sessions) {
@@ -84,7 +102,10 @@ export async function assertSessionsAvailable(
       );
     }
 
-    if (isDateBlocked(session.date, blockedKeys)) {
+    if (
+      isDateBlocked(session.date, blockedKeys) ||
+      bufferKeys.has(toDateKey(session.date))
+    ) {
       throw new Error(
         `${formatDate(session.date)} is blocked and unavailable for booking.`
       );

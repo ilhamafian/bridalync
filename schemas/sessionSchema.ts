@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { addressSchema } from "@/schemas/addressSchema";
-import { timeOfDaySchema, timeSlotSchema } from "./settingSchema";
+import { regionIdSchema, timeOfDaySchema, timeSlotSchema } from "./settingSchema";
 
 export const sessionSchema = z.object({
     status: z.enum(["scheduled", "completed", "cancelled", "rescheduled"]),
@@ -19,6 +19,8 @@ export const sessionSchema = z.object({
     ready_by: timeOfDaySchema.optional(),
     /** Optional for Google Calendar imports; stylists add it later from the dashboard. */
     location: addressSchema.optional(),
+    /** Venue's state, set server-side when it was looked up (`null` = outside every region). */
+    region: regionIdSchema.nullable().optional(),
 });
 
 export type Session = z.infer<typeof sessionSchema>;

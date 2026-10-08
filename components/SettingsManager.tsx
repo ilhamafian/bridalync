@@ -89,6 +89,7 @@ export type SettingsItem = {
     region_prices?: RegionPrices;
     accommodation_by?: AccommodationProvider;
     base_region?: RegionId;
+    travel_buffer_regions?: RegionId[];
   };
   payment: {
     balance_due_before: number;
@@ -280,6 +281,9 @@ export function SettingsManager({
   const [baseRegion, setBaseRegion] = useState<RegionId | null>(
     initialSettings.travel.base_region ?? null
   );
+  const [bufferRegions, setBufferRegions] = useState<RegionId[]>(
+    initialSettings.travel.travel_buffer_regions ?? []
+  );
   const [balanceDueBefore, setBalanceDueBefore] = useState(
     String(initialSettings.payment.balance_due_before)
   );
@@ -396,6 +400,7 @@ export function SettingsManager({
     setRegionPrices(toRegionPriceInputs(next.travel.region_prices));
     setAccommodationBy(next.travel.accommodation_by ?? "self");
     setBaseRegion(next.travel.base_region ?? null);
+    setBufferRegions(next.travel.travel_buffer_regions ?? []);
     setBalanceDueBefore(String(next.payment.balance_due_before));
     setPaymentMethod(next.payment.method ?? "manual_transfer");
     setQrImageUrl(next.payment.qr_image_url ?? "");
@@ -470,6 +475,7 @@ export function SettingsManager({
     const accommodation = {
       accommodation_by: accommodationBy,
       ...(baseRegion ? { base_region: baseRegion } : {}),
+      travel_buffer_regions: bufferRegions.filter((id) => id !== baseRegion),
     };
 
     if (travelEnabled && travelMode === "region") {
@@ -1061,6 +1067,39 @@ export function SettingsManager({
               </p>
             </div>
           ) : null}
+        </SettingsSection>
+
+        <SettingsSection title="Travel days">
+          <p className="-mt-1 text-xs text-muted-foreground">
+            For bookings in these states, the day before and after each session
+            is blocked so other clients can&apos;t book them. Applies once a
+            booking holds its slot (booked, or a request you approved).
+          </p>
+          <div className={settingsListClassName}>
+            {MALAYSIA_REGIONS.filter((region) => region.id !== baseRegion).map(
+              (region) => (
+                <label
+                  key={region.id}
+                  className={cn(settingsRowClassName, "cursor-pointer py-2.5")}
+                >
+                  <span className="min-w-0 flex-1 text-sm font-medium">
+                    {region.label}
+                  </span>
+                  <Switch
+                    checked={bufferRegions.includes(region.id)}
+                    onCheckedChange={(checked) =>
+                      setBufferRegions((current) =>
+                        checked
+                          ? [...current, region.id]
+                          : current.filter((id) => id !== region.id)
+                      )
+                    }
+                    aria-label={`Block travel days for ${region.label}`}
+                  />
+                </label>
+              )
+            )}
+          </div>
         </SettingsSection>
       </SettingsPanel>
     );

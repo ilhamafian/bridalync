@@ -3,7 +3,13 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IconCheck, IconCopy, IconPencil, IconTrash } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconCheck,
+  IconCopy,
+  IconPencil,
+  IconTrash,
+} from "@tabler/icons-react";
 
 import {
   BookingDetailsSections,
@@ -13,7 +19,10 @@ import {
 import { BackButton } from "@/components/dashboard/BackButton";
 import {
   BookingRequestButtons,
+  formatBookedClashes,
   formatCompetingRequests,
+  TRAVEL_CLASH_HINT,
+  type BookedClash,
 } from "@/components/dashboard/BookingRequestButtons";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
@@ -151,11 +160,13 @@ function DeleteBookingButton({ booking }: { booking: SerializedBooking }) {
 function BookingRequestActions({
   booking,
   competingRequests,
+  bookedClashes,
   onBookingUpdated,
   onBookingsDeclined,
 }: {
   booking: SerializedBooking;
   competingRequests: SerializedBooking[];
+  bookedClashes: BookedClash[];
   onBookingUpdated?: (booking: SerializedBooking) => void;
   onBookingsDeclined?: (ids: string[]) => void;
 }) {
@@ -175,17 +186,27 @@ function BookingRequestActions({
             <span className="font-medium text-foreground">
               {formatCompetingRequests(competingCount)}
             </span>{" "}
-            for this slot (
+            (
             {competingRequests
               .map((request) => request.contact.name)
               .join(", ")}
-            ) will be declined if you approve this one.
+            ) for the same slot will be declined if you approve this one.
+          </p>
+        ) : null}
+        {bookedClashes.length > 0 ? (
+          <p className="mt-2 flex gap-1.5 text-amber-700 dark:text-amber-400">
+            <IconAlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span>
+              Might clash with your schedule: {formatBookedClashes(bookedClashes)}.{" "}
+              {TRAVEL_CLASH_HINT}
+            </span>
           </p>
         ) : null}
       </div>
       <BookingRequestButtons
         booking={booking}
         competingCount={competingCount}
+        bookedClashes={bookedClashes}
         onBookingUpdated={onBookingUpdated}
         onBookingsDeclined={onBookingsDeclined}
       />
@@ -196,12 +217,15 @@ function BookingRequestActions({
 export function BookingDetailsPage({
   booking,
   competingRequests = [],
+  bookedClashes = [],
   onBookingUpdated,
   onBookingsDeclined,
 }: {
   booking: SerializedBooking | null;
-  /** Other open requests that share a slot with this booking (declined if it's approved). */
+  /** Other open requests that clash with this booking (declined if it's approved). */
   competingRequests?: SerializedBooking[];
+  /** Booked clients on this request's travel days (kept if it's approved). */
+  bookedClashes?: BookedClash[];
   onBookingUpdated?: (booking: SerializedBooking) => void;
   onBookingsDeclined?: (ids: string[]) => void;
 }) {
@@ -247,6 +271,7 @@ export function BookingDetailsPage({
         <BookingRequestActions
           booking={booking}
           competingRequests={competingRequests}
+          bookedClashes={bookedClashes}
           onBookingUpdated={onBookingUpdated}
           onBookingsDeclined={onBookingsDeclined}
         />

@@ -232,15 +232,19 @@ function validateEventSessions(
 function mapSessionsForStorage(
   sessions: BookingSessionInput[],
   resolvedSessionStyles: Map<string, Pick<ResolvedSessionStyle, "styleId" | "styleName">>,
-  slotCountBySessionKey: Map<string, number>
+  slotCountBySessionKey: Map<string, number>,
+  /** From the venue lookup; `null` = not looked up (no region stored). */
+  regionsBySessionKey: Record<string, RegionId | null> | null
 ) {
   return sessions.map((session) => {
     const resolvedStyle = resolvedSessionStyles.get(session.client_key);
     const slotCount = slotCountBySessionKey.get(session.client_key) ?? 1;
-
     return {
       ...toDbSession({
         ...session,
+        ...(regionsBySessionKey && session.location
+          ? { region: regionsBySessionKey[session.client_key] ?? null }
+          : {}),
         date: normalizeSessionDate(session.date),
         ...(slotCount > 1 ? { slot_count: slotCount } : {}),
         ...(resolvedStyle
@@ -450,12 +454,11 @@ export async function resolveBookingQuotation(
   }
 
   const travelPricing = getTravelPricing(settings.travel, chargeBy);
-  let regionTravel: TravelQuotationInput | undefined;
-  if (
+  const pricesByRegion =
     travelPricing.kind === "region_fixed" ||
-    travelPricing.kind === "region_per_event"
-  ) {
-    let regionsBySessionKey: Record<string, RegionId | null>;
+    travelPricing.kind === "region_per_event";
+  let regionsBySessionKey: Record<string, RegionId | null> | null = null;
+  if (pricesByRegion || settings.travel.travel_buffer_regions?.length) {
     try {
       regionsBySessionKey = await resolveSessionRegions(sessions);
     } catch (error) {
@@ -464,9 +467,13 @@ export async function resolveBookingQuotation(
         "We couldn't check the venue's state right now. Please try again."
       );
     }
+  }
+
+  let regionTravel: TravelQuotationInput | undefined;
+  if (pricesByRegion && regionsBySessionKey) {
     const regions = sessions
       .filter((session) => session.location)
-      .map((session) => regionsBySessionKey[session.client_key] ?? null);
+      .map((session) => regionsBySessionKey?.[session.client_key] ?? null);
 
     if (travelPricing.kind === "region_fixed") {
       const result = getBookingRegionPrice(regions, travelPricing.prices);
@@ -559,7 +566,8 @@ export async function resolveBookingQuotation(
     sessions: mapSessionsForStorage(
       sessions,
       resolvedSessionStyles,
-      slotCountBySessionKey
+      slotCountBySessionKey,
+      regionsBySessionKey
     ),
     ...(legacy || !event ? {} : { dayMode: getEventDayMode(event) }),
     paymentOption,

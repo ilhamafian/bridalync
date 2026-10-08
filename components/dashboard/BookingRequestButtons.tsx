@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { IconCheck, IconX } from "@tabler/icons-react";
+import { IconAlertTriangle, IconCheck, IconX } from "@tabler/icons-react";
+
+import { formatScheduleDate } from "@/components/dashboard/HomeBookingCard";
 
 import {
   AlertDialog,
@@ -20,19 +22,41 @@ import { cn } from "@/lib/utils";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
 export function formatCompetingRequests(count: number) {
-  return `${count} other request${count === 1 ? "" : "s"}`;
+  return `${count} other request ${count === 1 ? "" : "s"}`;
 }
+
+/**
+ * A booked client or open request a day away across an out-of-state session (travel day); approving never cancels or
+ * declines it.
+ */
+export type BookedClash = { booking: SerializedBooking; date: Date | string };
+
+export function formatBookedClashes(clashes: BookedClash[]) {
+  return clashes
+    .map(
+      ({ booking, date }) =>
+        `${booking.contact.name} (${formatScheduleDate(String(date))}${
+          booking.status === "requested" ? " · request" : ""
+        })`
+    )
+    .join(", ");
+}
+
+export const TRAVEL_CLASH_HINT =
+  "These are the day before or after an out-of-state session, so travel might be tight. Approving won't cancel or decline them.";
 
 /** Decline (confirmed) / Approve (confirmed when it auto-declines other requests) for a booking request. */
 export function BookingRequestButtons({
   booking,
   competingCount,
+  bookedClashes = [],
   onBookingUpdated,
   onBookingsDeclined,
   className,
 }: {
   booking: SerializedBooking;
   competingCount: number;
+  bookedClashes?: BookedClash[];
   onBookingUpdated?: (booking: SerializedBooking) => void;
   onBookingsDeclined?: (ids: string[]) => void;
   className?: string;
@@ -131,7 +155,7 @@ export function BookingRequestButtons({
           className="min-h-11 gap-2"
           disabled={working !== null}
           onClick={() => {
-            if (competingCount > 0) {
+            if (competingCount > 0 || bookedClashes.length > 0) {
               setApproveOpen(true);
             } else {
               void respond("approve");
@@ -151,10 +175,25 @@ export function BookingRequestButtons({
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Approve {booking.contact.name}?</AlertDialogTitle>
-              <AlertDialogDescription>
-                {competingLabel} for this slot will be declined automatically,
-                and those clients will get an email saying you can&apos;t take
-                their booking.
+              <AlertDialogDescription asChild>
+                <div className="flex flex-col gap-2">
+                  {competingCount > 0 ? (
+                    <p>
+                      {competingLabel} for the same slot will be declined
+                      automatically, and those clients will get an email saying
+                      you can&apos;t take their booking.
+                    </p>
+                  ) : null}
+                  {bookedClashes.length > 0 ? (
+                    <p className="flex gap-1.5 text-amber-700 dark:text-amber-400">
+                      <IconAlertTriangle className="mt-0.5 size-4 shrink-0" />
+                      <span>
+                        This might clash with your schedule:{" "}
+                        {formatBookedClashes(bookedClashes)}. {TRAVEL_CLASH_HINT}
+                      </span>
+                    </p>
+                  ) : null}
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             {error ? <p className="text-xs text-destructive">{error}</p> : null}

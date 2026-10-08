@@ -34,6 +34,7 @@ import { ReviewsManager } from "@/components/profile/ReviewsManager";
 import { cn } from "@/lib/utils";
 import { getRecentActivity } from "@/utils/activity";
 import { bookingSessionsOverlap } from "@/utils/booking/availability";
+import { findTravelDayClashes } from "@/utils/booking/travelBuffer";
 import { buildHotDateCatalog } from "@/utils/booking/hotDates";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
@@ -155,16 +156,26 @@ export function DashboardShell({ data }: { data: DashboardData }) {
   const openRequests = allBookings.filter(
     (booking) => booking.status === "requested"
   );
+  const bufferRegions =
+    data.settings.initialSettings.travel.travel_buffer_regions;
   const findCompetingRequests = (booking: SerializedBooking) =>
     openRequests.filter(
       (other) =>
-        other._id !== booking._id && bookingSessionsOverlap(other, booking)
+        other._id !== booking._id &&
+        bookingSessionsOverlap(other, booking)
     );
+
+  const findBookedClashes = (booking: SerializedBooking) =>
+    findTravelDayClashes(booking, allBookings, bufferRegions);
 
   const detailsBooking = findBooking(bookingDetailsId);
   const competingRequests =
     detailsBooking?.status === "requested"
       ? findCompetingRequests(detailsBooking)
+      : [];
+  const bookedClashes =
+    detailsBooking?.status === "requested"
+      ? findBookedClashes(detailsBooking)
       : [];
 
   const homeRequests =
@@ -177,6 +188,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
             .map((booking) => ({
               booking,
               competingCount: findCompetingRequests(booking).length,
+              bookedClashes: findBookedClashes(booking),
             })),
         }
       : null;
@@ -295,6 +307,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           <BookingDetailsPage
             booking={detailsBooking}
             competingRequests={competingRequests}
+            bookedClashes={bookedClashes}
             onBookingUpdated={handleBookingSaved}
             onBookingsDeclined={handleRequestsDeclined}
           />
