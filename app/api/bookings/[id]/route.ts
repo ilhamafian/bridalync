@@ -251,6 +251,7 @@ export async function PATCH(
             relaxPaymentDeadline: true,
             discountedTotalRm: data.totalRm,
             legacy: isLegacyBooking,
+            processingFee: Boolean(existing.invoice.breakdown?.processingFeeRm),
           });
 
         updatePayload = {

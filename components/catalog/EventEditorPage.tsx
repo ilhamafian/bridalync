@@ -12,6 +12,7 @@ import {
   settingsCardClassName,
 } from "@/components/dashboard/settings/SettingsUi";
 import type { PackageItem } from "@/components/PackagesManager";
+import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { RegionPriceList } from "@/components/RegionPriceList";
 import { SortableList } from "@/components/SortableList";
 import { Button } from "@/components/ui/button";
@@ -375,6 +376,7 @@ export function EventEditorPage({
                 onChange={(regionPrices) =>
                   setForm((current) => ({ ...current, regionPrices }))
                 }
+                feeHint="full"
               />
               <p className="text-xs text-muted-foreground">
                 The full event price for a venue in that state, travel
@@ -401,6 +403,7 @@ export function EventEditorPage({
                     }
                     placeholder="1500"
                   />
+                  <ProcessingFeeHint amountRm={form.price} />
                 </div>
               </div>
             </SettingsSection>

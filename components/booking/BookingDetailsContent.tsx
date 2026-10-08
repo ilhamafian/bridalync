@@ -384,6 +384,12 @@ function PriceBreakdown({ booking }: { booking: SerializedBooking }) {
           {breakdown.discountRm ? (
             <PriceRow label="Discount" amountRm={-breakdown.discountRm} />
           ) : null}
+          {breakdown.processingFeeRm ? (
+            <p className="text-xs text-muted-foreground">
+              Prices include a {formatRm(breakdown.processingFeeRm)} payment
+              processing fee.
+            </p>
+          ) : null}
         </div>
       ) : (
         <div className="flex flex-col gap-2">

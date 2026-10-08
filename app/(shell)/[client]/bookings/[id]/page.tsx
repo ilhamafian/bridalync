@@ -19,7 +19,6 @@ import { Button } from "@/components/ui/button";
 import type { PublicBooking } from "@/schemas/bookingSchema";
 import {
   applyPaymentOption,
-  calculateProcessingFeeRm,
   formatRm,
   resolveRequestPaymentOption,
 } from "@/utils/booking/pricing";
@@ -445,9 +444,6 @@ function BookingResultPageContent() {
     (booking.paymentOption === "full" || booking.invoice.balanceRm === 0);
   const usesManualBalance =
     (booking.stylistPaymentMethod ?? "manual_transfer") === "manual_transfer";
-  const balanceProcessingFeeRm = usesManualBalance
-    ? 0
-    : calculateProcessingFeeRm(booking.invoice.totalRm);
   const isRequested = booking.status === "requested";
   const isDeclinedRequest =
     booking.status === "cancelled" && Boolean(booking.requestDeclinedAt);
@@ -474,8 +470,7 @@ function BookingResultPageContent() {
   const requestOption = requestCanPayDeposit ? requestPayOption : "full";
   const requestPaysInFull = requestOption === "full";
   const requestAmountDueRm = requestPaysInFull
-    ? booking.invoice.totalRm +
-      (usesManualBalance ? 0 : calculateProcessingFeeRm(booking.invoice.totalRm))
+    ? booking.invoice.totalRm
     : booking.invoice.depositRm;
   const freelancerName = booking.freelancer?.name ?? t.stylist;
   const whatsAppUrl =
@@ -753,9 +748,7 @@ function BookingResultPageContent() {
                 {payingBalance
                   ? t.startingCheckout
                   : format(t.payRemainingBalance, {
-                      amount: formatRm(
-                        booking.invoice.balanceRm + balanceProcessingFeeRm
-                      ),
+                      amount: formatRm(booking.invoice.balanceRm),
                     })}
               </Button>
               {payError && (

@@ -51,11 +51,12 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import {
   applyPaymentOption,
+  applyPaymentProcessingFee,
   calculateBookingQuotation,
-  calculateProcessingFeeRm,
   formatRm,
   requiresFullPayment,
   resolveDepositRm,
+  withPaymentProcessingFeeRm,
 } from "@/utils/booking/pricing";
 import {
   isSlotTaken,
@@ -982,62 +983,62 @@ export default function ClientPage() {
     regionPriceRm,
   ]);
 
-  const quotation = useMemo(
-    () =>
-      calculateBookingQuotation({
-        chargeBy,
-        selectedPackages:
-          selectedEvent && selectedPackageId
-            ? [
-                {
-                  name: selectedEvent.name,
-                  price: eventPriceRm,
-                  deposit:
-                    chargeBy === "style"
-                      ? 0
-                      : resolveDepositRm(
-                          selectedEvent.deposit,
-                          selectedEvent.deposit_type,
-                          eventPriceRm
-                        ),
-                },
-              ]
-            : [],
-        selectedSessionStyles:
-          chargeBy === "style" ? selectedSessionStyles : undefined,
-        selectedAddOns: selectedAddOnItems.map((addOn) => ({
-          name: addOn.name,
-          price: addOn.price,
-        })),
-        travel:
-          settings && travelPricing.kind === "distance"
-            ? {
-                enabled: true,
-                ratePerKm: settings.travel.rate_per_km,
-                longDistanceRatePerKm:
-                  settings.travel.long_distance_rate_per_km,
-                timeSlots: settings.time_slots,
-                sessions,
-                distanceKmBySessionKey,
-              }
-            : travelPricing.kind === "region_fixed" && regionPriceRm !== null
-              ? { kind: "region", feeRm: regionPriceRm }
-              : undefined,
-      }),
-    [
-      settings,
-      travelPricing.kind,
-      regionPriceRm,
+  const includeProcessingFee = settings?.payment.method === "payment_gateway";
+  const quotation = useMemo(() => {
+    const base = calculateBookingQuotation({
       chargeBy,
-      selectedEvent,
-      selectedPackageId,
-      eventPriceRm,
-      selectedSessionStyles,
-      selectedAddOnItems,
-      sessions,
-      distanceKmBySessionKey,
-    ]
-  );
+      selectedPackages:
+        selectedEvent && selectedPackageId
+          ? [
+              {
+                name: selectedEvent.name,
+                price: eventPriceRm,
+                deposit:
+                  chargeBy === "style"
+                    ? 0
+                    : resolveDepositRm(
+                        selectedEvent.deposit,
+                        selectedEvent.deposit_type,
+                        eventPriceRm
+                      ),
+              },
+            ]
+          : [],
+      selectedSessionStyles:
+        chargeBy === "style" ? selectedSessionStyles : undefined,
+      selectedAddOns: selectedAddOnItems.map((addOn) => ({
+        name: addOn.name,
+        price: addOn.price,
+      })),
+      travel:
+        settings && travelPricing.kind === "distance"
+          ? {
+              enabled: true,
+              ratePerKm: settings.travel.rate_per_km,
+              longDistanceRatePerKm: settings.travel.long_distance_rate_per_km,
+              timeSlots: settings.time_slots,
+              sessions,
+              distanceKmBySessionKey,
+            }
+          : travelPricing.kind === "region_fixed" && regionPriceRm !== null
+            ? { kind: "region", feeRm: regionPriceRm }
+            : undefined,
+    });
+    return includeProcessingFee ? applyPaymentProcessingFee(base) : base;
+  }, [
+    includeProcessingFee,
+    settings,
+    travelPricing.kind,
+    regionPriceRm,
+    chargeBy,
+    selectedEvent,
+    selectedPackageId,
+    eventPriceRm,
+    selectedSessionStyles,
+    selectedAddOnItems,
+    sessions,
+    distanceKmBySessionKey,
+  ]);
 
   const balanceDueBeforeDays = settings?.payment.balance_due_before ?? 3;
   const manualTransfer = settings
@@ -1058,12 +1059,6 @@ export default function ClientPage() {
     () => applyPaymentOption(quotation, effectivePaymentOption),
     [quotation, effectivePaymentOption]
   );
-  const stripeProcessingFeeRm =
-    settings?.payment.method === "payment_gateway" &&
-    effectivePaymentOption === "full"
-      ? calculateProcessingFeeRm(payableQuotation.totalRm)
-      : 0;
-
   useEffect(() => {
     if (mustPayFull && paymentOption !== "full") {
       setPaymentOption("full");
@@ -2173,7 +2168,14 @@ export default function ClientPage() {
           <div className="flex w-full flex-col items-end gap-4">
             <div className="mx-auto w-full max-w-xs px-2">
               <BookingAddOnPicker
-                addOns={addOnOptions}
+                addOns={
+                  includeProcessingFee
+                    ? addOnOptions.map((addOn) => ({
+                        ...addOn,
+                        price: withPaymentProcessingFeeRm(addOn.price, false),
+                      }))
+                    : addOnOptions
+                }
                 selectedAddOnIds={selectedAddOnIds}
                 onSelectionChange={setSelectedAddOnIds}
                 showPrices={settings?.show_add_on_prices !== false}
@@ -2485,14 +2487,10 @@ export default function ClientPage() {
                     ? t.redirectingStripe
                     : effectivePaymentOption === "full"
                       ? format(t.payNow, {
-                          amount: formatRm(
-                            payableQuotation.depositRm + stripeProcessingFeeRm
-                          ),
+                          amount: formatRm(payableQuotation.depositRm),
                         })
                       : format(t.payDepositNow, {
-                          amount: formatRm(
-                            payableQuotation.depositRm + stripeProcessingFeeRm
-                          ),
+                          amount: formatRm(payableQuotation.depositRm),
                         })}
                 </Button>
               </>

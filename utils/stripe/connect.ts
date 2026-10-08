@@ -371,6 +371,23 @@ export async function retrieveConnectedAccount(accountId: string) {
   return stripe.accounts.retrieve(accountId);
 }
 
+type AccountLinkConfiguration = "merchant" | "recipient" | "customer";
+
+/**
+ * Account Links v2 must list exactly the configurations applied on the account
+ * (e.g. requesting v1 `transfers` applies `recipient` next to `merchant`).
+ */
+async function getOnboardingConfigurations(
+  accountId: string
+): Promise<AccountLinkConfiguration[]> {
+  const account = await getStripe().v2.core.accounts.retrieve(accountId);
+  const applied = (account.applied_configurations ?? []).filter(
+    (config): config is AccountLinkConfiguration =>
+      config === "merchant" || config === "recipient" || config === "customer"
+  );
+  return applied.includes("merchant") ? applied : ["merchant", ...applied];
+}
+
 export async function createOnboardingAccountLink(
   accountId: string,
   flow: ConnectFlow = "settings"
@@ -379,12 +396,13 @@ export async function createOnboardingAccountLink(
   const { returnUrl, refreshUrl } = getConnectUrls(flow);
 
   try {
+    const configurations = await getOnboardingConfigurations(accountId);
     return await stripe.v2.core.accountLinks.create({
       account: accountId,
       use_case: {
         type: "account_onboarding",
         account_onboarding: {
-          configurations: ["merchant"],
+          configurations,
           refresh_url: refreshUrl,
           return_url: returnUrl,
           collection_options: {

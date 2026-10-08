@@ -7,6 +7,7 @@ import { BackButton } from "@/components/dashboard/BackButton";
 import { BookingRequestSettings } from "@/components/dashboard/settings/BookingRequestSettings";
 import { ClientInfoSettings } from "@/components/dashboard/settings/ClientInfoSettings";
 import { getSettingsCategoryMeta } from "@/components/dashboard/settings/categories";
+import { usePaymentMethod } from "@/components/dashboard/PaymentMethodProvider";
 import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import { GoogleCalendarImport } from "@/components/dashboard/settings/GoogleCalendarImport";
 import { ResetPasswordSettings } from "@/components/dashboard/settings/ResetPasswordSettings";
@@ -39,6 +40,7 @@ export function SettingsCategoryPage({
   email: string;
 }) {
   const styleTerms = useStyleTerms();
+  const { setPaymentMethod } = usePaymentMethod();
   const [chargeBy, setChargeBy] = useState(packages.chargeBy);
   const [travel, setTravel] = useState(settings.initialSettings.travel);
   const regionPricesPerEvent =
@@ -88,6 +90,7 @@ export function SettingsCategoryPage({
             freelancerName={settings.freelancerName}
             onChargeByChange={setChargeBy}
             onTravelChange={setTravel}
+            onPaymentMethodChange={setPaymentMethod}
           />
           {category === "google-calendar" ? <GoogleCalendarImport /> : null}
         </Suspense>

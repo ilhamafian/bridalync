@@ -13,6 +13,8 @@ export type BookingQuotationBreakdown = {
   addOns: QuotationLineItem[];
   travelFeeRm: number;
   discountRm?: number;
+  /** Payment processing fee already included in the amounts above (payment-gateway bookings). */
+  processingFeeRm?: number;
 };
 
 export type BookingQuotationSummary = {
@@ -90,13 +92,97 @@ export function formatDeposit(
   return depositType === "percent" ? `${deposit}%` : formatRm(deposit);
 }
 
-export const PROCESSING_FEE_PERCENT = 3;
+export const PAYMENT_PROCESSING_FEE_PERCENT = 3;
+export const PAYMENT_PROCESSING_FEE_FIXED_RM = 1;
 
-/** Charged to clients on top of Stripe payments; rounded up to whole ringgit. */
-export function calculateProcessingFeeRm(amountRm: number) {
+/**
+ * Fee added to the client's price for payment-gateway stylists: 3% (rounded up)
+ * + RM1 once per booking. `includeFixed` = false for amounts added on top of
+ * another item, which already carries the RM1.
+ */
+export function calculatePaymentProcessingFeeRm(
+  amountRm: number,
+  includeFixed = true
+) {
   const rounded = roundRm(amountRm);
   if (rounded <= 0) return 0;
-  return Math.ceil((rounded * PROCESSING_FEE_PERCENT) / 100);
+  return (
+    Math.ceil((rounded * PAYMENT_PROCESSING_FEE_PERCENT) / 100) +
+    (includeFixed ? PAYMENT_PROCESSING_FEE_FIXED_RM : 0)
+  );
+}
+
+/** What the client sees for a price once the processing fee is added. */
+export function withPaymentProcessingFeeRm(amountRm: number, includeFixed = true) {
+  return roundRm(amountRm) + calculatePaymentProcessingFeeRm(amountRm, includeFixed);
+}
+
+/**
+ * Adds the processing fee into a quotation's prices (no separate line): each
+ * item gets its 3% share, the first session the RM1 plus rounding, so the
+ * total is `withPaymentProcessingFeeRm(totalRm)`. Apply before any discount.
+ */
+export function applyPaymentProcessingFee(
+  quotation: BookingQuotationSummary
+): BookingQuotationSummary {
+  if (quotation.totalRm <= 0) return quotation;
+  const feeRm = calculatePaymentProcessingFeeRm(quotation.totalRm);
+  const totalRm = quotation.totalRm + feeRm;
+  const depositRm =
+    quotation.depositRm > 0
+      ? Math.min(withPaymentProcessingFeeRm(quotation.depositRm), totalRm)
+      : 0;
+  const share = (amountRm: number) =>
+    calculatePaymentProcessingFeeRm(amountRm, false);
+
+  const breakdown = quotation.breakdown;
+  const hasItemisedShape =
+    breakdown &&
+    breakdown.sessions.length > 0 &&
+    !breakdown.discountRm &&
+    quotation.lineItems.length ===
+      breakdown.sessions.length + breakdown.addOns.length;
+
+  if (!breakdown || !hasItemisedShape) {
+    const [first, ...rest] = quotation.lineItems;
+    return {
+      ...quotation,
+      lineItems: first ? [{ ...first, amountRm: first.amountRm + feeRm }, ...rest] : [],
+      totalRm,
+      depositRm,
+      balanceRm: totalRm - depositRm,
+      ...(breakdown ? { breakdown: { ...breakdown, processingFeeRm: feeRm } } : {}),
+    };
+  }
+
+  const sessions = breakdown.sessions.map((item) => ({
+    ...item,
+    amountRm: item.amountRm + share(item.amountRm),
+  }));
+  const addOns = breakdown.addOns.map((item) => ({
+    ...item,
+    amountRm: item.amountRm + share(item.amountRm),
+  }));
+  const travelFeeRm = breakdown.travelFeeRm + share(breakdown.travelFeeRm);
+  const assignedRm =
+    [...sessions, ...addOns].reduce((sum, item) => sum + item.amountRm, 0) +
+    travelFeeRm -
+    quotation.totalRm;
+  sessions[0] = { ...sessions[0], amountRm: sessions[0].amountRm + feeRm - assignedRm };
+
+  return {
+    lineItems: [
+      ...sessions.map((item, index) => ({
+        label: item.label,
+        amountRm: item.amountRm + (index === 0 ? travelFeeRm : 0),
+      })),
+      ...addOns.map(({ label, amountRm }) => ({ label, amountRm })),
+    ],
+    totalRm,
+    depositRm,
+    balanceRm: totalRm - depositRm,
+    breakdown: { ...breakdown, sessions, addOns, travelFeeRm, processingFeeRm: feeRm },
+  };
 }
 
 export function formatRm(amount: number) {

@@ -16,6 +16,7 @@ import {
 } from "@tabler/icons-react";
 
 import { EventEditorPage } from "@/components/catalog/EventEditorPage";
+import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { StyleEditorPage } from "@/components/catalog/StyleEditorPage";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
@@ -875,6 +876,7 @@ export function PackagesManager({
                 }
                 placeholder="30"
               />
+              <ProcessingFeeHint amountRm={addOnForm.price} includeFixed={false} />
             </Field>
           </div>
 

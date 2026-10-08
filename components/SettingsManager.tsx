@@ -239,6 +239,7 @@ export function SettingsManager({
   freelancerName,
   onChargeByChange,
   onTravelChange,
+  onPaymentMethodChange,
 }: {
   category: SettingsCategory | null;
   initialSettings: SettingsItem;
@@ -247,6 +248,7 @@ export function SettingsManager({
   freelancerName: string;
   onChargeByChange?: (chargeBy: SettingsItem["charge_by"]) => void;
   onTravelChange?: (travel: SettingsItem["travel"]) => void;
+  onPaymentMethodChange?: (method: PaymentMethod) => void;
 }) {
   const styleTerms = useStyleTerms();
   const [settings, setSettings] = useState(initialSettings);
@@ -622,13 +624,16 @@ export function SettingsManager({
       return;
     }
 
-    await patchSettings("payment", {
+    const saved = await patchSettings("payment", {
       payment: {
         balance_due_before: days,
         method: paymentMethod,
         ...transferDetails,
       },
     });
+    if (saved) {
+      onPaymentMethodChange?.(saved.payment.method ?? "manual_transfer");
+    }
   }
 
   async function saveInvoice() {
@@ -948,6 +953,7 @@ export function SettingsManager({
                 <RegionPriceList
                   value={regionPrices}
                   onChange={setRegionPrices}
+                  feeHint="extra"
                 />
                 <p className="text-xs text-muted-foreground">
                   The state&apos;s price is included in the booking price, not

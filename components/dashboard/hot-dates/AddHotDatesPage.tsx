@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
+import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { BackButton } from "@/components/dashboard/BackButton";
 import { SummaryRow } from "@/components/dashboard/blocked/SummaryRow";
 import {
@@ -259,10 +260,8 @@ export function AddHotDatesPage({
           <>
             <div className={settingsListClassName}>
               {catalog.map((row) => (
-                <div
-                  key={row.key}
-                  className="flex items-center gap-3 px-4 py-3"
-                >
+                <div key={row.key} className="flex flex-col gap-1 px-4 py-3">
+                <div className="flex items-center gap-3">
                   <RowText
                     title={row.label}
                     description={
@@ -295,6 +294,11 @@ export function AddHotDatesPage({
                       aria-label={`Hot date price for ${row.label}`}
                     />
                   </div>
+                </div>
+                <ProcessingFeeHint
+                  amountRm={draft[row.key]}
+                  includeFixed={!hotDateIsExtraCharge}
+                />
                 </div>
               ))}
             </div>

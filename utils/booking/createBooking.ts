@@ -10,6 +10,7 @@ import type { RegionId, TimeSlot } from "@/schemas/settingSchema";
 import { getFreelancerByUsername } from "@/utils/users";
 import {
   applyDiscountedTotal,
+  applyPaymentProcessingFee,
   applyPaymentOption,
   calculateBookingQuotation,
   requiresFullPayment,
@@ -285,6 +286,8 @@ export async function resolveBookingQuotation(
     discountedTotalRm?: number;
     /** Editing a booking made before multi-session events: keep its old rules and pricing. */
     legacy?: boolean;
+    /** Add the payment processing fee; defaults to whether the stylist uses the payment gateway. */
+    processingFee?: boolean;
   }
 ): Promise<{
   invoice: BookingQuotationSummary;
@@ -555,10 +558,15 @@ export async function resolveBookingQuotation(
     );
   }
 
+  const includeProcessingFee =
+    options?.processingFee ?? settings.payment?.method === "payment_gateway";
+  const clientQuotation = includeProcessingFee
+    ? applyPaymentProcessingFee(quotation)
+    : quotation;
   const discounted =
     options?.discountedTotalRm !== undefined
-      ? applyDiscountedTotal(quotation, options.discountedTotalRm)
-      : quotation;
+      ? applyDiscountedTotal(clientQuotation, options.discountedTotalRm)
+      : clientQuotation;
 
   return {
     invoice: applyPaymentOption(discounted, paymentOption),

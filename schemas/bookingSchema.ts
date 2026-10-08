@@ -34,6 +34,8 @@ export const quotationBreakdownSchema = z.object({
   travelFeeRm: z.number(),
   /** Taken off the subtotal by the stylist; `lineItems` lists it as a negative "Discount". */
   discountRm: z.number().optional(),
+  /** Payment processing fee already included in the amounts above (payment-gateway bookings). */
+  processingFeeRm: z.number().optional(),
 });
 
 export const quotationSummarySchema = z.object({

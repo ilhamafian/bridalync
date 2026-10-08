@@ -26,6 +26,7 @@ import { HotDatesPage } from "@/components/dashboard/hot-dates/HotDatesPage";
 import { NotificationsPage } from "@/components/dashboard/NotificationsPage";
 import { PaymentsPage } from "@/components/dashboard/payments/PaymentsPage";
 import { SettingsCategoryPage } from "@/components/dashboard/settings/SettingsCategoryPage";
+import { PaymentMethodProvider } from "@/components/dashboard/PaymentMethodProvider";
 import { StyleTermsProvider } from "@/components/dashboard/StyleTermsProvider";
 import { SettingsPage } from "@/components/dashboard/settings/SettingsPage";
 import { ProfileManager } from "@/components/profile/ProfileManager";
@@ -201,6 +202,9 @@ export function DashboardShell({ data }: { data: DashboardData }) {
 
   return (
     <StyleTermsProvider role={data.profile.initialProfile.role}>
+    <PaymentMethodProvider
+      initialMethod={data.settings.initialSettings.payment.method}
+    >
     <Fragment key={refreshVersion}>
       <Section id="home" active={active}>
         <DashboardHome
@@ -357,6 +361,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
         <ReviewsManager reviews={reviews} onReviewsChange={setReviews} />
       </Section>
     </Fragment>
+    </PaymentMethodProvider>
     </StyleTermsProvider>
   );
 }

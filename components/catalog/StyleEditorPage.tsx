@@ -4,6 +4,7 @@ import { useState } from "react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 
 import { DepositField, parseDepositInput } from "@/components/catalog/DepositField";
+import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { BackButton } from "@/components/dashboard/BackButton";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
@@ -265,6 +266,7 @@ export function StyleEditorPage({
                       }
                       placeholder="200"
                     />
+                    <ProcessingFeeHint amountRm={variant.price} />
                   </div>
                   <DepositField
                     value={variant.deposit}

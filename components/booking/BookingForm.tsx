@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { usePaymentMethod } from "@/components/dashboard/PaymentMethodProvider";
 import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import {
@@ -43,7 +44,11 @@ import {
   resolveEffectivePrice,
   type HotDateLookup,
 } from "@/utils/booking/hotDates";
-import { formatRm, roundRm } from "@/utils/booking/pricing";
+import {
+  calculatePaymentProcessingFeeRm,
+  formatRm,
+  roundRm,
+} from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
   countSessionSlots,
@@ -522,7 +527,7 @@ export function BookingForm({
     [styleOptions, hotDatePriceMap]
   );
 
-  const fullPriceRm = useMemo(() => {
+  const basePriceRm = useMemo(() => {
     const eventHotDatePrice = selectedEvent
       ? getEventHotDatePrice(
           hotDatePriceMap,
@@ -587,6 +592,14 @@ export function BookingForm({
     resolveSessionStyle,
     timeSlots,
   ]);
+  const { usesPaymentGateway } = usePaymentMethod();
+  const includesProcessingFee = booking
+    ? Boolean(booking.invoice.breakdown?.processingFeeRm)
+    : usesPaymentGateway;
+  const processingFeeRm = includesProcessingFee
+    ? calculatePaymentProcessingFeeRm(basePriceRm)
+    : 0;
+  const fullPriceRm = basePriceRm + processingFeeRm;
 
   const editedTotalRm =
     form.totalRm === null || form.totalRm.trim() === ""
@@ -1197,6 +1210,16 @@ export function BookingForm({
                       : travelQuote.status === "error"
                         ? "Unavailable"
                         : formatRm(travelQuote.feeRm)}
+                  </span>
+                </div>
+              ) : null}
+              {processingFeeRm > 0 ? (
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">
+                    Payment processing fee
+                  </span>
+                  <span className="tabular-nums">
+                    {formatRm(processingFeeRm)}
                   </span>
                 </div>
               ) : null}
