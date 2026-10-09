@@ -28,6 +28,27 @@ function formatActivityTime(value: string) {
   });
 }
 
+const TIME_AGO_UNITS: { unit: string; ms: number }[] = [
+  { unit: "year", ms: 365 * 24 * 60 * 60 * 1000 },
+  { unit: "month", ms: 30 * 24 * 60 * 60 * 1000 },
+  { unit: "week", ms: 7 * 24 * 60 * 60 * 1000 },
+  { unit: "day", ms: 24 * 60 * 60 * 1000 },
+  { unit: "hour", ms: 60 * 60 * 1000 },
+  { unit: "min", ms: 60 * 1000 },
+];
+
+/** "Just now", "6 mins ago", "1 hour ago", ... */
+export function formatTimeAgo(value: string, now: number) {
+  const time = new Date(value).getTime();
+  if (Number.isNaN(time)) return "";
+  const elapsed = Math.max(0, now - time);
+  for (const { unit, ms } of TIME_AGO_UNITS) {
+    const count = Math.floor(elapsed / ms);
+    if (count >= 1) return `${count} ${unit}${count === 1 ? "" : "s"} ago`;
+  }
+  return "Just now";
+}
+
 const activityIcons: Record<ActivityKind, Icon> = {
   request: IconCalendarQuestion,
   new: IconCalendarPlus,
@@ -58,10 +79,12 @@ function ActivityRow({
   item,
   unread,
   onOpen,
+  now,
 }: {
   item: ActivityItem;
   unread: boolean;
   onOpen?: (item: ActivityItem) => void;
+  now?: number;
 }) {
   const Icon = activityIcons[item.kind];
   const isCancelled = item.kind === "cancelled";
@@ -126,6 +149,11 @@ function ActivityRow({
               {formatRm(item.balanceRm)} due
             </p>
           ) : null}
+          {now !== undefined ? (
+            <p className="text-xs text-muted-foreground">
+              {formatTimeAgo(item.at, now)}
+            </p>
+          ) : null}
         </div>
       </Link>
     </li>
@@ -136,10 +164,13 @@ export function ActivityList({
   items,
   isUnread,
   onOpen,
+  now,
 }: {
   items: ActivityItem[];
   isUnread?: (item: ActivityItem) => boolean;
   onOpen?: (item: ActivityItem) => void;
+  /** Current time (ms); when set, each row shows a relative "6 mins ago" timestamp. */
+  now?: number;
 }) {
   return (
     <div className={cn(glassCardClassName, "overflow-hidden")}>
@@ -150,6 +181,7 @@ export function ActivityList({
             item={item}
             unread={isUnread?.(item) ?? false}
             onOpen={onOpen}
+            now={now}
           />
         ))}
       </ul>

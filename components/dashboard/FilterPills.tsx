@@ -5,17 +5,22 @@ export function FilterPills<T extends string>({
   value,
   onChange,
   label,
+  className,
 }: {
   options: { value: T; label: string }[];
   value: T;
   onChange: (value: T) => void;
   label: string;
+  className?: string;
 }) {
   return (
     <div
       role="group"
       aria-label={label}
-      className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 no-scrollbar lg:-mx-6 lg:px-6"
+      className={cn(
+        "-mx-4 flex gap-2 overflow-x-auto px-4 py-1 no-scrollbar lg:-mx-6 lg:px-6",
+        className
+      )}
     >
       {options.map((option) => {
         const active = value === option.value;
