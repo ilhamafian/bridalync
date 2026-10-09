@@ -45,6 +45,7 @@ import {
   getStyleHotDatePrice,
   resolveEffectivePrice,
   toHotDateLookup,
+  type HotDateRate,
 } from "@/utils/booking/hotDates";
 
 type BookingSessionInput = CreateBookingRequest["sessions"][number];
@@ -76,7 +77,7 @@ async function resolveSessionStyle(
   sessionName: string,
   styleInput: NonNullable<BookingSessionInput["style"]>,
   sessionDate: Date | string,
-  hotDatePriceMap: Map<string, number>
+  hotDatePriceMap: Map<string, HotDateRate>
 ): Promise<ResolvedSessionStyle> {
   const parsed = parseStyleVariantId(styleInput.id);
   if (!parsed) {

@@ -44,17 +44,34 @@ import {
   hotDateTargetKey,
   type HotDateCatalogRow,
   type HotDateRange,
+  type HotDateRate,
 } from "@/utils/booking/hotDates";
 import { formatRm } from "@/utils/booking/pricing";
 import type { HotDateItem } from "@/utils/dashboardShell";
 
+function formatRate(rate: HotDateRate) {
+  return rate.type === "percent" ? `+${rate.price}%` : formatRm(rate.price);
+}
+
 function formatPrices(range: HotDateRange) {
   if (range.prices.length === 1) {
-    const [{ row, price }] = range.prices;
-    return `${row.label} ${formatRm(price)}`;
+    const [{ row, rate }] = range.prices;
+    return `${row.label} ${formatRate(rate)}`;
   }
-  const lowest = Math.min(...range.prices.map(({ price }) => price));
-  return `${range.prices.length} prices · from ${formatRm(lowest)}`;
+  const count = `${range.prices.length} prices`;
+  const [first] = range.prices;
+  if (
+    range.prices.every(
+      ({ rate }) => rate.type === first.rate.type && rate.price === first.rate.price
+    )
+  ) {
+    return `${count} · ${formatRate(first.rate)}`;
+  }
+  if (range.prices.every(({ rate }) => rate.type === "fixed")) {
+    const lowest = Math.min(...range.prices.map(({ rate }) => rate.price));
+    return `${count} · from ${formatRm(lowest)}`;
+  }
+  return count;
 }
 
 function formatRangeDescription(range: HotDateRange) {

@@ -4,6 +4,14 @@ export const hotDateKeySchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD");
 
+/**
+ * `fixed` = `price` is an RM amount (the hot date price, or the extra on top of the state price in per-event state
+ * pricing); `percent` = `price` is a % increase on the usual (or state) price. Missing = fixed.
+ */
+export const hotDatePriceTypeSchema = z.enum(["fixed", "percent"]);
+
+export const MAX_HOT_DATE_PERCENT = 1000;
+
 export const hotDateSchema = z
   .object({
     user_id: z.string().min(1),
@@ -12,6 +20,7 @@ export const hotDateSchema = z
     style_id: z.string().min(1).optional(),
     variant_order: z.number().int().optional(),
     price: z.number().min(0),
+    price_type: hotDatePriceTypeSchema.optional(),
     created_at: z.coerce.date().optional(),
     updated_at: z.coerce.date().optional(),
   })
@@ -35,8 +44,9 @@ export const hotDateOverrideInputSchema = z
     package_id: z.string().min(1).optional(),
     style_id: z.string().min(1).optional(),
     variant_order: z.number().int().optional(),
-    /** Absolute override price, or `null` to clear the override. */
+    /** Override amount (see `price_type`), or `null` to clear the override. */
     price: z.number().min(0).nullable(),
+    price_type: hotDatePriceTypeSchema.optional(),
   })
   .refine(
     (data) => {
@@ -51,6 +61,13 @@ export const hotDateOverrideInputSchema = z
       return isPackage || isStyle;
     },
     { message: "Override must target a package or a style variant" }
+  )
+  .refine(
+    (data) =>
+      data.price_type !== "percent" ||
+      data.price === null ||
+      data.price <= MAX_HOT_DATE_PERCENT,
+    { message: `A percentage increase can be at most ${MAX_HOT_DATE_PERCENT}%.` }
   );
 
 export const hotDatesPutSchema = z
@@ -69,9 +86,11 @@ export const publicHotDateSchema = z.object({
   style_id: z.string().optional(),
   variant_order: z.number().int().optional(),
   price: z.number().min(0),
+  price_type: hotDatePriceTypeSchema.optional(),
 });
 
 export type HotDate = z.infer<typeof hotDateSchema>;
+export type HotDatePriceType = z.infer<typeof hotDatePriceTypeSchema>;
 export type HotDateOverrideInput = z.infer<typeof hotDateOverrideInputSchema>;
 export type HotDatesPut = z.infer<typeof hotDatesPutSchema>;
 export type PublicHotDate = z.infer<typeof publicHotDateSchema>;

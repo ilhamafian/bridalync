@@ -570,7 +570,7 @@ export function BookingForm({
             .map((session) => `${session.date}T12:00:00`),
           selectedEvent._id
         )
-      : undefined;
+      : [];
     const sessionsRm =
       chargeBy === "package" && selectedEvent
         ? roundRm(

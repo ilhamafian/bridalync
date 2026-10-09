@@ -5,6 +5,7 @@ import {
   type RegionPrices,
   type TravelSetting,
 } from "@/schemas/settingSchema";
+import { resolveHotDateExtra, type HotDateRate } from "@/utils/booking/hotDates";
 
 export const MALAYSIA_REGIONS: Array<{ id: RegionId; label: string }> = [
   { id: "klang_valley", label: "Klang Valley" },
@@ -163,9 +164,10 @@ export function getTravelPricing(
 /** Per-event region price; a hot date's amount is an extra charge on top of it. */
 export function getRegionEventPrice(
   regionPriceRm: number,
-  hotDateChargeRm: number | undefined
+  hotDateRates: HotDateRate[]
 ): number {
-  return regionPriceRm + (hotDateChargeRm ?? 0);
+  const extras = hotDateRates.map((rate) => resolveHotDateExtra(regionPriceRm, rate));
+  return regionPriceRm + (extras.length > 0 ? Math.max(...extras) : 0);
 }
 
 /** Form state for a region price list: RM text per region, blank = not served. */

@@ -30,10 +30,16 @@ import {
   MAX_DATE_RANGE_DAYS,
 } from "@/utils/booking/dateRange";
 import {
+  MAX_HOT_DATE_PERCENT,
+  type HotDatePriceType,
+} from "@/schemas/hotDateSchema";
+import {
   buildHotDateRowPriceMap,
+  resolveHotDatePrice,
   toHotDateItem,
   type HotDateCatalogRow,
   type HotDateLookup,
+  type HotDateRate,
 } from "@/utils/booking/hotDates";
 import { formatRm } from "@/utils/booking/pricing";
 import type { HotDateItem } from "@/utils/dashboardShell";
@@ -50,24 +56,45 @@ function startOfToday() {
   return today;
 }
 
-/** Prefills each row with its price when every selected date shares it, else blank. */
+const PRICE_TYPE_OPTIONS: { value: HotDatePriceType; label: string }[] = [
+  { value: "fixed", label: "RM" },
+  { value: "percent", label: "%" },
+];
+
+type Draft = { priceType: HotDatePriceType; values: Record<string, string> };
+
+/**
+ * Prefills each row with its rate when every selected date shares it, else blank. The price type follows the first
+ * prefilled row; rows set with the other type start blank.
+ */
 function buildDraft(
   catalog: HotDateCatalogRow[],
-  priceMap: Map<string, number>,
+  priceMap: Map<string, HotDateRate>,
   dateKeys: string[]
-): Record<string, string> {
-  const draft: Record<string, string> = {};
-  if (dateKeys.length === 0) return draft;
-
-  for (const row of catalog) {
-    const values = dateKeys.map((date) => priceMap.get(`${date}|${row.key}`));
-    const first = values[0];
-    draft[row.key] =
-      first !== undefined && values.every((value) => value === first)
-        ? String(first)
-        : "";
+): Draft {
+  const shared = new Map<string, HotDateRate>();
+  if (dateKeys.length > 0) {
+    for (const row of catalog) {
+      const rates = dateKeys.map((date) => priceMap.get(`${date}|${row.key}`));
+      const first = rates[0];
+      if (
+        first &&
+        rates.every(
+          (rate) => rate?.type === first.type && rate.price === first.price
+        )
+      ) {
+        shared.set(row.key, first);
+      }
+    }
   }
-  return draft;
+
+  const priceType = shared.values().next().value?.type ?? "fixed";
+  const values: Record<string, string> = {};
+  for (const row of catalog) {
+    const rate = shared.get(row.key);
+    values[row.key] = rate && rate.type === priceType ? String(rate.price) : "";
+  }
+  return { priceType, values };
 }
 
 function toSortedDateKeys(dates: Date[] | undefined) {
@@ -120,7 +147,9 @@ export function AddHotDatesPage({
 
   const count = selectedKeys.length;
   const alreadyHot = selectedKeys.filter((key) => hotKeys.has(key)).length;
-  const pricedRows = catalog.filter((row) => (draft[row.key] ?? "").trim() !== "");
+  const { priceType, values } = draft;
+  const isPercent = priceType === "percent";
+  const pricedRows = catalog.filter((row) => (values[row.key] ?? "").trim() !== "");
   const removing = count > 0 && pricedRows.length === 0;
   const tooMany = count > MAX_DATE_RANGE_DAYS;
 
@@ -157,20 +186,30 @@ export function AddHotDatesPage({
       return;
     }
 
-    const overrides: (HotDateCatalogRow["target"] & { price: number | null })[] =
-      [];
+    const overrides: (HotDateCatalogRow["target"] & {
+      price: number | null;
+      price_type?: HotDatePriceType;
+    })[] = [];
     for (const row of catalog) {
-      const raw = (draft[row.key] ?? "").trim();
+      const raw = (values[row.key] ?? "").trim();
       if (raw === "") {
         overrides.push({ ...row.target, price: null });
         continue;
       }
       const price = Number(raw);
       if (!Number.isFinite(price) || price < 0) {
-        setError(`Enter a valid price for ${row.label}.`);
+        setError(
+          isPercent
+            ? `Enter a valid percentage for ${row.label}.`
+            : `Enter a valid price for ${row.label}.`
+        );
         return;
       }
-      overrides.push({ ...row.target, price });
+      if (isPercent && price > MAX_HOT_DATE_PERCENT) {
+        setError(`A percentage increase can be at most ${MAX_HOT_DATE_PERCENT}%.`);
+        return;
+      }
+      overrides.push({ ...row.target, price, price_type: priceType });
     }
 
     setSaving(true);
@@ -259,51 +298,134 @@ export function AddHotDatesPage({
         ) : (
           <>
             <div className={settingsListClassName}>
-              {catalog.map((row) => (
-                <div key={row.key} className="flex flex-col gap-1 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <RowText
-                    title={row.label}
-                    description={
-                      hotDateIsExtraCharge
-                        ? "Extra on top of the state price"
-                        : `Usual ${formatRm(row.catalogPrice)}`
-                    }
-                  />
-                  <div className="relative w-28 shrink-0">
-                    <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-xs text-muted-foreground">
-                      RM
-                    </span>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={1}
-                      inputMode="numeric"
-                      className={inputClassName}
-                      placeholder={
-                        hotDateIsExtraCharge ? "0" : String(row.catalogPrice)
-                      }
-                      value={draft[row.key] ?? ""}
-                      onChange={(event) =>
-                        setDraft((current) => ({
-                          ...current,
-                          [row.key]: event.target.value,
-                        }))
-                      }
-                      disabled={saving}
-                      aria-label={`Hot date price for ${row.label}`}
+              <div className="flex items-center gap-3 px-4 py-3">
+                <RowText
+                  title="Increase by"
+                  description={
+                    isPercent
+                      ? hotDateIsExtraCharge
+                        ? "A percentage of the state price"
+                        : "A percentage of the usual price"
+                      : hotDateIsExtraCharge
+                        ? "A fixed amount in RM"
+                        : "A new price in RM"
+                  }
+                />
+                <div
+                  className="flex h-10 shrink-0 rounded-md border border-border bg-white/60 p-0.5 dark:bg-white/5"
+                  role="radiogroup"
+                  aria-label="Increase by"
+                >
+                  {PRICE_TYPE_OPTIONS.map((option) => {
+                    const selected = option.value === priceType;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        disabled={saving}
+                        onClick={() =>
+                          setDraft((current) => ({
+                            ...current,
+                            priceType: option.value,
+                          }))
+                        }
+                        className={cn(
+                          "min-w-10 rounded px-2 text-sm font-medium transition-colors",
+                          selected
+                            ? "bg-primary text-primary-foreground"
+                            : "text-muted-foreground hover:text-foreground"
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <div className={settingsListClassName}>
+              {catalog.map((row) => {
+                const raw = (values[row.key] ?? "").trim();
+                const amount = raw === "" ? NaN : Number(raw);
+                const hotPriceRm =
+                  Number.isFinite(amount) && amount >= 0
+                    ? isPercent
+                      ? hotDateIsExtraCharge
+                        ? null
+                        : resolveHotDatePrice(row.catalogPrice, {
+                            price: amount,
+                            type: "percent",
+                          })
+                      : amount
+                    : null;
+                return (
+                  <div key={row.key} className="flex flex-col gap-1 px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <RowText
+                        title={row.label}
+                        description={
+                          hotDateIsExtraCharge
+                            ? "Increase in price from the state price"
+                            : isPercent && hotPriceRm !== null
+                              ? `Usual ${formatRm(row.catalogPrice)} → ${formatRm(hotPriceRm)}`
+                              : `Usual ${formatRm(row.catalogPrice)}`
+                        }
+                      />
+                      <div className="relative w-28 shrink-0">
+                        <span
+                          className={cn(
+                            "pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs text-muted-foreground",
+                            isPercent ? "right-3" : "left-3"
+                          )}
+                        >
+                          {isPercent ? "%" : "RM"}
+                        </span>
+                        <Input
+                          type="number"
+                          min={0}
+                          max={isPercent ? MAX_HOT_DATE_PERCENT : undefined}
+                          step={1}
+                          inputMode="numeric"
+                          className={cn(
+                            inputClassName,
+                            isPercent && "pr-8 pl-3"
+                          )}
+                          placeholder={
+                            isPercent || hotDateIsExtraCharge
+                              ? "0"
+                              : String(row.catalogPrice)
+                          }
+                          value={values[row.key] ?? ""}
+                          onChange={(event) =>
+                            setDraft((current) => ({
+                              ...current,
+                              values: {
+                                ...current.values,
+                                [row.key]: event.target.value,
+                              },
+                            }))
+                          }
+                          disabled={saving}
+                          aria-label={
+                            isPercent
+                              ? `Hot date increase (%) for ${row.label}`
+                              : `Hot date price for ${row.label}`
+                          }
+                        />
+                      </div>
+                    </div>
+                    <ProcessingFeeHint
+                      amountRm={hotPriceRm}
+                      includeFixed={!hotDateIsExtraCharge}
                     />
                   </div>
-                </div>
-                <ProcessingFeeHint
-                  amountRm={draft[row.key]}
-                  includeFixed={!hotDateIsExtraCharge}
-                />
-                </div>
-              ))}
+                );
+              })}
             </div>
             <p className="text-xs text-muted-foreground">
-              Leave a price blank to keep the usual price.
+              Leave a field blank to keep the usual price.
             </p>
           </>
         )}

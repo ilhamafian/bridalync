@@ -103,49 +103,22 @@ export class HotDateModel extends ModelBase<HotDate> {
   ): Promise<WithId<HotDate>> {
     const collection = await this.getCollection();
     const now = new Date();
+    const price_type = override.price_type ?? "fixed";
 
-    if (override.package_id) {
-      const filter = {
-        user_id,
-        date,
-        package_id: override.package_id,
-      } as Filter<HotDate>;
-      const existing = await collection.findOne(filter);
-      if (existing) {
-        await collection.updateOne(filter, {
-          $set: { price: override.price, updated_at: now },
-        });
-        return {
-          ...existing,
-          price: override.price,
-          updated_at: now,
-        } as WithId<HotDate>;
-      }
+    const target = override.package_id
+      ? { package_id: override.package_id }
+      : { style_id: override.style_id, variant_order: override.variant_order };
+    const filter = { user_id, date, ...target } as Filter<HotDate>;
 
-      return this.create(
-        hotDateSchema.parse({
-          user_id,
-          date,
-          package_id: override.package_id,
-          price: override.price,
-        })
-      );
-    }
-
-    const filter = {
-      user_id,
-      date,
-      style_id: override.style_id,
-      variant_order: override.variant_order,
-    } as Filter<HotDate>;
     const existing = await collection.findOne(filter);
     if (existing) {
       await collection.updateOne(filter, {
-        $set: { price: override.price, updated_at: now },
+        $set: { price: override.price, price_type, updated_at: now },
       });
       return {
         ...existing,
         price: override.price,
+        price_type,
         updated_at: now,
       } as WithId<HotDate>;
     }
@@ -154,9 +127,9 @@ export class HotDateModel extends ModelBase<HotDate> {
       hotDateSchema.parse({
         user_id,
         date,
-        style_id: override.style_id,
-        variant_order: override.variant_order,
+        ...target,
         price: override.price,
+        price_type,
       })
     );
   }

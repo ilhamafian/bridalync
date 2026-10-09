@@ -20,6 +20,7 @@ function serializeHotDate(doc: WithId<HotDate>) {
     style_id: doc.style_id,
     variant_order: doc.variant_order,
     price: doc.price,
+    price_type: doc.price_type ?? "fixed",
   };
 }
 

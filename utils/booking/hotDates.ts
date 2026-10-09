@@ -1,4 +1,4 @@
-import type { PublicHotDate } from "@/schemas/hotDateSchema";
+import type { HotDatePriceType, PublicHotDate } from "@/schemas/hotDateSchema";
 import { toDateKey } from "@/utils/booking/availability";
 import { nextDateKey } from "@/utils/booking/blockedDates";
 
@@ -8,12 +8,19 @@ export type HotDateLookup = {
   style_id?: string;
   variant_order?: number;
   price: number;
+  price_type?: HotDatePriceType;
+};
+
+/** A hot date override: an RM amount (`fixed`) or a % increase (`percent`). */
+export type HotDateRate = {
+  price: number;
+  type: HotDatePriceType;
 };
 
 export function toHotDateLookup(
   item: Pick<
     PublicHotDate,
-    "date" | "package_id" | "style_id" | "variant_order" | "price"
+    "date" | "package_id" | "style_id" | "variant_order" | "price" | "price_type"
   >
 ): HotDateLookup {
   return {
@@ -22,6 +29,7 @@ export function toHotDateLookup(
     style_id: item.style_id,
     variant_order: item.variant_order,
     price: item.price,
+    price_type: item.price_type ?? "fixed",
   };
 }
 
@@ -35,7 +43,12 @@ export function toHotDateItem(item: HotDateLookup): PublicHotDate {
       ? { variant_order: item.variant_order }
       : {}),
     price: item.price,
+    price_type: item.price_type ?? "fixed",
   };
+}
+
+function toHotDateRate(item: HotDateLookup): HotDateRate {
+  return { price: item.price, type: item.price_type ?? "fixed" };
 }
 
 export function packageHotDateKey(date: string, packageId: string) {
@@ -52,18 +65,18 @@ export function styleHotDateKey(
 
 export function buildHotDatePriceMap(
   hotDates: HotDateLookup[]
-): Map<string, number> {
-  const map = new Map<string, number>();
+): Map<string, HotDateRate> {
+  const map = new Map<string, HotDateRate>();
 
   for (const item of hotDates) {
     if (item.package_id) {
-      map.set(packageHotDateKey(item.date, item.package_id), item.price);
+      map.set(packageHotDateKey(item.date, item.package_id), toHotDateRate(item));
       continue;
     }
     if (item.style_id !== undefined && item.variant_order !== undefined) {
       map.set(
         styleHotDateKey(item.date, item.style_id, item.variant_order),
-        item.price
+        toHotDateRate(item)
       );
     }
   }
@@ -72,33 +85,35 @@ export function buildHotDatePriceMap(
 }
 
 export function getPackageHotDatePrice(
-  priceMap: Map<string, number>,
+  priceMap: Map<string, HotDateRate>,
   date: Date | string,
   packageId: string
-): number | undefined {
+): HotDateRate | undefined {
   const dateKey = toDateKey(date);
   if (!dateKey) return undefined;
   return priceMap.get(packageHotDateKey(dateKey, packageId));
 }
 
-/** Highest hot date price set for the event on any of its session dates. */
+/**
+ * Hot date rates set for the event on its session dates. Resolve them with `resolveEffectivePrice` /
+ * `getRegionEventPrice`, which charge the highest one.
+ */
 export function getEventHotDatePrice(
-  priceMap: Map<string, number>,
+  priceMap: Map<string, HotDateRate>,
   dates: Array<Date | string>,
   packageId: string
-): number | undefined {
-  const prices = dates
+): HotDateRate[] {
+  return dates
     .map((date) => getPackageHotDatePrice(priceMap, date, packageId))
-    .filter((price): price is number => price !== undefined);
-  return prices.length > 0 ? Math.max(...prices) : undefined;
+    .filter((rate): rate is HotDateRate => rate !== undefined);
 }
 
 export function getStyleHotDatePrice(
-  priceMap: Map<string, number>,
+  priceMap: Map<string, HotDateRate>,
   date: Date | string,
   styleId: string,
   variantOrder: number
-): number | undefined {
+): HotDateRate | undefined {
   const dateKey = toDateKey(date);
   if (!dateKey) return undefined;
   return priceMap.get(styleHotDateKey(dateKey, styleId, variantOrder));
@@ -156,12 +171,12 @@ export function buildHotDateCatalog(
   );
 }
 
-/** `date|targetKey` -> price, for looking up a row's override on a date. */
+/** `date|targetKey` -> rate, for looking up a row's override on a date. */
 export function buildHotDateRowPriceMap(hotDates: HotDateLookup[]) {
-  const map = new Map<string, number>();
+  const map = new Map<string, HotDateRate>();
   for (const item of hotDates) {
     const targetKey = hotDateTargetKey(item);
-    if (targetKey) map.set(`${item.date}|${targetKey}`, item.price);
+    if (targetKey) map.set(`${item.date}|${targetKey}`, toHotDateRate(item));
   }
   return map;
 }
@@ -171,7 +186,7 @@ export type HotDateRange = {
   start: string;
   end: string;
   dates: string[];
-  prices: { row: HotDateCatalogRow; price: number }[];
+  prices: { row: HotDateCatalogRow; rate: HotDateRate }[];
 };
 
 /**
@@ -189,12 +204,14 @@ export function groupHotDateRanges(
 
   for (const date of dates) {
     const prices = catalog.flatMap((row) => {
-      const price = priceMap.get(`${date}|${row.key}`);
-      return price === undefined ? [] : [{ row, price }];
+      const rate = priceMap.get(`${date}|${row.key}`);
+      return rate === undefined ? [] : [{ row, rate }];
     });
     if (prices.length === 0) continue;
 
-    const signature = prices.map(({ row, price }) => `${row.key}=${price}`).join(",");
+    const signature = prices
+      .map(({ row, rate }) => `${row.key}=${rate.type}:${rate.price}`)
+      .join(",");
     const last = ranges.at(-1);
     if (last && lastSignature === signature && nextDateKey(last.end) === date) {
       last.end = date;
@@ -208,9 +225,31 @@ export function groupHotDateRanges(
   return ranges;
 }
 
+/** RM a percentage increase adds to `basePrice` (rounded to whole RM). */
+function percentIncreaseRm(basePrice: number, percent: number): number {
+  return Math.round((basePrice * percent) / 100);
+}
+
+/** Hot date price for an item usually charged `catalogPrice`: fixed = that RM price, percent = increased by it. */
+export function resolveHotDatePrice(catalogPrice: number, rate: HotDateRate): number {
+  return rate.type === "percent"
+    ? catalogPrice + percentIncreaseRm(catalogPrice, rate.price)
+    : rate.price;
+}
+
+/** Hot date amount added on top of `basePrice` (per-event state pricing): fixed = that RM, percent = share of it. */
+export function resolveHotDateExtra(basePrice: number, rate: HotDateRate): number {
+  return rate.type === "percent"
+    ? percentIncreaseRm(basePrice, rate.price)
+    : rate.price;
+}
+
+/** Price charged for an item; several rates (an event over several dates) charge the highest. */
 export function resolveEffectivePrice(
   catalogPrice: number,
-  overridePrice: number | undefined
+  rate: HotDateRate | HotDateRate[] | undefined
 ): number {
-  return overridePrice ?? catalogPrice;
+  const rates = rate === undefined ? [] : Array.isArray(rate) ? rate : [rate];
+  if (rates.length === 0) return catalogPrice;
+  return Math.max(...rates.map((item) => resolveHotDatePrice(catalogPrice, item)));
 }
