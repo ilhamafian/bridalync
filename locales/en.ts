@@ -111,6 +111,8 @@ export const en: Locale = {
   nextVariant: "Next variant",
   showVariant: "Show {name}",
   showVariantImage: "Show photo {index} of {name}",
+  previousPhoto: "Previous photo",
+  nextPhoto: "Next photo",
 
   // Add-ons
   addOnsTitle: "Any add-ons?",

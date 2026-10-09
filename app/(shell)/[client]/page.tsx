@@ -2161,6 +2161,7 @@ export default function ClientPage() {
                   })}
                 </p>
                 <BookingStylePicker
+                  layout={usesLooks ? "rows" : "carousel"}
                   categories={styleCategories}
                   emptyMessage={styleText.noneAvailable}
                   selectedCategoryId={

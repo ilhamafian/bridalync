@@ -107,6 +107,8 @@ export const ms = {
   nextVariant: "Variasi seterusnya",
   showVariant: "Tunjuk {name}",
   showVariantImage: "Tunjuk gambar {index} bagi {name}",
+  previousPhoto: "Gambar sebelumnya",
+  nextPhoto: "Gambar seterusnya",
 
   // Add-ons
   addOnsTitle: "Ada tambahan?",

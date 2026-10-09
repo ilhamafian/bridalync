@@ -1,9 +1,9 @@
 "use client"
 
 import Image from "next/image"
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
+import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { motion } from "motion/react"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, type ReactNode } from "react"
 
 import { useLocale } from "@/components/LocaleProvider"
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -31,39 +31,54 @@ type BookingStylePickerProps = {
   onCategoryChange: (categoryId: string | null) => void
   onVariantChange: (variantId: string | null) => void
   emptyMessage?: string
+  /** `carousel` = swipe between variants (styles); `rows` = one row per variant, swipe between its photos (looks). */
+  layout?: "carousel" | "rows"
 }
 
 const CARD_WIDTH_RATIO = 0.82
 const CARD_GAP_PX = 12
 const SWIPE_THRESHOLD_RATIO = 0.2
 
-function VariantCarousel({
-  variants,
-  selectedVariantId,
-  onVariantChange,
+const selectedCardClassName =
+  "bg-rose-800 text-white ring-2 ring-rose-800 hover:bg-rose-800/90 hover:text-white"
+const glassCardClassName =
+  "border-transparent bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 hover:text-foreground dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
+
+/**
+ * Peeking card carousel: drag or use the arrows to move; tapping a side card
+ * brings it to the centre, tapping the centred card calls `onActivate`.
+ */
+function SwipeCarousel<T>({
+  items,
+  getKey,
+  initialIndex = 0,
+  onActivate,
+  renderItem,
+  labels,
+  lightDots = false,
 }: {
-  variants: StyleVariantOption[]
-  selectedVariantId: string | null
-  onVariantChange: (variantId: string | null) => void
+  /** White dots, for carousels on a dark (selected) background. */
+  lightDots?: boolean
+  items: T[]
+  getKey: (item: T) => string
+  initialIndex?: number
+  onActivate: (index: number) => void
+  renderItem: (
+    item: T,
+    state: { isActive: boolean; onClick: () => void }
+  ) => ReactNode
+  labels: {
+    previous: string
+    next: string
+    dot: (item: T, index: number) => string
+  }
 }) {
-  const { t, format } = useLocale()
-  const selectedIndex = selectedVariantId
-    ? variants.findIndex((variant) => variant.id === selectedVariantId)
-    : -1
   const [activeIndex, setActiveIndex] = useState(
-    selectedIndex >= 0 ? selectedIndex : 0
+    Math.min(Math.max(initialIndex, 0), Math.max(items.length - 1, 0))
   )
   const viewportRef = useRef<HTMLDivElement>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
   const suppressClickRef = useRef(false)
-
-  useEffect(() => {
-    if (selectedIndex >= 0) {
-      setActiveIndex(selectedIndex)
-      return
-    }
-    setActiveIndex(0)
-  }, [selectedIndex, variants])
 
   useEffect(() => {
     const viewport = viewportRef.current
@@ -80,11 +95,16 @@ function VariantCarousel({
     return () => observer.disconnect()
   }, [])
 
-  const activeVariant = variants[activeIndex] ?? variants[0]
-  if (!activeVariant) return null
+  if (items.length === 0) return null
+
+  if (items.length === 1) {
+    return (
+      <>{renderItem(items[0]!, { isActive: true, onClick: () => onActivate(0) })}</>
+    )
+  }
 
   const canGoPrev = activeIndex > 0
-  const canGoNext = activeIndex < variants.length - 1
+  const canGoNext = activeIndex < items.length - 1
   const cardWidth =
     viewportWidth > 0 ? viewportWidth * CARD_WIDTH_RATIO : undefined
   const slideOffset =
@@ -96,28 +116,16 @@ function VariantCarousel({
     SWIPE_THRESHOLD_RATIO
 
   function goToIndex(index: number) {
-    if (index < 0 || index >= variants.length) return
+    if (index < 0 || index >= items.length) return
     setActiveIndex(index)
   }
 
-  function handleCardSelect(index: number, isActive: boolean) {
-    if (suppressClickRef.current) return
-    if (!isActive) {
+  function handleItemClick(index: number) {
+    if (index !== activeIndex) {
       goToIndex(index)
       return
     }
-    onVariantChange(variants[index]!.id)
-  }
-
-  if (variants.length === 1) {
-    return (
-      <VariantCard
-        variant={activeVariant}
-        isSelected={selectedVariantId === activeVariant.id}
-        isActive
-        onSelect={() => onVariantChange(activeVariant.id)}
-      />
-    )
+    onActivate(index)
   }
 
   return (
@@ -130,6 +138,11 @@ function VariantCarousel({
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={0.18}
+            onClickCapture={(event) => {
+              if (!suppressClickRef.current) return
+              event.stopPropagation()
+              event.preventDefault()
+            }}
             onDragEnd={(_, info) => {
               const dragged =
                 Math.abs(info.offset.x) > 8 || Math.abs(info.velocity.x) > 200
@@ -156,21 +169,21 @@ function VariantCarousel({
             animate={{ x: -slideOffset }}
             transition={{ type: "spring", stiffness: 320, damping: 34 }}
           >
-            {variants.map((variant, index) => {
+            {items.map((item, index) => {
               const isActive = index === activeIndex
               return (
                 <div
-                  key={variant.id}
-                  className="shrink-0"
+                  key={getKey(item)}
+                  className={cn(
+                    "shrink-0 transition-opacity duration-300",
+                    !isActive && "opacity-55"
+                  )}
                   style={{ width: cardWidth ?? `${CARD_WIDTH_RATIO * 100}%` }}
                 >
-                  <VariantCard
-                    variant={variant}
-                    isSelected={selectedVariantId === variant.id}
-                    isActive={isActive}
-                    dimmed={!isActive}
-                    onSelect={() => handleCardSelect(index, isActive)}
-                  />
+                  {renderItem(item, {
+                    isActive,
+                    onClick: () => handleItemClick(index),
+                  })}
                 </div>
               )
             })}
@@ -185,7 +198,7 @@ function VariantCarousel({
             type="button"
             variant="secondary"
             size="icon"
-            aria-label={t.previousVariant}
+            aria-label={labels.previous}
             disabled={!canGoPrev}
             className="pointer-events-auto absolute top-1/2 left-2 size-9 -translate-y-1/2 rounded-full bg-white/90 shadow-sm backdrop-blur-sm hover:bg-white disabled:opacity-40"
             onClick={() => goToIndex(activeIndex - 1)}
@@ -196,7 +209,7 @@ function VariantCarousel({
             type="button"
             variant="secondary"
             size="icon"
-            aria-label={t.nextVariant}
+            aria-label={labels.next}
             disabled={!canGoNext}
             className="pointer-events-auto absolute top-1/2 size-9 -translate-y-1/2 rounded-full bg-white/90 shadow-sm backdrop-blur-sm hover:bg-white disabled:opacity-40"
             style={{ left: `calc(100% + ${CARD_GAP_PX}px)` }}
@@ -208,17 +221,21 @@ function VariantCarousel({
       </div>
 
       <div className="flex items-center justify-center gap-1.5">
-        {variants.map((variant, index) => (
+        {items.map((item, index) => (
           <button
-            key={variant.id}
+            key={getKey(item)}
             type="button"
-            aria-label={format(t.showVariant, { name: variant.name })}
+            aria-label={labels.dot(item, index)}
             aria-current={activeIndex === index}
             className={cn(
               "size-1.5 rounded-full transition-all",
               activeIndex === index
-                ? "w-4 bg-rose-800"
-                : "bg-zinc-400/50 hover:bg-zinc-500/70"
+                ? lightDots
+                  ? "w-4 bg-white"
+                  : "w-4 bg-rose-800"
+                : lightDots
+                  ? "bg-white/40 hover:bg-white/70"
+                  : "bg-zinc-400/50 hover:bg-zinc-500/70"
             )}
             onClick={() => goToIndex(index)}
           />
@@ -228,99 +245,132 @@ function VariantCarousel({
   )
 }
 
-function VariantCard({
+/** Styles: one card per variant, swiped between. */
+function VariantCarousel({
+  variants,
+  selectedVariantId,
+  onVariantChange,
+}: {
+  variants: StyleVariantOption[]
+  selectedVariantId: string | null
+  onVariantChange: (variantId: string | null) => void
+}) {
+  const { t, format } = useLocale()
+  const selectedIndex = variants.findIndex(
+    (variant) => variant.id === selectedVariantId
+  )
+
+  return (
+    <SwipeCarousel
+      items={variants}
+      getKey={(variant) => variant.id}
+      initialIndex={selectedIndex}
+      onActivate={(index) => onVariantChange(variants[index]!.id)}
+      labels={{
+        previous: t.previousVariant,
+        next: t.nextVariant,
+        dot: (variant) => format(t.showVariant, { name: variant.name }),
+      }}
+      renderItem={(variant, { isActive, onClick }) => (
+        <button
+          type="button"
+          aria-pressed={selectedVariantId === variant.id}
+          aria-current={isActive ? "true" : undefined}
+          className={cn(
+            buttonVariants({ variant: "ghost", size: "lg" }),
+            "h-auto w-full flex-col items-stretch overflow-hidden rounded-lg p-0 text-left whitespace-normal",
+            selectedVariantId === variant.id
+              ? selectedCardClassName
+              : glassCardClassName
+          )}
+          onClick={onClick}
+        >
+          {variant.imageSrcs[0] ? (
+            <span className="relative aspect-square w-full overflow-hidden bg-muted">
+              <Image
+                src={variant.imageSrcs[0]}
+                alt={variant.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 448px) 82vw, 360px"
+              />
+            </span>
+          ) : null}
+          <span className="px-3 py-2.5 font-medium">{variant.name}</span>
+        </button>
+      )}
+    />
+  )
+}
+
+/** Looks: the variant's own row, its photos swiped between. */
+function VariantPhotoRow({
   variant,
   isSelected,
-  isActive,
-  dimmed = false,
   onSelect,
 }: {
   variant: StyleVariantOption
   isSelected: boolean
-  isActive: boolean
-  dimmed?: boolean
   onSelect: () => void
 }) {
   const { t, format } = useLocale()
-  const [imageIndex, setImageIndex] = useState(0)
-  const images = variant.imageSrcs
-  const imageSrc = images[imageIndex] ?? images[0]
 
-  useEffect(() => {
-    setImageIndex(0)
-  }, [variant.id])
-
-  // A div with button semantics, so the photo thumbnails can be buttons of their own.
   return (
     <div
-      role="button"
-      tabIndex={0}
-      aria-pressed={isSelected}
-      aria-current={isActive ? "true" : undefined}
       className={cn(
-        buttonVariants({ variant: "ghost", size: "lg" }),
-        "h-auto w-full cursor-pointer overflow-hidden rounded-lg p-0 text-left whitespace-normal transition-[opacity,transform] duration-300",
-        isSelected
-          ? "bg-rose-800 text-white ring-2 ring-rose-800 hover:bg-rose-800/90 hover:text-white"
-          : "border-transparent bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 hover:text-foreground dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15",
-        dimmed && "opacity-55"
+        "flex flex-col gap-3 rounded-lg p-3 transition-colors",
+        isSelected ? selectedCardClassName : glassCardClassName
       )}
-      onClick={onSelect}
-      onKeyDown={(event) => {
-        if (event.target !== event.currentTarget) return
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault()
-          onSelect()
-        }
-      }}
     >
-      <span className="flex w-full flex-col">
-        {imageSrc ? (
-          <span className="relative aspect-square w-full overflow-hidden bg-muted">
-            <Image
-              src={imageSrc}
-              alt={variant.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 448px) 82vw, 360px"
-            />
-          </span>
-        ) : null}
-        {images.length > 1 ? (
-          <span className="flex gap-1.5 px-3 pt-2.5">
-            {images.map((src, index) => (
-              <button
-                key={src}
-                type="button"
-                aria-label={format(t.showVariantImage, {
-                  index: index + 1,
-                  name: variant.name,
-                })}
-                aria-pressed={index === imageIndex}
-                className={cn(
-                  "relative size-10 shrink-0 overflow-hidden rounded-md bg-muted ring-offset-1 transition-opacity",
-                  index === imageIndex
-                    ? "ring-2 ring-current"
-                    : "opacity-60 hover:opacity-100"
-                )}
-                onClick={(event) => {
-                  event.stopPropagation()
-                  setImageIndex(index)
-                }}
-              >
-                <Image
-                  src={src}
-                  alt=""
-                  fill
-                  className="object-cover"
-                  sizes="40px"
-                />
-              </button>
-            ))}
-          </span>
-        ) : null}
-        <span className="px-3 py-2.5 font-medium">{variant.name}</span>
-      </span>
+      <button
+        type="button"
+        aria-pressed={isSelected}
+        className="flex items-center justify-between gap-3 text-left font-medium"
+        onClick={onSelect}
+      >
+        <span>{variant.name}</span>
+        <span
+          className={cn(
+            "flex size-5 shrink-0 items-center justify-center rounded-full ring-1",
+            isSelected ? "bg-white text-rose-800 ring-white" : "ring-current/40"
+          )}
+        >
+          {isSelected ? <CheckIcon className="size-3.5" /> : null}
+        </span>
+      </button>
+
+      {variant.imageSrcs.length > 0 ? (
+        <SwipeCarousel
+          items={variant.imageSrcs}
+          getKey={(src) => src}
+          onActivate={onSelect}
+          lightDots={isSelected}
+          labels={{
+            previous: t.previousPhoto,
+            next: t.nextPhoto,
+            dot: (_, index) =>
+              format(t.showVariantImage, {
+                index: index + 1,
+                name: variant.name,
+              }),
+          }}
+          renderItem={(src, { onClick }) => (
+            <button
+              type="button"
+              className="relative block aspect-square w-full overflow-hidden rounded-md bg-muted"
+              onClick={onClick}
+            >
+              <Image
+                src={src}
+                alt={variant.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 448px) 75vw, 340px"
+              />
+            </button>
+          )}
+        />
+      ) : null}
     </div>
   )
 }
@@ -332,16 +382,19 @@ export function BookingStylePicker({
   onCategoryChange,
   onVariantChange,
   emptyMessage,
+  layout = "carousel",
 }: BookingStylePickerProps) {
   const { t } = useLocale()
   const didAutoOpenRef = useRef(false)
 
-  // Open the first category on mount only, so collapsing it afterwards sticks.
+  // Styles open the first category on mount only, so collapsing it afterwards sticks.
+  // Looks start collapsed so clients see every category first.
   useEffect(() => {
+    if (layout === "rows") return
     if (didAutoOpenRef.current || categories.length === 0) return
     didAutoOpenRef.current = true
     if (selectedCategoryId === null) onCategoryChange(categories[0]!.id)
-  }, [categories, selectedCategoryId, onCategoryChange])
+  }, [layout, categories, selectedCategoryId, onCategoryChange])
 
   if (categories.length === 0) {
     return (
@@ -404,6 +457,17 @@ export function BookingStylePicker({
                     <p className="px-2 py-1 text-sm text-muted-foreground">
                       {t.noVariantsAvailable}
                     </p>
+                  ) : layout === "rows" ? (
+                    <div className="flex flex-col gap-3">
+                      {category.variants.map((variant) => (
+                        <VariantPhotoRow
+                          key={variant.id}
+                          variant={variant}
+                          isSelected={selectedVariantId === variant.id}
+                          onSelect={() => onVariantChange(variant.id)}
+                        />
+                      ))}
+                    </div>
                   ) : (
                     <VariantCarousel
                       variants={category.variants}
