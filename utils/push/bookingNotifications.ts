@@ -136,15 +136,18 @@ export async function notifyBalancePaymentReceived(
   });
 }
 
+export type SessionReminderLead = "1d" | "2d";
+
 export async function notifyUpcomingSession(
   booking: PersistedBooking,
   sessionName: string,
-  startLabel: string
+  startLabel: string,
+  lead: SessionReminderLead = "1d"
 ) {
   if (!booking.freelancerUserId) return;
 
   await sendPushToUser(booking.freelancerUserId, {
-    title: "Upcoming session",
+    title: lead === "2d" ? "Session in 2 days" : "Upcoming session",
     body: `${booking.contact.name} — ${sessionName} at ${startLabel}`,
     url: bookingDetailsUrl(booking),
   });
@@ -164,7 +167,12 @@ export function getSessionStartDate(session: Booking["sessions"][number]): Date 
   return start;
 }
 
-export function sessionReminderKey(session: Booking["sessions"][number]): string {
+/** The 1-day key has no suffix so reminders recorded before the 2-day one existed still match. */
+export function sessionReminderKey(
+  session: Booking["sessions"][number],
+  lead: SessionReminderLead = "1d"
+): string {
   const start = getSessionStartDate(session);
-  return `${start.toISOString()}|${session.order}|${session.name}`;
+  const key = `${start.toISOString()}|${session.order}|${session.name}`;
+  return lead === "2d" ? `${key}|2d` : key;
 }

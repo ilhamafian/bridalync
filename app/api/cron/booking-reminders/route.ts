@@ -10,7 +10,8 @@ import {
   sessionReminderKey,
 } from "@/utils/push/bookingNotifications";
 
-const REMINDER_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
+const REMINDER_WINDOW_MS = 2 * DAY_MS;
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -67,7 +68,8 @@ async function runReminders(req: NextRequest) {
           continue;
         }
 
-        const key = sessionReminderKey(session);
+        const lead = start.getTime() - now.getTime() > DAY_MS ? "2d" : "1d";
+        const key = sessionReminderKey(session, lead);
         if (sent.has(key)) {
           skipped += 1;
           continue;
@@ -81,7 +83,7 @@ async function runReminders(req: NextRequest) {
           minute: "2-digit",
         });
 
-        await notifyUpcomingSession(booking, session.name, startLabel);
+        await notifyUpcomingSession(booking, session.name, startLabel, lead);
         newlySent.push(key);
         notified += 1;
       }
