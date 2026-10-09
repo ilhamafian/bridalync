@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState } from "react";
 import {
   IconEye,
@@ -125,6 +125,14 @@ export type AddOnItem = {
 };
 
 type Tab = "packages" | "styles" | "addons";
+
+function parseTab(value: string | null): Tab {
+  return value === "styles" || value === "addons" ? value : "packages";
+}
+
+function buildEventsSettingsHref(tab: Tab): string {
+  return tab === "packages" ? EVENTS_SETTINGS_HREF : `${EVENTS_SETTINGS_HREF}?tab=${tab}`;
+}
 
 type DeleteTarget = {
   type: "package" | "style" | "addon";
@@ -287,8 +295,10 @@ export function PackagesManager({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const editor = getCatalogEditorTarget(pathname);
-  const [tab, setTab] = useState<Tab>("packages");
+  // The dashboard shell remounts on every server render, so the tab lives in the URL to survive saves.
+  const [tab, setTabState] = useState<Tab>(() => parseTab(searchParams.get("tab")));
   const [packages, setPackages] = useState(initialPackages);
   const [styles, setStyles] = useState(initialStyles);
   const [addOns, setAddOns] = useState(initialAddOns);
@@ -307,6 +317,13 @@ export function PackagesManager({
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
   const openedEditorFromList = useRef(false);
 
+  function setTab(next: Tab) {
+    setTabState(next);
+    if (pathname === EVENTS_SETTINGS_HREF) {
+      window.history.replaceState(null, "", buildEventsSettingsHref(next));
+    }
+  }
+
   function openEditor(type: "event" | "style", id: string | null) {
     setTab(type === "event" ? "packages" : "styles");
     setError(null);
@@ -318,14 +335,15 @@ export function PackagesManager({
    * Returns to the list and refreshes server data. An editor opened from the list goes back in history, so the list
    * isn't stacked twice (which made the list's Back button land on the list again).
    */
-  function closeEditorAndRefresh() {
+  function closeEditorAndRefresh(listTab: Tab) {
+    setTabState(listTab);
     if (openedEditorFromList.current) {
       openedEditorFromList.current = false;
       window.addEventListener("popstate", () => router.refresh(), { once: true });
       router.back();
       return;
     }
-    router.replace(EVENTS_SETTINGS_HREF, { scroll: false });
+    router.replace(buildEventsSettingsHref(listTab), { scroll: false });
     router.refresh();
   }
 
@@ -509,7 +527,7 @@ export function PackagesManager({
         : [...current, saved];
       return next.sort((a, b) => a.order - b.order);
     });
-    closeEditorAndRefresh();
+    closeEditorAndRefresh("packages");
   }
 
   function handleStyleSaved(saved: StyleItem) {
@@ -520,7 +538,7 @@ export function PackagesManager({
         : [...current, saved];
       return next.sort((a, b) => a.order - b.order);
     });
-    closeEditorAndRefresh();
+    closeEditorAndRefresh("styles");
   }
 
   async function handleSaveAddOn() {
@@ -572,6 +590,7 @@ export function PackagesManager({
         }
         return [...current, saved].sort((a, b) => a.order - b.order);
       });
+      setTab("addons");
       setSheetOpen(false);
     } finally {
       setSaving(false);

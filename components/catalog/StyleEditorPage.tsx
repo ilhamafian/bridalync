@@ -192,7 +192,9 @@ export function StyleEditorPage({
               className={inputClassName}
               value={name}
               onChange={(event) => setName(event.target.value)}
-              placeholder="SHAWL"
+              placeholder={
+                styleTerms.kind === "look" ? "Signature looks" : "Shawl"
+              }
             />
           </div>
           {chargeBy === "package" ? (
