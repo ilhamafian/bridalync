@@ -78,7 +78,7 @@ export const ms = {
   distanceUnavailable: "Jarak jalan raya tidak tersedia buat masa ini.",
   accommodationTitle: "Penginapan & pengangkutan",
   accommodationDescription:
-    "Lokasi anda di luar {state}, tempat stylist anda berpangkalan. Anda perlu sediakan penginapan dan pengangkutan untuk stylist anda.",
+    "Lokasi anda di luar {state}, tempat {role} anda berpangkalan. Anda perlu sediakan penginapan dan pengangkutan (termasuk tiket penerbangan, jika berkaitan) untuk {role} anda. Sila berbincang dengan {role} anda untuk mengaturkannya.",
   accommodationCancel: "Tukar lokasi",
   accommodationAgree: "Saya faham",
   unservedRegionTitle: "Lokasi tidak tersedia",

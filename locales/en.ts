@@ -81,7 +81,7 @@ export const en: Locale = {
   distanceUnavailable: "Road distance unavailable right now.",
   accommodationTitle: "Accommodation & transport",
   accommodationDescription:
-    "Your venue is outside {state}, where your stylist is based. You'll need to provide accommodation and transport for your stylist.",
+    "Your venue is outside {state}, where your {role} is based. You'll need to provide accommodation and transport (including flights, if applicable) for your {role}. Please consult your {role} to arrange this.",
   accommodationCancel: "Change location",
   accommodationAgree: "I understand",
   unservedRegionTitle: "Location not available",

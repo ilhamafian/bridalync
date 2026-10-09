@@ -2094,6 +2094,12 @@ export default function ClientPage() {
                 <AlertDialogDescription>
                   {format(t.accommodationDescription, {
                     state: baseRegion ? getRegionLabel(baseRegion) : "",
+                    role: (user?.role === "makeupartist"
+                      ? t.makeupArtist
+                      : user?.role === "hijabstylist"
+                        ? t.hijabStylist
+                        : "stylist"
+                    ).toLowerCase(),
                   })}
                 </AlertDialogDescription>
               </AlertDialogHeader>
