@@ -14,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 
 import { emitProfilePhotoChange } from "@/components/dashboard/profilePhotoEvents";
+import { ImageCropDialog } from "@/components/ImageCropDialog";
 import {
   IconBadge,
   RowText,
@@ -121,6 +122,8 @@ export function ProfileManager({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [cropError, setCropError] = useState<string | null>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const busy = saving || uploading;
@@ -158,17 +161,23 @@ export function ProfileManager({
     emitProfilePhotoChange(saved.profile_photo_url || "");
   }
 
-  async function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
 
+    setCropError(null);
+    setCropFile(file);
+  }
+
+  async function handleConfirmPhotoCrop(croppedFile: File) {
     setUploading(true);
+    setCropError(null);
     setError(null);
     setSuccess(null);
 
     try {
-      const prepared = await compressImageFile(file);
+      const prepared = await compressImageFile(croppedFile);
 
       const formData = new FormData();
       formData.append("file", prepared);
@@ -181,7 +190,7 @@ export function ProfileManager({
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        setError(
+        setCropError(
           typeof data.error === "string"
             ? data.error
             : "Could not upload photo."
@@ -190,14 +199,15 @@ export function ProfileManager({
       }
 
       if (typeof data.url !== "string") {
-        setError("Could not upload photo.");
+        setCropError("Could not upload photo.");
         return;
       }
 
       await persistProfilePhoto(data.url);
+      setCropFile(null);
       setSuccess("Profile photo saved.");
     } catch (photoError) {
-      setError(
+      setCropError(
         photoError instanceof Error
           ? photoError.message
           : "Could not save profile photo."
@@ -396,6 +406,17 @@ export function ProfileManager({
               accept="image/jpeg,image/png,image/webp,image/gif"
               className="hidden"
               onChange={handlePhotoChange}
+            />
+            <ImageCropDialog
+              file={cropFile}
+              title="Crop profile photo"
+              busy={uploading}
+              error={cropError}
+              onCancel={() => {
+                setCropFile(null);
+                setCropError(null);
+              }}
+              onConfirm={handleConfirmPhotoCrop}
             />
           </div>
 
