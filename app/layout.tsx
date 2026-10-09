@@ -32,6 +32,11 @@ export const metadata: Metadata = {
     ],
     apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
   },
+  verification: {
+    other: {
+      "facebook-domain-verification": "blr99iye41kybhhx219wvuubqm7s2a",
+    },
+  },
 };
 
 export const viewport = {
