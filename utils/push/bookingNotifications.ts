@@ -1,6 +1,40 @@
+import { SettingModel } from "@/models/Setting";
 import type { Booking, PersistedBooking } from "@/schemas/bookingSchema";
+import type { RegionId } from "@/schemas/settingSchema";
 import { formatRm } from "@/utils/booking/pricing";
+import { getRegionLabel } from "@/utils/booking/regions";
 import { sendPushToUser } from "@/utils/push/webPush";
+
+/** States of the booking's active sessions that the stylist blocks travel days for. */
+async function getTravelDayRegions(
+  booking: PersistedBooking
+): Promise<RegionId[]> {
+  if (!booking.freelancerUserId) return [];
+  const settings = await new SettingModel().findSettingsByUserId(
+    booking.freelancerUserId
+  );
+  const bufferRegions = settings?.travel.travel_buffer_regions ?? [];
+  if (bufferRegions.length === 0) return [];
+
+  const regions = new Set<RegionId>();
+  for (const session of booking.sessions) {
+    if (session.status === "cancelled" || !session.region) continue;
+    if (bufferRegions.includes(session.region)) regions.add(session.region);
+  }
+  return [...regions];
+}
+
+async function formatTravelDaysNote(
+  booking: PersistedBooking,
+  blocked: boolean
+): Promise<string> {
+  const regions = await getTravelDayRegions(booking);
+  if (regions.length === 0) return "";
+  const states = regions.map(getRegionLabel).join(", ");
+  return blocked
+    ? ` · Out of state (${states}): travel days blocked`
+    : ` · Out of state (${states}): travel days block once approved`;
+}
 
 function formatSessionSummary(booking: Booking): string {
   const first = booking.sessions[0];
@@ -37,6 +71,9 @@ export async function notifyNewClientBooking(booking: PersistedBooking) {
   const verifyNote = awaitingVerification
     ? ` · ${paymentLabel} ${formatRm(booking.invoice.depositRm)} to verify`
     : "";
+  const travelNote = isEnquiry
+    ? ""
+    : await formatTravelDaysNote(booking, booking.status !== "requested");
 
   await sendPushToUser(booking.freelancerUserId, {
     title: isEnquiry
@@ -46,7 +83,7 @@ export async function notifyNewClientBooking(booking: PersistedBooking) {
         : awaitingVerification
         ? "New booking — payment pending"
         : "New booking",
-    body: `${booking.contact.name} — ${formatSessionSummary(booking)}${verifyNote}`,
+    body: `${booking.contact.name} — ${formatSessionSummary(booking)}${verifyNote}${travelNote}`,
     url: bookingDetailsUrl(booking),
   });
 }
@@ -77,10 +114,11 @@ export async function notifyBookingConfirmed(booking: PersistedBooking) {
     !isFullPayment(booking) && booking.invoice.balanceRm > 0
       ? ` · ${formatRm(booking.invoice.balanceRm)} balance due`
       : "";
+  const travelNote = await formatTravelDaysNote(booking, true);
 
   await sendPushToUser(booking.freelancerUserId, {
     title: `${paymentLabel} — ${formatRm(booking.invoice.depositRm)}`,
-    body: `${booking.contact.name} — ${formatSessionSummary(booking)}${balanceNote}`,
+    body: `${booking.contact.name} — ${formatSessionSummary(booking)}${balanceNote}${travelNote}`,
     url: bookingDetailsUrl(booking),
   });
 }
@@ -108,7 +146,7 @@ export async function notifyUpcomingSession(
   await sendPushToUser(booking.freelancerUserId, {
     title: "Upcoming session",
     body: `${booking.contact.name} — ${sessionName} at ${startLabel}`,
-    url: "/dashboard/bookings",
+    url: bookingDetailsUrl(booking),
   });
 }
 

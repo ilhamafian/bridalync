@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { ServiceWorkerNavigation } from "@/components/ServiceWorkerNavigation";
 import { cn } from "@/lib/utils";
 
 const cormorant = Cormorant_Garamond({
@@ -63,6 +64,7 @@ export default function RootLayout({
       )}
     >
       <body suppressHydrationWarning className="min-h-dvh font-sans">
+        <ServiceWorkerNavigation />
         {children}
       </body>
     </html>

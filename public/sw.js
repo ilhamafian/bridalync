@@ -1,3 +1,11 @@
+self.addEventListener("install", function () {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", function (event) {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener("push", function (event) {
   if (!event.data) return;
 
@@ -31,19 +39,18 @@ self.addEventListener("notificationclick", function (event) {
     clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then(function (clientList) {
-        for (const client of clientList) {
-          if (client.url.startsWith(self.location.origin) && "focus" in client) {
-            return client.focus().then(function (focused) {
-              if (focused && "navigate" in focused) {
-                return focused.navigate(targetUrl);
-              }
-              return focused;
-            });
-          }
+        const client = clientList.find(function (item) {
+          return item.url.startsWith(self.location.origin) && "focus" in item;
+        });
+        if (!client) {
+          return clients.openWindow ? clients.openWindow(targetUrl) : undefined;
         }
-        if (clients.openWindow) {
-          return clients.openWindow(targetUrl);
-        }
+        // The open app navigates itself (ServiceWorkerNavigation): WindowClient.navigate()
+        // fails for uncontrolled pages and isn't reliable in iOS home screen apps.
+        client.postMessage({ type: "bridalync:navigate", url: path });
+        return client.focus().catch(function () {
+          return clients.openWindow ? clients.openWindow(targetUrl) : undefined;
+        });
       })
   );
 });
