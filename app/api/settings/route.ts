@@ -27,6 +27,7 @@ function serializeSetting(setting: WithId<Setting>) {
     payment: setting.payment,
     invoice: setting.invoice,
     time_slots: setting.time_slots,
+    morning_call: setting.morning_call ?? null,
     messages: setting.messages ?? {},
     show_add_on_prices: setting.show_add_on_prices ?? true,
     client_info: setting.client_info ?? {},
@@ -81,6 +82,10 @@ function mergeSettingsUpdate(
 
   if (patch.time_slots !== undefined) {
     update.time_slots = patch.time_slots;
+  }
+
+  if (patch.morning_call !== undefined) {
+    update.morning_call = patch.morning_call;
   }
 
   if (patch.messages !== undefined) {

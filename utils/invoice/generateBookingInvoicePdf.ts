@@ -8,6 +8,7 @@ import {
   getEarliestSessionDate,
   roundRm,
 } from "@/utils/booking/pricing";
+import { MORNING_CALL_LABEL } from "@/utils/booking/morningCall";
 import { invoiceNumberFromBookingId } from "@/utils/invoice/invoiceNumber";
 import { formatLocationAddress } from "@/utils/session";
 
@@ -103,7 +104,21 @@ function invoiceItems(booking: PersistedBooking) {
   }
 
   return [
-    ...breakdown.sessions,
+    ...breakdown.sessions.flatMap(
+      ({ label, amountRm, morningCallRm, morningCallCount }) =>
+        morningCallRm
+          ? [
+              { label, amountRm: amountRm - morningCallRm },
+              {
+                label:
+                  (morningCallCount ?? 1) > 1
+                    ? `${MORNING_CALL_LABEL} × ${morningCallCount}`
+                    : MORNING_CALL_LABEL,
+                amountRm: morningCallRm,
+              },
+            ]
+          : [{ label, amountRm }]
+    ),
     ...breakdown.addOns,
     ...(breakdown.travelFeeRm > 0
       ? [{ label: "Travel fee", amountRm: breakdown.travelFeeRm }]

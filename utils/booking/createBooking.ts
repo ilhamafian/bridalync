@@ -18,6 +18,7 @@ import {
   type BookingQuotationSummary,
   type TravelQuotationInput,
 } from "@/utils/booking/pricing";
+import { getMorningCallCharge } from "@/utils/booking/morningCall";
 import { resolveSessionRegions } from "@/utils/booking/region.server";
 import {
   findUnservedRegion,
@@ -368,12 +369,14 @@ export async function resolveBookingQuotation(
     )
   );
 
+  const morningCall = settings.morning_call;
   let selectedPackages: Array<{
     name: string;
     price: number;
     deposit: number;
     sessionKey?: string;
     slotCount?: number;
+    morningCall?: { count: number; amountRm: number };
   }>;
   if (legacy) {
     const sessionByPackageId = new Map(
@@ -396,6 +399,9 @@ export async function resolveBookingQuotation(
             : resolveDepositRm(pkg.deposit, pkg.deposit_type, price),
         sessionKey: session?.client_key,
         slotCount: session ? slotCountBySessionKey.get(session.client_key) : 1,
+        morningCall: session
+          ? getMorningCallCharge(morningCall, [session])
+          : undefined,
       };
     });
   } else {
@@ -411,6 +417,7 @@ export async function resolveBookingQuotation(
           )
         ),
         deposit: chargeBy === "style" ? 0 : (event!.deposit ?? 0),
+        morningCall: getMorningCallCharge(morningCall, sessions),
       },
     ];
   }
@@ -426,6 +433,7 @@ export async function resolveBookingQuotation(
         deposit: number;
         sessionKey: string;
         slotCount?: number;
+        morningCall?: { count: number; amountRm: number };
       }>
     | undefined;
 
@@ -449,6 +457,7 @@ export async function resolveBookingQuotation(
         deposit: resolved.deposit,
         sessionKey: session.client_key,
         slotCount: slotCountBySessionKey.get(session.client_key),
+        morningCall: getMorningCallCharge(morningCall, [session]),
       });
     }
   } else {

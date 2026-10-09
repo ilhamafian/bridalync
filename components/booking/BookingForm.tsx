@@ -30,7 +30,11 @@ import {
   type Booking,
 } from "@/schemas/bookingSchema";
 import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
-import type { RegionPrices, TimeSlot } from "@/schemas/settingSchema";
+import type {
+  MorningCallSetting,
+  RegionPrices,
+  TimeSlot,
+} from "@/schemas/settingSchema";
 import { useRegionQuote } from "@/hooks/use-venue-regions";
 import {
   SLOT_HOLDING_STATUSES,
@@ -53,6 +57,7 @@ import {
   resolveEffectivePrice,
   type HotDateLookup,
 } from "@/utils/booking/hotDates";
+import { getMorningCallCharge } from "@/utils/booking/morningCall";
 import {
   calculatePaymentProcessingFeeRm,
   formatRm,
@@ -115,6 +120,7 @@ export type BookingFormCatalog = {
   addOns: AddOnCatalogItem[];
   chargeBy: "package" | "style";
   timeSlots: TimeSlot[];
+  morningCall?: MorningCallSetting | null;
   /** Null when the travel fee is turned off in Settings. */
   travel: BookingFormTravel | null;
 };
@@ -341,6 +347,7 @@ export function BookingForm({
   addOns,
   chargeBy,
   timeSlots,
+  morningCall,
   travel,
   occupancy,
   onSaved,
@@ -603,8 +610,18 @@ export function BookingForm({
       regionPricing && !regionPricing.perEvent && regionPriceRm !== null
         ? roundRm(regionPriceRm)
         : 0;
-    return sessionsRm + addOnsRm + travelQuote.feeRm + regionFeeRm;
+    const morningCallRm =
+      getMorningCallCharge(
+        morningCall,
+        form.sessions
+          .filter((session) => session.time_slots.length > 0)
+          .map((session) => ({ time_slot: mergeSlots(session.time_slots) }))
+      )?.amountRm ?? 0;
+    return (
+      sessionsRm + addOnsRm + travelQuote.feeRm + regionFeeRm + morningCallRm
+    );
   }, [
+    morningCall,
     travelQuote.feeRm,
     regionPricing,
     regionPriceRm,

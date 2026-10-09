@@ -282,6 +282,7 @@ export async function loadDashboardData(
       })),
       chargeBy,
       timeSlots,
+      morningCall: settings.morning_call ?? null,
       travel: toBookingFormTravel(settings.travel, chargeBy),
     },
     packages: {
@@ -304,6 +305,7 @@ export async function loadDashboardData(
           terms_and_conditions: invoice.terms_and_conditions,
         },
         time_slots: timeSlots,
+        morning_call: settings.morning_call ?? null,
         messages: { review_request: settings.messages?.review_request ?? "" },
         client_info: settings.client_info ?? {},
         booking_requests: settings.booking_requests ?? false,

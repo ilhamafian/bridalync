@@ -166,6 +166,15 @@ export const timeSlotSettingSchema = z
 export type TimeSlot = z.infer<typeof timeSlotSchema>;
 export type TimeSlotSetting = z.infer<typeof timeSlotSettingSchema>;
 
+/** Extra charge for sessions whose slot starts before `before`. */
+export const morningCallSettingSchema = z.object({
+  enabled: z.boolean(),
+  before: timeOfDaySchema,
+  price: z.number().min(0),
+});
+
+export type MorningCallSetting = z.infer<typeof morningCallSettingSchema>;
+
 export function getDefaultTimeSlots(
   chargeBy: "package" | "style"
 ): TimeSlot[] {
@@ -184,6 +193,8 @@ export const settingSchema = z.object({
   payment: paymentSettingSchema.default(() => paymentSettingSchema.parse({})),
   invoice: invoiceSettingSchema.default(() => invoiceSettingSchema.parse({})),
   time_slots: timeSlotSettingSchema,
+  /** Missing = off. */
+  morning_call: morningCallSettingSchema.optional(),
   messages: messageSettingSchema.optional(),
   /** Whether clients see add-on prices when picking add-ons. Missing = shown. */
   show_add_on_prices: z.boolean().optional(),
@@ -212,6 +223,7 @@ export const settingUpdateSchema = z.object({
   payment: paymentSettingSchema.partial().optional(),
   invoice: invoiceSettingSchema.partial().optional(),
   time_slots: z.array(timeSlotSchema).optional(),
+  morning_call: morningCallSettingSchema.optional(),
   messages: messageSettingSchema.partial().optional(),
   show_add_on_prices: z.boolean().optional(),
   client_info: clientInfoSettingSchema.optional(),

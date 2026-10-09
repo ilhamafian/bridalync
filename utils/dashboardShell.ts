@@ -15,7 +15,7 @@ import type { ProfileItem } from "@/components/profile/ProfileManager";
 import type { SettingsItem } from "@/components/SettingsManager";
 import type { PublicHotDate } from "@/schemas/hotDateSchema";
 import type { DashboardReview } from "@/schemas/reviewSchema";
-import type { TimeSlot } from "@/schemas/settingSchema";
+import type { MorningCallSetting, TimeSlot } from "@/schemas/settingSchema";
 import type { NotificationReadState } from "@/utils/activity";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
@@ -73,6 +73,7 @@ export type DashboardData = {
     addOns: AddOnCatalogItem[];
     chargeBy: "package" | "style";
     timeSlots: TimeSlot[];
+    morningCall: MorningCallSetting | null;
     travel: BookingFormTravel | null;
   };
   packages: {

@@ -15,10 +15,12 @@ import {
   IconRoute,
   IconPlus,
   IconSparkles,
+  IconSunrise,
   IconTrash,
   IconUserHeart,
 } from "@tabler/icons-react";
 
+import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
 import {
   IconBadge,
@@ -54,6 +56,7 @@ import {
   getDefaultTimeSlots,
   hasManualTransferDetails,
   type AccommodationProvider,
+  type MorningCallSetting,
   type PaymentMethod,
   type RegionId,
   type RegionPrices,
@@ -74,6 +77,7 @@ import {
   REVIEW_REQUEST_PLACEHOLDERS,
   REVIEW_REQUEST_TEMPLATE_MAX_LENGTH,
 } from "@/utils/booking/messages";
+import { DEFAULT_MORNING_CALL_BEFORE } from "@/utils/booking/morningCall";
 import { LONG_DISTANCE_THRESHOLD_KM } from "@/utils/booking/travel";
 import type { SettingsCategory } from "@/utils/dashboardShell";
 
@@ -110,6 +114,7 @@ export type SettingsItem = {
     terms_and_conditions: string;
   };
   time_slots: TimeSlot[];
+  morning_call?: MorningCallSetting | null;
   messages: { review_request?: string };
   client_info: ClientInfoSetting;
   booking_requests: boolean;
@@ -333,6 +338,18 @@ export function SettingsManager({
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>(
     initialSettings.time_slots
   );
+  const [morningCallEnabled, setMorningCallEnabled] = useState(
+    initialSettings.morning_call?.enabled ?? false
+  );
+  const [morningCallBefore, setMorningCallBefore] = useState(
+    initialSettings.morning_call?.before ?? DEFAULT_MORNING_CALL_BEFORE
+  );
+  const [morningCallPrice, setMorningCallPrice] = useState(
+    String(initialSettings.morning_call?.price ?? "")
+  );
+  const morningCallSlots = timeSlots.filter(
+    (slot) => slot.startTime < morningCallBefore
+  );
   const [reviewTemplate, setReviewTemplate] = useState(
     initialSettings.messages?.review_request?.trim() ||
       DEFAULT_REVIEW_REQUEST_TEMPLATE
@@ -428,6 +445,11 @@ export function SettingsManager({
     setCompanyLogo(next.invoice.company_logo ?? "");
     setTerms(next.invoice.terms_and_conditions);
     setTimeSlots(next.time_slots);
+    setMorningCallEnabled(next.morning_call?.enabled ?? false);
+    setMorningCallBefore(
+      next.morning_call?.before ?? DEFAULT_MORNING_CALL_BEFORE
+    );
+    setMorningCallPrice(String(next.morning_call?.price ?? ""));
     setReviewTemplate(
       next.messages?.review_request?.trim() || DEFAULT_REVIEW_REQUEST_TEMPLATE
     );
@@ -745,7 +767,33 @@ export function SettingsManager({
       }
     }
 
-    await patchSettings("time_slots", { time_slots: timeSlots });
+    const price = morningCallPrice.trim() === "" ? 0 : Number(morningCallPrice);
+    if (morningCallEnabled) {
+      if (!morningCallBefore) {
+        setSectionError((current) => ({
+          ...current,
+          time_slots: "Pick the morning call time.",
+        }));
+        return;
+      }
+      if (!Number.isFinite(price) || price <= 0) {
+        setSectionError((current) => ({
+          ...current,
+          time_slots: "Enter a morning call charge above RM 0.",
+        }));
+        return;
+      }
+    }
+
+    const saved = await patchSettings("time_slots", {
+      time_slots: timeSlots,
+      morning_call: {
+        enabled: morningCallEnabled,
+        before: morningCallBefore || DEFAULT_MORNING_CALL_BEFORE,
+        price: Number.isFinite(price) && price > 0 ? price : 0,
+      },
+    });
+    if (saved) router.refresh();
   }
 
   async function saveMessages() {
@@ -1527,6 +1575,60 @@ export function SettingsManager({
               <RowText title="Add slot" />
             </button>
           </div>
+        </SettingsSection>
+
+        <SettingsSection title="Morning call">
+          <div className={settingsListClassName}>
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconSunrise} />
+              <RowText
+                title="Charge for early sessions"
+                description="Add a charge when a session starts before a set time."
+              />
+              <Switch
+                checked={morningCallEnabled}
+                onCheckedChange={setMorningCallEnabled}
+              />
+            </label>
+          </div>
+          {morningCallEnabled ? (
+            <div className={settingsCardClassName}>
+              <Field label="Sessions starting before">
+                <Input
+                  className={inputClassName}
+                  type="time"
+                  value={morningCallBefore}
+                  onChange={(event) =>
+                    setMorningCallBefore(event.target.value)
+                  }
+                />
+              </Field>
+              <Field label="Charge per session (RM)">
+                <Input
+                  className={inputClassName}
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={morningCallPrice}
+                  onChange={(event) => setMorningCallPrice(event.target.value)}
+                  placeholder="50"
+                />
+              </Field>
+              <ProcessingFeeHint
+                amountRm={morningCallPrice}
+                includeFixed={false}
+              />
+              <p className="text-xs text-muted-foreground">
+                {morningCallSlots.length > 0
+                  ? `Charged on your ${morningCallSlots
+                      .map((slot) => `${slot.startTime}–${slot.endTime}`)
+                      .join(", ")} slot${morningCallSlots.length === 1 ? "" : "s"}. `
+                  : "None of your slots start before this time. "}
+                It&apos;s included in the session price clients see and
+                listed as &quot;Morning call&quot; on the invoice.
+              </p>
+            </div>
+          ) : null}
         </SettingsSection>
       </SettingsPanel>
     );

@@ -28,7 +28,12 @@ const quotationAmountSchema = z.object({
 /** Itemised prices; `lineItems` folds the travel fee into the first item. */
 export const quotationBreakdownSchema = z.object({
   sessions: z.array(
-    quotationAmountSchema.extend({ sessionKey: z.string().optional() })
+    quotationAmountSchema.extend({
+      sessionKey: z.string().optional(),
+      /** Morning call charge included in `amountRm`; the invoice PDF lists it separately. */
+      morningCallRm: z.number().optional(),
+      morningCallCount: z.number().int().optional(),
+    })
   ),
   addOns: z.array(quotationAmountSchema),
   travelFeeRm: z.number(),

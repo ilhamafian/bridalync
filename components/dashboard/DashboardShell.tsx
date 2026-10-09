@@ -330,6 +330,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
               addOns: data.bookings.addOns,
               chargeBy: data.bookings.chargeBy,
               timeSlots: data.bookings.timeSlots,
+              morningCall: data.bookings.morningCall,
               travel: data.bookings.travel,
             }}
             occupancy={{

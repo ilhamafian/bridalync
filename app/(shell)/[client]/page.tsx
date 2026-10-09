@@ -58,6 +58,7 @@ import {
   resolveDepositRm,
   withPaymentProcessingFeeRm,
 } from "@/utils/booking/pricing";
+import { getMorningCallCharge } from "@/utils/booking/morningCall";
 import {
   isSlotTaken,
   normalizeSessionDate,
@@ -874,10 +875,17 @@ export default function ClientPage() {
           name: `${session.name} — ${variant.categoryName} — ${variant.name}`,
           price,
           deposit: resolveDepositRm(variant.deposit, variant.depositType, price),
+          morningCall: getMorningCallCharge(settings?.morning_call, [session]),
         };
       })
       .filter((style): style is NonNullable<typeof style> => style !== null);
-  }, [sessions, styleVariantBySessionKey, styles, hotDatePriceMap]);
+  }, [
+    sessions,
+    styleVariantBySessionKey,
+    styles,
+    hotDatePriceMap,
+    settings?.morning_call,
+  ]);
 
   const reviewStyleBySessionKey = useMemo(() => {
     const labels: Record<string, string | undefined> = {};
@@ -1011,6 +1019,10 @@ export default function ClientPage() {
                         selectedEvent.deposit_type,
                         eventPriceRm
                       ),
+                morningCall: getMorningCallCharge(
+                  settings?.morning_call,
+                  sessions
+                ),
               },
             ]
           : [],

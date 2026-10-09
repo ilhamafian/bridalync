@@ -8,8 +8,16 @@ export type QuotationLineItem = {
   amountRm: number;
 };
 
+export type BreakdownSessionItem = QuotationLineItem & {
+  sessionKey?: string;
+  /** Morning call charge already included in `amountRm`; the invoice lists it separately. */
+  morningCallRm?: number;
+  /** Sessions the morning call charge covers. */
+  morningCallCount?: number;
+};
+
 export type BookingQuotationBreakdown = {
-  sessions: Array<QuotationLineItem & { sessionKey?: string }>;
+  sessions: BreakdownSessionItem[];
   addOns: QuotationLineItem[];
   travelFeeRm: number;
   discountRm?: number;
@@ -37,6 +45,8 @@ export type QuotationPackageInput = QuotationLineItemInput & {
   sessionKey?: string;
   /** Consecutive slots booked for the session; `price` is charged once per slot. */
   slotCount?: number;
+  /** Added on top of the price; not part of the deposit. */
+  morningCall?: { count: number; amountRm: number };
 };
 
 export function sessionLineItemLabel(name: string, slotCount = 1) {
@@ -158,6 +168,9 @@ export function applyPaymentProcessingFee(
   const sessions = breakdown.sessions.map((item) => ({
     ...item,
     amountRm: item.amountRm + share(item.amountRm),
+    ...(item.morningCallRm
+      ? { morningCallRm: item.morningCallRm + share(item.morningCallRm) }
+      : {}),
   }));
   const addOns = breakdown.addOns.map((item) => ({
     ...item,
@@ -323,7 +336,11 @@ export function calculateBookingQuotation(
   priced.forEach((item, index) => {
     const slotCount = Math.max(1, item.slotCount ?? 1);
     const label = sessionLineItemLabel(item.name, slotCount);
-    const price = item.price * slotCount + (index === 0 ? regionFeeRm : 0);
+    const morningCallRm = roundRm(item.morningCall?.amountRm ?? 0);
+    const price =
+      item.price * slotCount +
+      morningCallRm +
+      (index === 0 ? regionFeeRm : 0);
     lineItems.push({
       label,
       amountRm: roundRm(price + (index === 0 ? travelFeeRm : 0)),
@@ -332,6 +349,9 @@ export function calculateBookingQuotation(
       label,
       amountRm: roundRm(price),
       ...(item.sessionKey ? { sessionKey: item.sessionKey } : {}),
+      ...(morningCallRm > 0 && item.morningCall
+        ? { morningCallRm, morningCallCount: item.morningCall.count }
+        : {}),
     });
   });
 
