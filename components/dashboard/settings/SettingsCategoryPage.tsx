@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 
 import { BackButton } from "@/components/dashboard/BackButton";
@@ -16,7 +16,7 @@ import { PackagesManager } from "@/components/PackagesManager";
 import { PwaSettingsCard } from "@/components/PwaSettingsCard";
 import { SettingsManager } from "@/components/SettingsManager";
 import { cn } from "@/lib/utils";
-import { getTravelPricing } from "@/utils/booking/regions";
+import { getTravelPricing, getUnservedRegions } from "@/utils/booking/regions";
 import { getCatalogEditorTarget } from "@/utils/dashboardShell";
 import type {
   DashboardData,
@@ -46,6 +46,7 @@ export function SettingsCategoryPage({
   const regionPricesPerEvent =
     chargeBy === "package" &&
     getTravelPricing(travel, chargeBy).kind === "region_per_event";
+  const unservedRegions = useMemo(() => getUnservedRegions(travel), [travel]);
   const meta = category ? getSettingsCategoryMeta(category, styleTerms) : null;
   const isPackages = category === "events";
   const isCatalogEditor = getCatalogEditorTarget(usePathname()) !== null;
@@ -76,6 +77,7 @@ export function SettingsCategoryPage({
           initialShowAddOnPrices={packages.showAddOnPrices}
           chargeBy={chargeBy}
           regionPricesPerEvent={regionPricesPerEvent}
+          unservedRegions={unservedRegions}
           styleTerms={styleTerms}
         />
       </div>

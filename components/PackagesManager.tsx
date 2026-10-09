@@ -57,10 +57,10 @@ import type {
   PackageDayMode,
   PackageSession,
 } from "@/schemas/packageSchema";
-import type { RegionPrices } from "@/schemas/settingSchema";
+import type { RegionId, RegionPrices } from "@/schemas/settingSchema";
 import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
 import { formatDeposit, formatRm } from "@/utils/booking/pricing";
-import { getRegionPriceRange } from "@/utils/booking/regions";
+import { getRegionPriceRange, omitRegions } from "@/utils/booking/regions";
 import type { StyleTerms } from "@/utils/styleTerms";
 import {
   buildCatalogEditorHref,
@@ -157,8 +157,11 @@ function parseOptionalNumber(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function describeRegionPriceRange(prices: RegionPrices | undefined) {
-  const range = getRegionPriceRange(prices);
+function describeRegionPriceRange(
+  prices: RegionPrices | undefined,
+  hiddenRegions: RegionId[]
+) {
+  const range = getRegionPriceRange(omitRegions(prices, hiddenRegions));
   if (!range) return "No state prices set";
   return range.min === range.max
     ? formatRm(range.min)
@@ -177,11 +180,12 @@ function describeEventPrice(
   pkg: PackageItem,
   chargeBy: "package" | "style",
   regionPricesPerEvent: boolean,
+  hiddenRegions: RegionId[],
   styleTerms: StyleTerms
 ) {
   if (chargeBy === "style") return `Priced by ${styleTerms.one}`;
   const price = regionPricesPerEvent
-    ? describeRegionPriceRange(pkg.region_prices)
+    ? describeRegionPriceRange(pkg.region_prices, hiddenRegions)
     : pkg.price != null
       ? formatRm(pkg.price)
       : "No price set";
@@ -267,6 +271,7 @@ export function PackagesManager({
   initialShowAddOnPrices,
   chargeBy,
   regionPricesPerEvent = false,
+  unservedRegions = [],
   styleTerms,
 }: {
   initialPackages: PackageItem[];
@@ -276,6 +281,8 @@ export function PackagesManager({
   chargeBy: "package" | "style";
   /** Travel is charged by state per event: events are priced per state instead of one price. */
   regionPricesPerEvent?: boolean;
+  /** States the stylist doesn't serve; hidden from per-event state prices. */
+  unservedRegions?: RegionId[];
   styleTerms: StyleTerms;
 }) {
   const router = useRouter();
@@ -583,6 +590,7 @@ export function PackagesManager({
         nextOrder={packages.length}
         chargeBy={chargeBy}
         regionPricesPerEvent={regionPricesPerEvent}
+        unservedRegions={unservedRegions}
         styleTerms={styleTerms}
         onSaved={handlePackageSaved}
       />
@@ -672,6 +680,7 @@ export function PackagesManager({
                     pkg,
                     chargeBy,
                     regionPricesPerEvent,
+                    unservedRegions,
                     styleTerms
                   )}
                   footer={describeEventSessions(pkg)}

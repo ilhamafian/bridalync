@@ -76,6 +76,31 @@ export function isRegionId(value: string): value is RegionId {
   return (MALAYSIA_REGION_IDS as readonly string[]).includes(value);
 }
 
+/** States the stylist doesn't serve; the base state is always served. */
+export function getUnservedRegions(
+  travel:
+    | Pick<TravelSetting, "unserved_regions" | "base_region">
+    | null
+    | undefined
+): RegionId[] {
+  return (travel?.unserved_regions ?? []).filter(
+    (id) => id !== travel?.base_region
+  );
+}
+
+/** First venue region the stylist doesn't serve; unknown regions pass. */
+export function findUnservedRegion(
+  regions: Array<RegionId | null>,
+  unserved: RegionId[]
+): RegionId | null {
+  return (
+    regions.find(
+      (regionId): regionId is RegionId =>
+        regionId !== null && unserved.includes(regionId)
+    ) ?? null
+  );
+}
+
 export type RegionPriceResult =
   | { ok: true; regionId: RegionId; priceRm: number }
   /** `regionId` null = the venue is outside every region. */
@@ -170,6 +195,17 @@ export function parseRegionPriceInputs(
     prices[id] = price;
   }
   return prices;
+}
+
+export function omitRegions(
+  prices: RegionPrices | undefined,
+  regionIds: RegionId[]
+): RegionPrices {
+  const kept: RegionPrices = {};
+  for (const [id, price] of Object.entries(prices ?? {})) {
+    if (!regionIds.includes(id as RegionId)) kept[id as RegionId] = price;
+  }
+  return kept;
 }
 
 /** Lowest and highest region price, for summaries. */

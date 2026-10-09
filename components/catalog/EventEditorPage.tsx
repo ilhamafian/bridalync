@@ -22,7 +22,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { DepositType, PackageDayMode } from "@/schemas/packageSchema";
 import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
+import type { RegionId } from "@/schemas/settingSchema";
 import {
+  omitRegions,
   parseRegionPriceInputs,
   toRegionPriceInputs,
   type RegionPriceInputs,
@@ -100,6 +102,7 @@ export function EventEditorPage({
   nextOrder,
   chargeBy,
   regionPricesPerEvent,
+  unservedRegions,
   styleTerms,
   onSaved,
 }: {
@@ -109,6 +112,8 @@ export function EventEditorPage({
   nextOrder: number;
   chargeBy: "package" | "style";
   regionPricesPerEvent: boolean;
+  /** Hidden from "Price by state"; their stored prices are kept. */
+  unservedRegions: RegionId[];
   styleTerms: StyleTerms;
   onSaved: (saved: PackageItem) => void;
 }) {
@@ -146,7 +151,10 @@ export function EventEditorPage({
       setError("Enter a valid price for each state, or leave it blank.");
       return;
     }
-    if (regionPricesPerEvent && Object.keys(regionPrices).length === 0) {
+    if (
+      regionPricesPerEvent &&
+      Object.keys(omitRegions(regionPrices, unservedRegions)).length === 0
+    ) {
       setError("Enter a price for at least one state.");
       return;
     }
@@ -377,6 +385,7 @@ export function EventEditorPage({
                   setForm((current) => ({ ...current, regionPrices }))
                 }
                 feeHint="full"
+                hiddenRegions={unservedRegions}
               />
               <p className="text-xs text-muted-foreground">
                 The full event price for a venue in that state, travel

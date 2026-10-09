@@ -81,6 +81,9 @@ export const ms = {
     "Lokasi anda di luar {state}, tempat stylist anda berpangkalan. Anda perlu sediakan penginapan dan pengangkutan untuk stylist anda.",
   accommodationCancel: "Tukar lokasi",
   accommodationAgree: "Saya faham",
+  unservedRegionTitle: "Lokasi tidak tersedia",
+  unservedRegionDescription:
+    "Stylist anda tidak menerima tempahan di {state}. Sila pilih lokasi di negeri lain.",
   checkingVenueState: "Menyemak negeri lokasi...",
   venueStateUnavailable: "Tidak dapat menyemak negeri lokasi buat masa ini.",
   venueOutsideServiceArea: "Lokasi ini di luar kawasan perkhidmatan.",

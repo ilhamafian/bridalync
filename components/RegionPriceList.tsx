@@ -6,6 +6,7 @@ import {
   settingsRowClassName,
 } from "@/components/dashboard/settings/SettingsUi";
 import { cn } from "@/lib/utils";
+import type { RegionId } from "@/schemas/settingSchema";
 import {
   MALAYSIA_REGIONS,
   type RegionPriceInputs,
@@ -17,6 +18,7 @@ export function RegionPriceList({
   onChange,
   disabled = false,
   feeHint,
+  hiddenRegions = [],
   className,
 }: {
   value: RegionPriceInputs;
@@ -24,11 +26,15 @@ export function RegionPriceList({
   disabled?: boolean;
   /** Shows the client price per state: "full" = the whole booking price, "extra" = added on top. */
   feeHint?: "full" | "extra";
+  /** States the stylist doesn't serve; their stored prices are kept. */
+  hiddenRegions?: RegionId[];
   className?: string;
 }) {
   return (
     <div className={cn(settingsListClassName, className)}>
-      {MALAYSIA_REGIONS.map((region) => {
+      {MALAYSIA_REGIONS.filter(
+        (region) => !hiddenRegions.includes(region.id)
+      ).map((region) => {
         const inputId = `region-price-${region.id}`;
         return (
           <div

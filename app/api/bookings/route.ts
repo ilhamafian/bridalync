@@ -164,7 +164,9 @@ export async function POST(req: NextRequest) {
     }
 
     const { invoice, packageNames, sessions, dayMode, paymentOption } =
-      await resolveBookingQuotation(freelancer.userId, data);
+      await resolveBookingQuotation(freelancer.userId, data, {
+        enforceServiceArea: true,
+      });
 
     const isManualBooking =
       data.intent === "booking" &&

@@ -84,6 +84,9 @@ export const en: Locale = {
     "Your venue is outside {state}, where your stylist is based. You'll need to provide accommodation and transport for your stylist.",
   accommodationCancel: "Change location",
   accommodationAgree: "I understand",
+  unservedRegionTitle: "Location not available",
+  unservedRegionDescription:
+    "Your stylist doesn't take bookings in {state}. Please choose a venue in another state.",
   checkingVenueState: "Checking the venue's state...",
   venueStateUnavailable: "Couldn't check the venue's state right now.",
   venueOutsideServiceArea: "This venue is outside the areas served.",

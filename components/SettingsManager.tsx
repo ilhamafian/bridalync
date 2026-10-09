@@ -45,6 +45,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
@@ -76,6 +77,8 @@ import {
 import { LONG_DISTANCE_THRESHOLD_KM } from "@/utils/booking/travel";
 import type { SettingsCategory } from "@/utils/dashboardShell";
 
+type StatesTab = "areas" | "travel-days";
+
 export type SettingsItem = {
   _id: string;
   charge_by: "package" | "style";
@@ -90,6 +93,7 @@ export type SettingsItem = {
     accommodation_by?: AccommodationProvider;
     base_region?: RegionId;
     travel_buffer_regions?: RegionId[];
+    unserved_regions?: RegionId[];
   };
   payment: {
     balance_due_before: number;
@@ -286,6 +290,15 @@ export function SettingsManager({
   const [bufferRegions, setBufferRegions] = useState<RegionId[]>(
     initialSettings.travel.travel_buffer_regions ?? []
   );
+  const [unservedRegions, setUnservedRegions] = useState<RegionId[]>(
+    initialSettings.travel.unserved_regions ?? []
+  );
+  const hiddenPriceRegions = unservedRegions.filter((id) => id !== baseRegion);
+  const travelDayRegions = MALAYSIA_REGIONS.filter(
+    (region) =>
+      region.id !== baseRegion && !unservedRegions.includes(region.id)
+  );
+  const [statesTab, setStatesTab] = useState<StatesTab>("areas");
   const [balanceDueBefore, setBalanceDueBefore] = useState(
     String(initialSettings.payment.balance_due_before)
   );
@@ -403,6 +416,7 @@ export function SettingsManager({
     setAccommodationBy(next.travel.accommodation_by ?? "self");
     setBaseRegion(next.travel.base_region ?? null);
     setBufferRegions(next.travel.travel_buffer_regions ?? []);
+    setUnservedRegions(next.travel.unserved_regions ?? []);
     setBalanceDueBefore(String(next.payment.balance_due_before));
     setPaymentMethod(next.payment.method ?? "manual_transfer");
     setQrImageUrl(next.payment.qr_image_url ?? "");
@@ -477,7 +491,10 @@ export function SettingsManager({
     const accommodation = {
       accommodation_by: accommodationBy,
       ...(baseRegion ? { base_region: baseRegion } : {}),
-      travel_buffer_regions: bufferRegions.filter((id) => id !== baseRegion),
+      travel_buffer_regions: bufferRegions.filter(
+        (id) => id !== baseRegion && !unservedRegions.includes(id)
+      ),
+      unserved_regions: hiddenPriceRegions,
     };
 
     if (travelEnabled && travelMode === "region") {
@@ -493,7 +510,9 @@ export function SettingsManager({
         settings.charge_by === "package" ? regionMode : "fixed";
       if (
         effectiveRegionMode === "fixed" &&
-        Object.keys(parsedPrices).length === 0
+        Object.keys(parsedPrices).every((id) =>
+          hiddenPriceRegions.includes(id as RegionId)
+        )
       ) {
         setSectionError((current) => ({
           ...current,
@@ -954,6 +973,7 @@ export function SettingsManager({
                   value={regionPrices}
                   onChange={setRegionPrices}
                   feeHint="extra"
+                  hiddenRegions={hiddenPriceRegions}
                 />
                 <p className="text-xs text-muted-foreground">
                   The state&apos;s price is included in the booking price, not
@@ -1075,37 +1095,105 @@ export function SettingsManager({
           ) : null}
         </SettingsSection>
 
-        <SettingsSection title="Travel days">
-          <p className="-mt-1 text-xs text-muted-foreground">
-            For bookings in these states, the day before and after each session
-            is blocked so other clients can&apos;t book them. Applies once a
-            booking holds its slot (booked, or a request you approved).
-          </p>
-          <div className={settingsListClassName}>
-            {MALAYSIA_REGIONS.filter((region) => region.id !== baseRegion).map(
-              (region) => (
-                <label
-                  key={region.id}
-                  className={cn(settingsRowClassName, "cursor-pointer py-2.5")}
-                >
-                  <span className="min-w-0 flex-1 text-sm font-medium">
-                    {region.label}
-                  </span>
-                  <Switch
-                    checked={bufferRegions.includes(region.id)}
-                    onCheckedChange={(checked) =>
-                      setBufferRegions((current) =>
-                        checked
-                          ? [...current, region.id]
-                          : current.filter((id) => id !== region.id)
-                      )
-                    }
-                    aria-label={`Block travel days for ${region.label}`}
-                  />
-                </label>
-              )
-            )}
-          </div>
+        <SettingsSection title="States">
+          <Tabs
+            value={statesTab}
+            onValueChange={(value) => setStatesTab(value as StatesTab)}
+            className="gap-3"
+          >
+            <TabsList className="grid h-10! w-full grid-cols-2 bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15">
+              <TabsTrigger value="areas" className="text-sm">
+                Service areas
+              </TabsTrigger>
+              <TabsTrigger value="travel-days" className="text-sm">
+                Travel days
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="areas" className="flex flex-col gap-2">
+              <p className="text-xs text-muted-foreground">
+                States you take bookings in. Clients with a venue in a state
+                that&apos;s off are asked to change location.
+              </p>
+              <div className={settingsListClassName}>
+                {MALAYSIA_REGIONS.map((region) => {
+                  const isBase = region.id === baseRegion;
+                  const served = isBase || !unservedRegions.includes(region.id);
+                  return (
+                    <label
+                      key={region.id}
+                      className={cn(
+                        settingsRowClassName,
+                        "py-2.5",
+                        isBase ? "hover:bg-transparent" : "cursor-pointer"
+                      )}
+                    >
+                      <RowText
+                        title={region.label}
+                        description={
+                          isBase
+                            ? "Your base state · always on"
+                            : served
+                              ? undefined
+                              : "Clients can't book here"
+                        }
+                      />
+                      <Switch
+                        checked={served}
+                        disabled={isBase}
+                        onCheckedChange={(checked) =>
+                          setUnservedRegions((current) =>
+                            checked
+                              ? current.filter((id) => id !== region.id)
+                              : [...current, region.id]
+                          )
+                        }
+                        aria-label={`Take bookings in ${region.label}`}
+                      />
+                    </label>
+                  );
+                })}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="travel-days" className="flex flex-col gap-2">
+              <p className="text-xs text-muted-foreground">
+                For bookings in these states, the day before and after each
+                session is blocked so other clients can&apos;t book them.
+                Applies once a booking holds its slot (booked, or a request you
+                approved). Only states you serve are listed.
+              </p>
+              {travelDayRegions.length > 0 ? (
+                <div className={settingsListClassName}>
+                  {travelDayRegions.map((region) => (
+                    <label
+                      key={region.id}
+                      className={cn(settingsRowClassName, "cursor-pointer py-2.5")}
+                    >
+                      <RowText title={region.label} />
+                      <Switch
+                        checked={bufferRegions.includes(region.id)}
+                        onCheckedChange={(checked) =>
+                          setBufferRegions((current) =>
+                            checked
+                              ? [...current, region.id]
+                              : current.filter((id) => id !== region.id)
+                          )
+                        }
+                        aria-label={`Block travel days for ${region.label}`}
+                      />
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <div className={settingsCardClassName}>
+                  <p className="text-muted-foreground">
+                    Turn on a state in Service areas to set travel days for it.
+                  </p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </SettingsSection>
       </SettingsPanel>
     );

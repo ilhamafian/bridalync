@@ -52,6 +52,8 @@ export const travelSettingSchema = z.object({
   base_region: regionIdSchema.optional(),
   /** States where a slot-holding booking blocks the day before and after each session for clients. Missing = none. */
   travel_buffer_regions: z.array(regionIdSchema).optional(),
+  /** States clients can't book venues in (never `base_region`). Missing = every state served. */
+  unserved_regions: z.array(regionIdSchema).optional(),
 });
 
 export const paymentMethodSchema = z.enum([

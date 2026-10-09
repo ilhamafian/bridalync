@@ -20,9 +20,12 @@ import {
 } from "@/utils/booking/pricing";
 import { resolveSessionRegions } from "@/utils/booking/region.server";
 import {
+  findUnservedRegion,
   getBookingRegionPrice,
   getRegionEventPrice,
+  getRegionLabel,
   getTravelPricing,
+  getUnservedRegions,
 } from "@/utils/booking/regions";
 import { normalizeSessionDate, toDateKey } from "@/utils/booking/availability";
 import {
@@ -288,6 +291,8 @@ export async function resolveBookingQuotation(
     legacy?: boolean;
     /** Add the payment processing fee; defaults to whether the stylist uses the payment gateway. */
     processingFee?: boolean;
+    /** Reject venues in states the stylist doesn't serve (client bookings only). */
+    enforceServiceArea?: boolean;
   }
 ): Promise<{
   invoice: BookingQuotationSummary;
@@ -460,14 +465,35 @@ export async function resolveBookingQuotation(
   const pricesByRegion =
     travelPricing.kind === "region_fixed" ||
     travelPricing.kind === "region_per_event";
+  const unservedRegions = options?.enforceServiceArea
+    ? getUnservedRegions(settings.travel)
+    : [];
   let regionsBySessionKey: Record<string, RegionId | null> | null = null;
-  if (pricesByRegion || settings.travel.travel_buffer_regions?.length) {
+  if (
+    pricesByRegion ||
+    settings.travel.travel_buffer_regions?.length ||
+    unservedRegions.length
+  ) {
     try {
       regionsBySessionKey = await resolveSessionRegions(sessions);
     } catch (error) {
       console.error("Venue region lookup failed:", error);
       throw new Error(
         "We couldn't check the venue's state right now. Please try again."
+      );
+    }
+  }
+
+  if (regionsBySessionKey && unservedRegions.length) {
+    const unserved = findUnservedRegion(
+      sessions
+        .filter((session) => session.location)
+        .map((session) => regionsBySessionKey?.[session.client_key] ?? null),
+      unservedRegions
+    );
+    if (unserved) {
+      throw new Error(
+        `This stylist doesn't take bookings in ${getRegionLabel(unserved)}. Please choose another location.`
       );
     }
   }

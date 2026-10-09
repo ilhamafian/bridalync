@@ -102,11 +102,13 @@ import type {
 import {
   useOutOfStateVenues,
   useRegionQuote,
+  useUnservedVenues,
 } from "@/hooks/use-venue-regions";
 import {
   getRegionEventPrice,
   getRegionLabel,
   getTravelPricing,
+  getUnservedRegions,
 } from "@/utils/booking/regions";
 import { toManualTransferDetails } from "@/schemas/settingSchema";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
@@ -948,6 +950,14 @@ export default function ClientPage() {
     accommodationByClient
   );
   const [accommodationDialogOpen, setAccommodationDialogOpen] = useState(false);
+  const unservedRegions = useMemo(
+    () => getUnservedRegions(settings?.travel),
+    [settings?.travel]
+  );
+  const unservedCheck = useUnservedVenues(venueLocations, unservedRegions);
+  const unservedRegion =
+    unservedCheck.status === "ready" ? unservedCheck.unservedRegion : null;
+  const [unservedDialogOpen, setUnservedDialogOpen] = useState(false);
   const regionPriceRm =
     regionQuote.status === "ready" && regionQuote.result?.ok
       ? regionQuote.result.priceRm
@@ -1372,7 +1382,7 @@ export default function ClientPage() {
   const regionReady =
     !regionPricingEnabled ||
     (regionQuote.status === "ready" && regionQuote.result?.ok !== false);
-  const regionMessage = !regionPricingEnabled || !allLocationsSet
+  const regionMessage = !regionPricingEnabled || !allLocationsSet || unservedRegion
     ? null
     : regionQuote.status === "loading"
       ? { text: t.checkingVenueState, isError: false }
@@ -2038,10 +2048,15 @@ export default function ClientPage() {
               disabled={
                 !allLocationsSet ||
                 !allDistancesReady ||
-                !regionReady ||
+                (!regionReady && !unservedRegion) ||
+                unservedCheck.status === "loading" ||
                 outOfStateCheck.status === "loading"
               }
               onClick={() => {
+                if (unservedRegion) {
+                  setUnservedDialogOpen(true);
+                  return;
+                }
                 if (
                   outOfStateCheck.status === "ready" &&
                   outOfStateCheck.outOfState
@@ -2079,6 +2094,27 @@ export default function ClientPage() {
                   }}
                 >
                   {t.accommodationAgree}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <AlertDialog
+            open={unservedDialogOpen}
+            onOpenChange={setUnservedDialogOpen}
+          >
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t.unservedRegionTitle}</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {format(t.unservedRegionDescription, {
+                    state: unservedRegion ? getRegionLabel(unservedRegion) : "",
+                  })}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogAction onClick={() => setUnservedDialogOpen(false)}>
+                  {t.accommodationCancel}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Address } from "@/schemas/addressSchema";
 import type { RegionId, RegionPrices } from "@/schemas/settingSchema";
 import {
+  findUnservedRegion,
   getBookingRegionPrice,
   type RegionPriceResult,
 } from "@/utils/booking/regions";
@@ -105,6 +106,36 @@ export function useOutOfStateVenues(
 
     return loading ? { status: "loading" } : { status: "ready", outOfState: false };
   }, [baseRegion, enabled, locations, venueRegions]);
+}
+
+export type UnservedVenueCheck =
+  | { status: "loading" }
+  | { status: "ready"; unservedRegion: RegionId | null };
+
+/** First venue state in `unserved`; venues outside every region, or whose lookup failed, pass (the server re-checks). */
+export function useUnservedVenues(
+  locations: Array<Address | null | undefined>,
+  unserved: RegionId[]
+): UnservedVenueCheck {
+  const enabled = unserved.length > 0;
+  const venueRegions = useVenueRegions(locations, enabled);
+
+  return useMemo(() => {
+    if (!enabled) return { status: "ready", unservedRegion: null };
+
+    const regionIds: Array<RegionId | null> = [];
+    for (const location of locations) {
+      if (!location) continue;
+      const region = venueRegions[venueKey(location.location)];
+      if (region?.status === "ready") regionIds.push(region.regionId);
+      else if (region?.status !== "error") return { status: "loading" };
+    }
+
+    return {
+      status: "ready",
+      unservedRegion: findUnservedRegion(regionIds, unserved),
+    };
+  }, [enabled, locations, unserved, venueRegions]);
 }
 
 /** Highest region price for the given venues, once every venue's region is known. */
