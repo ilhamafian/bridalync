@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
       sessions,
       invoice,
       paymentOption,
+      ...(data.remarks ? { remarks: data.remarks } : {}),
       ...(data.payByLink
         ? { status: "pending" as const, paymentLinkAt: new Date() }
         : { status: data.status }),

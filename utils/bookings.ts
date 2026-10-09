@@ -387,6 +387,7 @@ const bookingDashboardFieldsSchema = bookingSchema.pick({
   invoice: true,
   paymentOption: true,
   status: true,
+  remarks: true,
 });
 
 export async function updateDashboardBooking(

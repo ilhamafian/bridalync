@@ -62,6 +62,8 @@ export const paymentVerificationStatusSchema = z.enum([
   "rejected",
 ]);
 
+export const BOOKING_REMARKS_MAX_LENGTH = 2000;
+
 export const bookingSchema = z.object({
   _id: z.unknown().optional(),
   freelancerUsername: z.string(),
@@ -94,6 +96,8 @@ export const bookingSchema = z.object({
   requestApprovedAt: z.coerce.date().optional(),
   /** Deposit/full picked with a transfer receipt on an approved request; applied when the receipt is approved. */
   requestPaymentOption: z.enum(["deposit", "full"]).optional(),
+  /** Stylist's private notes; never shown to the client. */
+  remarks: z.string().max(BOOKING_REMARKS_MAX_LENGTH).optional(),
   /** Set when the stylist created the booking unpaid (`pending`) for the client to pay via the booking page link. */
   paymentLinkAt: z.coerce.date().optional(),
   /** Set when the stylist declined a booking request (status becomes `cancelled`). */
@@ -178,6 +182,7 @@ export const publicBookingSchema = bookingSchema
     stripePaymentIntentId: true,
     sessionRemindersSent: true,
     balanceReminderSentAt: true,
+    remarks: true,
   })
   .extend({
     _id: z.string(),
@@ -249,6 +254,8 @@ export const manualBookingInputSchema = z.object({
   totalRm: z.number().min(0).optional(),
   /** Create it unpaid (`pending`, slot held) for the client to pay from a link; `status` is ignored. */
   payByLink: z.boolean().optional(),
+  /** Blank clears it. */
+  remarks: z.string().trim().max(BOOKING_REMARKS_MAX_LENGTH).optional(),
 });
 
 export type ManualBookingInput = z.infer<typeof manualBookingInputSchema>;

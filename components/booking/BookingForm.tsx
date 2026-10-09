@@ -22,9 +22,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { Address, LatLng } from "@/schemas/addressSchema";
-import type { Booking } from "@/schemas/bookingSchema";
+import {
+  BOOKING_REMARKS_MAX_LENGTH,
+  type Booking,
+} from "@/schemas/bookingSchema";
 import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
 import type { RegionPrices, TimeSlot } from "@/schemas/settingSchema";
 import { useRegionQuote } from "@/hooks/use-venue-regions";
@@ -160,6 +164,7 @@ type BookingFormState = {
   paymentOption: "deposit" | "full";
   /** New bookings only: create it unpaid for the client to pay from a link. */
   payByLink: boolean;
+  remarks: string;
   /** Edited (discounted) total as typed; null = use the full price. */
   totalRm: string | null;
 };
@@ -270,6 +275,7 @@ function emptyForm(): BookingFormState {
     status: "confirmed",
     paymentOption: "deposit",
     payByLink: false,
+    remarks: "",
     totalRm: null,
   };
 }
@@ -305,6 +311,7 @@ function bookingToForm(
     status: booking.status,
     paymentOption: booking.paymentOption,
     payByLink: false,
+    remarks: booking.remarks ?? "",
     totalRm: booking.invoice.breakdown?.discountRm
       ? String(booking.invoice.totalRm)
       : null,
@@ -873,6 +880,7 @@ export function BookingForm({
           style: resolveSessionStyle(session),
         })),
         status: form.status,
+        remarks: form.remarks.trim(),
         ...(isGoogleImport
           ? {}
           : {
@@ -1276,6 +1284,21 @@ export function BookingForm({
             deposit or in full.
           </p>
         ) : null}
+
+        <Field label="Remarks (optional)">
+          <Textarea
+            value={form.remarks}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, remarks: event.target.value }))
+            }
+            maxLength={BOOKING_REMARKS_MAX_LENGTH}
+            rows={3}
+            placeholder="Notes for yourself, e.g. parking, special requests"
+          />
+          <p className="text-xs text-muted-foreground">
+            Only you can see this; it isn&apos;t shown to the client.
+          </p>
+        </Field>
 
         {isGoogleImport ? null : (
           <>

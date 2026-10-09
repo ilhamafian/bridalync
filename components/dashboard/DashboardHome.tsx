@@ -84,7 +84,7 @@ export function DashboardHome({
   onBookingUpdated,
   onBookingsDeclined,
 }: DashboardHomeProps & {
-  /** Open booking requests (first 3) and the total; `null` hides the section. */
+  /** Open booking requests (first 3) and the total; `null` or none hides the section. */
   requests: { items: HomeRequestItem[]; total: number } | null;
   isActivityUnread?: (item: ActivityItem) => boolean;
   onOpenActivity?: (item: ActivityItem) => void;
@@ -106,31 +106,25 @@ export function DashboardHome({
         </p>
       </section>
 
-      {requests ? (
+      {requests && requests.items.length > 0 ? (
         <section className="flex flex-col gap-3">
           <h3 className="text-sm font-medium">
             Booking requests
-            {requests.total > 0 ? (
-              <span className="text-muted-foreground"> · {requests.total}</span>
-            ) : null}
+            <span className="text-muted-foreground"> · {requests.total}</span>
           </h3>
-          {requests.items.length === 0 ? (
-            <EmptyCard>No booking requests waiting.</EmptyCard>
-          ) : (
-            <CardCarousel
-              items={requests.items}
-              getKey={(item) => item.booking._id}
-              seeMoreHref="/dashboard/bookings?filter=requests"
-              renderItem={(item, className) => (
-                <HomeRequestCard
-                  item={item}
-                  className={className}
-                  onBookingUpdated={onBookingUpdated}
-                  onBookingsDeclined={onBookingsDeclined}
-                />
-              )}
-            />
-          )}
+          <CardCarousel
+            items={requests.items}
+            getKey={(item) => item.booking._id}
+            seeMoreHref="/dashboard/bookings?filter=requests"
+            renderItem={(item, className) => (
+              <HomeRequestCard
+                item={item}
+                className={className}
+                onBookingUpdated={onBookingUpdated}
+                onBookingsDeclined={onBookingsDeclined}
+              />
+            )}
+          />
         </section>
       ) : null}
 

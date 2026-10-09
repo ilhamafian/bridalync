@@ -204,6 +204,9 @@ export async function PATCH(
       if (data.status) {
         updatePayload.status = data.status;
       }
+      if (data.remarks !== undefined) {
+        updatePayload.remarks = data.remarks;
+      }
 
       if (isGoogleImportWithoutPackages && data.sessions) {
         updatePayload.sessions = data.sessions.map((session, index) => ({

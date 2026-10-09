@@ -179,6 +179,15 @@ export function BookingDetailsSections({
         </div>
       </div>
 
+      {booking.remarks ? (
+        <div className={sectionClassName}>
+          <SectionLabel>Remarks</SectionLabel>
+          <p className="mt-1 whitespace-pre-wrap break-words text-foreground">
+            {booking.remarks}
+          </p>
+        </div>
+      ) : null}
+
       {answers.length > 0 || moodboardUrls.length > 0 ? (
         <div className={sectionClassName}>
           <SectionLabel>Client details</SectionLabel>

@@ -45,6 +45,7 @@ export type SerializedBooking = {
   requestDeclinedAt?: string;
   requestPaymentOption?: Booking["requestPaymentOption"];
   paymentLinkAt?: string;
+  remarks?: string;
   created_at?: string;
   updated_at?: string;
 };
@@ -94,6 +95,7 @@ export function serializeBooking(
     ),
     requestPaymentOption: booking.requestPaymentOption,
     paymentLinkAt: toIsoDate(booking.paymentLinkAt as Date | string | undefined),
+    ...(booking.remarks ? { remarks: booking.remarks } : {}),
     created_at: toIsoDate(booking.created_at as Date | string | undefined),
     updated_at: toIsoDate(booking.updated_at as Date | string | undefined),
   };
