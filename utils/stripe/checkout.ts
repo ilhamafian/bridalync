@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe";
 import { getAppUrl } from "@/utils/appUrl";
 import type { PersistedBooking } from "@/schemas/bookingSchema";
+import { awaitsClientPayment } from "@/utils/booking/paymentLink";
 import {
   ensurePaymentCapabilities,
   isAccountReadyForClientCharges,
@@ -135,7 +136,7 @@ export async function createDepositCheckoutSession(input: {
         description: paymentDescription,
       },
       success_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=success`,
-      cancel_url: input.booking.requestApprovedAt
+      cancel_url: awaitsClientPayment(input.booking)
         ? `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=cancelled`
         : `${appUrl}/${input.freelancerUsername}?payment=cancelled`,
     },

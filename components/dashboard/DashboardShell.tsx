@@ -312,6 +312,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
             booking={detailsBooking}
             competingRequests={competingRequests}
             bookedClashes={bookedClashes}
+            appUrl={data.profile.appUrl}
             onBookingUpdated={handleBookingSaved}
             onBookingsDeclined={handleRequestsDeclined}
           />
@@ -330,6 +331,19 @@ export function DashboardShell({ data }: { data: DashboardData }) {
               chargeBy: data.bookings.chargeBy,
               timeSlots: data.bookings.timeSlots,
               travel: data.bookings.travel,
+            }}
+            occupancy={{
+              bookings: [
+                ...allBookings,
+                ...Object.values(savedBookings).filter(
+                  (saved) =>
+                    !data.bookings.initialBookings.some(
+                      (initial) => initial._id === saved._id
+                    )
+                ),
+              ],
+              blockedDates: blockedDates.map((item) => item.date),
+              blockedSlots,
             }}
             onSaved={handleBookingSaved}
           />

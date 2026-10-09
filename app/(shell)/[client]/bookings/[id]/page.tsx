@@ -23,6 +23,7 @@ import {
   resolveRequestPaymentOption,
 } from "@/utils/booking/pricing";
 import { cn } from "@/lib/utils";
+import { awaitsClientPayment } from "@/utils/booking/paymentLink";
 import {
   buildBookingResultMessage,
   buildWhatsAppUrl,
@@ -448,10 +449,10 @@ function BookingResultPageContent() {
   const isDeclinedRequest =
     booking.status === "cancelled" && Boolean(booking.requestDeclinedAt);
   const awaitingRequestPayment =
-    isPending &&
-    Boolean(booking.requestApprovedAt) &&
+    awaitsClientPayment(booking) &&
     !awaitingManualVerification &&
     !isConfirmingDeposit;
+  const isPaymentLink = !booking.requestApprovedAt && Boolean(booking.paymentLinkAt);
   const requestState = isRequested
     ? "requested"
     : isDeclinedRequest
@@ -498,7 +499,8 @@ function BookingResultPageContent() {
             )}
             <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
               {requestState === "requested" && t.requestSentTitle}
-              {requestState === "approved" && t.requestApprovedTitle}
+              {requestState === "approved" &&
+                (isPaymentLink ? t.paymentLinkTitle : t.requestApprovedTitle)}
               {requestState === "declined" && t.requestDeclinedTitle}
             </h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -508,7 +510,7 @@ function BookingResultPageContent() {
                   email: booking.contact.email,
                 })}
               {requestState === "approved" &&
-                format(t.requestApprovedBody, {
+                format(isPaymentLink ? t.paymentLinkBody : t.requestApprovedBody, {
                   name: freelancerName,
                   amount: formatRm(requestAmountDueRm),
                 })}

@@ -9,6 +9,7 @@ import {
   type PersistedBooking,
 } from "@/schemas/bookingSchema";
 import { bookingSessionsOverlap } from "@/utils/booking/availability";
+import { awaitsClientPayment } from "@/utils/booking/paymentLink";
 import { resolveSessionRegions } from "@/utils/booking/region.server";
 import { applyPaymentOption } from "@/utils/booking/pricing";
 import { sendBalancePaymentReceivedEmail } from "@/utils/email/balance-payment-received";
@@ -216,8 +217,8 @@ export async function rejectManualDepositPayment(bookingId: string) {
   await bookingModel.update(
     bookingId,
     {
-      // Approved requests stay payable so the client can upload another receipt.
-      status: existing?.requestApprovedAt ? "pending" : "failed",
+      // Approved requests / payment links stay payable so the client can upload another receipt.
+      status: existing && awaitsClientPayment(existing) ? "pending" : "failed",
       depositVerificationStatus: "rejected",
     },
     bookingSchema.pick({
@@ -362,8 +363,8 @@ export async function markBookingPaymentFailed(bookingId: string) {
   if (!ObjectId.isValid(bookingId)) return null;
 
   const existing = await getBookingById(bookingId);
-  // An approved request keeps its slot when a checkout expires or fails; the client can pay again.
-  if (existing?.requestApprovedAt && existing.status === "pending") {
+  // Approved requests / payment links keep their slot when a checkout expires or fails; the client can pay again.
+  if (existing && awaitsClientPayment(existing)) {
     return existing;
   }
 

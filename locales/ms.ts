@@ -183,6 +183,9 @@ export const ms = {
   requestApprovedTitle: "Permohonan diluluskan",
   requestApprovedBody:
     "{name} telah meluluskan permohonan anda. Bayar {amount} untuk mengesahkan tempahan.",
+  paymentLinkTitle: "Lengkapkan tempahan anda",
+  paymentLinkBody:
+    "{name} telah menempah slot untuk anda. Bayar {amount} untuk mengesahkan tempahan.",
   requestDeclinedTitle: "Permohonan ditolak",
   requestDeclinedBody:
     "Maaf, {name} tidak dapat menerima tempahan ini. Anda tidak dicaj.",

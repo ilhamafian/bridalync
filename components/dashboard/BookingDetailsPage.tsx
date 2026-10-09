@@ -7,6 +7,7 @@ import {
   IconAlertTriangle,
   IconCheck,
   IconCopy,
+  IconLink,
   IconPencil,
   IconTrash,
 } from "@tabler/icons-react";
@@ -39,6 +40,12 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  awaitsClientPayment,
+  buildBookingPaymentUrl,
+  hasPayableBalance,
+} from "@/utils/booking/paymentLink";
+import { formatRm } from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
 function BookingIdRow({ id }: { id: string }) {
@@ -70,6 +77,68 @@ function BookingIdRow({ id }: { id: string }) {
           <IconCopy className="size-3.5" aria-hidden />
         )}
       </button>
+    </div>
+  );
+}
+
+function PaymentLinkCard({
+  booking,
+  appUrl,
+}: {
+  booking: SerializedBooking;
+  appUrl: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const balanceOnly = hasPayableBalance(booking);
+  const url = buildBookingPaymentUrl(
+    appUrl,
+    booking.freelancerUsername,
+    booking._id
+  );
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText(url);
+      setError(null);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setError("Couldn't copy. Long-press the link below to copy it.");
+    }
+  }
+
+  return (
+    <div className={cn(glassCardClassName, "flex flex-col gap-3 p-4 text-sm")}>
+      <div>
+        <p className="font-medium">
+          {balanceOnly ? "Balance payment link" : "Payment link"}
+        </p>
+        <p className="mt-0.5 text-muted-foreground">
+          {balanceOnly
+            ? `Send this to ${booking.contact.name} to pay the remaining ${formatRm(booking.invoice.balanceRm)}.`
+            : `Send this to ${booking.contact.name} to pay the deposit or in full. The booking is confirmed once they pay.`}
+        </p>
+        {error ? (
+          <p className="mt-2 break-all text-xs text-muted-foreground select-all">
+            {url}
+          </p>
+        ) : null}
+      </div>
+      <Button
+        type="button"
+        size="lg"
+        className="min-h-11 gap-2"
+        onClick={() => void copyLink()}
+      >
+        {copied ? (
+          <IconCheck className="size-5" />
+        ) : (
+          <IconLink className="size-5" />
+        )}
+        {copied ? "Link copied" : "Copy payment link"}
+      </Button>
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -218,10 +287,13 @@ export function BookingDetailsPage({
   booking,
   competingRequests = [],
   bookedClashes = [],
+  appUrl,
   onBookingUpdated,
   onBookingsDeclined,
 }: {
   booking: SerializedBooking | null;
+  /** Needed for the payment link; null hides it. */
+  appUrl: string | null;
   /** Other open requests that clash with this booking (declined if it's approved). */
   competingRequests?: SerializedBooking[];
   /** Booked clients on this request's travel days (kept if it's approved). */
@@ -275,6 +347,13 @@ export function BookingDetailsPage({
           onBookingUpdated={onBookingUpdated}
           onBookingsDeclined={onBookingsDeclined}
         />
+      ) : null}
+
+      {appUrl &&
+      booking.depositVerificationStatus !== "pending" &&
+      booking.balanceVerificationStatus !== "pending" &&
+      (awaitsClientPayment(booking) || hasPayableBalance(booking)) ? (
+        <PaymentLinkCard booking={booking} appUrl={appUrl} />
       ) : null}
 
       <div className="flex flex-col gap-3 text-sm">

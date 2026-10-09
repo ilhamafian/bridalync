@@ -7,6 +7,7 @@ import {
   paymentSettingSchema,
 } from "@/schemas/settingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
+import { awaitsClientPayment } from "@/utils/booking/paymentLink";
 import { resolveRequestPaymentOption } from "@/utils/booking/pricing";
 import {
   attachManualDepositReceipt,
@@ -16,7 +17,7 @@ import { prepareFileForUpload } from "@/utils/image/upload";
 import { RECEIPT_ALLOWED_TYPES } from "@/utils/payment/manualTransfer";
 import { notifyDepositReceiptSubmitted } from "@/utils/push/bookingNotifications";
 
-/** Transfer receipt for an approved booking request (public; `client` = the stylist's username). */
+/** Transfer receipt for an approved booking request or payment-link booking (public; `client` = the stylist's username). */
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -35,7 +36,7 @@ export async function POST(
       return createResponse({ error: "Booking not found" }, 404);
     }
 
-    if (booking.status !== "pending" || !booking.requestApprovedAt) {
+    if (!awaitsClientPayment(booking)) {
       return createResponse(
         { error: "This booking can no longer be paid." },
         409

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   BookingForm,
   type BookingFormCatalog,
+  type BookingFormOccupancy,
 } from "@/components/booking/BookingForm";
 import { BackButton } from "@/components/dashboard/BackButton";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
@@ -15,11 +16,13 @@ export function BookingFormPage({
   mode,
   booking,
   catalog,
+  occupancy,
   onSaved,
 }: {
   mode: "new" | "edit";
   booking: SerializedBooking | null;
   catalog: BookingFormCatalog;
+  occupancy: BookingFormOccupancy;
   onSaved: (booking: SerializedBooking) => void;
 }) {
   const router = useRouter();
@@ -71,6 +74,7 @@ export function BookingFormPage({
         key={booking?._id ?? "new"}
         booking={booking}
         {...catalog}
+        occupancy={occupancy}
         onSaved={handleSaved}
         onCancel={handleCancel}
         className={cn(

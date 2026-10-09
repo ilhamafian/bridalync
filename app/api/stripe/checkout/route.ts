@@ -11,6 +11,7 @@ import {
   applyPaymentOption,
   resolveRequestPaymentOption,
 } from "@/utils/booking/pricing";
+import { awaitsClientPayment } from "@/utils/booking/paymentLink";
 import { getBookingById, markBookingPaymentFailed } from "@/utils/bookings";
 import {
   createBalanceCheckoutSession,
@@ -22,7 +23,7 @@ const checkoutRequestSchema = z.object({
   bookingId: z.string().min(1),
   freelancerUsername: z.string().min(1),
   purpose: z.enum(["deposit", "balance"]).default("deposit"),
-  /** Approved booking requests only: what the client chose to pay now. */
+  /** Approved booking requests / payment-link bookings only: what the client chose to pay now. */
   paymentOption: z.enum(["deposit", "full"]).optional(),
 });
 
@@ -93,8 +94,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Approved requests keep the deposit invoice until paid; paying in full is applied on confirmation.
-    const requestOption = booking.requestApprovedAt
+    // Approved requests / payment links keep the deposit invoice until paid; paying in full is applied on confirmation.
+    const requestOption = awaitsClientPayment(booking)
       ? resolveRequestPaymentOption(
           booking.invoice,
           booking.sessions,

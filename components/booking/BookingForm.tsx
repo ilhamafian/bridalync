@@ -29,6 +29,11 @@ import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
 import type { RegionPrices, TimeSlot } from "@/schemas/settingSchema";
 import { useRegionQuote } from "@/hooks/use-venue-regions";
 import {
+  SLOT_HOLDING_STATUSES,
+  timeRangesOverlap,
+  toDateKey,
+} from "@/utils/booking/availability";
+import {
   getRegionEventPrice,
   getRegionLabel,
 } from "@/utils/booking/regions";
@@ -110,6 +115,14 @@ export type BookingFormCatalog = {
   travel: BookingFormTravel | null;
 };
 
+/** What's already taken, so the slot picker can disable it (the server rejects these on create). */
+export type BookingFormOccupancy = {
+  bookings: SerializedBooking[];
+  /** YYYY-MM-DD */
+  blockedDates: string[];
+  blockedSlots: Array<{ date: string } & TimeSlot>;
+};
+
 type VenueDistance =
   | { status: "loading" }
   | { status: "ready"; distanceKm: number }
@@ -145,6 +158,8 @@ type BookingFormState = {
   sessions: SessionFormRow[];
   status: DashboardStatus;
   paymentOption: "deposit" | "full";
+  /** New bookings only: create it unpaid for the client to pay from a link. */
+  payByLink: boolean;
   /** Edited (discounted) total as typed; null = use the full price. */
   totalRm: string | null;
 };
@@ -254,6 +269,7 @@ function emptyForm(): BookingFormState {
     sessions: [],
     status: "confirmed",
     paymentOption: "deposit",
+    payByLink: false,
     totalRm: null,
   };
 }
@@ -288,6 +304,7 @@ function bookingToForm(
     })),
     status: booking.status,
     paymentOption: booking.paymentOption,
+    payByLink: false,
     totalRm: booking.invoice.breakdown?.discountRm
       ? String(booking.invoice.totalRm)
       : null,
@@ -318,12 +335,14 @@ export function BookingForm({
   chargeBy,
   timeSlots,
   travel,
+  occupancy,
   onSaved,
   onCancel,
   className,
   actionsClassName,
 }: BookingFormCatalog & {
   booking: SerializedBooking | null;
+  occupancy?: BookingFormOccupancy;
   onSaved: (booking: SerializedBooking) => void;
   onCancel: () => void;
   className?: string;
@@ -335,6 +354,7 @@ export function BookingForm({
   const [form, setForm] = useState<BookingFormState>(() =>
     booking ? bookingToForm(booking, timeSlots) : emptyForm()
   );
+  const payByLink = !editingId && form.payByLink;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hotDates, setHotDates] = useState<HotDateLookup[]>([]);
@@ -647,14 +667,62 @@ export function BookingForm({
   }
 
   function updateSessionDate(clientKey: string, date: string) {
-    if (dayMode === "same_day") {
-      setForm((current) => ({
-        ...current,
-        sessions: current.sessions.map((session) => ({ ...session, date })),
-      }));
-      return;
+    const withDate = (session: SessionFormRow): SessionFormRow => ({
+      ...session,
+      date,
+      time_slots: session.time_slots.filter(
+        (slot) => !getSlotConflict(date, slot)
+      ),
+    });
+    setForm((current) => ({
+      ...current,
+      sessions: current.sessions.map((session) =>
+        dayMode === "same_day" || session.client_key === clientKey
+          ? withDate(session)
+          : session
+      ),
+    }));
+  }
+
+  const takenByDate = useMemo(() => {
+    const byDate = new Map<string, Array<{ slot: TimeSlot; label: string }>>();
+    const add = (dateKey: string, slot: TimeSlot, label: string) => {
+      if (!dateKey) return;
+      const list = byDate.get(dateKey) ?? [];
+      list.push({ slot, label });
+      byDate.set(dateKey, list);
+    };
+    for (const other of occupancy?.bookings ?? []) {
+      if (other._id === editingId) continue;
+      if (!SLOT_HOLDING_STATUSES.includes(other.status)) continue;
+      for (const session of other.sessions) {
+        if (session.status === "cancelled" || !session.time_slot) continue;
+        add(
+          toDateKey(session.date),
+          session.time_slot,
+          `Booked · ${other.contact.name}`
+        );
+      }
     }
-    updateSession(clientKey, { date });
+    for (const blocked of occupancy?.blockedSlots ?? []) {
+      add(blocked.date, blocked, "Blocked");
+    }
+    return byDate;
+  }, [occupancy, editingId]);
+  const blockedDateKeys = useMemo(
+    () => new Set(occupancy?.blockedDates ?? []),
+    [occupancy]
+  );
+
+  /** Why a slot can't be booked on `dateKey`, or null when it's free. */
+  function getSlotConflict(dateKey: string, slot: TimeSlot): string | null {
+    if (!dateKey) return null;
+    if (blockedDateKeys.has(dateKey)) return "Date blocked";
+    return (
+      takenByDate
+        .get(dateKey)
+        ?.find((taken) => timeRangesOverlap(taken.slot, slot))?.label ?? null
+    );
   }
 
   function toggleSessionSlot(session: SessionFormRow, slot: TimeSlot) {
@@ -811,6 +879,7 @@ export function BookingForm({
               packageIds: form.packageIds,
               addOns: selectedAddOns,
               paymentOption: form.paymentOption,
+              ...(!editingId && form.payByLink ? { payByLink: true } : {}),
               ...(discountRm > 0 && editedTotalRm !== null
                 ? { totalRm: roundRm(editedTotalRm) }
                 : {}),
@@ -1074,6 +1143,7 @@ export function BookingForm({
                     const selected = session.time_slots.some(
                       (item) => timeSlotKey(item) === timeSlotKey(slot)
                     );
+                    const conflict = getSlotConflict(session.date, slot);
                     return (
                       <Button
                         key={timeSlotKey(slot)}
@@ -1081,13 +1151,27 @@ export function BookingForm({
                         size="sm"
                         variant={selected ? "default" : "outline"}
                         aria-pressed={selected}
+                        disabled={Boolean(conflict) && !selected}
+                        className={cn(conflict && "h-auto flex-col gap-0 py-1.5")}
                         onClick={() => toggleSessionSlot(session, slot)}
                       >
-                        {slot.startTime} – {slot.endTime}
+                        <span>
+                          {slot.startTime} – {slot.endTime}
+                        </span>
+                        {conflict ? (
+                          <span className="max-w-full truncate text-[11px] font-normal">
+                            {conflict}
+                          </span>
+                        ) : null}
                       </Button>
                     );
                   })}
                 </div>
+                {session.date && blockedDateKeys.has(session.date) ? (
+                  <p className="text-xs text-destructive">
+                    This date is blocked. Pick another date or unblock it first.
+                  </p>
+                ) : null}
                 {isLegacy ? (
                   <p className="text-xs text-muted-foreground">
                     {session.time_slots.length > 1
@@ -1130,7 +1214,8 @@ export function BookingForm({
         <div className="grid grid-cols-2 gap-3">
           <Field label="Status">
             <Select
-              value={form.status}
+              value={payByLink ? "pending" : form.status}
+              disabled={payByLink}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
@@ -1142,23 +1227,32 @@ export function BookingForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {getStatusOptions(booking?.status).map((status) => (
-                  <SelectItem key={status.value} value={status.value}>
-                    {status.label}
-                  </SelectItem>
-                ))}
+                {payByLink ? (
+                  <SelectItem value="pending">Awaiting payment</SelectItem>
+                ) : (
+                  getStatusOptions(booking?.status).map((status) => (
+                    <SelectItem key={status.value} value={status.value}>
+                      {status.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </Field>
           {isGoogleImport ? null : (
             <Field label="Payment">
               <Select
-                value={form.paymentOption}
+                value={payByLink ? "link" : form.paymentOption}
                 onValueChange={(value) =>
-                  setForm((current) => ({
-                    ...current,
-                    paymentOption: value as "deposit" | "full",
-                  }))
+                  setForm((current) =>
+                    value === "link"
+                      ? { ...current, payByLink: true }
+                      : {
+                          ...current,
+                          payByLink: false,
+                          paymentOption: value as "deposit" | "full",
+                        }
+                  )
                 }
               >
                 <SelectTrigger className="w-full">
@@ -1167,11 +1261,21 @@ export function BookingForm({
                 <SelectContent>
                   <SelectItem value="deposit">Deposit</SelectItem>
                   <SelectItem value="full">Full</SelectItem>
+                  {editingId ? null : (
+                    <SelectItem value="link">Client pays by link</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </Field>
           )}
         </div>
+        {payByLink ? (
+          <p className="-mt-1 text-xs text-muted-foreground">
+            The slot is held for this client. After creating the booking, copy
+            its payment link and send it to them; they choose to pay the
+            deposit or in full.
+          </p>
+        ) : null}
 
         {isGoogleImport ? null : (
           <>

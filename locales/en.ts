@@ -188,6 +188,9 @@ export const en: Locale = {
   requestApprovedTitle: "Request approved",
   requestApprovedBody:
     "{name} approved your request. Pay {amount} to confirm your booking.",
+  paymentLinkTitle: "Complete your booking",
+  paymentLinkBody:
+    "{name} has reserved your slot. Pay {amount} to confirm your booking.",
   requestDeclinedTitle: "Request declined",
   requestDeclinedBody:
     "Sorry, {name} can't take this booking. You haven't been charged.",

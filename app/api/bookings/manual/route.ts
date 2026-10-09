@@ -45,7 +45,8 @@ export async function POST(req: NextRequest) {
       packageIds: data.packageIds,
       addOns: data.addOns,
       sessions: data.sessions,
-      paymentOption: data.paymentOption,
+      // Payment-link clients pick deposit or full when paying, so the invoice keeps its deposit split.
+      paymentOption: data.payByLink ? "deposit" : data.paymentOption,
     };
 
     try {
@@ -75,7 +76,9 @@ export async function POST(req: NextRequest) {
       sessions,
       invoice,
       paymentOption,
-      status: data.status,
+      ...(data.payByLink
+        ? { status: "pending" as const, paymentLinkAt: new Date() }
+        : { status: data.status }),
     });
     scheduleBookingCalendarSync(booking._id.toString());
 

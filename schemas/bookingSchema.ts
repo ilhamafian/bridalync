@@ -94,6 +94,8 @@ export const bookingSchema = z.object({
   requestApprovedAt: z.coerce.date().optional(),
   /** Deposit/full picked with a transfer receipt on an approved request; applied when the receipt is approved. */
   requestPaymentOption: z.enum(["deposit", "full"]).optional(),
+  /** Set when the stylist created the booking unpaid (`pending`) for the client to pay via the booking page link. */
+  paymentLinkAt: z.coerce.date().optional(),
   /** Set when the stylist declined a booking request (status becomes `cancelled`). */
   requestDeclinedAt: z.coerce.date().optional(),
   source: z.enum(["bridalync", "google_calendar"]).default("bridalync"),
@@ -245,6 +247,8 @@ export const manualBookingInputSchema = z.object({
   status: bookingStatusSchema.default("confirmed"),
   /** Discounted total; omitted = full price. Must not exceed the calculated subtotal. */
   totalRm: z.number().min(0).optional(),
+  /** Create it unpaid (`pending`, slot held) for the client to pay from a link; `status` is ignored. */
+  payByLink: z.boolean().optional(),
 });
 
 export type ManualBookingInput = z.infer<typeof manualBookingInputSchema>;
