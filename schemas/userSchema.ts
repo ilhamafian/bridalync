@@ -52,6 +52,7 @@ export type DeferredOnboarding = z.infer<typeof deferredOnboardingSchema>;
 export const socialLinksSchema = z.object({
   instagram: z.string().optional(),
   tiktok: z.string().optional(),
+  threads: z.string().optional(),
 });
 
 export type SocialLinks = z.infer<typeof socialLinksSchema>;
@@ -157,6 +158,7 @@ export const profileUpdateSchema = z.object({
     .object({
       instagram: optionalSocialUrl.optional(),
       tiktok: optionalSocialUrl.optional(),
+      threads: optionalSocialUrl.optional(),
     })
     .optional(),
 });
@@ -183,6 +185,7 @@ export function toPublicProfile(user: User): PublicProfile {
       ? {
           instagram: user.social_links.instagram,
           tiktok: user.social_links.tiktok,
+          threads: user.social_links.threads,
         }
       : undefined,
   });
@@ -195,7 +198,7 @@ export function normalizeSocialLinks(
   if (!links) return undefined;
 
   const cleaned: SocialLinks = {};
-  for (const key of ["instagram", "tiktok"] as const) {
+  for (const key of ["instagram", "tiktok", "threads"] as const) {
     const value = links[key]?.trim();
     if (value) cleaned[key] = value;
   }

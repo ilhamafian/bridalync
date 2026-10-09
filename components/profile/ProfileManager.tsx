@@ -42,6 +42,7 @@ import { formatWhatsAppDisplay } from "@/utils/socialLinks";
 export type ProfileSocialLinks = {
   instagram: string;
   tiktok: string;
+  threads: string;
 };
 
 export type ProfileItem = {
@@ -60,6 +61,7 @@ export type ProfileItem = {
 const EMPTY_SOCIALS: ProfileSocialLinks = {
   instagram: "",
   tiktok: "",
+  threads: "",
 };
 
 const inputClassName = cn(
@@ -515,6 +517,18 @@ export function ProfileManager({
               value={socials.tiktok}
               onChange={(e) => setSocialField("tiktok", e.target.value)}
               placeholder="@yourhandle or tiktok.com/@…"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+          </Field>
+          <Field label="Threads" htmlFor="social-threads">
+            <Input
+              id="social-threads"
+              className={inputClassName}
+              value={socials.threads}
+              onChange={(e) => setSocialField("threads", e.target.value)}
+              placeholder="@yourhandle or threads.com/@…"
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}

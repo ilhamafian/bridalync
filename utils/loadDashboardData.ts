@@ -329,6 +329,7 @@ export async function loadDashboardData(
         social_links: {
           instagram: user.social_links?.instagram ?? "",
           tiktok: user.social_links?.tiktok ?? "",
+          threads: user.social_links?.threads ?? "",
         },
       },
       initialReviews: reviewDocs.map(toDashboardReview),

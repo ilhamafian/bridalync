@@ -3,6 +3,7 @@ import { toWhatsAppNumber } from "@/utils/booking/messages";
 
 const INSTAGRAM_HOST = /^(?:www\.)?instagram\.com$/i;
 const TIKTOK_HOST = /^(?:www\.)?tiktok\.com$/i;
+const THREADS_HOST = /^(?:www\.)?threads\.(?:net|com)$/i;
 
 function stripAt(value: string) {
   return value.replace(/^@+/, "").trim();
@@ -49,6 +50,15 @@ export function resolveSocialUrl(
       );
       return handle ? `https://tiktok.com/@${stripAt(handle)}` : null;
     }
+    case "threads": {
+      if (parsed && THREADS_HOST.test(parsed.hostname)) {
+        return parsed.toString();
+      }
+      const handle = stripAt(
+        parsed?.pathname.replace(/^\//, "").split("/")[0] || value
+      );
+      return handle ? `https://www.threads.com/@${handle}` : null;
+    }
     default:
       return null;
   }
@@ -60,7 +70,7 @@ export function socialLinksWithUrls(
   if (!links) return {};
 
   const result: Partial<Record<keyof SocialLinks, string>> = {};
-  for (const key of ["instagram", "tiktok"] as const) {
+  for (const key of ["instagram", "tiktok", "threads"] as const) {
     const raw = links[key];
     if (!raw) continue;
     const url = resolveSocialUrl(key, raw);

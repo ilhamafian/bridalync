@@ -29,6 +29,7 @@ function serializeProfile(user: {
   social_links?: {
     instagram?: string;
     tiktok?: string;
+    threads?: string;
   };
 }) {
   const username = user.username ?? "";
@@ -57,6 +58,7 @@ function serializeProfile(user: {
     social_links: {
       instagram: user.social_links?.instagram ?? "",
       tiktok: user.social_links?.tiktok ?? "",
+      threads: user.social_links?.threads ?? "",
     },
     profileUrl,
     profileDisplayUrl,
