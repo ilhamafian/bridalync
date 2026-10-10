@@ -1,6 +1,11 @@
 import Image from "next/image";
 
-import { LEGAL_URLS, SITE_CONTACT_EMAIL } from "@/lib/site";
+import {
+  LEGAL_BUSINESS_NAME,
+  LEGAL_BUSINESS_REGISTRATION,
+  LEGAL_URLS,
+  SITE_CONTACT_EMAIL,
+} from "@/lib/site";
 
 import { LandingLogo } from "./landing-logo";
 
@@ -37,7 +42,8 @@ export function LandingFooter() {
               availability, clients, and payments in one place.
             </p>
             <p className="mt-3 font-serif text-sm leading-relaxed text-landing-cream-text/70">
-              © {new Date().getFullYear()} Bridalync. All rights reserved.
+              © {new Date().getFullYear()} {LEGAL_BUSINESS_NAME} (
+              {LEGAL_BUSINESS_REGISTRATION}). All rights reserved.
             </p>
           </div>
 
