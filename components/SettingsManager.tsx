@@ -1274,7 +1274,7 @@ export function SettingsManager({
               <IconBadge icon={IconCreditCard} />
               <RowText
                 title="Payment Gateway"
-                description="Clients pay online with Stripe (card / FPX). Setup takes about 3 minutes and requires your SSM and Tax Identification Number."
+                description="Clients pay online with Stripe (card / FPX). A 3% + RM1 payment processing fee is added to the prices clients pay, so you keep your full price. Setup takes about 3 minutes and requires your SSM and Tax Identification Number."
               />
               <RadioGroupItem value="payment_gateway" aria-label="Payment Gateway" />
             </label>
