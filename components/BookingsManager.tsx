@@ -57,7 +57,7 @@ type BookingFilter =
   | "completed"
   | "cancelled";
 
-type BookingSort = "upcoming" | "latest";
+type BookingSort = "upcoming" | "earliest" | "latest";
 
 const BOOKING_FILTERS: { value: BookingFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -73,6 +73,7 @@ const BOOKING_FILTERS: { value: BookingFilter; label: string }[] = [
 
 const BOOKING_SORTS: { value: BookingSort; label: string }[] = [
   { value: "upcoming", label: "Upcoming" },
+  { value: "earliest", label: "Earliest" },
   { value: "latest", label: "Latest" },
 ];
 
@@ -210,6 +211,12 @@ function sortBookings(
   if (sort === "latest") {
     return copy.sort(
       (left, right) => bookingCreatedAtMs(right) - bookingCreatedAtMs(left)
+    );
+  }
+
+  if (sort === "earliest") {
+    return copy.sort(
+      (left, right) => bookingCreatedAtMs(left) - bookingCreatedAtMs(right)
     );
   }
 
