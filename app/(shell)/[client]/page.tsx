@@ -778,12 +778,11 @@ export default function ClientPage() {
   const usesLooks = user?.role === "makeupartist";
   const styleExtrasOffered =
     settings?.charge_by !== "style" && hasStyleExtras(styles);
-  // Charging by event: makeup artists' clients pick a look per session; others get an optional
-  // style step only when some styles carry an extra charge.
+  // Charging by event: makeup artists' clients pick a look per session; others pick a style
+  // only when some styles carry an extra charge.
   const showStyleStep =
     styles.length > 0 &&
     (settings?.charge_by === "style" || usesLooks || styleExtrasOffered);
-  const styleOptional = settings?.charge_by !== "style" && !usesLooks;
 
   const stepOrder = useMemo(
     () =>
@@ -806,9 +805,7 @@ export default function ClientPage() {
     : {
         step: t.stepStyle,
         choose: t.chooseStyle,
-        helper: styleOptional
-          ? t.chooseStyleOptionalHelper
-          : t.chooseStyleHelper,
+        helper: t.chooseStyleHelper,
         forSession: t.chooseStyleForSession,
         noneAvailable: t.noStylesAvailable,
       };
@@ -951,7 +948,7 @@ export default function ClientPage() {
   }, [styleExtrasOffered, sessions, styleVariantBySessionKey, styles]);
 
   const allSessionsStyled =
-    (chargeBy !== "style" && (!showStyleStep || styleOptional)) ||
+    (chargeBy !== "style" && !showStyleStep) ||
     (sessions.length > 0 &&
       sessions.every((session) => styleVariantBySessionKey[session.client_key]));
 
@@ -2236,15 +2233,10 @@ export default function ClientPage() {
                     }))
                   }
                   onVariantChange={(variantId) =>
-                    setStyleVariantBySessionKey((current) => {
-                      const key = currentStyleSession.client_key;
-                      // Optional styles: tapping the picked one again clears it.
-                      const next =
-                        styleOptional && variantId !== null && current[key] === variantId
-                          ? null
-                          : variantId;
-                      return { ...current, [key]: next };
-                    })
+                    setStyleVariantBySessionKey((current) => ({
+                      ...current,
+                      [currentStyleSession.client_key]: variantId,
+                    }))
                   }
                 />
               </div>
@@ -2254,12 +2246,10 @@ export default function ClientPage() {
                 size="lg"
                 className="bg-rose-800 text-white hover:bg-rose-800/90"
                 disabled={
-                  styleOptional
-                    ? !currentStyleSession
-                    : currentStyleSessionIndex < sessions.length - 1
-                      ? !currentStyleSession ||
-                        !styleVariantBySessionKey[currentStyleSession.client_key]
-                      : !allSessionsStyled
+                  currentStyleSessionIndex < sessions.length - 1
+                    ? !currentStyleSession ||
+                      !styleVariantBySessionKey[currentStyleSession.client_key]
+                    : !allSessionsStyled
                 }
                 onClick={goToNextStep}
               >

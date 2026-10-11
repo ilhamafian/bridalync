@@ -300,6 +300,8 @@ export async function resolveBookingQuotation(
     processingFee?: boolean;
     /** Reject venues in states the stylist doesn't serve (client bookings only). */
     enforceServiceArea?: boolean;
+    /** Charging by event: every session needs a style/look (client bookings when one is offered). */
+    requireSessionStyle?: boolean;
   }
 ): Promise<{
   invoice: BookingQuotationSummary;
@@ -469,7 +471,12 @@ export async function resolveBookingQuotation(
     }
   } else {
     for (const session of sessions) {
-      if (!session.style) continue;
+      if (!session.style) {
+        if (options?.requireSessionStyle) {
+          throw new Error("Choose a style for each session.");
+        }
+        continue;
+      }
       const { extraRm, ...resolved } = await resolveEventSessionStyle(
         freelancerUserId,
         session.style

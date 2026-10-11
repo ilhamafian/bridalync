@@ -13,7 +13,10 @@ import {
   resolveBookingQuotation,
   resolveFreelancerForBooking,
 } from "@/utils/booking/createBooking";
+import { hasStyleExtras } from "@/utils/booking/styleExtras";
+import { loadStyleCatalog } from "@/utils/booking/styleCatalog.server";
 import { getBookingById, markBookingPaymentFailed } from "@/utils/bookings";
+import { usesLooks } from "@/utils/styleTerms";
 import { prepareFileForUpload } from "@/utils/image/upload";
 import { RECEIPT_ALLOWED_TYPES } from "@/utils/payment/manualTransfer";
 import { notifyNewClientBooking } from "@/utils/push/bookingNotifications";
@@ -163,9 +166,18 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: message }, 409);
     }
 
+    // Charging by event, clients still pick a look (makeup artists) or a style once some carry an extra.
+    const requireSessionStyle =
+      data.sessions.some((session) => !session.style) &&
+      (usesLooks(freelancer.user.role) ||
+        hasStyleExtras(
+          await loadStyleCatalog(freelancer.userId, freelancer.user.role)
+        ));
+
     const { invoice, packageNames, sessions, dayMode, paymentOption } =
       await resolveBookingQuotation(freelancer.userId, data, {
         enforceServiceArea: true,
+        requireSessionStyle,
       });
 
     const isManualBooking =
