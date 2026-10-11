@@ -97,6 +97,8 @@ export const en: Locale = {
   // Style
   chooseStyle: "Choose your hijab style",
   chooseStyleHelper: "Pick a look for each session.",
+  chooseStyleOptionalHelper:
+    "Optional. Some styles have an extra charge. Tap a picked style again to clear it.",
   chooseStyleForSession: "Choose style for {sessionName}",
   sessionOfTotal: "Session {current} of {total}",
   noStylesAvailable: "No styles available.",

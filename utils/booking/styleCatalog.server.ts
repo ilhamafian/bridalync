@@ -17,6 +17,7 @@ export type CatalogStyle = {
     price: number;
     deposit: number;
     deposit_type?: DepositType;
+    event_extra_price?: number;
     /** Styles have at most one; looks up to five. */
     image_urls: string[];
   }>;
@@ -28,6 +29,7 @@ type StoredVariant = {
   price: number;
   deposit: number;
   deposit_type?: DepositType;
+  event_extra_price?: number;
   image_url?: string;
   image_urls?: string[];
 };
@@ -50,6 +52,9 @@ function toCatalogStyle(doc: {
       price: variant.price,
       deposit: variant.deposit,
       ...(variant.deposit_type ? { deposit_type: variant.deposit_type } : {}),
+      ...(variant.event_extra_price
+        ? { event_extra_price: variant.event_extra_price }
+        : {}),
       image_urls:
         variant.image_urls ?? (variant.image_url ? [variant.image_url] : []),
     })),

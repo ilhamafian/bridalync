@@ -94,6 +94,8 @@ export const ms = {
   // Style
   chooseStyle: "Pilih gaya hijab anda",
   chooseStyleHelper: "Pilih gaya untuk setiap sesi.",
+  chooseStyleOptionalHelper:
+    "Pilihan. Sesetengah gaya ada caj tambahan. Ketik gaya yang dipilih sekali lagi untuk membatalkannya.",
   chooseStyleForSession: "Pilih gaya untuk {sessionName}",
   sessionOfTotal: "Sesi {current} daripada {total}",
   noStylesAvailable: "Tiada gaya tersedia.",

@@ -72,6 +72,8 @@ export type CalculateQuotationInput = {
   chargeBy: "package" | "style";
   selectedPackages: QuotationPackageInput[];
   selectedSessionStyles?: QuotationPackageInput[];
+  /** Charging by event: styles picked with an extra charge; listed like add-ons, not in the deposit. */
+  selectedStyleExtras?: QuotationLineItemInput[];
   selectedAddOns: QuotationLineItemInput[];
   travel?: TravelQuotationInput;
 };
@@ -365,7 +367,9 @@ export function calculateBookingQuotation(
     });
   });
 
-  const addOnPrices = input.selectedAddOns.map((addOn) => ({
+  const styleExtras =
+    input.chargeBy === "package" ? (input.selectedStyleExtras ?? []) : [];
+  const addOnPrices = [...styleExtras, ...input.selectedAddOns].map((addOn) => ({
     label: addOn.name,
     amountRm: roundRm(addOn.price),
   }));

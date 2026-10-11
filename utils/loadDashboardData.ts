@@ -272,6 +272,9 @@ export async function loadDashboardData(
           order: variant.order,
           price: variant.price,
           deposit: variant.deposit,
+          ...(variant.event_extra_price
+            ? { event_extra_price: variant.event_extra_price }
+            : {}),
           image_urls: variant.image_urls,
         })),
       })),

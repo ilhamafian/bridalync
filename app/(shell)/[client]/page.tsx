@@ -61,6 +61,11 @@ import {
 } from "@/utils/booking/pricing";
 import { getMorningCallCharge } from "@/utils/booking/morningCall";
 import {
+  getStyleExtraRm,
+  hasStyleExtras,
+  styleExtraLabel,
+} from "@/utils/booking/styleExtras";
+import {
   isSlotTaken,
   normalizeSessionDate,
   timeSlotsMatch,
@@ -436,6 +441,7 @@ type StyleVariant = {
   price: number;
   deposit: number;
   deposit_type?: DepositType;
+  event_extra_price?: number;
   /** Styles have at most one; makeup artists' looks up to five. */
   image_urls: string[];
 };
@@ -453,6 +459,8 @@ type SelectedStyleForBooking = {
   price: number;
   deposit: number;
   depositType?: DepositType;
+  /** Charging by event: added on top of the event price. */
+  extraRm: number;
   categoryName: string;
 };
 
@@ -592,6 +600,7 @@ function resolveStyleVariant(
     price: variant.price,
     deposit: variant.deposit,
     depositType: variant.deposit_type,
+    extraRm: getStyleExtraRm(variant),
     categoryName: category.name,
   };
 }
@@ -767,9 +776,14 @@ export default function ClientPage() {
     isSlotTaken(selectedDate, selectedTimeSlot, bookedSlots, sessions);
 
   const usesLooks = user?.role === "makeupartist";
-  // Makeup artists' clients pick a look per session even when charging by event (unpriced).
+  const styleExtrasOffered =
+    settings?.charge_by !== "style" && hasStyleExtras(styles);
+  // Charging by event: makeup artists' clients pick a look per session; others get an optional
+  // style step only when some styles carry an extra charge.
   const showStyleStep =
-    styles.length > 0 && (settings?.charge_by === "style" || usesLooks);
+    styles.length > 0 &&
+    (settings?.charge_by === "style" || usesLooks || styleExtrasOffered);
+  const styleOptional = settings?.charge_by !== "style" && !usesLooks;
 
   const stepOrder = useMemo(
     () =>
@@ -792,7 +806,9 @@ export default function ClientPage() {
     : {
         step: t.stepStyle,
         choose: t.chooseStyle,
-        helper: t.chooseStyleHelper,
+        helper: styleOptional
+          ? t.chooseStyleOptionalHelper
+          : t.chooseStyleHelper,
         forSession: t.chooseStyleForSession,
         noneAvailable: t.noStylesAvailable,
       };
@@ -820,29 +836,40 @@ export default function ClientPage() {
     [user]
   );
 
-  const styleCategories = useMemo(
-    () =>
-      [...styles]
-        .sort((a, b) => a.order - b.order)
-        .map((style) => {
-          const id = normalizePackageId(style._id);
-          return {
-            id,
-            name: style.name,
-            variants: [...style.variants]
-              .sort((a, b) => a.order - b.order)
-              .map((variant) => ({
+  const styleCategories = useMemo(() => {
+    const feeIncluded = settings?.payment.method === "payment_gateway";
+    return [...styles]
+      .sort((a, b) => a.order - b.order)
+      .map((style) => {
+        const id = normalizePackageId(style._id);
+        return {
+          id,
+          name: style.name,
+          variants: [...style.variants]
+            .sort((a, b) => a.order - b.order)
+            .map((variant) => {
+              const extraRm = styleExtrasOffered ? getStyleExtraRm(variant) : 0;
+              return {
                 id: buildStyleVariantId(id, variant.order),
                 name: variant.name,
                 price: variant.price,
                 deposit: variant.deposit,
                 imageSrcs: variant.image_urls,
-              })),
-          };
-        })
-        .filter((style) => style.id.length > 0),
-    [styles]
-  );
+                ...(extraRm > 0
+                  ? {
+                      priceLabel: `+${formatRm(
+                        feeIncluded
+                          ? withPaymentProcessingFeeRm(extraRm, false)
+                          : extraRm
+                      )}`,
+                    }
+                  : {}),
+              };
+            }),
+        };
+      })
+      .filter((style) => style.id.length > 0);
+  }, [styles, styleExtrasOffered, settings?.payment.method]);
 
   const chargeBy = settings?.charge_by ?? "package";
 
@@ -905,8 +932,26 @@ export default function ClientPage() {
     return labels;
   }, [sessions, styleVariantBySessionKey, styles]);
 
+  const selectedStyleExtras = useMemo(() => {
+    if (!styleExtrasOffered) return [];
+    return sessions.flatMap((session) => {
+      const variantId = styleVariantBySessionKey[session.client_key];
+      const variant = variantId ? resolveStyleVariant(variantId, styles) : null;
+      if (!variant || variant.extraRm <= 0) return [];
+      return [
+        {
+          name: styleExtraLabel(
+            session.name,
+            `${variant.categoryName} — ${variant.name}`
+          ),
+          price: variant.extraRm,
+        },
+      ];
+    });
+  }, [styleExtrasOffered, sessions, styleVariantBySessionKey, styles]);
+
   const allSessionsStyled =
-    (chargeBy !== "style" && !showStyleStep) ||
+    (chargeBy !== "style" && (!showStyleStep || styleOptional)) ||
     (sessions.length > 0 &&
       sessions.every((session) => styleVariantBySessionKey[session.client_key]));
 
@@ -1034,6 +1079,7 @@ export default function ClientPage() {
           : [],
       selectedSessionStyles:
         chargeBy === "style" ? selectedSessionStyles : undefined,
+      selectedStyleExtras,
       selectedAddOns: selectedAddOnItems.map((addOn) => ({
         name: addOn.name,
         price: addOn.price,
@@ -1063,6 +1109,7 @@ export default function ClientPage() {
     selectedPackageId,
     eventPriceRm,
     selectedSessionStyles,
+    selectedStyleExtras,
     selectedAddOnItems,
     sessions,
     distanceKmBySessionKey,
@@ -2189,10 +2236,15 @@ export default function ClientPage() {
                     }))
                   }
                   onVariantChange={(variantId) =>
-                    setStyleVariantBySessionKey((current) => ({
-                      ...current,
-                      [currentStyleSession.client_key]: variantId,
-                    }))
+                    setStyleVariantBySessionKey((current) => {
+                      const key = currentStyleSession.client_key;
+                      // Optional styles: tapping the picked one again clears it.
+                      const next =
+                        styleOptional && variantId !== null && current[key] === variantId
+                          ? null
+                          : variantId;
+                      return { ...current, [key]: next };
+                    })
                   }
                 />
               </div>
@@ -2202,10 +2254,12 @@ export default function ClientPage() {
                 size="lg"
                 className="bg-rose-800 text-white hover:bg-rose-800/90"
                 disabled={
-                  currentStyleSessionIndex < sessions.length - 1
-                    ? !currentStyleSession ||
-                      !styleVariantBySessionKey[currentStyleSession.client_key]
-                    : !allSessionsStyled
+                  styleOptional
+                    ? !currentStyleSession
+                    : currentStyleSessionIndex < sessions.length - 1
+                      ? !currentStyleSession ||
+                        !styleVariantBySessionKey[currentStyleSession.client_key]
+                      : !allSessionsStyled
                 }
                 onClick={goToNextStep}
               >

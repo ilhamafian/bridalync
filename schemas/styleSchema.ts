@@ -9,6 +9,8 @@ export const styleVariantSchema = z.object({
     price: z.number(),
     deposit: z.number(),
     deposit_type: depositTypeSchema.optional(),
+    /** Charging by event: added on top of the event price when a client picks it (missing/0 = none). */
+    event_extra_price: z.number().min(0).optional(),
 });
 
 export const styleSchema = z.object({

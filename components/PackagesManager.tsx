@@ -61,6 +61,7 @@ import type { RegionId, RegionPrices } from "@/schemas/settingSchema";
 import { getEventDayMode, getEventSessions } from "@/utils/booking/events";
 import { formatDeposit, formatRm } from "@/utils/booking/pricing";
 import { getRegionPriceRange, omitRegions } from "@/utils/booking/regions";
+import { getStyleExtraRm } from "@/utils/booking/styleExtras";
 import type { StyleTerms } from "@/utils/styleTerms";
 import {
   buildCatalogEditorHref,
@@ -93,6 +94,7 @@ export type StyleItem = {
     price: number;
     deposit: number;
     deposit_type?: DepositType;
+    event_extra_price?: number;
   }[];
 };
 
@@ -781,6 +783,10 @@ export function PackagesManager({
                                   deposit
                                 </span>
                               ) : null}
+                            </span>
+                          ) : getStyleExtraRm(variant) > 0 ? (
+                            <span className="shrink-0 font-medium tabular-nums">
+                              +{formatRm(getStyleExtraRm(variant))}
                             </span>
                           ) : null}
                         </li>

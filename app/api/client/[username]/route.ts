@@ -7,6 +7,7 @@ import { toPublicBlockedSlot } from "@/utils/booking/availability.server";
 import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { loadStyleCatalog } from "@/utils/booking/styleCatalog.server";
+import { hasStyleExtras } from "@/utils/booking/styleExtras";
 import { usesLooks } from "@/utils/styleTerms";
 import { UserModel } from "@/models/User";
 import { toIdString } from "@/schemas/objectId";
@@ -51,9 +52,11 @@ export async function GET(request: NextRequest) {
     });
 
     const chargeBy = publicSettings.charge_by ?? "package";
+    const catalog = await loadStyleCatalog(user_id, user.role);
+    // Charging by event, styles are only offered when some carry an extra charge (looks always).
     const styles =
-      chargeBy === "style" || usesLooks(user.role)
-        ? await loadStyleCatalog(user_id, user.role)
+      chargeBy === "style" || usesLooks(user.role) || hasStyleExtras(catalog)
+        ? catalog
         : [];
     const add_ons = (await new AddOnModel().getAddOnsByUserId(user_id)) ?? [];
 

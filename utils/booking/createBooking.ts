@@ -38,6 +38,7 @@ import {
 import { resolveSessionDistancesKm } from "@/utils/booking/roadDistance.server";
 import { countSessionSlots } from "@/utils/booking/slots";
 import { findCatalogStyle } from "@/utils/booking/styleCatalog.server";
+import { getStyleExtraRm, styleExtraLabel } from "@/utils/booking/styleExtras";
 import {
   buildHotDatePriceMap,
   getEventHotDatePrice,
@@ -125,11 +126,14 @@ async function resolveSessionStyle(
   };
 }
 
-/** A look picked while charging by event: stored on the session, not priced. */
-async function resolveUnpricedSessionStyle(
+/**
+ * A style/look picked while charging by event: stored on the session; only its extra charge
+ * (if any) is priced, on top of the event.
+ */
+async function resolveEventSessionStyle(
   freelancerUserId: string,
   styleInput: NonNullable<BookingSessionInput["style"]>
-): Promise<Pick<ResolvedSessionStyle, "styleId" | "styleName">> {
+): Promise<Pick<ResolvedSessionStyle, "styleId" | "styleName"> & { extraRm: number }> {
   const parsed = parseStyleVariantId(styleInput.id);
   if (!parsed) {
     throw new Error("Invalid style selection");
@@ -150,6 +154,7 @@ async function resolveUnpricedSessionStyle(
   return {
     styleId: styleInput.id,
     styleName: `${styleDoc.name} — ${variant.name}`,
+    extraRm: getStyleExtraRm(variant),
   };
 }
 
@@ -437,6 +442,7 @@ export async function resolveBookingQuotation(
         morningCall?: { count: number; amountRm: number };
       }>
     | undefined;
+  const selectedStyleExtras: Array<{ name: string; price: number }> = [];
 
   if (chargeBy === "style") {
     selectedSessionStyles = [];
@@ -464,10 +470,17 @@ export async function resolveBookingQuotation(
   } else {
     for (const session of sessions) {
       if (!session.style) continue;
-      resolvedSessionStyles.set(
-        session.client_key,
-        await resolveUnpricedSessionStyle(freelancerUserId, session.style)
+      const { extraRm, ...resolved } = await resolveEventSessionStyle(
+        freelancerUserId,
+        session.style
       );
+      resolvedSessionStyles.set(session.client_key, resolved);
+      if (extraRm > 0) {
+        selectedStyleExtras.push({
+          name: styleExtraLabel(session.name, resolved.styleName),
+          price: extraRm,
+        });
+      }
     }
   }
 
@@ -563,6 +576,7 @@ export async function resolveBookingQuotation(
     chargeBy,
     selectedPackages,
     selectedSessionStyles,
+    selectedStyleExtras,
     selectedAddOns,
     travel:
       travelPricing.kind === "distance"

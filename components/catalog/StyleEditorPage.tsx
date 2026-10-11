@@ -36,6 +36,7 @@ type VariantRow = {
   price: string;
   deposit: string;
   depositType: DepositType;
+  extraPrice: string;
   image_urls: string[];
 };
 
@@ -50,6 +51,7 @@ function emptyVariant(): VariantRow {
     price: "",
     deposit: "",
     depositType: "fixed",
+    extraPrice: "",
     image_urls: [],
   };
 }
@@ -62,6 +64,7 @@ function toRows(style: StyleItem | null): VariantRow[] {
     price: variant.price.toString(),
     deposit: variant.deposit.toString(),
     depositType: variant.deposit_type ?? "fixed",
+    extraPrice: variant.event_extra_price ? variant.event_extra_price.toString() : "",
     image_urls: variant.image_urls,
   }));
 }
@@ -131,12 +134,18 @@ export function StyleEditorPage({
         );
         return;
       }
+      const extraPrice = Number(variant.extraPrice.trim() || 0);
+      if (!Number.isFinite(extraPrice) || extraPrice < 0) {
+        setError(`Enter a valid extra charge for ${variant.name.trim()}.`);
+        return;
+      }
       payloadVariants.push({
         name: variant.name.trim(),
         order: index,
         price,
         deposit: deposit ?? 0,
         deposit_type: variant.depositType,
+        event_extra_price: Math.round(extraPrice),
         ...(styleTerms.kind === "look"
           ? { image_urls: variant.image_urls }
           : { image_url: variant.image_urls[0] }),
@@ -199,7 +208,8 @@ export function StyleEditorPage({
           </div>
           {chargeBy === "package" ? (
             <p className="text-xs text-muted-foreground">
-              You charge by event, so prices are set on your events.
+              You charge by event, so prices are set on your events. A variant can
+              add an extra charge on top.
             </p>
           ) : null}
         </div>
@@ -282,7 +292,27 @@ export function StyleEditorPage({
                     }
                   />
                 </>
-              ) : null}
+              ) : (
+                <div className="flex flex-col gap-1.5">
+                  <Label>Extra charge (RM, optional)</Label>
+                  <Input
+                    className={inputClassName}
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={variant.extraPrice}
+                    onChange={(event) =>
+                      updateVariant(variant.id, { extraPrice: event.target.value })
+                    }
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Added on top of the event price when a client picks this{" "}
+                    {styleTerms.one}. Leave blank for no extra.
+                  </p>
+                  <ProcessingFeeHint amountRm={variant.extraPrice} includeFixed={false} />
+                </div>
+              )}
 
               <VariantImageUpload
                 value={variant.image_urls}

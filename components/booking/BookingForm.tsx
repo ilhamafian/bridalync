@@ -58,6 +58,7 @@ import {
   type HotDateLookup,
 } from "@/utils/booking/hotDates";
 import { getMorningCallCharge } from "@/utils/booking/morningCall";
+import { getStyleExtraRm, hasStyleExtras } from "@/utils/booking/styleExtras";
 import {
   calculatePaymentProcessingFeeRm,
   formatRm,
@@ -92,6 +93,7 @@ export type StyleCatalogItem = {
     order: number;
     price: number;
     deposit: number;
+    event_extra_price?: number;
     image_urls: string[];
   }[];
 };
@@ -137,6 +139,8 @@ type VenueDistance =
   | { status: "loading" }
   | { status: "ready"; distanceKm: number }
   | { status: "error" };
+
+const NO_STYLE_VALUE = "__none__";
 
 function venueKey(location: LatLng) {
   return `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`;
@@ -512,19 +516,27 @@ export function BookingForm({
     return { status, feeRm };
   }, [distanceTravel, form.sessions, venueDistances, timeSlots]);
 
+  const styleExtrasOffered = chargeBy === "package" && hasStyleExtras(styles);
+  const styleOptional = chargeBy === "package" && styleTerms.kind !== "look";
   const styleOptions = useMemo(
     () =>
       styles.flatMap((style) =>
-        style.variants.map((variant) => ({
-          id: `${style._id}:${variant.order}`,
-          label: `${style.name} — ${variant.name}`,
-          name: variant.name,
-          price: variant.price,
-          deposit: variant.deposit,
-          categoryName: style.name,
-        }))
+        style.variants.map((variant) => {
+          const extraRm = chargeBy === "package" ? getStyleExtraRm(variant) : 0;
+          return {
+            id: `${style._id}:${variant.order}`,
+            label: `${style.name} — ${variant.name}${
+              extraRm > 0 ? ` (+${formatRm(extraRm)})` : ""
+            }`,
+            name: variant.name,
+            price: variant.price,
+            deposit: variant.deposit,
+            extraRm,
+            categoryName: style.name,
+          };
+        })
       ),
-    [styles]
+    [styles, chargeBy]
   );
 
   const resolveSessionStyle = useCallback(
@@ -610,6 +622,16 @@ export function BookingForm({
       regionPricing && !regionPricing.perEvent && regionPriceRm !== null
         ? roundRm(regionPriceRm)
         : 0;
+    const styleExtrasRm =
+      chargeBy === "package"
+        ? form.sessions.reduce(
+            (sum, session) =>
+              sum +
+              (styleOptions.find((option) => option.id === session.styleId)
+                ?.extraRm ?? 0),
+            0
+          )
+        : 0;
     const morningCallRm =
       getMorningCallCharge(
         morningCall,
@@ -618,9 +640,15 @@ export function BookingForm({
           .map((session) => ({ time_slot: mergeSlots(session.time_slots) }))
       )?.amountRm ?? 0;
     return (
-      sessionsRm + addOnsRm + travelQuote.feeRm + regionFeeRm + morningCallRm
+      sessionsRm +
+      addOnsRm +
+      styleExtrasRm +
+      travelQuote.feeRm +
+      regionFeeRm +
+      morningCallRm
     );
   }, [
+    styleOptions,
     morningCall,
     travelQuote.feeRm,
     regionPricing,
@@ -1130,19 +1158,35 @@ export function BookingForm({
                   {session.name || `Session ${index + 1}`}
                 </p>
               )}
-              {(chargeBy === "style" || styleTerms.kind === "look") &&
+              {(chargeBy === "style" ||
+                styleTerms.kind === "look" ||
+                styleExtrasOffered) &&
               !isGoogleImport ? (
-                <Field label={styleTerms.One}>
+                <Field
+                  label={
+                    styleOptional ? `${styleTerms.One} (optional)` : styleTerms.One
+                  }
+                >
                   <Select
-                    value={session.styleId || undefined}
+                    value={
+                      session.styleId ||
+                      (styleOptional ? NO_STYLE_VALUE : undefined)
+                    }
                     onValueChange={(value) =>
-                      updateSession(session.client_key, { styleId: value })
+                      updateSession(session.client_key, {
+                        styleId: value === NO_STYLE_VALUE ? "" : value,
+                      })
                     }
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder={`Select ${styleTerms.one}`} />
                     </SelectTrigger>
                     <SelectContent>
+                      {styleOptional ? (
+                        <SelectItem value={NO_STYLE_VALUE}>
+                          No {styleTerms.one}
+                        </SelectItem>
+                      ) : null}
                       {styleOptions.map((option) => (
                         <SelectItem key={option.id} value={option.id}>
                           {option.label}
