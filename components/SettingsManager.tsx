@@ -979,7 +979,7 @@ export function SettingsManager({
                 title={`By ${styleTerms.one}`}
                 description={
                   styleTerms.kind === "look"
-                    ? "Clients pick a look for each session"
+                    ? "Recommended for hijab stylists"
                     : "Recommended for hijab stylists"
                 }
               />
