@@ -927,6 +927,37 @@ export function SettingsManager({
         saving={savingSection === "charge_by"}
         onSave={saveChargeBy}
       >
+        <SettingsSection title="Charge clients by">
+          <RadioGroup
+            value={chargeBy}
+            onValueChange={(value) => setChargeBy(value as "package" | "style")}
+            className={settingsListClassName}
+          >
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconPackage} />
+              <RowText
+                title="By event"
+                description="Recommended for makeup artists"
+              />
+              <RadioGroupItem value="package" aria-label="By event" />
+            </label>
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconSparkles} />
+              <RowText
+                title={`By ${styleTerms.one}`}
+                description={
+                  styleTerms.kind === "look"
+                    ? "Recommended for hijab stylists"
+                    : "Recommended for hijab stylists"
+                }
+              />
+              <RadioGroupItem value="style" aria-label={`By ${styleTerms.one}`} />
+            </label>
+          </RadioGroup>
+          <p className="text-xs text-muted-foreground">
+            Changing this resets your default time slots.
+          </p>
+        </SettingsSection>
         <SettingsSection title="Your role">
           <RadioGroup
             value={role ?? ""}
@@ -958,37 +989,6 @@ export function SettingsManager({
                 : "Only makeup artists offer looks. Your current looks won't be shown to clients; add your styles in Events & styles."}
             </p>
           ) : null}
-        </SettingsSection>
-        <SettingsSection title="Charge clients by">
-          <RadioGroup
-            value={chargeBy}
-            onValueChange={(value) => setChargeBy(value as "package" | "style")}
-            className={settingsListClassName}
-          >
-            <label className={cn(settingsRowClassName, "cursor-pointer")}>
-              <IconBadge icon={IconPackage} />
-              <RowText
-                title="By event"
-                description="Recommended for makeup artists"
-              />
-              <RadioGroupItem value="package" aria-label="By event" />
-            </label>
-            <label className={cn(settingsRowClassName, "cursor-pointer")}>
-              <IconBadge icon={IconSparkles} />
-              <RowText
-                title={`By ${styleTerms.one}`}
-                description={
-                  styleTerms.kind === "look"
-                    ? "Recommended for hijab stylists"
-                    : "Recommended for hijab stylists"
-                }
-              />
-              <RadioGroupItem value="style" aria-label={`By ${styleTerms.one}`} />
-            </label>
-          </RadioGroup>
-          <p className="text-xs text-muted-foreground">
-            Changing this resets your default time slots.
-          </p>
         </SettingsSection>
       </SettingsPanel>
     );
