@@ -96,7 +96,7 @@ export function DashboardHome({
 
   return (
     <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <section className="pr-12">
+      <section className="pr-24">
         <h2 className="text-xl font-semibold tracking-tight">
           {greeting}, {firstName}
         </h2>

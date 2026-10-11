@@ -81,7 +81,7 @@ export const en: Locale = {
   distanceUnavailable: "Road distance unavailable right now.",
   accommodationTitle: "Accommodation & transport",
   accommodationDescription:
-    "Your venue is outside {state}, where your {role} is based. You'll need to provide accommodation and transport (including flights, if applicable) for your {role}. Please consult your {role} to arrange this.",
+    "Your venue is outside {state}, where your {role} is based. Accommodation and transport (including flights, if applicable) for your {role} will need to be paid by you. Please consult your {role} to arrange this.",
   accommodationCancel: "Change location",
   accommodationAgree: "I understand",
   unservedRegionTitle: "Location not available",
@@ -120,7 +120,7 @@ export const en: Locale = {
   noAddOnsAvailable: "No add-ons available.",
 
   // Contact
-  almostThere: "Almost there!\nJust need some final info...",
+  almostThere: "Don't go yet!\nWe just need some few info...",
   phoneNumber: "Phone number",
   email: "Email",
   emailPlaceholder: "your@email.com",

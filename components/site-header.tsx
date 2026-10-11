@@ -2,26 +2,41 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { IconBell } from "@tabler/icons-react";
+import { IconBell, IconSearch } from "@tabler/icons-react";
 
 import { useUnreadNotificationCount } from "@/components/dashboard/UnreadNotifications";
 import { getDashboardSection, NAVBAR_SECTIONS } from "@/utils/dashboardShell";
 
+const iconButtonClassName =
+  "pointer-events-auto relative flex size-10 items-center justify-center rounded-full border border-zinc-900/10 bg-white/40 text-rose-900 shadow-sm backdrop-blur-sm transition-colors hover:bg-white/55 dark:border-white/20 dark:bg-white/10 dark:text-rose-400 dark:hover:bg-white/15";
+
 export function SiteHeader() {
   const pathname = usePathname();
   const unreadCount = useUnreadNotificationCount();
+  const section = getDashboardSection(pathname);
 
-  if (!NAVBAR_SECTIONS.includes(getDashboardSection(pathname))) {
+  if (!NAVBAR_SECTIONS.includes(section)) {
     return null;
   }
 
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end px-4">
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end gap-2 px-4">
+      {section === "home" ? (
+        <Link
+          href="/dashboard/bookings"
+          scroll={false}
+          prefetch
+          className={iconButtonClassName}
+        >
+          <IconSearch className="size-5" aria-hidden />
+          <span className="sr-only">Find bookings</span>
+        </Link>
+      ) : null}
       <Link
         href="/dashboard/notifications"
         scroll={false}
         prefetch
-        className="pointer-events-auto relative flex size-10 items-center justify-center rounded-full border border-zinc-900/10 bg-white/40 text-rose-900 shadow-sm backdrop-blur-sm transition-colors hover:bg-white/55 dark:border-white/20 dark:bg-white/10 dark:text-rose-400 dark:hover:bg-white/15"
+        className={iconButtonClassName}
       >
         <IconBell className="size-5" aria-hidden />
         {unreadCount > 0 ? (

@@ -78,7 +78,7 @@ export const ms = {
   distanceUnavailable: "Jarak jalan raya tidak tersedia buat masa ini.",
   accommodationTitle: "Penginapan & pengangkutan",
   accommodationDescription:
-    "Lokasi anda di luar {state}, tempat {role} anda berpangkalan. Anda perlu sediakan penginapan dan pengangkutan (termasuk tiket penerbangan, jika berkaitan) untuk {role} anda. Sila berbincang dengan {role} anda untuk mengaturkannya.",
+    "Lokasi anda di luar {state}, tempat {role} anda berpangkalan. Kos penginapan dan pengangkutan (termasuk tiket penerbangan, jika berkaitan) untuk {role} anda perlu dibayar oleh anda. Sila berbincang dengan {role} anda untuk mengaturkannya.",
   accommodationCancel: "Tukar lokasi",
   accommodationAgree: "Saya faham",
   unservedRegionTitle: "Lokasi tidak tersedia",
@@ -116,7 +116,7 @@ export const ms = {
   noAddOnsAvailable: "Tiada tambahan tersedia.",
 
   // Contact
-  almostThere: "Hampir selesai!\nKami cuma perlukan beberapa maklumat tambahan...",
+  almostThere: "Jangan pergi dulu!\nKami cuma perlukan sedikit maklumat lagi...",
   phoneNumber: "Nombor telefon",
   email: "E-mel",
   emailPlaceholder: "emel@anda.com",
