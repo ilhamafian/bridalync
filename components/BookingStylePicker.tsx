@@ -200,7 +200,7 @@ function SwipeCarousel<T>({
             size="icon"
             aria-label={labels.previous}
             disabled={!canGoPrev}
-            className="pointer-events-auto absolute top-1/2 left-2 size-9 -translate-y-1/2 rounded-full bg-white/90 shadow-sm backdrop-blur-sm hover:bg-white disabled:opacity-40"
+            className="pointer-events-auto absolute top-1/2 left-2 size-9 -translate-y-1/2 rounded-full bg-white/90 text-zinc-900 shadow-sm backdrop-blur-sm hover:bg-white disabled:opacity-40"
             onClick={() => goToIndex(activeIndex - 1)}
           >
             <ChevronLeftIcon className="size-4" />
@@ -211,7 +211,7 @@ function SwipeCarousel<T>({
             size="icon"
             aria-label={labels.next}
             disabled={!canGoNext}
-            className="pointer-events-auto absolute top-1/2 size-9 -translate-y-1/2 rounded-full bg-white/90 shadow-sm backdrop-blur-sm hover:bg-white disabled:opacity-40"
+            className="pointer-events-auto absolute top-1/2 size-9 -translate-y-1/2 rounded-full bg-white/90 text-zinc-900 shadow-sm backdrop-blur-sm hover:bg-white disabled:opacity-40"
             style={{ left: `calc(100% + ${CARD_GAP_PX}px)` }}
             onClick={() => goToIndex(activeIndex + 1)}
           >
