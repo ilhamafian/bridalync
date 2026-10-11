@@ -55,7 +55,7 @@ export function sessionLineItemLabel(name: string, slotCount = 1) {
 
 export type TravelQuotationInput =
   | DistanceTravelQuotationInput
-  /** Fixed region fee, folded into the first priced item (no separate travel fee). */
+  /** Fixed region fee, split evenly across the priced items (no separate travel fee). */
   | { kind: "region"; feeRm: number };
 
 export type DistanceTravelQuotationInput = {
@@ -79,6 +79,15 @@ export type CalculateQuotationInput = {
 /** Round money to whole ringgit; `formatRm` still shows `.00`. */
 export function roundRm(amount: number) {
   return Math.round(amount);
+}
+
+/** Splits `amountRm` into `count` whole-ringgit shares; leftover ringgit go to the first shares. */
+export function splitEvenlyRm(amountRm: number, count: number): number[] {
+  if (count <= 0) return [];
+  const total = roundRm(amountRm);
+  const base = Math.floor(total / count);
+  const remainder = total - base * count;
+  return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0));
 }
 
 /** Deposit in RM for an item charged at `priceRm`; percent deposits are a share of that price. */
@@ -182,12 +191,13 @@ export function applyPaymentProcessingFee(
     travelFeeRm -
     quotation.totalRm;
   sessions[0] = { ...sessions[0], amountRm: sessions[0].amountRm + feeRm - assignedRm };
+  const travelShares = splitEvenlyRm(travelFeeRm, sessions.length);
 
   return {
     lineItems: [
       ...sessions.map((item, index) => ({
         label: item.label,
-        amountRm: item.amountRm + (index === 0 ? travelFeeRm : 0),
+        amountRm: item.amountRm + travelShares[index],
       })),
       ...addOns.map(({ label, amountRm }) => ({ label, amountRm })),
     ],
@@ -333,17 +343,17 @@ export function calculateBookingQuotation(
       ? input.selectedPackages
       : (input.selectedSessionStyles ?? []);
 
+  const regionShares = splitEvenlyRm(regionFeeRm, priced.length);
+  const travelShares = splitEvenlyRm(travelFeeRm, priced.length);
+
   priced.forEach((item, index) => {
     const slotCount = Math.max(1, item.slotCount ?? 1);
     const label = sessionLineItemLabel(item.name, slotCount);
     const morningCallRm = roundRm(item.morningCall?.amountRm ?? 0);
-    const price =
-      item.price * slotCount +
-      morningCallRm +
-      (index === 0 ? regionFeeRm : 0);
+    const price = item.price * slotCount + morningCallRm + regionShares[index];
     lineItems.push({
       label,
-      amountRm: roundRm(price + (index === 0 ? travelFeeRm : 0)),
+      amountRm: roundRm(price + travelShares[index]),
     });
     sessionPrices.push({
       label,
