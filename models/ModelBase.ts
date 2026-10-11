@@ -9,7 +9,7 @@ import {
   WithId,
 } from "mongodb";
 import { ZodSchema } from "zod";
-import clientPromise from "@/lib/mongodb";
+import { getMongoClient } from "@/lib/mongodb";
 
 export abstract class ModelBase<T extends Record<string, any>> {
   protected abstract collectionName: string;
@@ -20,7 +20,7 @@ export abstract class ModelBase<T extends Record<string, any>> {
 
   static async initialize() {
     if (!ModelBase.client || !ModelBase.db) {
-      ModelBase.client = await clientPromise;
+      ModelBase.client = await getMongoClient();
       const dbName =
         process.env.MONGODB_DATABASE ?? process.env.DB_NAME ?? "test";
       ModelBase.db = ModelBase.client.db(dbName);
