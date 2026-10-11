@@ -117,6 +117,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -684,6 +685,10 @@ export default function ClientPage() {
   /** The style/look step picks for one session at a time. */
   const [styleSessionIndex, setStyleSessionIndex] = useState(0);
   const stepScrollRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    stepScrollRef.current?.scrollTo({ top: 0 });
+  }, [step]);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
