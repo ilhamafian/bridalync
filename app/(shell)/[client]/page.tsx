@@ -4,6 +4,7 @@ import { BookingAddOnPicker } from "@/components/BookingAddOnPicker";
 import { BookingContactForm } from "@/components/BookingContactForm";
 import {
   BookingClientInfoForm,
+  BookingInstagramField,
   type MoodboardPhoto,
 } from "@/components/booking/BookingClientInfoForm";
 import { BookingReviewDetails } from "@/components/booking/BookingReviewDetails";
@@ -2268,11 +2269,15 @@ export default function ClientPage() {
               className="mb-6 w-full max-w-md text-center text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
             />
           <div className="flex w-full flex-col items-end gap-4">
-            <BookingContactForm value={contact} onChange={setContact} />
+            <BookingContactForm value={contact} onChange={setContact}>
+              <BookingInstagramField
+                clientInfo={clientInfo}
+                value={instagram}
+                onChange={setInstagram}
+              />
+            </BookingContactForm>
             <BookingClientInfoForm
               clientInfo={clientInfo}
-              instagram={instagram}
-              onInstagramChange={setInstagram}
               answers={clientAnswers}
               onAnswersChange={setClientAnswers}
               moodboard={moodboard}

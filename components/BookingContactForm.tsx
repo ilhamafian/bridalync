@@ -1,5 +1,7 @@
 "use client"
 
+import type { ReactNode } from "react"
+
 import { Card, CardContent } from "@/components/ui/card"
 import { useLocale } from "@/components/LocaleProvider"
 import { PhoneNumberInput } from "@/components/PhoneNumberInput"
@@ -9,6 +11,8 @@ import { cn } from "@/lib/utils"
 type BookingContactFormProps = {
   value: Client
   onChange: (contact: Client) => void
+  /** Extra fields shown in the same card, after email. */
+  children?: ReactNode
 }
 
 const inputClassName = cn(
@@ -18,7 +22,11 @@ const inputClassName = cn(
   "dark:bg-input/30"
 )
 
-export function BookingContactForm({ value, onChange }: BookingContactFormProps) {
+export function BookingContactForm({
+  value,
+  onChange,
+  children,
+}: BookingContactFormProps) {
   const { t } = useLocale()
 
   function updateField<K extends keyof Client>(
@@ -58,6 +66,7 @@ export function BookingContactForm({ value, onChange }: BookingContactFormProps)
             className={inputClassName}
           />
         </label>
+        {children}
       </CardContent>
     </Card>
   )

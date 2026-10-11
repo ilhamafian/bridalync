@@ -121,7 +121,7 @@ export const en: Locale = {
   noAddOnsAvailable: "No add-ons available.",
 
   // Contact
-  almostThere: "Don't go yet!\nWe just need some few info...",
+  almostThere: "Don't go yet!\nWe just need some final info...",
   phoneNumber: "Phone number",
   email: "Email",
   emailPlaceholder: "your@email.com",

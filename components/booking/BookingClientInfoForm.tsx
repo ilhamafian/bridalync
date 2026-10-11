@@ -32,11 +32,10 @@ const inputClassName = cn(
   "dark:bg-input/30"
 );
 
-export function hasClientInfoFields(clientInfo: ClientInfoSetting | undefined) {
+/** Moodboard / questions; Instagram sits in the contact card (`BookingInstagramField`). */
+function hasClientInfoFields(clientInfo: ClientInfoSetting | undefined) {
   return (
-    getInstagramRequirement(clientInfo) !== "off" ||
-    Boolean(clientInfo?.moodboard) ||
-    getClientQuestions(clientInfo).length > 0
+    Boolean(clientInfo?.moodboard) || getClientQuestions(clientInfo).length > 0
   );
 }
 
@@ -184,29 +183,70 @@ function MoodboardPicker({
   );
 }
 
+/** Instagram username, rendered inside the contact (phone + email) card. */
+export function BookingInstagramField({
+  clientInfo,
+  value,
+  onChange,
+}: {
+  clientInfo: ClientInfoSetting | undefined;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const { t } = useLocale();
+  const requirement = getInstagramRequirement(clientInfo);
+  const username = normalizeInstagramUsername(value);
+  const invalid = username.length > 0 && !isValidInstagramUsername(username);
+
+  if (requirement === "off") return null;
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <FieldLabel
+        htmlFor="client-instagram"
+        optional={requirement === "optional"}
+      >
+        {t.instagramUsername}
+      </FieldLabel>
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs text-muted-foreground">
+          @
+        </span>
+        <input
+          id="client-instagram"
+          type="text"
+          autoComplete="off"
+          autoCapitalize="none"
+          spellCheck={false}
+          placeholder={t.instagramPlaceholder}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          aria-invalid={invalid}
+          className={cn(inputClassName, "pl-7")}
+        />
+      </div>
+      {invalid ? (
+        <p className="text-xs text-destructive">{t.invalidInstagram}</p>
+      ) : null}
+    </div>
+  );
+}
+
 export function BookingClientInfoForm({
   clientInfo,
-  instagram,
-  onInstagramChange,
   answers,
   onAnswersChange,
   moodboard,
   onMoodboardChange,
 }: {
   clientInfo: ClientInfoSetting | undefined;
-  instagram: string;
-  onInstagramChange: (value: string) => void;
   answers: Record<string, string>;
   onAnswersChange: (answers: Record<string, string>) => void;
   moodboard: MoodboardPhoto[];
   onMoodboardChange: (photos: MoodboardPhoto[]) => void;
 }) {
   const { t, format } = useLocale();
-  const instagramRequirement = getInstagramRequirement(clientInfo);
   const questions = getClientQuestions(clientInfo);
-  const instagramUsername = normalizeInstagramUsername(instagram);
-  const instagramInvalid =
-    instagramUsername.length > 0 && !isValidInstagramUsername(instagramUsername);
 
   if (!hasClientInfoFields(clientInfo)) return null;
 
@@ -217,37 +257,6 @@ export function BookingClientInfoForm({
   return (
     <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
       <CardContent className="flex flex-col gap-4">
-        {instagramRequirement !== "off" ? (
-          <div className="flex flex-col gap-1.5">
-            <FieldLabel
-              htmlFor="client-instagram"
-              optional={instagramRequirement === "optional"}
-            >
-              {t.instagramUsername}
-            </FieldLabel>
-            <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-xs text-muted-foreground">
-                @
-              </span>
-              <input
-                id="client-instagram"
-                type="text"
-                autoComplete="off"
-                autoCapitalize="none"
-                spellCheck={false}
-                placeholder={t.instagramPlaceholder}
-                value={instagram}
-                onChange={(event) => onInstagramChange(event.target.value)}
-                aria-invalid={instagramInvalid}
-                className={cn(inputClassName, "pl-7")}
-              />
-            </div>
-            {instagramInvalid ? (
-              <p className="text-xs text-destructive">{t.invalidInstagram}</p>
-            ) : null}
-          </div>
-        ) : null}
-
         {questions.map((question) => {
           const answer = answers[question.id] ?? "";
           return (
