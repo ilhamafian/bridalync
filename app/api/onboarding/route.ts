@@ -8,6 +8,7 @@ import { SettingModel } from "@/models/Setting";
 import { StyleModel } from "@/models/Style";
 import { UserModel } from "@/models/User";
 import {
+  getDefaultChargeBy,
   getOnboardingResumeStep,
   isOnboardingComplete,
   onboardingStepRequestSchema,
@@ -15,6 +16,7 @@ import {
   type OnboardingStepRequest,
   type UpdateUser,
   type User,
+  type UserRole,
 } from "@/schemas/userSchema";
 import { addOnSchema } from "@/schemas/addOnSchema";
 import { packageSchema } from "@/schemas/packageSchema";
@@ -50,6 +52,10 @@ const MUA_PACKAGES = [
   { name: "Photoshoot", price: 450, deposit: 150, order: 4 },
   { name: "Trial Makeup", price: 600, deposit: 200, order: 5 },
 ] as const;
+
+const BRIDE_ASSISTANT_PACKAGES = MUA_PACKAGES.filter(
+  (pkg) => pkg.name !== "Trial Makeup"
+);
 
 const HS_PACKAGES = [
   { name: "Nikah", order: 0 },
@@ -195,7 +201,10 @@ async function ensureDefaultCatalog(
   role: Parameters<typeof usesLooks>[0]
 ) {
   if (chargeBy === "package") {
-    await seedPackages(userId, MUA_PACKAGES);
+    await seedPackages(
+      userId,
+      role === "brideassistant" ? BRIDE_ASSISTANT_PACKAGES : MUA_PACKAGES
+    );
   } else {
     await Promise.all([
       seedPackages(userId, HS_PACKAGES),
@@ -212,13 +221,13 @@ async function ensureDefaultCatalog(
 
 async function resolveChargeBy(
   userId: string,
-  user: { role?: string }
+  user: { role?: UserRole }
 ): Promise<"package" | "style"> {
   const settings = await new SettingModel().findSettingsByUserId(userId);
   if (settings?.charge_by) {
     return settings.charge_by;
   }
-  return user.role === "hijabstylist" ? "style" : "package";
+  return user.role ? getDefaultChargeBy(user.role) : "package";
 }
 
 export async function GET() {

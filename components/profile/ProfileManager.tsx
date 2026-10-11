@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { BIO_MAX_LENGTH } from "@/schemas/bio";
+import type { UserRole } from "@/schemas/roleSchema";
 import { buildProfilePreviewUrl, formatAppHost } from "@/utils/appUrl";
 import { compressImageFile } from "@/utils/image/compressClient";
 import { formatWhatsAppDisplay } from "@/utils/socialLinks";
@@ -52,7 +53,7 @@ export type ProfileItem = {
   username: string;
   mobile: string;
   country_code: string;
-  role: "hijabstylist" | "makeupartist" | null;
+  role: UserRole | null;
   profile_photo_url: string;
   bio: string;
   social_links: ProfileSocialLinks;
@@ -70,9 +71,10 @@ const inputClassName = cn(
   "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
 );
 
-const roleLabel: Record<"hijabstylist" | "makeupartist", string> = {
+const roleLabel: Record<UserRole, string> = {
   hijabstylist: "Hijab stylist",
   makeupartist: "Makeup artist",
+  brideassistant: "Bride assistant",
 };
 
 function Field({

@@ -361,6 +361,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           settings={data.settings}
           packages={data.packages}
           email={data.profile.initialProfile.email}
+          role={data.profile.initialProfile.role}
         />
       </Section>
 

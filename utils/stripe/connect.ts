@@ -12,7 +12,7 @@ export type ConnectedAccountOwner = {
   email: string;
   name?: string | null;
   username?: string | null;
-  role?: "hijabstylist" | "makeupartist" | string | null;
+  role?: string | null;
 };
 
 const BEAUTY_SERVICES_MCC = "7298";

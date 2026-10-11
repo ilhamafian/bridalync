@@ -16,6 +16,7 @@ import { PackagesManager } from "@/components/PackagesManager";
 import { PwaSettingsCard } from "@/components/PwaSettingsCard";
 import { SettingsManager } from "@/components/SettingsManager";
 import { cn } from "@/lib/utils";
+import type { UserRole } from "@/schemas/roleSchema";
 import { getTravelPricing, getUnservedRegions } from "@/utils/booking/regions";
 import { getCatalogEditorTarget } from "@/utils/dashboardShell";
 import type {
@@ -33,11 +34,13 @@ export function SettingsCategoryPage({
   settings,
   packages,
   email,
+  role,
 }: {
   category: SettingsCategory | null;
   settings: DashboardData["settings"];
   packages: DashboardData["packages"];
   email: string;
+  role: UserRole | null;
 }) {
   const styleTerms = useStyleTerms();
   const { setPaymentMethod } = usePaymentMethod();
@@ -90,6 +93,7 @@ export function SettingsCategoryPage({
             isStripeConnected={settings.isStripeConnected}
             hasStripeAccount={settings.hasStripeAccount}
             freelancerName={settings.freelancerName}
+            initialRole={role}
             onChargeByChange={setChargeBy}
             onTravelChange={setTravel}
             onPaymentMethodChange={setPaymentMethod}

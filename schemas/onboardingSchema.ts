@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { addressSchema } from "./addressSchema";
+import { userRoleSchema } from "./roleSchema";
 
 export const onboardingProgressSchema = z.object({
   initial_onboarding: z.boolean().default(false),
@@ -69,7 +70,7 @@ const travelStepSchema = z.discriminatedUnion("enabled", [
 
 export const onboardingRoleTravelSchema = z.object({
   step: z.literal("role_travel"),
-  role: z.enum(["hijabstylist", "makeupartist"]),
+  role: userRoleSchema,
   charge_by: z.enum(["package", "style"]),
   travel: travelStepSchema,
 });

@@ -25,9 +25,14 @@ import {
   type OnboardingStepRequest,
   type OnboardingUser,
 } from "@/schemas/onboardingSchema";
+import {
+  getDefaultChargeBy,
+  userRoleSchema,
+  type UserRole,
+} from "@/schemas/roleSchema";
 
-type UserRole = {
-  value: string;
+type RoleOption = {
+  value: UserRole;
   label: string;
 };
 
@@ -143,11 +148,6 @@ function getErrorMessage(payload: unknown) {
   return "Something went wrong. Please try again.";
 }
 
-function getChargeBy(role: string): "package" | "style" {
-  if (role === "hijabstylist") return "style";
-  return "package";
-}
-
 export default function OnboardingPage() {
   return (
     <Suspense
@@ -167,8 +167,8 @@ function OnboardingPageContent() {
   const searchParams = useSearchParams();
   const [step, setStep] = useState<OnboardingStepId>("role");
   const [user, setUser] = useState<OnboardingUser | null>(null);
-  const [roles, setRoles] = useState<UserRole[]>([]);
-  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [roles, setRoles] = useState<RoleOption[]>([]);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [travelEnabled, setTravelEnabled] = useState(false);
   const [ratePerKm, setRatePerKm] = useState("1.00");
   const [location, setLocation] = useState<Address | null>(null);
@@ -209,7 +209,8 @@ function OnboardingPageContent() {
       .then((data) => {
         if (data?.user) {
           setUser(data.user);
-          if (data.user.role) setSelectedRole(data.user.role);
+          const savedRole = userRoleSchema.safeParse(data.user.role);
+          if (savedRole.success) setSelectedRole(savedRole.data);
           if (data.user.name) setDisplayName(data.user.name);
           if (data.user.username) setUsername(data.user.username);
           if (data.user.mobile) setMobile(data.user.mobile);
@@ -335,8 +336,8 @@ function OnboardingPageContent() {
     await runStep(
       {
         step: "role_travel",
-        role: selectedRole as "hijabstylist" | "makeupartist",
-        charge_by: getChargeBy(selectedRole),
+        role: selectedRole,
+        charge_by: getDefaultChargeBy(selectedRole),
         travel: travelEnabled
           ? {
               enabled: true,

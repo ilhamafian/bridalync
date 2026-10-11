@@ -19,7 +19,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PublicReviewsState } from "@/hooks/use-public-reviews";
 import type { PublicReview } from "@/schemas/reviewSchema";
-import type { PublicProfile } from "@/schemas/userSchema";
+import type { PublicProfile, UserRole } from "@/schemas/userSchema";
 import { formatReviewEventDate } from "@/utils/reviews";
 import {
   buildWhatsAppProfileUrl,
@@ -27,8 +27,10 @@ import {
 } from "@/utils/socialLinks";
 import type { Locale } from "@/locales";
 
-function roleLabel(role: "hijabstylist" | "makeupartist", t: Locale) {
-  return role === "hijabstylist" ? t.hijabStylist : t.makeupArtist;
+export function roleLabel(role: UserRole, t: Locale) {
+  if (role === "hijabstylist") return t.hijabStylist;
+  if (role === "brideassistant") return t.brideAssistant;
+  return t.makeupArtist;
 }
 
 /** Portrait fallback used until the opened photo reports its real dimensions. */

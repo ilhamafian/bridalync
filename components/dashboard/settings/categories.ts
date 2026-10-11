@@ -41,8 +41,8 @@ export const SETTINGS_CATEGORY_META: Record<
   { label: string; description: string; icon: Icon }
 > = {
   "pricing-model": {
-    label: "Pricing model",
-    description: "Charge clients by event or by style.",
+    label: "Pricing model & role",
+    description: "Your role, and whether you charge clients by event or by style.",
     icon: IconTag,
   },
   events: {
@@ -115,7 +115,10 @@ export function getSettingsCategoryMeta(
 ) {
   const meta = SETTINGS_CATEGORY_META[category];
   if (category === "pricing-model") {
-    return { ...meta, description: `Charge clients by event or by ${styleTerms.one}.` };
+    return {
+      ...meta,
+      description: `Your role, and whether you charge clients by event or by ${styleTerms.one}.`,
+    };
   }
   if (category === "events") {
     return { ...meta, label: `Events & ${styleTerms.many}` };

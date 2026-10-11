@@ -12,6 +12,7 @@ export const ms = {
   profileNotFound: "Profil tidak dijumpai.",
   hijabStylist: "Hijab Stylist",
   makeupArtist: "Makeup Artist",
+  brideAssistant: "Bride Assistant",
   reviews: "Ulasan",
   clientFeedback: "Maklum balas pelanggan dan foto hasil kerja.",
   noReviews: "Tiada ulasan lagi.",

@@ -10,6 +10,7 @@ import {
   profileUpdateSchema,
   updateUserSchema,
   type User,
+  type UserRole,
 } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
@@ -23,7 +24,7 @@ function serializeProfile(user: {
   username?: string;
   mobile?: string;
   country_code?: string;
-  role?: "hijabstylist" | "makeupartist";
+  role?: UserRole;
   profile_photo_url?: string;
   bio?: string;
   social_links?: {

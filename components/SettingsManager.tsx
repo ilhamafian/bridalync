@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   IconBed,
   IconBrandStripe,
+  IconBrush,
   IconBuildingBank,
   IconCar,
   IconClock,
@@ -18,6 +19,8 @@ import {
   IconSunrise,
   IconTrash,
   IconUserHeart,
+  IconWoman,
+  type Icon,
 } from "@tabler/icons-react";
 
 import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
@@ -52,6 +55,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
 import type { ClientInfoSetting } from "@/schemas/clientInfoSchema";
+import { USER_ROLE_LABELS, type UserRole } from "@/schemas/roleSchema";
+import { usesLooks } from "@/utils/styleTerms";
 import {
   getDefaultTimeSlots,
   hasManualTransferDetails,
@@ -139,6 +144,12 @@ const textareaClassName = cn(
   "placeholder:text-muted-foreground",
   "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
 );
+const ROLE_OPTIONS: { value: UserRole; icon: Icon }[] = [
+  { value: "makeupartist", icon: IconBrush },
+  { value: "hijabstylist", icon: IconWoman },
+  { value: "brideassistant", icon: IconUserHeart },
+];
+
 type SectionKey =
   | "charge_by"
   | "travel"
@@ -246,6 +257,7 @@ export function SettingsManager({
   isStripeConnected,
   hasStripeAccount,
   freelancerName,
+  initialRole,
   onChargeByChange,
   onTravelChange,
   onPaymentMethodChange,
@@ -255,6 +267,7 @@ export function SettingsManager({
   isStripeConnected: boolean;
   hasStripeAccount: boolean;
   freelancerName: string;
+  initialRole: UserRole | null;
   onChargeByChange?: (chargeBy: SettingsItem["charge_by"]) => void;
   onTravelChange?: (travel: SettingsItem["travel"]) => void;
   onPaymentMethodChange?: (method: PaymentMethod) => void;
@@ -262,6 +275,8 @@ export function SettingsManager({
   const styleTerms = useStyleTerms();
   const [settings, setSettings] = useState(initialSettings);
   const [chargeBy, setChargeBy] = useState(initialSettings.charge_by);
+  const [savedRole, setSavedRole] = useState(initialRole);
+  const [role, setRole] = useState(initialRole);
   const [travelEnabled, setTravelEnabled] = useState(
     initialSettings.travel.enabled
   );
@@ -493,13 +508,39 @@ export function SettingsManager({
     }
   }
 
+  async function saveRole(nextRole: UserRole) {
+    const response = await fetch("/api/role", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ role: nextRole }),
+    });
+    if (!response.ok) {
+      setSectionError((current) => ({
+        ...current,
+        charge_by: "Failed to save your role.",
+      }));
+      return false;
+    }
+    setSavedRole(nextRole);
+    return true;
+  }
+
   async function saveChargeBy() {
+    const roleChanged = role !== null && role !== savedRole;
+    if (roleChanged) {
+      clearSectionFeedback("charge_by");
+      setSavingSection("charge_by");
+      const ok = await saveRole(role).finally(() => setSavingSection(null));
+      if (!ok) return;
+    }
+
     const payload: Record<string, unknown> = { charge_by: chargeBy };
     if (chargeBy !== settings.charge_by) {
       payload.time_slots = getDefaultTimeSlots(chargeBy);
     }
     const saved = await patchSettings("charge_by", payload);
     if (saved) onChargeByChange?.(saved.charge_by);
+    if (roleChanged) router.refresh();
   }
 
   async function saveTravel() {
@@ -886,6 +927,38 @@ export function SettingsManager({
         saving={savingSection === "charge_by"}
         onSave={saveChargeBy}
       >
+        <SettingsSection title="Your role">
+          <RadioGroup
+            value={role ?? ""}
+            onValueChange={(value) => setRole(value as UserRole)}
+            className={settingsListClassName}
+          >
+            {ROLE_OPTIONS.map((option) => (
+              <label
+                key={option.value}
+                className={cn(settingsRowClassName, "cursor-pointer")}
+              >
+                <IconBadge icon={option.icon} />
+                <RowText title={USER_ROLE_LABELS[option.value]} />
+                <RadioGroupItem
+                  value={option.value}
+                  aria-label={USER_ROLE_LABELS[option.value]}
+                />
+              </label>
+            ))}
+          </RadioGroup>
+          <p className="text-xs text-muted-foreground">
+            Shown on your booking page. Changing it doesn&apos;t change how you
+            charge clients.
+          </p>
+          {role && savedRole && usesLooks(role) !== usesLooks(savedRole) ? (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              {usesLooks(role)
+                ? "Makeup artists offer looks instead of styles. Your current styles won't be shown to clients; add your looks in Events & looks."
+                : "Only makeup artists offer looks. Your current looks won't be shown to clients; add your styles in Events & styles."}
+            </p>
+          ) : null}
+        </SettingsSection>
         <SettingsSection title="Charge clients by">
           <RadioGroup
             value={chargeBy}

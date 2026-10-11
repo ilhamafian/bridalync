@@ -6,7 +6,16 @@ import {
 } from "./onboardingSchema";
 import { BIO_MAX_LENGTH } from "./bio";
 import { objectIdSchema } from "./objectId";
+import { userRoleSchema } from "./roleSchema";
 import { themeColorSchema, themePreferenceSchema } from "./themeSchema";
+
+export {
+  USER_ROLES,
+  USER_ROLE_LABELS,
+  getDefaultChargeBy,
+  userRoleSchema,
+  type UserRole,
+} from "./roleSchema";
 
 export {
   DEFAULT_THEME,
@@ -56,6 +65,7 @@ export const socialLinksSchema = z.object({
 });
 
 export type SocialLinks = z.infer<typeof socialLinksSchema>;
+
 export const userSchema = z.object({
   _id: objectIdSchema.optional(),
   email: z.email(),
@@ -65,7 +75,7 @@ export const userSchema = z.object({
   // filled in later during onboarding
   username: z.string().min(1).optional(),
   name: z.string().min(1).optional(),
-  role: z.enum(["hijabstylist", "makeupartist"]).optional(),
+  role: userRoleSchema.optional(),
   mobile: z.string().min(1).optional(),
   country_code: z.string().min(1).optional(),
   language: z.string().min(1).optional(),
@@ -118,7 +128,7 @@ export const publicUserSchema = userSchema.omit({
 export const publicProfileSchema = z.object({
   name: z.string().optional(),
   username: z.string().optional(),
-  role: z.enum(["hijabstylist", "makeupartist"]).optional(),
+  role: userRoleSchema.optional(),
   profile_photo_url: z.string().optional(),
   bio: z.string().optional(),
   mobile: z.string().optional(),

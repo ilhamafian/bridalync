@@ -14,6 +14,7 @@ export const en: Locale = {
   profileNotFound: "Profile not found.",
   hijabStylist: "Hijab Stylist",
   makeupArtist: "Makeup Artist",
+  brideAssistant: "Bride Assistant",
   reviews: "Reviews",
   clientFeedback: "Client feedback and work photos.",
   noReviews: "No reviews yet.",

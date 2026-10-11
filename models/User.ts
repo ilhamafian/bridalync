@@ -5,6 +5,8 @@ import {
   User,
   type ThemeColor,
   type ThemePreference,
+  type UserRole,
+  USER_ROLE_LABELS,
 } from "@/schemas/userSchema";
 import { isOnboardingComplete } from "@/schemas/onboardingSchema";
 
@@ -12,10 +14,9 @@ export class UserModel extends ModelBase<User> {
   protected collectionName = "users";
   protected schema: ZodSchema<User> = userSchema;
 
-  static userRoles: { value: string; label: string }[] = [
-    { value: "makeupartist", label: "Makeup Artist" },
-    { value: "hijabstylist", label: "Hijab Stylist" },
-  ];
+  static userRoles: { value: UserRole; label: string }[] = (
+    ["makeupartist", "hijabstylist", "brideassistant"] as const
+  ).map((value) => ({ value, label: USER_ROLE_LABELS[value] }));
 
   async findByUsername(username: string): Promise<User | null> {
     const result = await this.findOne({ username: username.toLowerCase() });
@@ -46,6 +47,13 @@ export class UserModel extends ModelBase<User> {
     const collection = await this.getCollection();
     return collection.updateOne(this.buildIdFilter(userId), {
       $set: { ...prefs, updated_at: new Date() },
+    } as never);
+  }
+
+  async setRole(userId: string, role: UserRole) {
+    const collection = await this.getCollection();
+    return collection.updateOne(this.buildIdFilter(userId), {
+      $set: { role, updated_at: new Date() },
     } as never);
   }
 

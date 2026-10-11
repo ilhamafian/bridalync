@@ -15,7 +15,7 @@ import {
 } from "@/components/BookingPackagePicker";
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
-import { ClientProfile } from "@/components/booking/ClientProfile";
+import { ClientProfile, roleLabel } from "@/components/booking/ClientProfile";
 import { usePublicReviews } from "@/hooks/use-public-reviews";
 import { ManualPaymentStep } from "@/components/booking/ManualPaymentStep";
 import { BookingLoadingState } from "@/components/booking/BookingLoadingState";
@@ -2099,11 +2099,9 @@ export default function ClientPage() {
                 <AlertDialogDescription>
                   {format(t.accommodationDescription, {
                     state: baseRegion ? getRegionLabel(baseRegion) : "",
-                    role: (user?.role === "makeupartist"
-                      ? t.makeupArtist
-                      : user?.role === "hijabstylist"
-                        ? t.hijabStylist
-                        : "stylist"
+                    role: (user?.role
+                      ? roleLabel(user.role, t)
+                      : "stylist"
                     ).toLowerCase(),
                   })}
                 </AlertDialogDescription>
