@@ -2,15 +2,10 @@
 
 import { usePaymentMethod } from "@/components/dashboard/PaymentMethodProvider";
 import { cn } from "@/lib/utils";
-import {
-  formatRm,
-  PAYMENT_PROCESSING_FEE_FIXED_RM,
-  PAYMENT_PROCESSING_FEE_PERCENT,
-  withPaymentProcessingFeeRm,
-} from "@/utils/booking/pricing";
+import { formatRm, withClientFeesRm } from "@/utils/booking/pricing";
 
 /**
- * What clients see for a price once the payment processing fee is added.
+ * What clients see for a price once the fees are added.
  * Hidden for manual-transfer stylists, whose clients pay no fee.
  */
 export function ProcessingFeeHint({
@@ -28,14 +23,10 @@ export function ProcessingFeeHint({
   if (!usesPaymentGateway || amount == null || !Number.isFinite(amount) || amount <= 0) {
     return null;
   }
-  const fee = includeFixed
-    ? `${PAYMENT_PROCESSING_FEE_PERCENT}% + RM${PAYMENT_PROCESSING_FEE_FIXED_RM}`
-    : `${PAYMENT_PROCESSING_FEE_PERCENT}%`;
 
   return (
     <p className={cn("text-xs text-muted-foreground", className)}>
-      Clients see {formatRm(withPaymentProcessingFeeRm(amount, includeFixed))}{" "}
-      (incl. {fee} payment processing fee).
+      {formatRm(withClientFeesRm(amount, includeFixed))} after fee
     </p>
   );
 }

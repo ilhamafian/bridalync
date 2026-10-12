@@ -21,8 +21,10 @@ export type BookingQuotationBreakdown = {
   addOns: QuotationLineItem[];
   travelFeeRm: number;
   discountRm?: number;
-  /** Payment processing fee already included in the amounts above (payment-gateway bookings). */
+  /** Fees already included in the amounts above (payment-gateway bookings), incl. `platformFeeRm`. */
   processingFeeRm?: number;
+  /** Bridalync's platform fee within `processingFeeRm`; collected as the Stripe application fee. */
+  platformFeeRm?: number;
 };
 
 export type BookingQuotationSummary = {
@@ -113,48 +115,70 @@ export function formatDeposit(
   return depositType === "percent" ? `${deposit}%` : formatRm(deposit);
 }
 
+export const PLATFORM_FEE_PERCENT = 3;
 export const PAYMENT_PROCESSING_FEE_PERCENT = 3;
 export const PAYMENT_PROCESSING_FEE_FIXED_RM = 1;
 
+/** Bridalync's platform fee on a price: 3% rounded up. */
+export function calculatePlatformFeeRm(amountRm: number) {
+  const rounded = roundRm(amountRm);
+  if (rounded <= 0) return 0;
+  return Math.ceil((rounded * PLATFORM_FEE_PERCENT) / 100);
+}
+
 /**
- * Fee added to the client's price for payment-gateway stylists: 3% (rounded up)
- * + RM1 once per booking. `includeFixed` = false for amounts added on top of
- * another item, which already carries the RM1.
+ * Fees added to the client's price for payment-gateway stylists: the platform fee,
+ * then the payment processing fee on top of it (3% rounded up + RM1 once per booking).
+ * `includeFixed` = false for amounts added on top of another item, which already
+ * carries the RM1. `platformFee` = false for bookings priced before the platform fee.
  */
-export function calculatePaymentProcessingFeeRm(
+export function calculateClientFeesRm(
   amountRm: number,
-  includeFixed = true
+  includeFixed = true,
+  platformFee = true
 ) {
   const rounded = roundRm(amountRm);
   if (rounded <= 0) return 0;
+  const platformRm = platformFee ? calculatePlatformFeeRm(rounded) : 0;
   return (
-    Math.ceil((rounded * PAYMENT_PROCESSING_FEE_PERCENT) / 100) +
+    platformRm +
+    Math.ceil(((rounded + platformRm) * PAYMENT_PROCESSING_FEE_PERCENT) / 100) +
     (includeFixed ? PAYMENT_PROCESSING_FEE_FIXED_RM : 0)
   );
 }
 
-/** What the client sees for a price once the processing fee is added. */
-export function withPaymentProcessingFeeRm(amountRm: number, includeFixed = true) {
-  return roundRm(amountRm) + calculatePaymentProcessingFeeRm(amountRm, includeFixed);
+/** What the client sees for a price once the fees are added. */
+export function withClientFeesRm(
+  amountRm: number,
+  includeFixed = true,
+  platformFee = true
+) {
+  return roundRm(amountRm) + calculateClientFeesRm(amountRm, includeFixed, platformFee);
 }
 
 /**
- * Adds the processing fee into a quotation's prices (no separate line): each
- * item gets its 3% share, the first session the RM1 plus rounding, so the
- * total is `withPaymentProcessingFeeRm(totalRm)`. Apply before any discount.
+ * Adds the fees into a quotation's prices (no separate line): each item gets its
+ * percentage share, the first session the RM1 plus rounding, so the total is
+ * `withClientFeesRm(totalRm)`. Apply before any discount.
  */
 export function applyPaymentProcessingFee(
-  quotation: BookingQuotationSummary
+  quotation: BookingQuotationSummary,
+  { platformFee = true }: { platformFee?: boolean } = {}
 ): BookingQuotationSummary {
   if (quotation.totalRm <= 0) return quotation;
-  const feeRm = calculatePaymentProcessingFeeRm(quotation.totalRm);
+  const feeRm = calculateClientFeesRm(quotation.totalRm, true, platformFee);
+  const platformFeeRm = platformFee ? calculatePlatformFeeRm(quotation.totalRm) : 0;
+  const feeBreakdown = {
+    processingFeeRm: feeRm,
+    ...(platformFeeRm > 0 ? { platformFeeRm } : {}),
+  };
   const totalRm = quotation.totalRm + feeRm;
   const depositRm =
     quotation.depositRm > 0
-      ? Math.min(withPaymentProcessingFeeRm(quotation.depositRm), totalRm)
+      ? Math.min(withClientFeesRm(quotation.depositRm, true, platformFee), totalRm)
       : 0;
   const share = (amountRm: number) =>
-    calculatePaymentProcessingFeeRm(amountRm, false);
+    calculateClientFeesRm(amountRm, false, platformFee);
 
   const breakdown = quotation.breakdown;
   const hasItemisedShape =
@@ -172,7 +196,7 @@ export function applyPaymentProcessingFee(
       totalRm,
       depositRm,
       balanceRm: totalRm - depositRm,
-      ...(breakdown ? { breakdown: { ...breakdown, processingFeeRm: feeRm } } : {}),
+      ...(breakdown ? { breakdown: { ...breakdown, ...feeBreakdown } } : {}),
     };
   }
 
@@ -206,7 +230,7 @@ export function applyPaymentProcessingFee(
     totalRm,
     depositRm,
     balanceRm: totalRm - depositRm,
-    breakdown: { ...breakdown, sessions, addOns, travelFeeRm, processingFeeRm: feeRm },
+    breakdown: { ...breakdown, sessions, addOns, travelFeeRm, ...feeBreakdown },
   };
 }
 
@@ -307,6 +331,7 @@ export function applyDiscountedTotal(
   if (discountRm <= 0) return quotation;
 
   const depositRm = Math.min(quotation.depositRm, discountedTotalRm);
+  const platformFeeRm = quotation.breakdown?.platformFeeRm;
   return {
     lineItems: [
       ...quotation.lineItems,
@@ -316,9 +341,44 @@ export function applyDiscountedTotal(
     depositRm,
     balanceRm: discountedTotalRm - depositRm,
     ...(quotation.breakdown
-      ? { breakdown: { ...quotation.breakdown, discountRm } }
+      ? {
+          breakdown: {
+            ...quotation.breakdown,
+            discountRm,
+            ...(platformFeeRm
+              ? {
+                  platformFeeRm: roundRm(
+                    (platformFeeRm * discountedTotalRm) / quotation.totalRm
+                  ),
+                }
+              : {}),
+          },
+        }
       : {}),
   };
+}
+
+/**
+ * Platform fee to collect on one Stripe charge: the deposit takes its share of the
+ * booking's platform fee, the balance the rest, a full payment all of it.
+ */
+export function getPlatformFeeForCharge(
+  invoice: Pick<BookingQuotationSummary, "totalRm" | "depositRm" | "breakdown">,
+  purpose: "deposit" | "balance" | "full",
+  chargeRm: number
+): number {
+  const platformFeeRm = invoice.breakdown?.platformFeeRm ?? 0;
+  if (platformFeeRm <= 0 || invoice.totalRm <= 0 || chargeRm <= 0) return 0;
+  const depositShareRm = roundRm(
+    (platformFeeRm * Math.min(invoice.depositRm, invoice.totalRm)) / invoice.totalRm
+  );
+  const feeRm =
+    purpose === "full"
+      ? platformFeeRm
+      : purpose === "deposit"
+        ? depositShareRm
+        : platformFeeRm - depositShareRm;
+  return Math.max(0, Math.min(feeRm, chargeRm));
 }
 
 export function calculateBookingQuotation(

@@ -171,6 +171,15 @@ export async function PATCH(req: NextRequest) {
     }
 
     const nextPaymentMethod = parsed.data.payment?.method;
+    if (
+      nextPaymentMethod === "manual_transfer" &&
+      (existing.payment?.method ?? "manual_transfer") !== "manual_transfer"
+    ) {
+      return createResponse(
+        { error: "Manual transfer is no longer available." },
+        400
+      );
+    }
     if (nextPaymentMethod === "payment_gateway") {
       const user = await new UserModel().findById(userId);
       if (!user?.is_stripe_connected) {

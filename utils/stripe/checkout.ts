@@ -4,6 +4,7 @@ import { getStripe } from "@/lib/stripe";
 import { getAppUrl } from "@/utils/appUrl";
 import type { PersistedBooking } from "@/schemas/bookingSchema";
 import { awaitsClientPayment } from "@/utils/booking/paymentLink";
+import { getPlatformFeeForCharge } from "@/utils/booking/pricing";
 import {
   ensurePaymentCapabilities,
   isAccountReadyForClientCharges,
@@ -15,6 +16,15 @@ const CHECKOUT_SESSION_TTL_SECONDS = 30 * 60;
 
 function toStripeAmount(rm: number) {
   return Math.round(rm * 100);
+}
+
+function applicationFeeParams(
+  booking: PersistedBooking,
+  purpose: "deposit" | "balance" | "full",
+  chargeRm: number
+): Pick<Stripe.Checkout.SessionCreateParams.PaymentIntentData, "application_fee_amount"> {
+  const feeRm = getPlatformFeeForCharge(booking.invoice, purpose, chargeRm);
+  return feeRm > 0 ? { application_fee_amount: toStripeAmount(feeRm) } : {};
 }
 
 function checkoutExpiresAt() {
@@ -134,6 +144,11 @@ export async function createDepositCheckoutSession(input: {
       payment_intent_data: {
         metadata,
         description: paymentDescription,
+        ...applicationFeeParams(
+          input.booking,
+          isFullPayment ? "full" : "deposit",
+          chargeRm
+        ),
       },
       success_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=success`,
       cancel_url: awaitsClientPayment(input.booking)
@@ -203,6 +218,7 @@ export async function createBalanceCheckoutSession(input: {
       payment_intent_data: {
         metadata,
         description: paymentDescription,
+        ...applicationFeeParams(input.booking, "balance", chargeRm),
       },
       success_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=balance-success`,
       cancel_url: `${appUrl}/${input.freelancerUsername}/bookings/${bookingId}?payment=cancelled`,

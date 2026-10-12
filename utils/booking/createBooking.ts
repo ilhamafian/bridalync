@@ -298,6 +298,8 @@ export async function resolveBookingQuotation(
     legacy?: boolean;
     /** Add the payment processing fee; defaults to whether the stylist uses the payment gateway. */
     processingFee?: boolean;
+    /** Include the platform fee with the processing fee; defaults to true. */
+    platformFee?: boolean;
     /** Reject venues in states the stylist doesn't serve (client bookings only). */
     enforceServiceArea?: boolean;
     /** Charging by event: every session needs a style/look (client bookings when one is offered). */
@@ -618,7 +620,9 @@ export async function resolveBookingQuotation(
   const includeProcessingFee =
     options?.processingFee ?? settings.payment?.method === "payment_gateway";
   const clientQuotation = includeProcessingFee
-    ? applyPaymentProcessingFee(quotation)
+    ? applyPaymentProcessingFee(quotation, {
+        platformFee: options?.platformFee ?? true,
+      })
     : quotation;
   const discounted =
     options?.discountedTotalRm !== undefined

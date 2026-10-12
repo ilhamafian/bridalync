@@ -39,8 +39,10 @@ export const quotationBreakdownSchema = z.object({
   travelFeeRm: z.number(),
   /** Taken off the subtotal by the stylist; `lineItems` lists it as a negative "Discount". */
   discountRm: z.number().optional(),
-  /** Payment processing fee already included in the amounts above (payment-gateway bookings). */
+  /** Fees already included in the amounts above (payment-gateway bookings), incl. `platformFeeRm`. */
   processingFeeRm: z.number().optional(),
+  /** Bridalync's platform fee within `processingFeeRm`; collected as the Stripe application fee. */
+  platformFeeRm: z.number().optional(),
 });
 
 export const quotationSummarySchema = z.object({

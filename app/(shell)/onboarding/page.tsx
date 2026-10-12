@@ -5,15 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
-import { PaymentQrUpload } from "@/components/PaymentQrUpload";
 import { PhoneNumberInput, isValidPhoneNumber, DEFAULT_COUNTRY_CODE } from "@/components/PhoneNumberInput";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
+import { DEFAULT_TERMS_AND_CONDITIONS } from "@/schemas/settingSchema";
 import {
-  DEFAULT_TERMS_AND_CONDITIONS,
-  type PaymentMethod,
-} from "@/schemas/settingSchema";
+  PAYMENT_PROCESSING_FEE_FIXED_RM,
+  PAYMENT_PROCESSING_FEE_PERCENT,
+  PLATFORM_FEE_PERCENT,
+} from "@/utils/booking/pricing";
 import {
   buildProfileDisplayUrl,
   buildProfileUrl,
@@ -55,7 +56,7 @@ const STEP_CONFIG: Record<
   },
   payment: {
     title: "How will clients pay you?",
-    description: "Choose how you want to collect payments for bookings.",
+    description: "Clients pay for bookings online, straight to your account.",
   },
   username: {
     title: "Choose a username",
@@ -179,13 +180,6 @@ function OnboardingPageContent() {
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
   const [companyLogo, setCompanyLogo] = useState("");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
-  const [paymentMethod, setPaymentMethod] =
-    useState<PaymentMethod>("manual_transfer");
-  const [qrImageUrl, setQrImageUrl] = useState("");
-  const [payeeName, setPayeeName] = useState("");
-  const [bankName, setBankName] = useState("");
-  const [accountNumber, setAccountNumber] = useState("");
-  const [isUploadingQr, setIsUploadingQr] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
@@ -228,15 +222,11 @@ function OnboardingPageContent() {
         if (typeof data?.appUrl === "string") setAppUrl(data.appUrl);
 
         if (stripeStatus === "incomplete" || stripeStatus === "missing") {
-          setPaymentMethod("payment_gateway");
           setError(
             "Stripe setup is incomplete. Continue to finish setup — it takes about 3 minutes and requires your SSM and Tax Identification Number."
           );
         } else if (stripeStatus === "error") {
-          setPaymentMethod("payment_gateway");
           setError("Something went wrong with Stripe. Continue to try again.");
-        } else if (stripeStatus === "pending" || stripeStatus === "ready") {
-          setPaymentMethod("payment_gateway");
         }
       })
       .catch(() => setError("Could not load onboarding data."))
@@ -377,38 +367,6 @@ function OnboardingPageContent() {
   }
 
   async function handleContinueFromPayment() {
-    if (isUploadingQr) {
-      setError("Wait for the QR upload to finish.");
-      return;
-    }
-
-    if (paymentMethod === "manual_transfer") {
-      if (
-        !qrImageUrl.trim() ||
-        !payeeName.trim() ||
-        !bankName.trim() ||
-        !accountNumber.trim()
-      ) {
-        setError(
-          "Upload your payment QR and fill in payee name, bank, and account number."
-        );
-        return;
-      }
-
-      await runStep(
-        {
-          step: "payment",
-          method: "manual_transfer",
-          qr_image_url: qrImageUrl.trim(),
-          payee_name: payeeName.trim(),
-          bank_name: bankName.trim(),
-          account_number: accountNumber.trim(),
-        },
-        "username"
-      );
-      return;
-    }
-
     await runStep(
       {
         step: "payment",
@@ -488,7 +446,7 @@ function OnboardingPageContent() {
   const continueLabel =
     step === "preview_profile"
       ? "Go to dashboard"
-      : step === "payment" && paymentMethod === "payment_gateway"
+      : step === "payment"
         ? isSubmitting
           ? "Opening Stripe…"
           : "Continue to Stripe"
@@ -660,108 +618,31 @@ function OnboardingPageContent() {
 
             {step === "payment" && (
               <>
-                <div className="flex w-full flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPaymentMethod("manual_transfer");
-                      setError(null);
-                    }}
-                    className={cn(
-                      "rounded-xl border px-4 py-3 text-left text-sm transition-colors",
-                      paymentMethod === "manual_transfer"
-                        ? "border-primary bg-primary/5 text-foreground"
-                        : "border-border bg-background text-foreground hover:bg-muted/50"
-                    )}
-                  >
-                    <span className="font-medium">Manual Transfer</span>
-                    <span className="mt-1 block text-muted-foreground">
-                      Clients pay you via your QR or bank transfer and upload a
-                      receipt. You verify payments in Bookings.
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setPaymentMethod("payment_gateway");
-                      setError(null);
-                    }}
-                    className={cn(
-                      "rounded-xl border px-4 py-3 text-left text-sm transition-colors",
-                      paymentMethod === "payment_gateway"
-                        ? "border-primary bg-primary/5 text-foreground"
-                        : "border-border bg-background text-foreground hover:bg-muted/50"
-                    )}
-                  >
-                    <span className="font-medium">Payment Gateway</span>
-                    <span className="mt-1 block text-muted-foreground">
-                      Clients pay online with Stripe (card / FPX). Setup takes
-                      about 3 minutes and requires your SSM and Tax
-                      Identification Number.
-                    </span>
-                  </button>
+                <div className="rounded-xl border border-primary bg-primary/5 px-4 py-3 text-left text-sm text-foreground">
+                  <span className="font-medium">Payment Gateway</span>
+                  <span className="mt-1 block text-muted-foreground">
+                    Clients pay online with Stripe (card / FPX). Setup takes
+                    about 3 minutes and requires your SSM and Tax
+                    Identification Number.
+                  </span>
                 </div>
 
-                {paymentMethod === "manual_transfer" ? (
-                  <div className="flex flex-col gap-3 rounded-xl border border-border bg-background p-4">
-                    <PaymentQrUpload
-                      value={qrImageUrl}
-                      onChange={(url) => {
-                        setError(null);
-                        setQrImageUrl(url);
-                      }}
-                      disabled={isSubmitting}
-                      uploadEndpoint="/api/onboarding/upload"
-                      uploadFolder="payment-qr"
-                      onUploadingChange={setIsUploadingQr}
-                      onError={(message) => setError(message)}
-                    />
-                    <label className="flex flex-col gap-1.5">
-                      <span className="text-sm font-medium text-foreground">
-                        Payee / account name
-                      </span>
-                      <input
-                        type="text"
-                        value={payeeName}
-                        onChange={(event) => setPayeeName(event.target.value)}
-                        placeholder="e.g. Your business name"
-                        className={inputClassName}
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                      <span className="text-sm font-medium text-foreground">
-                        Bank name
-                      </span>
-                      <input
-                        type="text"
-                        value={bankName}
-                        onChange={(event) => setBankName(event.target.value)}
-                        placeholder="e.g. Maybank"
-                        className={inputClassName}
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1.5">
-                      <span className="text-sm font-medium text-foreground">
-                        Account number
-                      </span>
-                      <input
-                        type="text"
-                        value={accountNumber}
-                        onChange={(event) =>
-                          setAccountNumber(event.target.value)
-                        }
-                        placeholder="e.g. 1234 5678 9012"
-                        className={inputClassName}
-                      />
-                    </label>
-                  </div>
-                ) : (
-                  <div className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
-                    Continue opens Stripe setup in about 3 minutes. Have your
-                    SSM and Tax Identification Number ready. When you finish,
-                    you&apos;ll return here to complete your profile.
-                  </div>
-                )}
+                <div className="flex flex-col gap-1 rounded-xl border border-border bg-background px-4 py-3 text-sm">
+                  <span className="font-medium text-foreground">Fees</span>
+                  <span className="text-muted-foreground">
+                    A {PLATFORM_FEE_PERCENT}% Bridalync platform fee, then
+                    Stripe&apos;s {PAYMENT_PROCESSING_FEE_PERCENT}% + RM
+                    {PAYMENT_PROCESSING_FEE_FIXED_RM} payment processing fee, are
+                    added to the prices your clients pay. You keep your full
+                    price.
+                  </span>
+                </div>
+
+                <div className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+                  Continue opens Stripe setup in about 3 minutes. Have your
+                  SSM and Tax Identification Number ready. When you finish,
+                  you&apos;ll return here to complete your profile.
+                </div>
               </>
             )}
 
@@ -914,7 +795,6 @@ function OnboardingPageContent() {
                 disabled={
                   isSubmitting ||
                   isUploadingLogo ||
-                  isUploadingQr ||
                   (step === "role" && !selectedRole)
                 }
                 onClick={() => {

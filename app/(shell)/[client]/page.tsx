@@ -57,7 +57,7 @@ import {
   formatRm,
   requiresFullPayment,
   resolveDepositRm,
-  withPaymentProcessingFeeRm,
+  withClientFeesRm,
 } from "@/utils/booking/pricing";
 import { getMorningCallCharge } from "@/utils/booking/morningCall";
 import {
@@ -856,7 +856,7 @@ export default function ClientPage() {
                   ? {
                       priceLabel: `+${formatRm(
                         feeIncluded
-                          ? withPaymentProcessingFeeRm(extraRm, false)
+                          ? withClientFeesRm(extraRm, false)
                           : extraRm
                       )}`,
                     }
@@ -2275,7 +2275,7 @@ export default function ClientPage() {
                   includeProcessingFee
                     ? addOnOptions.map((addOn) => ({
                         ...addOn,
-                        price: withPaymentProcessingFeeRm(addOn.price, false),
+                        price: withClientFeesRm(addOn.price, false),
                       }))
                     : addOnOptions
                 }

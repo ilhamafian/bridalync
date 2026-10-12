@@ -255,6 +255,7 @@ export async function PATCH(
             discountedTotalRm: data.totalRm,
             legacy: isLegacyBooking,
             processingFee: Boolean(existing.invoice.breakdown?.processingFeeRm),
+            platformFee: Boolean(existing.invoice.breakdown?.platformFeeRm),
           });
 
         updatePayload = {

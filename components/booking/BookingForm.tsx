@@ -60,7 +60,7 @@ import {
 import { getMorningCallCharge } from "@/utils/booking/morningCall";
 import { getStyleExtraRm, hasStyleExtras } from "@/utils/booking/styleExtras";
 import {
-  calculatePaymentProcessingFeeRm,
+  calculateClientFeesRm,
   formatRm,
   roundRm,
 } from "@/utils/booking/pricing";
@@ -668,8 +668,11 @@ export function BookingForm({
   const includesProcessingFee = booking
     ? Boolean(booking.invoice.breakdown?.processingFeeRm)
     : usesPaymentGateway;
+  const includesPlatformFee = booking
+    ? Boolean(booking.invoice.breakdown?.platformFeeRm)
+    : true;
   const processingFeeRm = includesProcessingFee
-    ? calculatePaymentProcessingFeeRm(basePriceRm)
+    ? calculateClientFeesRm(basePriceRm, true, includesPlatformFee)
     : 0;
   const fullPriceRm = basePriceRm + processingFeeRm;
 
@@ -1403,9 +1406,7 @@ export function BookingForm({
               ) : null}
               {processingFeeRm > 0 ? (
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">
-                    Payment processing fee
-                  </span>
+                  <span className="text-muted-foreground">Fees</span>
                   <span className="tabular-nums">
                     {formatRm(processingFeeRm)}
                   </span>

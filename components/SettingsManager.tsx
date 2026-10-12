@@ -1335,19 +1335,21 @@ export function SettingsManager({
             onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
             className={settingsListClassName}
           >
-            <label className={cn(settingsRowClassName, "cursor-pointer")}>
-              <IconBadge icon={IconBuildingBank} />
-              <RowText
-                title="Manual Transfer"
-                description="Clients pay via your QR or bank transfer and upload a receipt. You verify payments in Bookings before the booking is confirmed."
-              />
-              <RadioGroupItem value="manual_transfer" aria-label="Manual Transfer" />
-            </label>
+            {(settings.payment.method ?? "manual_transfer") === "manual_transfer" ? (
+              <label className={cn(settingsRowClassName, "cursor-pointer")}>
+                <IconBadge icon={IconBuildingBank} />
+                <RowText
+                  title="Manual Transfer"
+                  description="Clients pay via your QR or bank transfer and upload a receipt. You verify payments in Bookings before the booking is confirmed."
+                />
+                <RadioGroupItem value="manual_transfer" aria-label="Manual Transfer" />
+              </label>
+            ) : null}
             <label className={cn(settingsRowClassName, "cursor-pointer")}>
               <IconBadge icon={IconCreditCard} />
               <RowText
                 title="Payment Gateway"
-                description="Clients pay online with Stripe (card / FPX). A 3% + RM1 payment processing fee is added to the prices clients pay, so you keep your full price. Setup takes about 3 minutes and requires your SSM and Tax Identification Number."
+                description="Clients pay online with Stripe (card / FPX). Setup takes about 3 minutes and requires your SSM and Tax Identification Number."
               />
               <RadioGroupItem value="payment_gateway" aria-label="Payment Gateway" />
             </label>
