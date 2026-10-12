@@ -131,7 +131,8 @@ function SwipeCarousel<T>({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="relative">
-        <div ref={viewportRef} className="overflow-hidden touch-pan-y">
+        {/* `overflow-clip`, not hidden: focusing a peeking card must not scroll the viewport. */}
+        <div ref={viewportRef} className="overflow-clip touch-pan-y">
           <motion.div
             className="flex cursor-grab active:cursor-grabbing"
             style={{ gap: CARD_GAP_PX }}
