@@ -23,8 +23,8 @@ export const SETTINGS_GROUPS: { title: string; categories: SettingsCategory[] }[
     title: "Business",
     categories: [
       "pricing-model",
-      "events",
       "time-slots",
+      "events",
       "travel-fee",
       "client-info",
       "booking-requests",

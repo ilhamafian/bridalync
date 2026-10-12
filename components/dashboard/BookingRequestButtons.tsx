@@ -45,7 +45,7 @@ export function formatBookedClashes(clashes: BookedClash[]) {
 export const TRAVEL_CLASH_HINT =
   "These are the day before or after an out-of-state session, so travel might be tight. Approving won't cancel or decline them.";
 
-/** Decline (confirmed) / Approve (confirmed when it auto-declines other requests) for a booking request. */
+/** Decline / Approve for a booking request, each behind a confirm dialog. */
 export function BookingRequestButtons({
   booking,
   competingCount,
@@ -154,13 +154,7 @@ export function BookingRequestButtons({
           size="lg"
           className="min-h-11 gap-2"
           disabled={working !== null}
-          onClick={() => {
-            if (competingCount > 0 || bookedClashes.length > 0) {
-              setApproveOpen(true);
-            } else {
-              void respond("approve");
-            }
-          }}
+          onClick={() => setApproveOpen(true)}
         >
           <IconCheck className="size-5" />
           {working === "approve" ? "Approving…" : "Approve"}
@@ -177,6 +171,10 @@ export function BookingRequestButtons({
               <AlertDialogTitle>Approve {booking.contact.name}?</AlertDialogTitle>
               <AlertDialogDescription asChild>
                 <div className="flex flex-col gap-2">
+                  <p>
+                    {booking.contact.name} will get an email with a link to pay and
+                    confirm the booking.
+                  </p>
                   {competingCount > 0 ? (
                     <p>
                       {competingLabel} for the same slot will be declined

@@ -39,8 +39,8 @@ export type DashboardSection =
 
 export const SETTINGS_CATEGORIES = [
   "pricing-model",
-  "events",
   "time-slots",
+  "events",
   "travel-fee",
   "client-info",
   "booking-requests",
