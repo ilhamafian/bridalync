@@ -16,8 +16,6 @@ export type StyleVariantOption = {
   deposit: number
   /** Styles have at most one; looks up to five. */
   imageSrcs: string[]
-  /** Shown beside the name, e.g. "+RM80.00" for an extra charge. */
-  priceLabel?: string
 }
 
 export type StyleCategoryOption = {
@@ -298,12 +296,7 @@ function VariantCarousel({
               />
             </span>
           ) : null}
-          <span className="flex items-center justify-between gap-3 px-3 py-2.5 font-medium">
-            <span>{variant.name}</span>
-            {variant.priceLabel ? (
-              <span className="shrink-0 tabular-nums">{variant.priceLabel}</span>
-            ) : null}
-          </span>
+          <span className="px-3 py-2.5 font-medium">{variant.name}</span>
         </button>
       )}
     />
@@ -335,12 +328,7 @@ function VariantPhotoRow({
         className="flex items-center justify-between gap-3 text-left font-medium"
         onClick={onSelect}
       >
-        <span className="flex min-w-0 flex-1 items-center justify-between gap-3">
-          <span>{variant.name}</span>
-          {variant.priceLabel ? (
-            <span className="shrink-0 tabular-nums">{variant.priceLabel}</span>
-          ) : null}
-        </span>
+        <span>{variant.name}</span>
         <span
           className={cn(
             "flex size-5 shrink-0 items-center justify-center rounded-full ring-1",

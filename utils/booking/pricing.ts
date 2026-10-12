@@ -14,6 +14,8 @@ export type BreakdownSessionItem = QuotationLineItem & {
   morningCallRm?: number;
   /** Sessions the morning call charge covers. */
   morningCallCount?: number;
+  /** Style extra charges already included in `amountRm`; only the stylist's dashboard lists them. */
+  styleExtras?: QuotationLineItem[];
 };
 
 export type BookingQuotationBreakdown = {
@@ -74,7 +76,7 @@ export type CalculateQuotationInput = {
   chargeBy: "package" | "style";
   selectedPackages: QuotationPackageInput[];
   selectedSessionStyles?: QuotationPackageInput[];
-  /** Charging by event: styles picked with an extra charge; listed like add-ons, not in the deposit. */
+  /** Charging by event: styles picked with an extra charge; folded into the event price, not in the deposit. */
   selectedStyleExtras?: QuotationLineItemInput[];
   selectedAddOns: QuotationLineItemInput[];
   travel?: TravelQuotationInput;
@@ -205,6 +207,14 @@ export function applyPaymentProcessingFee(
     amountRm: item.amountRm + share(item.amountRm),
     ...(item.morningCallRm
       ? { morningCallRm: item.morningCallRm + share(item.morningCallRm) }
+      : {}),
+    ...(item.styleExtras
+      ? {
+          styleExtras: item.styleExtras.map((extra) => ({
+            ...extra,
+            amountRm: extra.amountRm + share(extra.amountRm),
+          })),
+        }
       : {}),
   }));
   const addOns = breakdown.addOns.map((item) => ({
@@ -407,12 +417,25 @@ export function calculateBookingQuotation(
 
   const regionShares = splitEvenlyRm(regionFeeRm, priced.length);
   const travelShares = splitEvenlyRm(travelFeeRm, priced.length);
+  const styleExtras =
+    input.chargeBy === "package"
+      ? (input.selectedStyleExtras ?? []).map((extra) => ({
+          label: extra.name,
+          amountRm: roundRm(extra.price),
+        }))
+      : [];
+  const styleExtrasRm = styleExtras.reduce((sum, extra) => sum + extra.amountRm, 0);
 
   priced.forEach((item, index) => {
     const slotCount = Math.max(1, item.slotCount ?? 1);
     const label = sessionLineItemLabel(item.name, slotCount);
     const morningCallRm = roundRm(item.morningCall?.amountRm ?? 0);
-    const price = item.price * slotCount + morningCallRm + regionShares[index];
+    const itemStyleExtras = index === 0 ? styleExtras : [];
+    const price =
+      item.price * slotCount +
+      morningCallRm +
+      regionShares[index] +
+      (index === 0 ? styleExtrasRm : 0);
     lineItems.push({
       label,
       amountRm: roundRm(price + travelShares[index]),
@@ -424,12 +447,11 @@ export function calculateBookingQuotation(
       ...(morningCallRm > 0 && item.morningCall
         ? { morningCallRm, morningCallCount: item.morningCall.count }
         : {}),
+      ...(itemStyleExtras.length > 0 ? { styleExtras: itemStyleExtras } : {}),
     });
   });
 
-  const styleExtras =
-    input.chargeBy === "package" ? (input.selectedStyleExtras ?? []) : [];
-  const addOnPrices = [...styleExtras, ...input.selectedAddOns].map((addOn) => ({
+  const addOnPrices = input.selectedAddOns.map((addOn) => ({
     label: addOn.name,
     amountRm: roundRm(addOn.price),
   }));

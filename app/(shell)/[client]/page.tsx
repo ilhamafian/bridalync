@@ -833,40 +833,29 @@ export default function ClientPage() {
     [user]
   );
 
-  const styleCategories = useMemo(() => {
-    const feeIncluded = settings?.payment.method === "payment_gateway";
-    return [...styles]
-      .sort((a, b) => a.order - b.order)
-      .map((style) => {
-        const id = normalizePackageId(style._id);
-        return {
-          id,
-          name: style.name,
-          variants: [...style.variants]
-            .sort((a, b) => a.order - b.order)
-            .map((variant) => {
-              const extraRm = styleExtrasOffered ? getStyleExtraRm(variant) : 0;
-              return {
+  const styleCategories = useMemo(
+    () =>
+      [...styles]
+        .sort((a, b) => a.order - b.order)
+        .map((style) => {
+          const id = normalizePackageId(style._id);
+          return {
+            id,
+            name: style.name,
+            variants: [...style.variants]
+              .sort((a, b) => a.order - b.order)
+              .map((variant) => ({
                 id: buildStyleVariantId(id, variant.order),
                 name: variant.name,
                 price: variant.price,
                 deposit: variant.deposit,
                 imageSrcs: variant.image_urls,
-                ...(extraRm > 0
-                  ? {
-                      priceLabel: `+${formatRm(
-                        feeIncluded
-                          ? withClientFeesRm(extraRm, false)
-                          : extraRm
-                      )}`,
-                    }
-                  : {}),
-              };
-            }),
-        };
-      })
-      .filter((style) => style.id.length > 0);
-  }, [styles, styleExtrasOffered, settings?.payment.method]);
+              })),
+          };
+        })
+        .filter((style) => style.id.length > 0),
+    [styles]
+  );
 
   const chargeBy = settings?.charge_by ?? "package";
 

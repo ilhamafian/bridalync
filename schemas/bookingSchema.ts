@@ -33,6 +33,8 @@ export const quotationBreakdownSchema = z.object({
       /** Morning call charge included in `amountRm`; the invoice PDF lists it separately. */
       morningCallRm: z.number().optional(),
       morningCallCount: z.number().int().optional(),
+      /** Style extra charges included in `amountRm`; only the stylist's dashboard lists them. */
+      styleExtras: z.array(quotationAmountSchema).optional(),
     })
   ),
   addOns: z.array(quotationAmountSchema),

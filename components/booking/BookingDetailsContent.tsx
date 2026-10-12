@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { Fragment } from "react";
 import {
   IconBrandInstagram,
   IconFileTypePdf,
@@ -356,14 +357,30 @@ function PriceBreakdown({ booking }: { booking: SerializedBooking }) {
         <div className="flex flex-col gap-2">
           {breakdown.sessions
             .filter((item) => item.sessionKey == null)
-            .map((item, index) => (
-              <PriceRow
-                key={`${item.label}-${index}`}
-                label={item.label}
-                detail="Event"
-                amountRm={item.amountRm}
-              />
-            ))}
+            .map((item, index) => {
+              const styleExtras = item.styleExtras ?? [];
+              const styleExtrasRm = styleExtras.reduce(
+                (sum, extra) => sum + extra.amountRm,
+                0
+              );
+              return (
+                <Fragment key={`${item.label}-${index}`}>
+                  <PriceRow
+                    label={item.label}
+                    detail="Event"
+                    amountRm={item.amountRm - styleExtrasRm}
+                  />
+                  {styleExtras.map((extra, extraIndex) => (
+                    <PriceRow
+                      key={`${extra.label}-${extraIndex}`}
+                      label={extra.label}
+                      detail="Style extra · client sees it in the event price"
+                      amountRm={extra.amountRm}
+                    />
+                  ))}
+                </Fragment>
+              );
+            })}
           {booking.sessions.map((session, index) => {
             const price = breakdown.sessions.find(
               (item) =>
