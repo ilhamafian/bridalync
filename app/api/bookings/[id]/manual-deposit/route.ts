@@ -16,6 +16,7 @@ import {
 import { prepareFileForUpload } from "@/utils/image/upload";
 import { RECEIPT_ALLOWED_TYPES } from "@/utils/payment/manualTransfer";
 import { notifyDepositReceiptSubmitted } from "@/utils/push/bookingNotifications";
+import { runAfterResponse } from "@/utils/runAfterResponse";
 
 /** Transfer receipt for an approved booking request or payment-link booking (public; `client` = the stylist's username). */
 export async function POST(
@@ -96,15 +97,13 @@ export async function POST(
 
     const updated = await attachManualDepositReceipt(id, blob.url, paymentOption);
     if (updated) {
-      try {
-        await notifyDepositReceiptSubmitted(
+      runAfterResponse("Receipt push", () =>
+        notifyDepositReceiptSubmitted(
           updated,
           paymentOption === "full" ? updated.invoice.totalRm : updated.invoice.depositRm,
           paymentOption === "full"
-        );
-      } catch (error) {
-        console.error("Failed to send receipt push:", error);
-      }
+        )
+      );
     }
 
     return createResponse(

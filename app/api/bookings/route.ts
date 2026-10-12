@@ -20,6 +20,7 @@ import { usesLooks } from "@/utils/styleTerms";
 import { prepareFileForUpload } from "@/utils/image/upload";
 import { RECEIPT_ALLOWED_TYPES } from "@/utils/payment/manualTransfer";
 import { notifyNewClientBooking } from "@/utils/push/bookingNotifications";
+import { runAfterResponse } from "@/utils/runAfterResponse";
 import {
   isAccountReadyForClientCharges,
   retrieveConnectedAccount,
@@ -238,11 +239,9 @@ export async function POST(req: NextRequest) {
       persisted &&
       (persisted.status === "enquiry" || isRequest || isManualBooking)
     ) {
-      try {
-        await notifyNewClientBooking(persisted);
-      } catch (error) {
-        console.error("Failed to send new booking push:", error);
-      }
+      runAfterResponse("New booking push", () =>
+        notifyNewClientBooking(persisted)
+      );
     }
 
     return createResponse(

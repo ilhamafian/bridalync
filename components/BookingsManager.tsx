@@ -396,7 +396,10 @@ export function BookingsManager({
       router.refresh();
     } catch {
       setVerifyErrorBookingId(bookingId);
-      setVerifyError("Could not update payment verification.");
+      setVerifyError(
+        "Couldn't reach the server. Refreshing to check whether it went through."
+      );
+      router.refresh();
     } finally {
       setVerifyingKey(null);
     }

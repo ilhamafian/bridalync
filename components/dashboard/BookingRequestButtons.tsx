@@ -73,14 +73,14 @@ export function BookingRequestButtons({
     setWorking(action);
     setError(null);
     try {
-      const response = await fetch(
-        `/api/bookings/${encodeURIComponent(booking._id)}/request`,
-        {
+      const send = () =>
+        fetch(`/api/bookings/${encodeURIComponent(booking._id)}/request`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ action }),
-        }
-      );
+        });
+      // Phones drop the connection when the app is backgrounded mid-request; answering again is a no-op server-side.
+      const response = await send().catch(() => send());
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         setError(
@@ -96,7 +96,7 @@ export function BookingRequestButtons({
       setApproveOpen(false);
       router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
+      setError("Couldn't reach the server. Check your connection and try again.");
     } finally {
       setWorking(null);
     }

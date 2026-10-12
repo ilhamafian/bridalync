@@ -19,6 +19,22 @@ class BookingModel extends ModelBase<Booking> {
     const collection = await this.getCollection();
     await collection.updateOne({ _id: new ObjectId(id) }, { $set: set });
   }
+
+  /** Sets `fields` only if the booking still has `status`; false when another request changed it first. */
+  async updateIfStatus(
+    id: string,
+    status: Booking["status"],
+    updateData: Partial<Booking>,
+    schema: ZodSchema<Partial<Booking>>
+  ): Promise<boolean> {
+    const validated = schema.parse(updateData);
+    const collection = await this.getCollection();
+    const result = await collection.updateOne(
+      { _id: new ObjectId(id), status },
+      { $set: { ...validated, updated_at: new Date() } }
+    );
+    return result.modifiedCount > 0;
+  }
 }
 
 export const bookingModel = new BookingModel();

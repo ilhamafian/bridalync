@@ -273,7 +273,22 @@ function BookingResultPageContent() {
     const refresh = await fetch(
       `/api/bookings/${bookingId}?client=${encodeURIComponent(client)}`
     );
-    if (refresh.ok) setBooking((await refresh.json()) as PublicBooking);
+    if (!refresh.ok) return null;
+    const refreshed = (await refresh.json()) as PublicBooking;
+    setBooking(refreshed);
+    return refreshed;
+  }
+
+  /** The upload can succeed even when the connection drops before the reply (e.g. the phone locks). */
+  async function receiptReachedServer(
+    field: "depositVerificationStatus" | "balanceVerificationStatus"
+  ) {
+    try {
+      const refreshed = await refreshBooking();
+      return refreshed?.[field] === "pending";
+    } catch {
+      return false;
+    }
   }
 
   /** Approved booking request, stylist on Stripe. */
@@ -340,7 +355,11 @@ function BookingResultPageContent() {
       const response = await fetch(`/api/bookings/${bookingId}/manual-deposit`, {
         method: "POST",
         body: formData,
+      }).catch(async (networkError: unknown) => {
+        if (await receiptReachedServer("depositVerificationStatus")) return null;
+        throw networkError;
       });
+      if (!response) return;
       const payload: unknown = await response.json();
       if (!response.ok) {
         throw new Error(
@@ -376,7 +395,14 @@ function BookingResultPageContent() {
       const response = await fetch(`/api/bookings/${bookingId}/manual-balance`, {
         method: "POST",
         body: formData,
+      }).catch(async (networkError: unknown) => {
+        if (await receiptReachedServer("balanceVerificationStatus")) return null;
+        throw networkError;
       });
+      if (!response) {
+        setShowManualBalance(false);
+        return;
+      }
       const payload: unknown = await response.json();
 
       if (!response.ok) {

@@ -22,6 +22,7 @@ import {
   notifyBalancePaymentReceived,
   notifyBookingConfirmed,
 } from "@/utils/push/bookingNotifications";
+import { runAfterResponse } from "@/utils/runAfterResponse";
 
 export async function getBookingById(
   id: string
@@ -108,13 +109,10 @@ export async function confirmBookingPayment(
   }
 
   if (booking) {
-    try {
-      await notifyBookingConfirmed(booking);
-    } catch (error) {
-      console.error("Failed to send booking confirmed push:", error);
-    }
-
-    try {
+    runAfterResponse("Booking confirmed push", () =>
+      notifyBookingConfirmed(booking)
+    );
+    runAfterResponse("Booking confirmation email", async () => {
       const freelancer = booking.freelancerUserId
         ? await new UserModel().findById(booking.freelancerUserId)
         : null;
@@ -136,9 +134,7 @@ export async function confirmBookingPayment(
         invoiceSettings: settings?.invoice ?? null,
         paymentSettings: settings?.payment ?? null,
       });
-    } catch (error) {
-      console.error("Failed to send booking confirmation email:", error);
-    }
+    });
   }
 
   return booking;
@@ -191,20 +187,15 @@ export async function confirmBookingBalancePayment(
   }
 
   if (booking) {
-    try {
-      await notifyBalancePaymentReceived(booking, existing.invoice.balanceRm);
-    } catch (error) {
-      console.error("Failed to send balance received push:", error);
-    }
-
-    try {
+    runAfterResponse("Balance received push", () =>
+      notifyBalancePaymentReceived(booking, existing.invoice.balanceRm)
+    );
+    runAfterResponse("Balance received email", async () => {
       const freelancer = booking.freelancerUserId
         ? await new UserModel().findById(booking.freelancerUserId)
         : null;
       await sendBalancePaymentReceivedEmail(booking, freelancer?.name ?? null);
-    } catch (error) {
-      console.error("Failed to send balance received email:", error);
-    }
+    });
   }
 
   return booking;
@@ -246,15 +237,17 @@ export async function rejectManualBalancePayment(bookingId: string) {
   return getBookingById(bookingId);
 }
 
+/** Null when the request was already answered (e.g. a retried request got there first). */
 export async function approveBookingRequest(bookingId: string) {
   if (!ObjectId.isValid(bookingId)) return null;
 
-  await bookingModel.update(
+  const changed = await bookingModel.updateIfStatus(
     bookingId,
+    "requested",
     { status: "pending", requestApprovedAt: new Date() },
     bookingSchema.pick({ status: true, requestApprovedAt: true })
   );
-  return getBookingById(bookingId);
+  return changed ? getBookingById(bookingId) : null;
 }
 
 /** Looks up and stores the venue state of sessions that don't have one yet (e.g. booked before travel buffers). */
@@ -300,15 +293,17 @@ export async function findOverlappingBookingRequests(
   );
 }
 
+/** Null when the request was already answered (e.g. a retried request got there first). */
 export async function declineBookingRequest(bookingId: string) {
   if (!ObjectId.isValid(bookingId)) return null;
 
-  await bookingModel.update(
+  const changed = await bookingModel.updateIfStatus(
     bookingId,
+    "requested",
     { status: "cancelled", requestDeclinedAt: new Date() },
     bookingSchema.pick({ status: true, requestDeclinedAt: true })
   );
-  return getBookingById(bookingId);
+  return changed ? getBookingById(bookingId) : null;
 }
 
 /** Receipt for an approved booking request (bookings paid at creation attach theirs in `POST /api/bookings`). */

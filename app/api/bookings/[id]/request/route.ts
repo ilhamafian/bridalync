@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { z } from "zod";
 
 import { SettingModel } from "@/models/Setting";
+import type { PersistedBooking } from "@/schemas/bookingSchema";
 import { toIdString } from "@/schemas/objectId";
 import { paymentSettingSchema } from "@/schemas/settingSchema";
 import { isOnboardingComplete } from "@/schemas/userSchema";
@@ -21,10 +22,25 @@ import {
   sendBookingRequestApprovedEmail,
   sendBookingRequestDeclinedEmail,
 } from "@/utils/email/booking-request";
+import { runAfterResponse } from "@/utils/runAfterResponse";
 
 const requestActionSchema = z.object({
   action: z.enum(["approve", "decline"]),
 });
+
+/** A booking no longer `requested`: answering it the same way again succeeds, so the app can safely retry. */
+function answeredResponse(booking: PersistedBooking, approve: boolean) {
+  const sameAnswer = approve
+    ? Boolean(booking.requestApprovedAt) && booking.status !== "cancelled"
+    : Boolean(booking.requestDeclinedAt);
+  if (!sameAnswer) {
+    return createResponse(
+      { error: "This booking request was already answered." },
+      409
+    );
+  }
+  return createResponse({ booking: serializeBooking(booking), declinedIds: [] });
+}
 
 /**
  * The stylist approves (client can then pay; the slot is now held) or declines a booking request.
@@ -54,14 +70,11 @@ export async function POST(
     if (!booking || booking.freelancerUserId !== userId) {
       return createResponse({ error: "Booking not found" }, 404);
     }
+    const approve = parsed.data.action === "approve";
     if (booking.status !== "requested") {
-      return createResponse(
-        { error: "This booking request was already answered." },
-        409
-      );
+      return answeredResponse(booking, approve);
     }
 
-    const approve = parsed.data.action === "approve";
     const settings = await new SettingModel().findSettingsByUserId(userId);
     const bufferRegions = settings?.travel.travel_buffer_regions;
 
@@ -96,41 +109,43 @@ export async function POST(
     const updated = approve
       ? await approveBookingRequest(id)
       : await declineBookingRequest(id);
+    if (!updated) {
+      const latest = await getBookingById(id);
+      if (!latest) {
+        return createResponse({ error: "Booking not found" }, 404);
+      }
+      return answeredResponse(latest, approve);
+    }
 
-    const declinedIds: string[] = [];
-    if (approve && updated) {
+    const declined: PersistedBooking[] = [];
+    if (approve) {
       for (const competing of await findOverlappingBookingRequests(updated)) {
-        const competingId = String(competing._id);
-        const declined = await declineBookingRequest(competingId);
-        if (!declined) continue;
-        declinedIds.push(competingId);
-        try {
-          await sendBookingRequestDeclinedEmail(declined, user.name);
-        } catch (error) {
-          console.error("Failed to send booking request email:", error);
-        }
+        const result = await declineBookingRequest(String(competing._id));
+        if (result) declined.push(result);
       }
     }
 
-    if (updated) {
-      try {
-        if (approve) {
-          await sendBookingRequestApprovedEmail(
-            updated,
-            user.name,
-            paymentSettingSchema.parse(settings?.payment ?? {}).balance_due_before
-          );
-        } else {
-          await sendBookingRequestDeclinedEmail(updated, user.name);
-        }
-      } catch (error) {
-        console.error("Failed to send booking request email:", error);
+    const stylistName = user.name;
+    runAfterResponse("Booking request email", async () => {
+      if (approve) {
+        await sendBookingRequestApprovedEmail(
+          updated,
+          stylistName,
+          paymentSettingSchema.parse(settings?.payment ?? {}).balance_due_before
+        );
+      } else {
+        await sendBookingRequestDeclinedEmail(updated, stylistName);
       }
+    });
+    for (const booking of declined) {
+      runAfterResponse("Booking request declined email", () =>
+        sendBookingRequestDeclinedEmail(booking, stylistName)
+      );
     }
 
     return createResponse({
-      booking: updated ? serializeBooking(updated) : null,
-      declinedIds,
+      booking: serializeBooking(updated),
+      declinedIds: declined.map((booking) => String(booking._id)),
     });
   } catch (error) {
     return handleError(error);

@@ -1,5 +1,4 @@
 import { createHash } from "crypto";
-import { after } from "next/server";
 
 import { bookingModel } from "@/models/Booking";
 import type { PersistedBooking } from "@/schemas/bookingSchema";
@@ -15,6 +14,7 @@ import {
   getGoogleCalendarAccessToken,
   invalidateGoogleAccessToken,
 } from "@/utils/google/calendarConnection";
+import { runAfterResponse } from "@/utils/runAfterResponse";
 import { GOOGLE_CALENDAR_EVENTS_SCOPE } from "@/utils/google/oauth";
 import { formatLocationAddress } from "@/utils/session";
 
@@ -266,17 +266,9 @@ export async function syncUpcomingBookingsToGoogleCalendar(
   }
 }
 
-/** Runs after the response is sent; Google errors never fail the booking request. */
+/** Google errors never fail the booking request. */
 function runInBackground(label: string, task: () => Promise<void>) {
-  const run = () =>
-    task().catch((error) => {
-      console.error(`[google-calendar-sync] ${label} failed:`, error);
-    });
-  try {
-    after(run);
-  } catch {
-    void run();
-  }
+  runAfterResponse(`[google-calendar-sync] ${label}`, task);
 }
 
 export function scheduleBookingCalendarSync(bookingId: string) {
