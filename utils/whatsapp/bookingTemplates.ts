@@ -108,6 +108,7 @@ export async function sendBookingRejectedWhatsApp(
   await sendWhatsAppTemplate({
     ...clientPhone(booking),
     template: "booking_rejected",
+    language: "en_US",
     body: [clientName(booking), name, bookingDate(booking), eventName(booking), name],
   });
 }

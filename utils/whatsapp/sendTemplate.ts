@@ -10,6 +10,8 @@ type SendTemplateInput = {
   countryCode?: string | null;
   mobile?: string | null;
   template: string;
+  /** Must match the language the template was approved in; defaults to `WHATSAPP_TEMPLATE_LANGUAGE` / `en`. */
+  language?: string;
   body: string[];
   urlButton?: WhatsAppUrlButton;
 };
@@ -97,7 +99,7 @@ export async function sendWhatsAppTemplate(input: SendTemplateInput) {
         type: "template",
         template: {
           name: input.template,
-          language: { code: templateLanguage() },
+          language: { code: input.language ?? templateLanguage() },
           components,
         },
       }),
