@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   IconBed,
   IconCar,
@@ -24,15 +24,9 @@ import { RegionPriceList } from "@/components/RegionPriceList";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useVenueRegions, venueKey } from "@/hooks/use-venue-regions";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
 import type {
@@ -43,6 +37,7 @@ import type {
   TravelSetting,
 } from "@/schemas/settingSchema";
 import {
+  getRegionLabel,
   MALAYSIA_REGIONS,
   parseRegionPriceInputs,
   toRegionPriceInputs,
@@ -89,11 +84,12 @@ function Field({
 }
 
 function savedLocation(travel: TravelSetting): Address | null {
-  return travel.enabled &&
-    travel.location.placeId !== DISABLED_TRAVEL_LOCATION.placeId
+  return travel.location.placeId !== DISABLED_TRAVEL_LOCATION.placeId
     ? travel.location
     : null;
 }
+
+export type BaseRegionStatus = "none" | "loading" | "ready" | "error";
 
 export function useTravelSettingsForm(initial: TravelSetting) {
   const [saved, setSaved] = useState(initial);
@@ -117,9 +113,6 @@ export function useTravelSettingsForm(initial: TravelSetting) {
   const [accommodationBy, setAccommodationBy] = useState<AccommodationProvider>(
     initial.accommodation_by ?? "self"
   );
-  const [baseRegion, setBaseRegion] = useState<RegionId | null>(
-    initial.base_region ?? null
-  );
   const [bufferRegions, setBufferRegions] = useState<RegionId[]>(
     initial.travel_buffer_regions ?? []
   );
@@ -127,6 +120,21 @@ export function useTravelSettingsForm(initial: TravelSetting) {
     initial.unserved_regions ?? []
   );
   const [statesTab, setStatesTab] = useState<StatesTab>("areas");
+
+  const baseLocations = useMemo(() => [location], [location]);
+  const venueRegions = useVenueRegions(baseLocations, !!location);
+  const detectedRegion = location
+    ? venueRegions[venueKey(location.location)]
+    : undefined;
+  const baseRegionStatus: BaseRegionStatus = !location
+    ? "none"
+    : (detectedRegion?.status ?? "loading");
+  const baseRegion: RegionId | null =
+    detectedRegion?.status === "ready"
+      ? detectedRegion.regionId
+      : baseRegionStatus === "loading" || baseRegionStatus === "none"
+        ? (saved.base_region ?? null)
+        : null;
 
   const hiddenPriceRegions = unservedRegions.filter((id) => id !== baseRegion);
 
@@ -140,7 +148,6 @@ export function useTravelSettingsForm(initial: TravelSetting) {
     setRegionMode(next.region_mode ?? "fixed");
     setRegionPrices(toRegionPriceInputs(next.region_prices));
     setAccommodationBy(next.accommodation_by ?? "self");
-    setBaseRegion(next.base_region ?? null);
     setBufferRegions(next.travel_buffer_regions ?? []);
     setUnservedRegions(next.unserved_regions ?? []);
   }
@@ -149,8 +156,14 @@ export function useTravelSettingsForm(initial: TravelSetting) {
   function buildTravel(
     chargeBy: ChargeBy
   ): { travel: TravelSettingsPayload } | { error: string } {
+    if (baseRegionStatus === "loading") {
+      return { error: "Still detecting your base state. Try again in a moment." };
+    }
     if (accommodationBy === "client" && !baseRegion) {
-      return { error: "Pick your base state." };
+      return {
+        error:
+          "Pick a base location in Malaysia so your base state can be detected.",
+      };
     }
     const accommodation = {
       accommodation_by: accommodationBy,
@@ -227,7 +240,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
       travel: {
         enabled: false,
         rate_per_km: 0,
-        location: DISABLED_TRAVEL_LOCATION,
+        location: location ?? DISABLED_TRAVEL_LOCATION,
         ...accommodation,
       },
     };
@@ -251,7 +264,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
     accommodationBy,
     setAccommodationBy,
     baseRegion,
-    setBaseRegion,
+    baseRegionStatus,
     bufferRegions,
     setBufferRegions,
     unservedRegions,
@@ -265,6 +278,21 @@ export function useTravelSettingsForm(initial: TravelSetting) {
 }
 
 export type TravelSettingsForm = ReturnType<typeof useTravelSettingsForm>;
+
+function baseRegionText(status: BaseRegionStatus, baseRegion: RegionId | null) {
+  switch (status) {
+    case "none":
+      return "Your base state is detected from this location.";
+    case "loading":
+      return "Detecting your base state…";
+    case "error":
+      return "Couldn't detect your base state. Pick the location again.";
+    case "ready":
+      return baseRegion
+        ? `Base state: ${getRegionLabel(baseRegion)}`
+        : "This location isn't in a Malaysian state.";
+  }
+}
 
 export function TravelSettingsFields({
   form,
@@ -330,6 +358,20 @@ export function TravelSettingsFields({
         </SettingsSection>
       ) : null}
 
+      <MapsProvider>
+        <SettingsSection title="Base location">
+          <div className={settingsCardClassName}>
+            <LocationMapPicker
+              value={form.location}
+              onChange={form.setLocation}
+            />
+            <p className="text-xs text-muted-foreground">
+              {baseRegionText(form.baseRegionStatus, baseRegion)}
+            </p>
+          </div>
+        </SettingsSection>
+      </MapsProvider>
+
       {enabled && mode === "region" ? (
         <>
           {chargeBy === "package" ? (
@@ -393,7 +435,7 @@ export function TravelSettingsFields({
       ) : null}
 
       {enabled && mode === "distance" ? (
-        <MapsProvider>
+        <>
           <SettingsSection title="Rate">
             <div className={settingsCardClassName}>
               <Field label="Rate per km (RM)">
@@ -437,15 +479,7 @@ export function TravelSettingsFields({
               </p>
             </div>
           </SettingsSection>
-          <SettingsSection title="Base location">
-            <div className={settingsCardClassName}>
-              <LocationMapPicker
-                value={form.location}
-                onChange={form.setLocation}
-              />
-            </div>
-          </SettingsSection>
-        </MapsProvider>
+        </>
       ) : null}
 
       <SettingsSection title="Out-of-state accommodation & transport">
@@ -475,27 +509,10 @@ export function TravelSettingsFields({
         </RadioGroup>
         {form.accommodationBy === "client" ? (
           <div className={settingsCardClassName}>
-            <Field label="Your base state">
-              <Select
-                value={baseRegion ?? undefined}
-                onValueChange={(value) => form.setBaseRegion(value as RegionId)}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select state" />
-                </SelectTrigger>
-                <SelectContent>
-                  {MALAYSIA_REGIONS.map((region) => (
-                    <SelectItem key={region.id} value={region.id}>
-                      {region.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </Field>
             <p className="text-xs text-muted-foreground">
-              When a session&apos;s venue is in another state, the client must
-              agree to provide your accommodation and transport before
-              continuing their booking.
+              {baseRegion
+                ? `When a session's venue is outside ${getRegionLabel(baseRegion)}, the client must agree to provide your accommodation and transport before continuing their booking.`
+                : "Pick your base location above so your base state can be detected."}
             </p>
           </div>
         ) : null}
@@ -520,33 +537,26 @@ export function TravelSettingsFields({
             <p className="text-xs text-muted-foreground">
               States you take bookings in. Clients with a venue in a state
               that&apos;s off are asked to change location.
+              {baseRegion
+                ? ` Your base state (${getRegionLabel(baseRegion)}) is always served.`
+                : null}
             </p>
             <div className={settingsListClassName}>
-              {MALAYSIA_REGIONS.map((region) => {
-                const isBase = region.id === baseRegion;
-                const served = isBase || !unservedRegions.includes(region.id);
+              {MALAYSIA_REGIONS.filter(
+                (region) => region.id !== baseRegion
+              ).map((region) => {
+                const served = !unservedRegions.includes(region.id);
                 return (
                   <label
                     key={region.id}
-                    className={cn(
-                      settingsRowClassName,
-                      "py-2.5",
-                      isBase ? "hover:bg-transparent" : "cursor-pointer"
-                    )}
+                    className={cn(settingsRowClassName, "cursor-pointer py-2.5")}
                   >
                     <RowText
                       title={region.label}
-                      description={
-                        isBase
-                          ? "Your base state · always on"
-                          : served
-                            ? undefined
-                            : "Clients can't book here"
-                      }
+                      description={served ? undefined : "Clients can't book here"}
                     />
                     <Switch
                       checked={served}
-                      disabled={isBase}
                       onCheckedChange={(checked) =>
                         form.setUnservedRegions((current) =>
                           checked

@@ -20,7 +20,7 @@ export type RegionQuote =
   | { status: "error" }
   | { status: "ready"; result: RegionPriceResult | null };
 
-function venueKey(location: Address["location"]) {
+export function venueKey(location: Address["location"]) {
   return `${location.lat.toFixed(6)},${location.lng.toFixed(6)}`;
 }
 
