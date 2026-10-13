@@ -96,6 +96,7 @@ export async function sendBookingAcceptedWhatsApp(
     ...clientPhone(booking),
     template: "booking_accepted",
     body: [clientName(booking), name, eventName(booking), bookingDate(booking), name],
+    urlButton: { index: 0, text: paymentPath(booking) },
   });
 }
 
