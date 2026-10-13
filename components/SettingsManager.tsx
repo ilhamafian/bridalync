@@ -3,17 +3,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  IconBed,
   IconBrandStripe,
   IconBrush,
   IconBuildingBank,
-  IconCar,
   IconClock,
   IconCreditCard,
-  IconMap,
-  IconMapPin,
   IconPackage,
-  IconRoute,
   IconPlus,
   IconSparkles,
   IconSunrise,
@@ -34,23 +29,18 @@ import {
   settingsListClassName,
   settingsRowClassName,
 } from "@/components/dashboard/settings/SettingsUi";
+import {
+  TravelSettingsFields,
+  useTravelSettingsForm,
+} from "@/components/dashboard/settings/TravelSettingsFields";
 import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
-import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import { PaymentQrUpload } from "@/components/PaymentQrUpload";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import type { Address } from "@/schemas/addressSchema";
@@ -69,13 +59,6 @@ import {
   type TravelMode,
   type TravelRegionMode,
 } from "@/schemas/settingSchema";
-import { RegionPriceList } from "@/components/RegionPriceList";
-import {
-  MALAYSIA_REGIONS,
-  parseRegionPriceInputs,
-  toRegionPriceInputs,
-  type RegionPriceInputs,
-} from "@/utils/booking/regions";
 import {
   buildReviewRequestMessage,
   DEFAULT_REVIEW_REQUEST_TEMPLATE,
@@ -83,10 +66,7 @@ import {
   REVIEW_REQUEST_TEMPLATE_MAX_LENGTH,
 } from "@/utils/booking/messages";
 import { DEFAULT_MORNING_CALL_BEFORE } from "@/utils/booking/morningCall";
-import { LONG_DISTANCE_THRESHOLD_KM } from "@/utils/booking/travel";
 import type { SettingsCategory } from "@/utils/dashboardShell";
-
-type StatesTab = "areas" | "travel-days";
 
 export type SettingsItem = {
   _id: string;
@@ -124,13 +104,6 @@ export type SettingsItem = {
   client_info: ClientInfoSetting;
   booking_requests: boolean;
   max_booking_year?: number;
-};
-
-const DISABLED_TRAVEL_LOCATION: Address = {
-  placeId: "travel-disabled",
-  formattedAddress: "Travel not enabled",
-  displayName: "Travel not enabled",
-  location: { lat: 0, lng: 0 },
 };
 
 const inputClassName = cn(
@@ -234,7 +207,7 @@ function SettingsPanel({
         onClick={onSave}
         disabled={saving || disabled}
       >
-        {saving ? "Saving…" : "Save"}
+        {saving ? "Savingâ€¦" : "Save"}
       </Button>
     </div>
   );
@@ -277,48 +250,7 @@ export function SettingsManager({
   const [chargeBy, setChargeBy] = useState(initialSettings.charge_by);
   const [savedRole, setSavedRole] = useState(initialRole);
   const [role, setRole] = useState(initialRole);
-  const [travelEnabled, setTravelEnabled] = useState(
-    initialSettings.travel.enabled
-  );
-  const [ratePerKm, setRatePerKm] = useState(
-    String(initialSettings.travel.rate_per_km || "")
-  );
-  const [longDistanceRatePerKm, setLongDistanceRatePerKm] = useState(
-    String(initialSettings.travel.long_distance_rate_per_km ?? "")
-  );
-  const [travelLocation, setTravelLocation] = useState<Address | null>(
-    initialSettings.travel.enabled &&
-      initialSettings.travel.location.placeId !== DISABLED_TRAVEL_LOCATION.placeId
-      ? initialSettings.travel.location
-      : null
-  );
-  const [travelMode, setTravelMode] = useState<TravelMode>(
-    initialSettings.travel.mode ?? "distance"
-  );
-  const [regionMode, setRegionMode] = useState<TravelRegionMode>(
-    initialSettings.travel.region_mode ?? "fixed"
-  );
-  const [regionPrices, setRegionPrices] = useState<RegionPriceInputs>(() =>
-    toRegionPriceInputs(initialSettings.travel.region_prices)
-  );
-  const [accommodationBy, setAccommodationBy] = useState<AccommodationProvider>(
-    initialSettings.travel.accommodation_by ?? "self"
-  );
-  const [baseRegion, setBaseRegion] = useState<RegionId | null>(
-    initialSettings.travel.base_region ?? null
-  );
-  const [bufferRegions, setBufferRegions] = useState<RegionId[]>(
-    initialSettings.travel.travel_buffer_regions ?? []
-  );
-  const [unservedRegions, setUnservedRegions] = useState<RegionId[]>(
-    initialSettings.travel.unserved_regions ?? []
-  );
-  const hiddenPriceRegions = unservedRegions.filter((id) => id !== baseRegion);
-  const travelDayRegions = MALAYSIA_REGIONS.filter(
-    (region) =>
-      region.id !== baseRegion && !unservedRegions.includes(region.id)
-  );
-  const [statesTab, setStatesTab] = useState<StatesTab>("areas");
+  const travelForm = useTravelSettingsForm(initialSettings.travel);
   const [balanceDueBefore, setBalanceDueBefore] = useState(
     String(initialSettings.payment.balance_due_before)
   );
@@ -432,23 +364,7 @@ export function SettingsManager({
   function applySavedSetting(next: SettingsItem) {
     setSettings(next);
     setChargeBy(next.charge_by);
-    setTravelEnabled(next.travel.enabled);
-    setRatePerKm(String(next.travel.rate_per_km || ""));
-    setLongDistanceRatePerKm(
-      String(next.travel.long_distance_rate_per_km ?? "")
-    );
-    setTravelLocation(
-      next.travel.enabled && next.travel.location.placeId !== DISABLED_TRAVEL_LOCATION.placeId
-        ? next.travel.location
-        : null
-    );
-    setTravelMode(next.travel.mode ?? "distance");
-    setRegionMode(next.travel.region_mode ?? "fixed");
-    setRegionPrices(toRegionPriceInputs(next.travel.region_prices));
-    setAccommodationBy(next.travel.accommodation_by ?? "self");
-    setBaseRegion(next.travel.base_region ?? null);
-    setBufferRegions(next.travel.travel_buffer_regions ?? []);
-    setUnservedRegions(next.travel.unserved_regions ?? []);
+    travelForm.reset(next.travel);
     setBalanceDueBefore(String(next.payment.balance_due_before));
     setPaymentMethod(next.payment.method ?? "manual_transfer");
     setQrImageUrl(next.payment.qr_image_url ?? "");
@@ -544,118 +460,12 @@ export function SettingsManager({
   }
 
   async function saveTravel() {
-    if (accommodationBy === "client" && !baseRegion) {
-      setSectionError((current) => ({
-        ...current,
-        travel: "Pick your base state.",
-      }));
+    const result = travelForm.buildTravel(settings.charge_by);
+    if ("error" in result) {
+      setSectionError((current) => ({ ...current, travel: result.error }));
       return;
     }
-    const accommodation = {
-      accommodation_by: accommodationBy,
-      ...(baseRegion ? { base_region: baseRegion } : {}),
-      travel_buffer_regions: bufferRegions.filter(
-        (id) => id !== baseRegion && !unservedRegions.includes(id)
-      ),
-      unserved_regions: hiddenPriceRegions,
-    };
-
-    if (travelEnabled && travelMode === "region") {
-      const parsedPrices = parseRegionPriceInputs(regionPrices);
-      if (!parsedPrices) {
-        setSectionError((current) => ({
-          ...current,
-          travel: "Enter a valid price for each state, or leave it blank.",
-        }));
-        return;
-      }
-      const effectiveRegionMode =
-        settings.charge_by === "package" ? regionMode : "fixed";
-      if (
-        effectiveRegionMode === "fixed" &&
-        Object.keys(parsedPrices).every((id) =>
-          hiddenPriceRegions.includes(id as RegionId)
-        )
-      ) {
-        setSectionError((current) => ({
-          ...current,
-          travel: "Enter a price for at least one state you serve.",
-        }));
-        return;
-      }
-
-      const saved = await patchSettings("travel", {
-        travel: {
-          enabled: true,
-          mode: "region",
-          region_mode: effectiveRegionMode,
-          region_prices: parsedPrices,
-          location: travelLocation ?? settings.travel.location,
-          ...accommodation,
-        },
-      });
-      if (saved) {
-      onTravelChange?.(saved.travel);
-      router.refresh();
-    }
-      return;
-    }
-
-    if (travelEnabled) {
-      const parsedRate = Number.parseFloat(ratePerKm);
-      if (Number.isNaN(parsedRate) || parsedRate < 0) {
-        setSectionError((current) => ({
-          ...current,
-          travel: "Enter a valid travel rate per km.",
-        }));
-        return;
-      }
-      const longDistanceRaw = longDistanceRatePerKm.trim();
-      const parsedLongDistanceRate =
-        longDistanceRaw === "" ? null : Number.parseFloat(longDistanceRaw);
-      if (
-        parsedLongDistanceRate !== null &&
-        (Number.isNaN(parsedLongDistanceRate) || parsedLongDistanceRate < 0)
-      ) {
-        setSectionError((current) => ({
-          ...current,
-          travel: `Enter a valid rate for trips over ${LONG_DISTANCE_THRESHOLD_KM} km.`,
-        }));
-        return;
-      }
-      if (!travelLocation) {
-        setSectionError((current) => ({
-          ...current,
-          travel: "Pick a base location on the map.",
-        }));
-        return;
-      }
-
-      const saved = await patchSettings("travel", {
-        travel: {
-          enabled: true,
-          mode: "distance",
-          rate_per_km: parsedRate,
-          long_distance_rate_per_km: parsedLongDistanceRate,
-          location: travelLocation,
-          ...accommodation,
-        },
-      });
-      if (saved) {
-      onTravelChange?.(saved.travel);
-      router.refresh();
-    }
-      return;
-    }
-
-    const saved = await patchSettings("travel", {
-      travel: {
-        enabled: false,
-        rate_per_km: 0,
-        location: DISABLED_TRAVEL_LOCATION,
-        ...accommodation,
-      },
-    });
+    const saved = await patchSettings("travel", { travel: result.travel });
     if (saved) {
       onTravelChange?.(saved.travel);
       router.refresh();
@@ -1002,320 +812,11 @@ export function SettingsManager({
         saving={savingSection === "travel"}
         onSave={saveTravel}
       >
-        <SettingsSection title="Travel fee">
-          <div className={settingsListClassName}>
-            <label className={cn(settingsRowClassName, "cursor-pointer")}>
-              <IconBadge icon={IconCar} />
-              <RowText
-                title="Enable travel fee"
-                description="Charge clients for travelling to their venue."
-              />
-              <Switch
-                checked={travelEnabled}
-                onCheckedChange={setTravelEnabled}
-              />
-            </label>
-          </div>
-        </SettingsSection>
-
-        {travelEnabled ? (
-          <SettingsSection title="Charge by">
-            <RadioGroup
-              value={travelMode}
-              onValueChange={(value) => setTravelMode(value as TravelMode)}
-              className={settingsListClassName}
-            >
-              <label className={cn(settingsRowClassName, "cursor-pointer")}>
-                <IconBadge icon={IconRoute} />
-                <RowText
-                  title="By distance"
-                  description="A rate per km from your base location."
-                />
-                <RadioGroupItem value="distance" aria-label="By distance" />
-              </label>
-              <label className={cn(settingsRowClassName, "cursor-pointer")}>
-                <IconBadge icon={IconMap} />
-                <RowText
-                  title="By state"
-                  description="A price for each state you serve."
-                />
-                <RadioGroupItem value="region" aria-label="By state" />
-              </label>
-            </RadioGroup>
-          </SettingsSection>
-        ) : null}
-
-        {travelEnabled && travelMode === "region" ? (
-          <>
-            {settings.charge_by === "package" ? (
-              <SettingsSection title="State pricing">
-                <RadioGroup
-                  value={regionMode}
-                  onValueChange={(value) =>
-                    setRegionMode(value as TravelRegionMode)
-                  }
-                  className={settingsListClassName}
-                >
-                  <label className={cn(settingsRowClassName, "cursor-pointer")}>
-                    <IconBadge icon={IconMapPin} />
-                    <RowText
-                      title="Fixed charge"
-                      description="One price per state, added to every event."
-                    />
-                    <RadioGroupItem value="fixed" aria-label="Fixed charge" />
-                  </label>
-                  <label className={cn(settingsRowClassName, "cursor-pointer")}>
-                    <IconBadge icon={IconPackage} />
-                    <RowText
-                      title="Different charge by event"
-                      description="Each event has its own price per state."
-                    />
-                    <RadioGroupItem
-                      value="per_event"
-                      aria-label="Different charge by event"
-                    />
-                  </label>
-                </RadioGroup>
-              </SettingsSection>
-            ) : null}
-
-            {settings.charge_by === "package" && regionMode === "per_event" ? (
-              <div className={settingsCardClassName}>
-                <p className="text-muted-foreground">
-                  Set each event&apos;s price per state in Events &amp;{" "}
-                  {styleTerms.many}.
-                  The price already includes travel, so clients see one price
-                  for the event.
-                </p>
-              </div>
-            ) : (
-              <SettingsSection title="Prices">
-                <RegionPriceList
-                  value={regionPrices}
-                  onChange={setRegionPrices}
-                  feeHint="extra"
-                  hiddenRegions={hiddenPriceRegions}
-                />
-                <p className="text-xs text-muted-foreground">
-                  The state&apos;s price is included in the booking price, not
-                  shown as a separate travel fee. Leave a state blank if you
-                  don&apos;t serve it. When sessions are in different states,
-                  the highest price is charged once.
-                </p>
-              </SettingsSection>
-            )}
-          </>
-        ) : null}
-
-        {travelEnabled && travelMode === "distance" ? (
-          <MapsProvider>
-            <SettingsSection title="Rate">
-              <div className={settingsCardClassName}>
-                <Field label="Rate per km (RM)">
-                  <Input
-                    className={inputClassName}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={ratePerKm}
-                    onChange={(event) => setRatePerKm(event.target.value)}
-                    placeholder="1.00"
-                  />
-                </Field>
-                <p className="text-xs text-muted-foreground">
-                  Travel is charged as a round trip — to the client and back to
-                  your base. For example, 10 km away at RM 1/km adds RM 20 to
-                  the booking.
-                </p>
-              </div>
-            </SettingsSection>
-            <SettingsSection title={`Over ${LONG_DISTANCE_THRESHOLD_KM} km`}>
-              <div className={settingsCardClassName}>
-                <Field label="Rate per km (RM)">
-                  <Input
-                    className={inputClassName}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={longDistanceRatePerKm}
-                    onChange={(event) =>
-                      setLongDistanceRatePerKm(event.target.value)
-                    }
-                    placeholder={ratePerKm || "1.50"}
-                  />
-                </Field>
-                <p className="text-xs text-muted-foreground">
-                  When the client is more than {LONG_DISTANCE_THRESHOLD_KM} km
-                  away, this rate is used for the whole trip instead. For
-                  example, 120 km away at RM 1.50/km adds RM 360. Leave blank to
-                  use your normal rate.
-                </p>
-              </div>
-            </SettingsSection>
-            <SettingsSection title="Base location">
-              <div className={settingsCardClassName}>
-                <LocationMapPicker
-                  value={travelLocation}
-                  onChange={setTravelLocation}
-                />
-              </div>
-            </SettingsSection>
-          </MapsProvider>
-        ) : null}
-
-        <SettingsSection title="Out-of-state accommodation & transport">
-          <RadioGroup
-            value={accommodationBy}
-            onValueChange={(value) =>
-              setAccommodationBy(value as AccommodationProvider)
-            }
-            className={settingsListClassName}
-          >
-            <label className={cn(settingsRowClassName, "cursor-pointer")}>
-              <IconBadge icon={IconBed} />
-              <RowText
-                title="Provided by me"
-                description="You arrange your own stay and transport."
-              />
-              <RadioGroupItem value="self" aria-label="Provided by me" />
-            </label>
-            <label className={cn(settingsRowClassName, "cursor-pointer")}>
-              <IconBadge icon={IconUserHeart} />
-              <RowText
-                title="Provided by the client"
-                description="Clients outside your base state are told they must provide them."
-              />
-              <RadioGroupItem value="client" aria-label="Provided by the client" />
-            </label>
-          </RadioGroup>
-          {accommodationBy === "client" ? (
-            <div className={settingsCardClassName}>
-              <Field label="Your base state">
-                <Select
-                  value={baseRegion ?? undefined}
-                  onValueChange={(value) => setBaseRegion(value as RegionId)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select state" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MALAYSIA_REGIONS.map((region) => (
-                      <SelectItem key={region.id} value={region.id}>
-                        {region.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <p className="text-xs text-muted-foreground">
-                When a session&apos;s venue is in another state, the client
-                must agree to provide your accommodation and transport before
-                continuing their booking.
-              </p>
-            </div>
-          ) : null}
-        </SettingsSection>
-
-        <SettingsSection title="States">
-          <Tabs
-            value={statesTab}
-            onValueChange={(value) => setStatesTab(value as StatesTab)}
-            className="gap-3"
-          >
-            <TabsList className="grid h-10! w-full grid-cols-2 bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15">
-              <TabsTrigger value="areas" className="text-sm">
-                Service areas
-              </TabsTrigger>
-              <TabsTrigger value="travel-days" className="text-sm">
-                Travel days
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="areas" className="flex flex-col gap-2">
-              <p className="text-xs text-muted-foreground">
-                States you take bookings in. Clients with a venue in a state
-                that&apos;s off are asked to change location.
-              </p>
-              <div className={settingsListClassName}>
-                {MALAYSIA_REGIONS.map((region) => {
-                  const isBase = region.id === baseRegion;
-                  const served = isBase || !unservedRegions.includes(region.id);
-                  return (
-                    <label
-                      key={region.id}
-                      className={cn(
-                        settingsRowClassName,
-                        "py-2.5",
-                        isBase ? "hover:bg-transparent" : "cursor-pointer"
-                      )}
-                    >
-                      <RowText
-                        title={region.label}
-                        description={
-                          isBase
-                            ? "Your base state · always on"
-                            : served
-                              ? undefined
-                              : "Clients can't book here"
-                        }
-                      />
-                      <Switch
-                        checked={served}
-                        disabled={isBase}
-                        onCheckedChange={(checked) =>
-                          setUnservedRegions((current) =>
-                            checked
-                              ? current.filter((id) => id !== region.id)
-                              : [...current, region.id]
-                          )
-                        }
-                        aria-label={`Take bookings in ${region.label}`}
-                      />
-                    </label>
-                  );
-                })}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="travel-days" className="flex flex-col gap-2">
-              <p className="text-xs text-muted-foreground">
-                For bookings in these states, the day before and after each
-                session is blocked so other clients can&apos;t book them.
-                Applies once a booking holds its slot (booked, or a request you
-                approved). Only states you serve are listed.
-              </p>
-              {travelDayRegions.length > 0 ? (
-                <div className={settingsListClassName}>
-                  {travelDayRegions.map((region) => (
-                    <label
-                      key={region.id}
-                      className={cn(settingsRowClassName, "cursor-pointer py-2.5")}
-                    >
-                      <RowText title={region.label} />
-                      <Switch
-                        checked={bufferRegions.includes(region.id)}
-                        onCheckedChange={(checked) =>
-                          setBufferRegions((current) =>
-                            checked
-                              ? [...current, region.id]
-                              : current.filter((id) => id !== region.id)
-                          )
-                        }
-                        aria-label={`Block travel days for ${region.label}`}
-                      />
-                    </label>
-                  ))}
-                </div>
-              ) : (
-                <div className={settingsCardClassName}>
-                  <p className="text-muted-foreground">
-                    Turn on a state in Service areas to set travel days for it.
-                  </p>
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </SettingsSection>
+        <TravelSettingsFields
+          form={travelForm}
+          chargeBy={settings.charge_by}
+          styleTerms={styleTerms}
+        />
       </SettingsPanel>
     );
   }
@@ -1431,7 +932,7 @@ export function SettingsManager({
                 disabled={connectingStripe}
               >
                 {connectingStripe
-                  ? "Opening Stripe…"
+                  ? "Opening Stripeâ€¦"
                   : stripeConnected
                     ? "Manage Stripe account"
                     : stripeSetupPhase === "verifying"
@@ -1523,7 +1024,7 @@ export function SettingsManager({
     const preview = buildReviewRequestMessage({
       clientName: "Aisyah Rahman",
       freelancerName,
-      reviewUrl: "https://bridalync.com/you/review/…",
+      reviewUrl: "https://bridalync.com/you/review/â€¦",
       template: reviewTemplate,
     });
 
@@ -1609,7 +1110,7 @@ export function SettingsManager({
                     updateTimeSlot(index, { startTime: event.target.value })
                   }
                 />
-                <span className="text-muted-foreground">–</span>
+                <span className="text-muted-foreground">â€“</span>
                 <Input
                   className={cn(inputClassName, "min-w-0 flex-1 px-2")}
                   type="time"
@@ -1696,7 +1197,7 @@ export function SettingsManager({
               <p className="text-xs text-muted-foreground">
                 {morningCallSlots.length > 0
                   ? `Charged on your ${morningCallSlots
-                      .map((slot) => `${slot.startTime}–${slot.endTime}`)
+                      .map((slot) => `${slot.startTime}â€“${slot.endTime}`)
                       .join(", ")} slot${morningCallSlots.length === 1 ? "" : "s"}. `
                   : "None of your slots start before this time. "}
                 It&apos;s included in the session price clients see and

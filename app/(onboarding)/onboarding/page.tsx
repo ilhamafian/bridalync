@@ -4,7 +4,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   IconBrush,
-  IconCar,
   IconCheck,
   IconCreditCard,
   IconReceipt,
@@ -15,6 +14,7 @@ import {
 
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { PaymentMethodProvider } from "@/components/dashboard/PaymentMethodProvider";
 import {
   IconBadge,
   RowText,
@@ -23,15 +23,21 @@ import {
   settingsListClassName,
   settingsRowClassName,
 } from "@/components/dashboard/settings/SettingsUi";
-import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
+import {
+  DISABLED_TRAVEL_LOCATION,
+  TravelSettingsFields,
+  useTravelSettingsForm,
+} from "@/components/dashboard/settings/TravelSettingsFields";
 import { PhoneNumberInput, isValidPhoneNumber, DEFAULT_COUNTRY_CODE } from "@/components/PhoneNumberInput";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import type { Address } from "@/schemas/addressSchema";
-import { DEFAULT_TERMS_AND_CONDITIONS } from "@/schemas/settingSchema";
+import {
+  DEFAULT_TERMS_AND_CONDITIONS,
+  type TravelSetting,
+} from "@/schemas/settingSchema";
+import { getStyleTerms } from "@/utils/styleTerms";
 import {
   PAYMENT_PROCESSING_FEE_FIXED_RM,
   PAYMENT_PROCESSING_FEE_PERCENT,
@@ -92,6 +98,12 @@ const STEP_CONFIG: Record<
 };
 
 const TOTAL_STEPS = ONBOARDING_STEP_ORDER.length;
+
+const DEFAULT_ONBOARDING_TRAVEL: TravelSetting = {
+  enabled: false,
+  rate_per_km: 1,
+  location: DISABLED_TRAVEL_LOCATION,
+};
 
 const inputClassName = cn(
   "h-10 w-full rounded-md border border-border bg-white/60 px-3 text-sm text-foreground dark:bg-white/5",
@@ -281,9 +293,7 @@ function OnboardingPageContent() {
   const [user, setUser] = useState<OnboardingUser | null>(null);
   const [roles, setRoles] = useState<RoleOption[]>([]);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [travelEnabled, setTravelEnabled] = useState(false);
-  const [ratePerKm, setRatePerKm] = useState("1.00");
-  const [location, setLocation] = useState<Address | null>(null);
+  const travelForm = useTravelSettingsForm(DEFAULT_ONBOARDING_TRAVEL);
   const [companyName, setCompanyName] = useState("");
   const [termsAndConditions, setTermsAndConditions] = useState(
     DEFAULT_TERMS_AND_CONDITIONS
@@ -423,14 +433,10 @@ function OnboardingPageContent() {
       return;
     }
 
-    if (travelEnabled && !location) {
-      setError("Pick a location on the map to enable travel.");
-      return;
-    }
-
-    const parsedRate = Number.parseFloat(ratePerKm);
-    if (travelEnabled && (Number.isNaN(parsedRate) || parsedRate < 0)) {
-      setError("Enter a valid travel rate per km.");
+    const chargeBy = getDefaultChargeBy(selectedRole);
+    const result = travelForm.buildTravel(chargeBy);
+    if ("error" in result) {
+      setError(result.error);
       return;
     }
 
@@ -438,14 +444,8 @@ function OnboardingPageContent() {
       {
         step: "role_travel",
         role: selectedRole,
-        charge_by: getDefaultChargeBy(selectedRole),
-        travel: travelEnabled
-          ? {
-              enabled: true,
-              rate_per_km: parsedRate,
-              location: location!,
-            }
-          : { enabled: false },
+        charge_by: chargeBy,
+        travel: result.travel,
       },
       "invoice"
     );
@@ -622,61 +622,15 @@ function OnboardingPageContent() {
               )}
 
               {step === "travel" && (
-                <>
-                  <SettingsSection title="Travel fee">
-                    <div className={settingsListClassName}>
-                      <label className={cn(settingsRowClassName, "cursor-pointer")}>
-                        <IconBadge icon={IconCar} />
-                        <RowText
-                          title="Enable travel fee"
-                          description="Charge clients for travelling to their venue."
-                        />
-                        <Switch
-                          checked={travelEnabled}
-                          onCheckedChange={(checked) => {
-                            setTravelEnabled(checked);
-                            setError(null);
-                          }}
-                        />
-                      </label>
-                    </div>
-                  </SettingsSection>
-
-                  {travelEnabled && (
-                    <>
-                      <SettingsSection title="Rate">
-                        <div className={settingsCardClassName}>
-                          <Field
-                            label="Rate per km (RM)"
-                            hint="Travel is charged as a round trip — to the client and back to your base. For example, 10 km away at RM 1/km adds RM 20 to the booking."
-                          >
-                            <input
-                              type="number"
-                              min="0"
-                              step="0.01"
-                              inputMode="decimal"
-                              value={ratePerKm}
-                              onChange={(event) => setRatePerKm(event.target.value)}
-                              className={inputClassName}
-                              required
-                            />
-                          </Field>
-                        </div>
-                      </SettingsSection>
-
-                      <SettingsSection title="Your base location">
-                        <div className={cn(glassCardClassName, "overflow-hidden p-2")}>
-                          <MapsProvider>
-                            <LocationMapPicker
-                              value={location}
-                              onChange={setLocation}
-                            />
-                          </MapsProvider>
-                        </div>
-                      </SettingsSection>
-                    </>
-                  )}
-                </>
+                <PaymentMethodProvider initialMethod="payment_gateway">
+                  <TravelSettingsFields
+                    form={travelForm}
+                    chargeBy={
+                      selectedRole ? getDefaultChargeBy(selectedRole) : "package"
+                    }
+                    styleTerms={getStyleTerms(selectedRole)}
+                  />
+                </PaymentMethodProvider>
               )}
 
               {step === "invoice" && (

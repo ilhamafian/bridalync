@@ -37,13 +37,6 @@ import {
   ensureStripeAccountId,
 } from "@/utils/stripe/connect";
 
-const DISABLED_TRAVEL_LOCATION: TravelSetting["location"] = {
-  placeId: "travel-disabled",
-  formattedAddress: "Travel not enabled",
-  displayName: "Travel not enabled",
-  location: { lat: 0, lng: 0 },
-};
-
 const MUA_PACKAGES = [
   { name: "Nikah", price: 800, deposit: 250, order: 0 },
   { name: "Sanding", price: 800, deposit: 250, order: 1 },
@@ -123,19 +116,10 @@ function buildStripeConnectStatus(user: {
 function buildTravelSetting(
   travel: Extract<OnboardingStepRequest, { step: "role_travel" }>["travel"]
 ): TravelSetting {
-  if (travel.enabled) {
-    return {
-      enabled: true,
-      rate_per_km: travel.rate_per_km,
-      location: travel.location,
-    };
-  }
-
-  return {
-    enabled: false,
-    rate_per_km: 0,
-    location: DISABLED_TRAVEL_LOCATION,
-  };
+  const { long_distance_rate_per_km: longDistanceRate, ...rest } = travel;
+  return longDistanceRate == null
+    ? rest
+    : { ...rest, long_distance_rate_per_km: longDistanceRate };
 }
 
 async function seedPackages(

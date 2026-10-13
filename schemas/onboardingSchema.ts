@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { addressSchema } from "./addressSchema";
 import { userRoleSchema } from "./roleSchema";
+import { travelSettingSchema } from "./settingSchema";
 
 export const onboardingProgressSchema = z.object({
   initial_onboarding: z.boolean().default(false),
@@ -59,14 +59,16 @@ export function getOnboardingResumeStep(
   return "preview_profile";
 }
 
-const travelStepSchema = z.discriminatedUnion("enabled", [
-  z.object({ enabled: z.literal(false) }),
-  z.object({
-    enabled: z.literal(true),
+const travelStepSchema = travelSettingSchema
+  .extend({
     rate_per_km: z.number().min(0),
-    location: addressSchema,
-  }),
-]);
+    /** `null` = no long-distance rate. */
+    long_distance_rate_per_km: z.number().min(0).nullable().optional(),
+  })
+  .refine(
+    (travel) => travel.accommodation_by !== "client" || !!travel.base_region,
+    { message: "Pick your base state for out-of-state bookings." }
+  );
 
 export const onboardingRoleTravelSchema = z.object({
   step: z.literal("role_travel"),
