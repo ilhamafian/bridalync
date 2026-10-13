@@ -11,6 +11,7 @@ import {
   getEarliestSessionDate,
 } from "@/utils/booking/pricing";
 import { sendBalanceDueReminderEmail } from "@/utils/email/balance-due-reminder";
+import { sendPaymentReminderWhatsApp } from "@/utils/whatsapp/bookingTemplates";
 
 function isAuthorized(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -90,6 +91,18 @@ async function runBalanceReminders(req: NextRequest) {
           daysUntilSession: daysUntil,
           balanceDueBeforeDays,
         });
+
+        try {
+          await sendPaymentReminderWhatsApp({
+            booking,
+            freelancerName: freelancer?.name ?? null,
+          });
+        } catch (error) {
+          console.error(
+            `[balance-reminders] WhatsApp failed for booking ${bookingIdString(booking)}:`,
+            error
+          );
+        }
 
         await bookingModel.update(
           bookingIdString(booking),

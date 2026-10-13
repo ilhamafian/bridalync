@@ -4,7 +4,6 @@ import { z } from "zod";
 import { SettingModel } from "@/models/Setting";
 import type { PersistedBooking } from "@/schemas/bookingSchema";
 import { toIdString } from "@/schemas/objectId";
-import { paymentSettingSchema } from "@/schemas/settingSchema";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
@@ -18,11 +17,11 @@ import {
   findOverlappingBookingRequests,
   getBookingById,
 } from "@/utils/bookings";
-import {
-  sendBookingRequestApprovedEmail,
-  sendBookingRequestDeclinedEmail,
-} from "@/utils/email/booking-request";
 import { runAfterResponse } from "@/utils/runAfterResponse";
+import {
+  sendBookingAcceptedWhatsApp,
+  sendBookingRejectedWhatsApp,
+} from "@/utils/whatsapp/bookingTemplates";
 
 const requestActionSchema = z.object({
   action: z.enum(["approve", "decline"]),
@@ -126,20 +125,16 @@ export async function POST(
     }
 
     const stylistName = user.name;
-    runAfterResponse("Booking request email", async () => {
+    runAfterResponse("Booking request WhatsApp", async () => {
       if (approve) {
-        await sendBookingRequestApprovedEmail(
-          updated,
-          stylistName,
-          paymentSettingSchema.parse(settings?.payment ?? {}).balance_due_before
-        );
+        await sendBookingAcceptedWhatsApp(updated, stylistName);
       } else {
-        await sendBookingRequestDeclinedEmail(updated, stylistName);
+        await sendBookingRejectedWhatsApp(updated, stylistName);
       }
     });
     for (const booking of declined) {
-      runAfterResponse("Booking request declined email", () =>
-        sendBookingRequestDeclinedEmail(booking, stylistName)
+      runAfterResponse("Booking request declined WhatsApp", () =>
+        sendBookingRejectedWhatsApp(booking, stylistName)
       );
     }
 

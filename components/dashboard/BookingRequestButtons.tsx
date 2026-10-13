@@ -129,8 +129,8 @@ export function BookingRequestButtons({
             <AlertDialogHeader>
               <AlertDialogTitle>Decline this request?</AlertDialogTitle>
               <AlertDialogDescription>
-                {booking.contact.name} will get an email saying you can&apos;t take
-                this booking.
+                {booking.contact.name} will get a WhatsApp message saying you
+                can&apos;t take this booking.
               </AlertDialogDescription>
             </AlertDialogHeader>
             {error ? <p className="text-xs text-destructive">{error}</p> : null}
@@ -172,14 +172,14 @@ export function BookingRequestButtons({
               <AlertDialogDescription asChild>
                 <div className="flex flex-col gap-2">
                   <p>
-                    {booking.contact.name} will get an email with a link to pay and
-                    confirm the booking.
+                    {booking.contact.name} will get a WhatsApp message with a link
+                    to pay and confirm the booking.
                   </p>
                   {competingCount > 0 ? (
                     <p>
                       {competingLabel} for the same slot will be declined
-                      automatically, and those clients will get an email saying
-                      you can&apos;t take their booking.
+                      automatically, and those clients will get a WhatsApp
+                      message saying you can&apos;t take their booking.
                     </p>
                   ) : null}
                   {bookedClashes.length > 0 ? (

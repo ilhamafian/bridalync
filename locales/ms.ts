@@ -179,13 +179,13 @@ export const ms = {
   requestBooking: "Mohon tempahan",
   requestDialogTitle: "Tempahan anda belum disahkan",
   requestDialogBody:
-    "{name} perlu meluluskan permohonan anda dahulu, dan slot ini masih terbuka kepada pelanggan lain sehingga itu. Selepas diluluskan, kami akan emel pautan ke {email} untuk membayar deposit atau jumlah penuh.",
+    "{name} perlu meluluskan permohonan anda dahulu, dan slot ini masih terbuka kepada pelanggan lain sehingga itu. Selepas diluluskan, kami akan hantar mesej WhatsApp dengan pautan untuk membayar deposit atau jumlah penuh.",
   requestDialogCancel: "Kembali",
   requestDialogConfirm: "Hantar permohonan",
   sendingRequest: "Menghantar permohonan…",
   requestSentTitle: "Permohonan dihantar",
   requestSentBody:
-    "{name} akan menyemak permohonan anda. Kami akan e-mel ke {email} sebaik sahaja ia diluluskan, bersama pautan untuk membayar dan mengesahkan tempahan.",
+    "{name} akan menyemak permohonan anda. Kami akan hantar mesej WhatsApp sebaik sahaja ia diluluskan, bersama pautan untuk membayar dan mengesahkan tempahan.",
   requestApprovedTitle: "Permohonan diluluskan",
   requestApprovedBody:
     "{name} telah meluluskan permohonan anda. Bayar {amount} untuk mengesahkan tempahan.",

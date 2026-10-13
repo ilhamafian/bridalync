@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  IconBrandWhatsapp,
   IconCalendarQuestion,
   IconCheck,
   IconCreditCard,
-  IconMail,
 } from "@tabler/icons-react";
 
 import {
@@ -34,8 +34,8 @@ const STEPS = [
       "Approve one request and the slot is yours with them; other requests for that slot are declined automatically.",
   },
   {
-    icon: IconMail,
-    title: "Clients get an email",
+    icon: IconBrandWhatsapp,
+    title: "Clients get a WhatsApp message",
     description: "The approved client gets a link to pay; declined clients are told you can't take the booking.",
   },
   {

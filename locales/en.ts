@@ -184,13 +184,13 @@ export const en: Locale = {
   requestBooking: "Request booking",
   requestDialogTitle: "Your booking isn't confirmed yet",
   requestDialogBody:
-    "{name} needs to approve your request first, and this slot stays open to other clients until then. Once it's approved we'll email {email} a link to pay a deposit or the full amount.",
+    "{name} needs to approve your request first, and this slot stays open to other clients until then. Once it's approved we'll send a WhatsApp message with a link to pay a deposit or the full amount.",
   requestDialogCancel: "Go back",
   requestDialogConfirm: "Send request",
   sendingRequest: "Sending request…",
   requestSentTitle: "Request sent",
   requestSentBody:
-    "{name} will review your request. We'll email you at {email} once it's approved, with a link to pay and confirm your booking.",
+    "{name} will review your request. We'll send you a WhatsApp message once it's approved, with a link to pay and confirm your booking.",
   requestApprovedTitle: "Request approved",
   requestApprovedBody:
     "{name} approved your request. Pay {amount} to confirm your booking.",
