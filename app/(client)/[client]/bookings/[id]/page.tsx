@@ -34,7 +34,7 @@ const frostedPanelClassName =
 
 function BookingResultLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+    <div className="@container/client relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <AnimatedFlow
         flowSpeed={0.9}
         distortionWarp={1.4}
@@ -511,9 +511,9 @@ function BookingResultPageContent() {
 
   return (
     <BookingResultLayout>
-      <div className="flex w-full max-w-md flex-col items-center gap-6">
+      <div className="flex w-full max-w-md flex-col items-center gap-6 @4xl/client:grid @4xl/client:max-w-5xl @4xl/client:grid-cols-2 @4xl/client:items-start @4xl/client:gap-x-10">
         {requestState ? (
-          <div className="flex flex-col items-center gap-3 text-center">
+          <div className="flex flex-col items-center gap-3 text-center @4xl/client:col-span-2">
             {requestState === "requested" && (
               <HourglassIcon className="size-12 text-rose-900 dark:text-rose-400" />
             )}
@@ -551,7 +551,7 @@ function BookingResultPageContent() {
             ) : null}
           </div>
         ) : (
-        <div className="flex flex-col items-center gap-3 text-center">
+        <div className="flex flex-col items-center gap-3 text-center @4xl/client:col-span-2">
           {(isFullyPaid || isCompleted) && (
             <CheckCircle2Icon className="size-12 text-rose-900 dark:text-rose-400" />
           )}
@@ -632,193 +632,197 @@ function BookingResultPageContent() {
         </div>
         )}
 
-        <div className="w-full space-y-2">
-          <p className="text-sm font-medium text-foreground">
-            {t.bookingDetails}
-          </p>
-          <div className={frostedPanelClassName}>
-            <p className="font-medium text-foreground">{booking.packageNames}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {booking.contact.name} · {booking.contact.email}
+        <div className="flex w-full flex-col gap-6">
+          <div className="w-full space-y-2">
+            <p className="text-sm font-medium text-foreground">
+              {t.bookingDetails}
             </p>
+            <div className={frostedPanelClassName}>
+              <p className="font-medium text-foreground">{booking.packageNames}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {booking.contact.name} · {booking.contact.email}
+              </p>
+            </div>
+          </div>
+
+          <div className="w-full space-y-2">
+            <p className="text-sm font-medium text-foreground">
+              {t.sessionsHeading}
+            </p>
+            <BookingSessionList
+              sessions={booking.sessions}
+              showLocation
+              frosted
+            />
           </div>
         </div>
 
-        <div className="w-full space-y-2">
-          <p className="text-sm font-medium text-foreground">
-            {t.sessionsHeading}
-          </p>
-          <BookingSessionList
-            sessions={booking.sessions}
-            showLocation
-            frosted
-          />
-        </div>
-
-        {requestState === "approved" && requestCanPayDeposit ? (
-          <div
-            className="flex w-full flex-col gap-2"
-            role="radiogroup"
-            aria-label={t.paymentOptionLabel}
-          >
-            {(["full", "deposit"] as const).map((option) => {
-              const selected = requestOption === option;
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onClick={() => setRequestPayOption(option)}
-                  className={cn(
-                    "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
-                    selected
-                      ? "bg-rose-800 text-white shadow-sm"
-                      : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-                  )}
-                >
-                  <span className="font-medium">
-                    {option === "full"
-                      ? format(t.payFullOption, {
-                          amount: formatRm(booking.invoice.totalRm),
-                        })
-                      : format(t.payDepositOption, {
-                          amount: formatRm(booking.invoice.depositRm),
-                        })}
-                  </span>
-                  <span
+        <div className="flex w-full flex-col gap-6 @4xl/client:sticky @4xl/client:top-0">
+          {requestState === "approved" && requestCanPayDeposit ? (
+            <div
+              className="flex w-full flex-col gap-2"
+              role="radiogroup"
+              aria-label={t.paymentOptionLabel}
+            >
+              {(["full", "deposit"] as const).map((option) => {
+                const selected = requestOption === option;
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setRequestPayOption(option)}
                     className={cn(
-                      "text-xs",
-                      selected ? "text-white/80" : "text-muted-foreground"
+                      "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
+                      selected
+                        ? "bg-rose-800 text-white shadow-sm"
+                        : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
                     )}
                   >
-                    {option === "full"
-                      ? t.noBalanceLater
-                      : format(t.balanceDue, {
-                          amount: formatRm(booking.invoice.balanceRm),
-                          days: balanceDueBeforeDays,
-                        })}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        ) : null}
+                    <span className="font-medium">
+                      {option === "full"
+                        ? format(t.payFullOption, {
+                            amount: formatRm(booking.invoice.totalRm),
+                          })
+                        : format(t.payDepositOption, {
+                            amount: formatRm(booking.invoice.depositRm),
+                          })}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-xs",
+                        selected ? "text-white/80" : "text-muted-foreground"
+                      )}
+                    >
+                      {option === "full"
+                        ? t.noBalanceLater
+                        : format(t.balanceDue, {
+                            amount: formatRm(booking.invoice.balanceRm),
+                            days: balanceDueBeforeDays,
+                          })}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
 
-        <BookingInvoice
-          invoice={
-            requestState === "approved" && requestPaysInFull
-              ? applyPaymentOption(booking.invoice, "full")
-              : booking.invoice
-          }
-          paymentOption={
-            requestState === "approved" ? requestOption : booking.paymentOption
-          }
-        />
+          <BookingInvoice
+            invoice={
+              requestState === "approved" && requestPaysInFull
+                ? applyPaymentOption(booking.invoice, "full")
+                : booking.invoice
+            }
+            paymentOption={
+              requestState === "approved" ? requestOption : booking.paymentOption
+            }
+          />
 
-        {requestState === "approved" &&
-          (usesManualBalance ? (
+          {requestState === "approved" &&
+            (usesManualBalance ? (
+              booking.manualTransfer ? (
+                <ManualPaymentStep
+                  amountLabel={format(t.transferAmountDue, {
+                    amount: formatRm(requestAmountDueRm),
+                  })}
+                  submitLabel={t.submitReceiptConfirm}
+                  submittingLabel={t.submittingReceipt}
+                  isSubmitting={payingBalance}
+                  error={payError}
+                  transfer={booking.manualTransfer}
+                  onSubmit={(file) => void handleRequestReceipt(file, requestOption)}
+                />
+              ) : (
+                <p className="text-center text-sm text-destructive" role="alert">
+                  This stylist has not set up payment details yet. Please contact
+                  them to complete your booking.
+                </p>
+              )
+            ) : (
+              <div className="flex w-full flex-col gap-2">
+                <Button
+                  size="lg"
+                  className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
+                  disabled={payingBalance}
+                  onClick={() => void handlePayRequest(requestOption)}
+                >
+                  {payingBalance
+                    ? t.redirectingStripe
+                    : format(requestPaysInFull ? t.payNow : t.payDepositNow, {
+                        amount: formatRm(requestAmountDueRm),
+                      })}
+                </Button>
+                {payError && (
+                  <p className="text-center text-sm text-destructive">{payError}</p>
+                )}
+              </div>
+            ))}
+
+          {outstandingBalance &&
+            !isConfirmingBalance &&
+            !balanceReceiptPending &&
+            !showManualBalance && (
+              <div className="flex w-full flex-col gap-2">
+                <Button
+                  size="lg"
+                  className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
+                  disabled={payingBalance}
+                  onClick={() => {
+                    if (usesManualBalance) {
+                      setShowManualBalance(true);
+                      return;
+                    }
+                    void handlePayBalance();
+                  }}
+                >
+                  {payingBalance
+                    ? t.startingCheckout
+                    : format(t.payRemainingBalance, {
+                        amount: formatRm(booking.invoice.balanceRm),
+                      })}
+                </Button>
+                {payError && (
+                  <p className="text-center text-sm text-destructive">{payError}</p>
+                )}
+              </div>
+            )}
+
+          {outstandingBalance && showManualBalance && (
             booking.manualTransfer ? (
               <ManualPaymentStep
                 amountLabel={format(t.transferAmountDue, {
-                  amount: formatRm(requestAmountDueRm),
+                  amount: formatRm(booking.invoice.balanceRm),
                 })}
-                submitLabel={t.submitReceiptConfirm}
+                submitLabel={t.submitBalanceReceipt}
                 submittingLabel={t.submittingReceipt}
                 isSubmitting={payingBalance}
                 error={payError}
                 transfer={booking.manualTransfer}
-                onSubmit={(file) => void handleRequestReceipt(file, requestOption)}
+                onSubmit={(file) => void handleManualBalanceReceipt(file)}
               />
             ) : (
               <p className="text-center text-sm text-destructive" role="alert">
                 This stylist has not set up payment details yet. Please contact
-                them to complete your booking.
+                them to pay the balance.
               </p>
             )
-          ) : (
-            <div className="flex w-full flex-col gap-2">
-              <Button
-                size="lg"
-                className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
-                disabled={payingBalance}
-                onClick={() => void handlePayRequest(requestOption)}
-              >
-                {payingBalance
-                  ? t.redirectingStripe
-                  : format(requestPaysInFull ? t.payNow : t.payDepositNow, {
-                      amount: formatRm(requestAmountDueRm),
-                    })}
-              </Button>
-              {payError && (
-                <p className="text-center text-sm text-destructive">{payError}</p>
-              )}
-            </div>
-          ))}
-
-        {outstandingBalance &&
-          !isConfirmingBalance &&
-          !balanceReceiptPending &&
-          !showManualBalance && (
-            <div className="flex w-full flex-col gap-2">
-              <Button
-                size="lg"
-                className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
-                disabled={payingBalance}
-                onClick={() => {
-                  if (usesManualBalance) {
-                    setShowManualBalance(true);
-                    return;
-                  }
-                  void handlePayBalance();
-                }}
-              >
-                {payingBalance
-                  ? t.startingCheckout
-                  : format(t.payRemainingBalance, {
-                      amount: formatRm(booking.invoice.balanceRm),
-                    })}
-              </Button>
-              {payError && (
-                <p className="text-center text-sm text-destructive">{payError}</p>
-              )}
-            </div>
           )}
 
-        {outstandingBalance && showManualBalance && (
-          booking.manualTransfer ? (
-            <ManualPaymentStep
-              amountLabel={format(t.transferAmountDue, {
-                amount: formatRm(booking.invoice.balanceRm),
-              })}
-              submitLabel={t.submitBalanceReceipt}
-              submittingLabel={t.submittingReceipt}
-              isSubmitting={payingBalance}
-              error={payError}
-              transfer={booking.manualTransfer}
-              onSubmit={(file) => void handleManualBalanceReceipt(file)}
-            />
-          ) : (
-            <p className="text-center text-sm text-destructive" role="alert">
-              This stylist has not set up payment details yet. Please contact
-              them to pay the balance.
-            </p>
-          )
-        )}
-
-        {whatsAppUrl && (
-          <Button
-            size="lg"
-            variant="outline"
-            className="h-11 w-full gap-2"
-            asChild
-          >
-            <a href={whatsAppUrl} target="_blank" rel="noopener noreferrer">
-              <MessageCircleIcon className="size-4 text-rose-900 dark:text-rose-400" />
-              WhatsApp {booking.freelancer?.name ?? "stylist"}
-            </a>
-          </Button>
-        )}
+          {whatsAppUrl && (
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-11 w-full gap-2"
+              asChild
+            >
+              <a href={whatsAppUrl} target="_blank" rel="noopener noreferrer">
+                <MessageCircleIcon className="size-4 text-rose-900 dark:text-rose-400" />
+                WhatsApp {booking.freelancer?.name ?? "stylist"}
+              </a>
+            </Button>
+          )}
+        </div>
       </div>
     </BookingResultLayout>
   );

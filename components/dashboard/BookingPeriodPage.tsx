@@ -79,10 +79,12 @@ export function BookingPeriodPage({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <BackButton />
+    <div className="flex flex-col gap-4 px-4 md:px-8 @4xl/main:grid @4xl/main:grid-cols-2 @4xl/main:grid-rows-[auto_auto_auto_1fr] @4xl/main:items-start @4xl/main:gap-x-8">
+      <div className="@4xl/main:col-span-full">
+        <BackButton />
+      </div>
 
-      <div>
+      <div className="@4xl/main:col-span-full">
         <h2 className="text-lg font-semibold">Booking period</h2>
         <p className="text-sm text-muted-foreground">
           Clients can&apos;t book past this date
@@ -92,7 +94,7 @@ export function BookingPeriodPage({
       <div
         className={cn(
           glassCardClassName,
-          "flex flex-col items-center gap-1 px-4 py-6 text-center"
+          "flex flex-col items-center gap-1 px-4 py-6 text-center @4xl/main:col-start-2 @4xl/main:row-start-3 @4xl/main:mt-8"
         )}
       >
         <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
@@ -112,7 +114,10 @@ export function BookingPeriodPage({
         ) : null}
       </div>
 
-      <SettingsSection title="Pick the last bookable date">
+      <SettingsSection
+        title="Pick the last bookable date"
+        className="@4xl/main:col-start-1 @4xl/main:row-span-2 @4xl/main:row-start-3"
+      >
         <div className={cn(glassCardClassName, "overflow-hidden")}>
           <DashboardCalendar
             mode="single"
@@ -138,16 +143,18 @@ export function BookingPeriodPage({
         </div>
       </SettingsSection>
 
-      <SettingsFeedback error={error} success={success} />
-      <Button
-        type="button"
-        size="lg"
-        className="min-h-11"
-        onClick={() => void handleSave()}
-        disabled={saving || !dirty}
-      >
-        {saving ? "Saving…" : "Save booking period"}
-      </Button>
+      <div className="flex flex-col gap-4 @4xl/main:col-start-2 @4xl/main:row-start-4">
+        <SettingsFeedback error={error} success={success} />
+        <Button
+          type="button"
+          size="lg"
+          className="min-h-11"
+          onClick={() => void handleSave()}
+          disabled={saving || !dirty}
+        >
+          {saving ? "Saving…" : "Save booking period"}
+        </Button>
+      </div>
     </div>
   );
 }

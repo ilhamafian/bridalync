@@ -21,6 +21,7 @@ import { BookingFormPage } from "@/components/dashboard/BookingFormPage";
 import { BookingPeriodPage } from "@/components/dashboard/BookingPeriodPage";
 import { useDashboardRefreshVersion } from "@/components/dashboard/DashboardRefresh";
 import { DashboardHome } from "@/components/dashboard/DashboardHome";
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { AddHotDatesPage } from "@/components/dashboard/hot-dates/AddHotDatesPage";
 import { HotDatesPage } from "@/components/dashboard/hot-dates/HotDatesPage";
 import { NotificationsPage } from "@/components/dashboard/NotificationsPage";
@@ -44,6 +45,7 @@ import {
   getCatalogEditorTarget,
   getDashboardSection,
   getSettingsCategory,
+  NARROW_SECTIONS,
   type DashboardData,
   type DashboardSection,
 } from "@/utils/dashboardShell";
@@ -67,13 +69,14 @@ function Section({
   const isActive = id === active;
 
   return (
-    <div
+    <DashboardPage
+      width={NARROW_SECTIONS.includes(id) ? "narrow" : "wide"}
       className={cn(!isActive && "hidden")}
       aria-hidden={!isActive}
       inert={!isActive ? true : undefined}
     >
       {children}
-    </div>
+    </DashboardPage>
   );
 }
 

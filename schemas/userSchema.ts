@@ -20,6 +20,7 @@ export {
 export {
   DEFAULT_THEME,
   DEFAULT_THEME_COLOR,
+  ONBOARDING_THEME_COLOR,
   themeColorSchema,
   themePreferenceSchema,
   type ThemeColor,

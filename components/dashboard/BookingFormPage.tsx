@@ -29,7 +29,7 @@ export function BookingFormPage({
 
   if (mode === "edit" && !booking) {
     return (
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 px-4 md:px-8">
         <BackButton />
         <div
           className={cn(
@@ -67,7 +67,7 @@ export function BookingFormPage({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <BackButton />
       <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
       <BookingForm

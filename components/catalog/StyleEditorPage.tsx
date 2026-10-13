@@ -93,7 +93,7 @@ export function StyleEditorPage({
 
   if (notFound) {
     return (
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 px-4 md:px-8">
         <BackButton fallbackHref={EVENTS_SETTINGS_HREF} />
         <EmptyCard>{styleTerms.One} not found.</EmptyCard>
       </div>
@@ -181,7 +181,7 @@ export function StyleEditorPage({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <BackButton fallbackHref={EVENTS_SETTINGS_HREF} />
       <section>
         <h2 className="text-xl font-semibold tracking-tight">

@@ -142,6 +142,9 @@ export const ms = {
   reviewAddOns: "Tambahan",
   reviewYourDetails: "Maklumat anda",
   reviewName: "Nama",
+  // Booking summary (wide screens)
+  summaryTitle: "Tempahan anda",
+  summaryEmpty: "Pilihan anda akan dipaparkan di sini.",
   // Terms
   termsTitle: "Terma dan Syarat",
   noTermsAvailable: "Tiada terma dan syarat tersedia.",

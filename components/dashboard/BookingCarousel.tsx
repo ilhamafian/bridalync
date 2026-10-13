@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 import { HomeBookingCard } from "@/components/dashboard/HomeBookingCard";
@@ -22,6 +22,18 @@ export function CardCarousel<T>({
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [overflowing, setOverflowing] = useState(true);
+
+  useEffect(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const update = () =>
+      setOverflowing(track.scrollWidth > track.clientWidth + 1);
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [items.length]);
 
   function handleScroll() {
     const track = trackRef.current;
@@ -38,21 +50,24 @@ export function CardCarousel<T>({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="@container/carousel flex flex-col gap-3">
       <div
         ref={trackRef}
         onScroll={handleScroll}
-        className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 no-scrollbar py-1 lg:-mx-6 lg:scroll-px-6 lg:px-6"
+        className="-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-3 overflow-x-auto px-4 no-scrollbar py-1 md:-mx-1 md:scroll-px-1 md:px-1"
       >
         {items.map((item) => (
           <Fragment key={getKey(item)}>
-            {renderItem(item, "w-full shrink-0 snap-start")}
+            {renderItem(
+              item,
+              "w-full shrink-0 snap-start @xl/carousel:w-[calc((100%-0.75rem)/2)] @5xl/carousel:w-[calc((100%-1.5rem)/3)]"
+            )}
           </Fragment>
         ))}
       </div>
       <div className="grid grid-cols-[1fr_auto_1fr] items-center">
         <span />
-        {items.length > 1 ? (
+        {items.length > 1 && overflowing ? (
           <div className="flex items-center gap-1.5">
             {items.map((item, index) => (
               <button

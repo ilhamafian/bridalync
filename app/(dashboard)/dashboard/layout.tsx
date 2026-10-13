@@ -5,8 +5,8 @@ import { AnimatedFlow } from "@/components/animated-flow";
 import { BottomNav } from "@/components/bottom-nav";
 import { DashboardScrollArea } from "@/components/dashboard/DashboardRefresh";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
+import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { DashboardSkeleton } from "@/components/dashboard/DashboardSkeleton";
-import { ProfilePreviewAside } from "@/components/dashboard/ProfilePreviewAside";
 import { UnreadNotificationsProvider } from "@/components/dashboard/UnreadNotifications";
 import { SiteHeader } from "@/components/site-header";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -58,6 +58,7 @@ export default async function DashboardLayout({
       profilePreviewUrl = buildProfilePreviewUrl(`/${username}`);
     }
   }
+  const profilePhotoUrl = user.profile_photo_url?.trim() || null;
 
   return (
     <UserThemeProvider
@@ -65,7 +66,7 @@ export default async function DashboardLayout({
       color={user.theme_color ?? DEFAULT_THEME_COLOR}
     >
       <TooltipProvider>
-        <div className="dashboard-theme relative flex h-full min-h-0 flex-col overflow-hidden">
+        <div className="dashboard-theme relative flex h-full min-h-0 overflow-hidden">
           <AnimatedFlow
             flowSpeed={0.9}
             distortionWarp={1.4}
@@ -74,25 +75,26 @@ export default async function DashboardLayout({
             className="pointer-events-none absolute inset-0 min-h-0"
           />
           <UnreadNotificationsProvider>
-            <SiteHeader />
-            <DashboardScrollArea>
-              <div className="@container/main flex flex-1 flex-col gap-2">
-                <div className="flex flex-col gap-4 pt-4 pb-28 md:gap-6 md:pt-6">
-                  <Suspense fallback={<DashboardSkeleton />}>
-                    <DashboardContent user={user} />
-                  </Suspense>
+            <DashboardSidebar
+              profileUrl={profileUrl}
+              profilePreviewUrl={profilePreviewUrl}
+              profilePhotoUrl={profilePhotoUrl}
+            />
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+              <SiteHeader />
+              <DashboardScrollArea>
+                <div className="@container/main flex flex-1 flex-col gap-2">
+                  <div className="flex flex-col gap-4 pt-4 pb-28 md:gap-6 md:pt-8 md:pb-12">
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <DashboardContent user={user} />
+                    </Suspense>
+                  </div>
                 </div>
-              </div>
-            </DashboardScrollArea>
+              </DashboardScrollArea>
+              <BottomNav profileUrl={profileUrl} profilePhotoUrl={profilePhotoUrl} />
+            </div>
           </UnreadNotificationsProvider>
-          <BottomNav
-            profileUrl={profileUrl}
-            profilePhotoUrl={user.profile_photo_url?.trim() || null}
-          />
         </div>
-        {profilePreviewUrl ? (
-          <ProfilePreviewAside href={profilePreviewUrl} />
-        ) : null}
       </TooltipProvider>
     </UserThemeProvider>
   );

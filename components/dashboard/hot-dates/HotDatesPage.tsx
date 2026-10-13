@@ -207,7 +207,7 @@ export function HotDatesPage({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <BackButton />
 
       <div className="flex items-start justify-between gap-3">

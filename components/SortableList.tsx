@@ -13,6 +13,7 @@ import {
   SortableContext,
   arrayMove,
   sortableKeyboardCoordinates,
+  rectSortingStrategy,
   useSortable,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
@@ -31,6 +32,8 @@ type SortableListProps<T> = {
   itemClassName?: string;
   handleClassName?: string;
   disabled?: boolean;
+  /** Items may wrap into several columns (set the columns via `className`). */
+  grid?: boolean;
 };
 
 function SortableRow({
@@ -94,6 +97,7 @@ export function SortableList<T>({
   itemClassName,
   handleClassName,
   disabled = false,
+  grid = false,
 }: SortableListProps<T>) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -128,8 +132,16 @@ export function SortableList<T>({
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-        <div className={cn("flex flex-col gap-3", className)}>
+      <SortableContext
+        items={itemIds}
+        strategy={grid ? rectSortingStrategy : verticalListSortingStrategy}
+      >
+        <div
+          className={cn(
+            grid ? "grid items-start gap-3" : "flex flex-col gap-3",
+            className
+          )}
+        >
           {items.map((item, index) => (
             <SortableRow
               key={getItemId(item)}

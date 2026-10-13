@@ -14,6 +14,7 @@ import {
 
 import {
   BookingDetailsSections,
+  BookingPaymentSection,
   bookingBadgeVariant,
   bookingStatusText,
 } from "@/components/booking/BookingDetailsContent";
@@ -303,7 +304,7 @@ export function BookingDetailsPage({
 }) {
   if (!booking) {
     return (
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 px-4 md:px-8">
         <BackButton />
         <div
           className={cn(
@@ -318,7 +319,7 @@ export function BookingDetailsPage({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <BackButton />
 
       <section className="flex flex-col gap-1">
@@ -356,25 +357,37 @@ export function BookingDetailsPage({
         <PaymentLinkCard booking={booking} appUrl={appUrl} />
       ) : null}
 
-      <div className="flex flex-col gap-3 text-sm">
-        <BookingDetailsSections
-          booking={booking}
-          sectionClassName={cn(glassCardClassName, "p-4")}
-          sessionClassName="rounded-xl bg-white/40 p-3 dark:bg-white/5"
-        />
-      </div>
+      <div className="flex flex-col gap-4 @4xl/main:grid @4xl/main:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl/main:items-start @4xl/main:gap-8">
+        <div className="flex min-w-0 flex-col gap-3 text-sm">
+          <BookingDetailsSections
+            booking={booking}
+            sectionClassName={cn(glassCardClassName, "p-4")}
+            sessionClassName="rounded-xl bg-white/40 p-3 dark:bg-white/5"
+            includePayment={false}
+          />
+        </div>
 
-      <div className="flex flex-col gap-2">
-        <Button asChild variant="outline" size="lg" className="min-h-11 gap-2">
-          <Link
-            href={`/dashboard/bookings/${encodeURIComponent(booking._id)}/edit`}
-            scroll={false}
-          >
-            <IconPencil className="size-5" />
-            Edit booking
-          </Link>
-        </Button>
-        <DeleteBookingButton booking={booking} />
+        <div className="flex min-w-0 flex-col gap-4 @4xl/main:sticky @4xl/main:top-4">
+          <div className="text-sm">
+            <BookingPaymentSection
+              booking={booking}
+              className={cn(glassCardClassName, "p-4")}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Button asChild variant="outline" size="lg" className="min-h-11 gap-2">
+              <Link
+                href={`/dashboard/bookings/${encodeURIComponent(booking._id)}/edit`}
+                scroll={false}
+              >
+                <IconPencil className="size-5" />
+                Edit booking
+              </Link>
+            </Button>
+            <DeleteBookingButton booking={booking} />
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -58,8 +58,8 @@ function themeScript(theme: ThemePreference, color: ThemeColor) {
 
 /**
  * Applies a user's theme (light/dark mode + color) to `<html>` only while
- * mounted. Pages outside this provider (landing, auth, onboarding) always
- * render the default light look.
+ * mounted. Pages outside this provider (landing, auth) always render the
+ * default light look. Onboarding mounts it with a fixed Blush light theme.
  */
 export function UserThemeProvider({
   theme: initialTheme,

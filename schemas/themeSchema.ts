@@ -22,3 +22,6 @@ export const themeColorSchema = z.enum([
 export type ThemeColor = z.infer<typeof themeColorSchema>;
 
 export const DEFAULT_THEME_COLOR: ThemeColor = "blush";
+
+/** Onboarding always uses this color in light mode, not the stylist's saved theme. */
+export const ONBOARDING_THEME_COLOR: ThemeColor = "blush";

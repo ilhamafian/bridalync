@@ -12,6 +12,7 @@ import {
   parseDateKey,
 } from "@/components/dashboard/DashboardCalendar";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { SplitColumns } from "@/components/dashboard/SplitColumns";
 import {
   SettingsFeedback,
   SettingsSection,
@@ -127,7 +128,7 @@ export function BlockDatesPage({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <BackButton fallbackHref="/dashboard/blocked" />
 
       <div>
@@ -137,56 +138,65 @@ export function BlockDatesPage({
         </p>
       </div>
 
-      <SettingsSection title="Pick dates">
-        <div className={cn(glassCardClassName, "overflow-hidden")}>
-          <DashboardCalendar
-            mode="range"
-            selected={range}
-            onSelect={(next) => {
-              setRange(next);
-              setError(null);
-            }}
-            disabled={{ before: startOfToday() }}
-            modifiers={{ blocked: blockedDays }}
-            modifiersClassNames={{ blocked: blockedDayClassName }}
-          />
-          <p className="flex items-center gap-2 border-t border-white/50 px-4 py-3 text-xs text-muted-foreground dark:border-white/10">
-            <span className="size-2.5 rounded-full bg-destructive/40" />
-            Already blocked · tap a start and end date
-          </p>
-        </div>
-      </SettingsSection>
+      <SplitColumns
+        primary={
+          <SettingsSection title="Pick dates">
+            <div className={cn(glassCardClassName, "overflow-hidden")}>
+              <DashboardCalendar
+                mode="range"
+                selected={range}
+                onSelect={(next) => {
+                  setRange(next);
+                  setError(null);
+                }}
+                disabled={{ before: startOfToday() }}
+                modifiers={{ blocked: blockedDays }}
+                modifiersClassNames={{ blocked: blockedDayClassName }}
+              />
+              <p className="flex items-center gap-2 border-t border-white/50 px-4 py-3 text-xs text-muted-foreground dark:border-white/10">
+                <span className="size-2.5 rounded-full bg-destructive/40" />
+                Already blocked · tap a start and end date
+              </p>
+            </div>
+          </SettingsSection>
+        }
+        secondary={
+          <>
+            <SettingsSection title="Summary">
+              <div className={settingsListClassName}>
+                <SummaryRow
+                  label="Dates"
+                  value={formatDateRangeLabel(range) ?? "None selected"}
+                />
+                <SummaryRow
+                  label="Days"
+                  value={count === 0 ? "—" : String(count)}
+                />
+                <SummaryRow label="Status" value={statusText} />
+              </div>
+            </SettingsSection>
 
-      <SettingsSection title="Summary">
-        <div className={settingsListClassName}>
-          <SummaryRow
-            label="Dates"
-            value={formatDateRangeLabel(range) ?? "None selected"}
-          />
-          <SummaryRow
-            label="Days"
-            value={count === 0 ? "—" : String(count)}
-          />
-          <SummaryRow label="Status" value={statusText} />
-        </div>
-      </SettingsSection>
-
-      <SettingsFeedback
-        error={
-          error ??
-          (tooMany ? `Choose up to ${MAX_DATE_RANGE_DAYS} days at a time.` : null)
+            <SettingsFeedback
+              error={
+                error ??
+                (tooMany
+                  ? `Choose up to ${MAX_DATE_RANGE_DAYS} days at a time.`
+                  : null)
+              }
+            />
+            <Button
+              type="button"
+              size="lg"
+              variant={unblocking ? "outline" : "default"}
+              className="min-h-11"
+              onClick={() => void handleSubmit()}
+              disabled={saving || count === 0 || tooMany}
+            >
+              {actionLabel}
+            </Button>
+          </>
         }
       />
-      <Button
-        type="button"
-        size="lg"
-        variant={unblocking ? "outline" : "default"}
-        className="min-h-11"
-        onClick={() => void handleSubmit()}
-        disabled={saving || count === 0 || tooMany}
-      >
-        {actionLabel}
-      </Button>
     </div>
   );
 }

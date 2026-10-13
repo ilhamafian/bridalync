@@ -296,5 +296,28 @@ html[data-theme-color="monochrome"] {
         calc(var(--shell-width) * var(--phone-height-ratio))
       );
     }
+
+    .app-shell.app-shell--full {
+      width: 100vw;
+      max-width: none;
+      height: 100dvh;
+    }
+  }
+}
+
+/* Unlayered so it beats the sheet's utility classes: bottom sheets become a
+   centered floating card on the full-width dashboard. */
+@media (min-width: 768px) {
+  .app-shell--full [data-slot="sheet-content"][data-side="bottom"] {
+    left: 50%;
+    right: auto;
+    bottom: 1.5rem;
+    width: calc(100% - 3rem);
+    max-width: 32rem;
+    max-height: calc(100dvh - 3rem);
+    overflow-y: auto;
+    translate: -50% 0;
+    border-width: 1px;
+    border-radius: 1rem;
   }
 }

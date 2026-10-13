@@ -4,55 +4,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import {
-  IconCash,
-  IconHome,
-  IconPlus,
-  IconSettings,
-  IconUser,
-  type Icon,
-} from "@tabler/icons-react";
+import { IconPlus } from "@tabler/icons-react";
 
 import { AddActionSheet } from "@/components/dashboard/AddActionSheet";
+import {
+  PRIMARY_NAV_ITEMS as leftItems,
+  PROFILE_NAV_HREF,
+  SECONDARY_NAV_ITEMS as rightItems,
+  type NavLinkItem,
+} from "@/components/dashboard/navItems";
 import { onProfilePhotoChange } from "@/components/dashboard/profilePhotoEvents";
 import { cn } from "@/lib/utils";
-
-type NavLinkItem = {
-  title: string;
-  href: string;
-  icon: Icon;
-  match: (pathname: string) => boolean;
-};
-
-const leftItems: NavLinkItem[] = [
-  {
-    title: "Home",
-    href: "/dashboard",
-    icon: IconHome,
-    match: (pathname) => pathname === "/dashboard",
-  },
-  {
-    title: "Payments",
-    href: "/dashboard/payments",
-    icon: IconCash,
-    match: (pathname) => pathname.startsWith("/dashboard/payments"),
-  },
-];
-
-const rightItems: NavLinkItem[] = [
-  {
-    title: "Settings",
-    href: "/dashboard/settings",
-    icon: IconSettings,
-    match: (pathname) => pathname.startsWith("/dashboard/settings"),
-  },
-  {
-    title: "Profile",
-    href: "/dashboard/profile",
-    icon: IconUser,
-    match: (pathname) => pathname.startsWith("/dashboard/profile"),
-  },
-];
 
 function NavLink({
   item,
@@ -119,7 +81,7 @@ export function BottomNav({
   return (
     <nav
       aria-label="Main navigation"
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
     >
       <div className="pointer-events-auto flex h-14 w-full items-center justify-around rounded-full bg-white/20 px-4 shadow-md ring-1 ring-white/50 backdrop-blur-md dark:bg-white/5 dark:ring-white/15">
         {leftItems.map((item) => (
@@ -141,7 +103,7 @@ export function BottomNav({
             key={item.href}
             item={item}
             pathname={pathname}
-            photoUrl={item.href === "/dashboard/profile" ? photoUrl : undefined}
+            photoUrl={item.href === PROFILE_NAV_HREF ? photoUrl : undefined}
           />
         ))}
       </div>

@@ -2,10 +2,12 @@
 
 import { usePathname } from "next/navigation";
 
+import { DashboardPage } from "@/components/dashboard/DashboardPage";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getDashboardSection,
   getSettingsCategory,
+  NARROW_SECTIONS,
 } from "@/utils/dashboardShell";
 
 function PageHeaderSkeleton({
@@ -44,38 +46,48 @@ function CardRowSkeleton() {
 
 function HomeSkeleton() {
   return (
-    <div className="flex flex-col gap-6 px-4 lg:px-6">
+    <div className="flex flex-col gap-6 px-4 md:px-8">
       <section className="flex flex-col gap-2">
         <Skeleton className="h-7 w-48" />
         <Skeleton className="h-4 w-64 max-w-full" />
       </section>
 
-      <section className="flex flex-col gap-3">
-        <Skeleton className="h-4 w-36" />
-        <Skeleton className="h-48 w-full rounded-2xl" />
-        <div className="flex justify-center gap-1.5">
-          <Skeleton className="h-1.5 w-4 rounded-full" />
-          <Skeleton className="size-1.5 rounded-full" />
-          <Skeleton className="size-1.5 rounded-full" />
+      <div className="flex flex-col gap-6 @5xl/main:grid @5xl/main:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] @5xl/main:items-start @5xl/main:gap-8">
+        <div className="flex min-w-0 flex-col gap-6">
+          <section className="flex flex-col gap-3">
+            <Skeleton className="h-4 w-36" />
+            <div className="flex gap-3">
+              <Skeleton className="h-48 w-full rounded-2xl" />
+              <Skeleton className="hidden h-48 w-full rounded-2xl @xl/main:block" />
+            </div>
+            <div className="flex justify-center gap-1.5 @xl/main:hidden">
+              <Skeleton className="h-1.5 w-4 rounded-full" />
+              <Skeleton className="size-1.5 rounded-full" />
+              <Skeleton className="size-1.5 rounded-full" />
+            </div>
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <Skeleton className="h-4 w-40" />
+            <div className="flex gap-3">
+              <Skeleton className="h-48 w-full rounded-2xl" />
+              <Skeleton className="hidden h-48 w-full rounded-2xl @xl/main:block" />
+            </div>
+          </section>
         </div>
-      </section>
 
-      <section className="flex flex-col gap-3">
-        <Skeleton className="h-4 w-40" />
-        <Skeleton className="h-48 w-full rounded-2xl" />
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <Skeleton className="h-4 w-32" />
-        <Skeleton className="h-56 w-full rounded-2xl" />
-      </section>
+        <section className="flex min-w-0 flex-col gap-3">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-56 w-full rounded-2xl" />
+        </section>
+      </div>
     </div>
   );
 }
 
 function BookingsSkeleton() {
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <PageHeaderSkeleton withAction />
       <Skeleton className="h-9 w-46" />
       <CardRowSkeleton />
@@ -87,7 +99,7 @@ function BookingsSkeleton() {
 
 function PackagesSkeleton() {
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <PageHeaderSkeleton withAction />
       <Skeleton className="h-9 w-full" />
       <CardRowSkeleton />
@@ -99,7 +111,7 @@ function PackagesSkeleton() {
 
 function SettingsSkeleton() {
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <PageHeaderSkeleton />
       {Array.from({ length: 3 }).map((_, index) => (
         <div key={index} className="rounded-xl border border-border p-4">
@@ -118,7 +130,7 @@ function SettingsSkeleton() {
 function ProfileSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 px-4 lg:px-6">
+      <div className="flex flex-col gap-4 px-4 md:px-8">
         <PageHeaderSkeleton withAction />
         <div className="rounded-xl border border-border p-4">
           <Skeleton className="h-5 w-32" />
@@ -140,7 +152,7 @@ function ProfileSkeleton() {
           </div>
         </div>
       </div>
-      <div className="px-4 lg:px-6">
+      <div className="px-4 md:px-8">
         <div className="rounded-xl border border-border p-4">
           <Skeleton className="h-5 w-24" />
           <Skeleton className="mt-2 h-4 w-48 max-w-full" />
@@ -158,19 +170,29 @@ export function DashboardSkeleton() {
   const pathname = usePathname();
   const section = getDashboardSection(pathname);
 
-  switch (section) {
-    case "bookings":
-      return <BookingsSkeleton />;
-    case "settings":
-    case "settings-category":
-      return getSettingsCategory(pathname) === "events" ? (
-        <PackagesSkeleton />
-      ) : (
-        <SettingsSkeleton />
-      );
-    case "profile":
-      return <ProfileSkeleton />;
-    default:
-      return <HomeSkeleton />;
+  return (
+    <DashboardPage
+      width={NARROW_SECTIONS.includes(section) ? "narrow" : "wide"}
+    >
+      {renderSkeleton()}
+    </DashboardPage>
+  );
+
+  function renderSkeleton() {
+    switch (section) {
+      case "bookings":
+        return <BookingsSkeleton />;
+      case "settings":
+      case "settings-category":
+        return getSettingsCategory(pathname) === "events" ? (
+          <PackagesSkeleton />
+        ) : (
+          <SettingsSkeleton />
+        );
+      case "profile":
+        return <ProfileSkeleton />;
+      default:
+        return <HomeSkeleton />;
+    }
   }
 }

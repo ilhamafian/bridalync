@@ -30,6 +30,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
+import type { SettingsCategory } from "@/utils/dashboardShell";
 
 function LogoutButton() {
   const router = useRouter();
@@ -107,18 +108,19 @@ function LogoutButton() {
   );
 }
 
-export function SettingsPage() {
+/**
+ * Settings categories grouped into list cards. `activeCategory` highlights the
+ * open category when the menu sits beside it on wide screens.
+ */
+export function SettingsMenu({
+  activeCategory = null,
+}: {
+  activeCategory?: SettingsCategory | null;
+}) {
   const styleTerms = useStyleTerms();
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <section className="pr-12">
-        <h2 className="text-xl font-semibold tracking-tight">Settings</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Manage your pricing, payments and app preferences.
-        </p>
-      </section>
-
+    <div className="flex flex-col gap-4">
       {SETTINGS_GROUPS.map((group) => (
         <SettingsSection key={group.title} title={group.title}>
           <nav aria-label={group.title} className={settingsListClassName}>
@@ -127,12 +129,17 @@ export function SettingsPage() {
                 category,
                 styleTerms
               );
+              const isActive = category === activeCategory;
               return (
                 <Link
                   key={category}
                   href={`/dashboard/settings/${category}`}
                   scroll={false}
-                  className={settingsRowClassName}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    settingsRowClassName,
+                    isActive && "bg-white/50 dark:bg-white/10"
+                  )}
                 >
                   <IconBadge icon={icon} />
                   <RowText title={label} description={description} />
@@ -144,6 +151,33 @@ export function SettingsPage() {
           {group.title === "Account" ? <LogoutButton /> : null}
         </SettingsSection>
       ))}
+    </div>
+  );
+}
+
+export function SettingsPage() {
+  return (
+    <div className="flex flex-col gap-4 px-4 md:px-8">
+      <section className="pr-12 md:pr-0">
+        <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+          Settings
+        </h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manage your pricing, payments and app preferences.
+        </p>
+      </section>
+
+      <div className="@4xl/main:grid @4xl/main:grid-cols-[20rem_minmax(0,1fr)] @4xl/main:items-start @4xl/main:gap-8">
+        <SettingsMenu />
+        <div
+          className={cn(
+            glassCardClassName,
+            "sticky top-4 hidden px-6 py-16 text-center text-sm text-muted-foreground @4xl/main:block"
+          )}
+        >
+          Choose a setting on the left to view and edit it.
+        </div>
+      </div>
     </div>
   );
 }

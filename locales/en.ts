@@ -146,6 +146,9 @@ export const en: Locale = {
   reviewAddOns: "Add-ons",
   reviewYourDetails: "Your details",
   reviewName: "Name",
+  // Booking summary (wide screens)
+  summaryTitle: "Your booking",
+  summaryEmpty: "Your choices will show up here as you go.",
   // Terms
   termsTitle: "Terms and Conditions",
   noTermsAvailable: "No terms and conditions available.",

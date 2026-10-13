@@ -17,6 +17,7 @@ import {
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile, roleLabel } from "@/components/booking/ClientProfile";
+import { BookingSummaryPanel } from "@/components/booking/BookingSummaryPanel";
 import { usePublicReviews } from "@/hooks/use-public-reviews";
 import { ManualPaymentStep } from "@/components/booking/ManualPaymentStep";
 import { BookingLoadingState } from "@/components/booking/BookingLoadingState";
@@ -1717,7 +1718,7 @@ export default function ClientPage() {
   }
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+    <div className="@container/client relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <Suspense fallback={null}>
         <ProfilePreviewBanner />
       </Suspense>
@@ -1731,869 +1732,890 @@ export default function ClientPage() {
       <Suspense fallback={null}>
         <ClientPageLanguageSelector />
       </Suspense>
-      {step !== "intro" && (
-        <div className="relative z-10 flex w-full shrink-0 flex-col items-center gap-3 px-6 pt-4">
-          <div className="relative flex w-full max-w-md items-center">
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              className="relative z-10 -ml-2 text-muted-foreground hover:text-foreground"
-              onClick={goToPreviousStep}
-            >
-              <ChevronLeftIcon />
-              {t.back}
-            </Button>
-          </div>
-          <Stepper value={progressValue} className="w-full max-w-lg px-4 sm:px-8">
-            <StepperNav className="gap-2 sm:gap-4">
-              {progressSteps.map((progressStep, index) => (
-                <StepperItem
-                  key={progressStep.key}
-                  step={index + 1}
-                  className="relative flex-1 items-start"
-                >
-                  <StepperTrigger
-                    className="pointer-events-none flex grow flex-col items-start justify-center gap-2"
-                    tabIndex={-1}
-                  >
-                    <StepperIndicator className="h-1 w-full rounded-full bg-rose-200 data-[state=active]:bg-rose-800 data-[state=completed]:bg-rose-800">
-                      <span className="sr-only">{index + 1}</span>
-                    </StepperIndicator>
-                    <StepperTitle className="text-start text-[10px] font-semibold leading-tight group-data-[state=inactive]/step:text-muted-foreground sm:text-xs">
-                      {progressStep.key === "style"
-                        ? styleText.step
-                        : progressStep.key === "payment" && requestMode
-                          ? t.stepRequest
-                          : t[progressStep.titleKey]}
-                    </StepperTitle>
-                  </StepperTrigger>
-                </StepperItem>
-              ))}
-            </StepperNav>
-          </Stepper>
-        </div>
-      )}
-      <div
-        ref={stepScrollRef}
-        className={cn(
-          "relative z-10 flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16",
-          step === "intro" ? "pt-16" : "pt-4"
+      <div className="relative z-10 flex min-h-0 w-full flex-1">
+        {step !== "intro" && (
+          <BookingSummaryPanel
+            className="hidden @4xl/client:flex"
+            user={user}
+            eventName={selectedEvent?.name}
+            sessions={sessions}
+            styleBySessionKey={reviewStyleBySessionKey}
+            styleLabel={usesLooks ? t.reviewLook : t.styleLabel}
+            addOnNames={selectedAddOnItems.map((addOn) => addOn.name)}
+            contactName={contact.name}
+            totalRm={
+              step === "review" || step === "t&c" || step === "payment"
+                ? payableQuotation.totalRm
+                : null
+            }
+          />
         )}
-      >
-      {step === "intro" && loading && (
-        <BookingLoadingState message={t.loadingProfile} />
-      )}
-      {step === "intro" && user && (
-        <ClientProfile
-          user={user}
-          reviews={publicReviews}
-          onBookNow={goToNextStep}
-        />
-      )}
-      {step === "intro" && !user && !loading && (
-        <p className="text-sm text-muted-foreground">{t.profileNotFound}</p>
-      )}
-      {step === "name" && (
-        <div className="relative flex w-full max-w-md flex-1 flex-col items-center justify-center">
-          <div className="absolute bottom-[calc(50%+3rem)] flex w-full flex-col items-center px-6">
-            <TextGenerateEffect
-              key={locale}
-              words={t.nameQuestion}
-              className="mb-6 w-full max-w-md text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
-            />
-          </div>
-          <div className="flex w-full flex-col items-end gap-12">
-            <div className="relative max-w-full self-center">
-              <span
-                aria-hidden
-                className="invisible block whitespace-pre px-1 text-2xl font-medium tracking-tight"
-              >
-                {contact.name || t.namePlaceholder}
-              </span>
-              <input
-                type="text"
-                autoFocus
-                placeholder={t.namePlaceholder}
-                value={contact.name}
-                onChange={(e) => setContact({ ...contact, name: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && contact.name.trim()) {
-                    e.preventDefault()
-                    goToNextStep()
-                  }
-                }}
-                className="absolute inset-0 w-full min-w-0 border-0 bg-transparent px-1 text-left text-2xl font-medium tracking-tight text-zinc-900 caret-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-0 dark:text-zinc-50 dark:caret-zinc-50 dark:placeholder:text-zinc-500"
-              />
-            </div>
-            <Button
-              size="lg"
-              className="mr-4 bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={!contact.name.trim()}
-              onClick={goToNextStep}
-            >
-              {t.next}
-              <ChevronRightIcon />
-            </Button>
-          </div>
-        </div>
-      )}
-      {step === "events" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
-          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {t.eventQuestion}
-          </h1>
-          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {t.eventHelper}
-          </p>
-
-          <div className="flex w-full flex-col items-end gap-4">
-            {loading ? (
-              <BookingLoadingState
-                message={t.loadingPackages}
-                className="w-full py-10"
-              />
-            ) : (
-              <div className="mx-auto w-full max-w-xs px-2">
-                <BookingPackagePicker
-                  packages={packages}
-                  selectedPackageId={selectedPackageId}
-                  onPackageChange={setSelectedPackageId}
-                />
-              </div>
-            )}
-            <Button
-              size="lg"
-              className="mt-4 bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={!selectedEvent}
-              onClick={goToNextStep}
-            >
-              {t.next}
-              <ChevronRightIcon />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {step === "datetime" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center">
-          <h1
-            className={cn(
-              "max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50",
-              isSingleSessionEvent ? "mb-6" : "mb-2"
-            )}
-          >
-            {nextSessionToSchedule
-              ? format(t.bookSession, { sessionName: nextSessionToSchedule.name })
-              : t.allSessionsScheduled}
-          </h1>
-          {!isSingleSessionEvent && (
-            <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-              {format(t.sessionsScheduledCount, {
-                scheduled: sessions.length,
-                total: eventSessions.length,
-              })}
-              {" · "}
-              {dayMode === "same_day" ? t.sameDayHint : t.differentDayHint}
-            </p>
-          )}
-
-          <div className="flex w-full flex-col items-end gap-4">
-            {nextSessionToSchedule && (
-              <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
-                <CardContent className="flex flex-col items-center gap-4 pt-1">
-                  <Calendar
-                    mode="single"
-                    locale={dateFnsLocale}
-                    selected={selectedDate}
-                    onSelect={(date) => {
-                      setSelectedDate(date);
-                      setSelectedTimeSlot(null);
-                    }}
-                    disabled={[
-                      { before: new Date() },
-                      (date) => isDateFullyBooked(date),
-                      (date) => isDateBlocked(date, blockedDateKeys),
-                      (date) => isPastBookingWindow(date, bookingUntil),
-                      (date) =>
-                        !isDateAllowedForEvent(dayMode, date, scheduledDates),
-                    ]}
-                    endMonth={bookingCalendarEndMonth}
-                    captionLayout="dropdown"
-                    className="mx-auto p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)] [&_button[data-selected-single=true]]:bg-rose-800 [&_button[data-selected-single=true]]:text-white [&_button[data-selected-single=true]]:hover:bg-rose-800/90 [&_button[data-selected-single=true]]:hover:text-white"
-                    classNames={{
-                      today:
-                        "rounded-(--cell-radius) bg-transparent data-[selected=true]:rounded-none [&_button]:bg-zinc-700 [&_button]:text-white [&_button]:hover:bg-zinc-700/90 [&_button]:hover:text-white",
-                    }}
-                  />
-                </CardContent>
-                <CardFooter className="w-full flex-col items-stretch gap-3 border-t border-white/40 bg-transparent dark:border-white/15">
-                  <p className="text-sm font-medium text-foreground">
-                    {t.availableSlots}
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {timeSlots.map((slot) => {
-                      const slotTaken = isSlotTaken(
-                        selectedDate,
-                        slot,
-                        bookedSlots,
-                        sessions
-                      );
-                      const selected = isSlotSelected(slot);
-
-                      return (
-                      <Button
-                        key={`${slot.startTime}-${slot.endTime}`}
-                        type="button"
-                        variant={selected ? "default" : "outline"}
-                        size="lg"
-                        aria-pressed={selected}
-                        disabled={!selectedDate || slotTaken}
-                        className={cn(
-                          "h-8 w-full",
-                          selected &&
-                            "bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white",
-                          slotTaken && "opacity-50"
-                        )}
-                        onClick={() =>
-                          setSelectedTimeSlot(selected ? null : slot)
-                        }
-                      >
-                        {formatTimeSlot(slot)}
-                      </Button>
-                      );
-                    })}
-                  </div>
-                  {selectedDateKey &&
-                    timeSlots.every((slot) =>
-                      isSlotTaken(selectedDate, slot, bookedSlots, sessions)
-                    ) && (
-                      <p className="text-sm text-muted-foreground">
-                        {t.allSlotsBooked}
-                      </p>
-                    )}
-                  {selectedTimeSlot && (
-                    <div className="flex flex-col gap-1.5 pt-1">
-                      <Label htmlFor="ready-by" className="text-sm font-medium">
-                        {t.readyByLabel}
-                      </Label>
-                      <Input
-                        id="ready-by"
-                        type="time"
-                        value={readyBy}
-                        onChange={(event) => setReadyBy(event.target.value)}
-                        className="bg-white/50 dark:bg-white/10"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        {t.readyByHelper}
-                      </p>
-                    </div>
-                  )}
-                </CardFooter>
-              </Card>
-            )}
-
-            {(!isSingleSessionEvent || allSessionsScheduled) && (
-              <div className="w-full space-y-2">
-                <p className="text-sm font-medium text-foreground">
-                  {t.yourBookings}
-                </p>
-                <BookingSessionList
-                  sessions={sessions}
-                  onRemove={handleRemoveSession}
-                  emptyMessage={t.noSessionsYet}
-                  frosted
-                />
-              </div>
-            )}
-
-            <div className="flex w-full justify-end gap-2">
-              {nextSessionToSchedule && (
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {step !== "intro" && (
+            <div className="relative z-10 flex w-full shrink-0 flex-col items-center gap-3 px-6 pt-4">
+              <div className="relative flex w-full max-w-md items-center">
                 <Button
                   type="button"
-                  variant={isSingleSessionEvent ? "default" : "outline"}
+                  variant="ghost"
                   size="lg"
-                  className={
-                    isSingleSessionEvent
-                      ? "bg-rose-800 text-white hover:bg-rose-800/90"
-                      : undefined
-                  }
-                  disabled={!selectedTimeSlot || !readyBy || selectionTaken}
-                  onClick={handleAddSession}
+                  className="relative z-10 -ml-2 text-muted-foreground hover:text-foreground"
+                  onClick={goToPreviousStep}
                 >
-                  {format(t.addSession, {
-                    sessionName: nextSessionToSchedule.name,
-                  })}
+                  <ChevronLeftIcon />
+                  {t.back}
                 </Button>
-              )}
-              {(!isSingleSessionEvent || allSessionsScheduled) && (
+              </div>
+              <Stepper value={progressValue} className="w-full max-w-lg px-4 sm:px-8">
+                <StepperNav className="gap-2 sm:gap-4">
+                  {progressSteps.map((progressStep, index) => (
+                    <StepperItem
+                      key={progressStep.key}
+                      step={index + 1}
+                      className="relative flex-1 items-start"
+                    >
+                      <StepperTrigger
+                        className="pointer-events-none flex grow flex-col items-start justify-center gap-2"
+                        tabIndex={-1}
+                      >
+                        <StepperIndicator className="h-1 w-full rounded-full bg-rose-200 data-[state=active]:bg-rose-800 data-[state=completed]:bg-rose-800">
+                          <span className="sr-only">{index + 1}</span>
+                        </StepperIndicator>
+                        <StepperTitle className="text-start text-[10px] font-semibold leading-tight group-data-[state=inactive]/step:text-muted-foreground sm:text-xs">
+                          {progressStep.key === "style"
+                            ? styleText.step
+                            : progressStep.key === "payment" && requestMode
+                              ? t.stepRequest
+                              : t[progressStep.titleKey]}
+                        </StepperTitle>
+                      </StepperTrigger>
+                    </StepperItem>
+                  ))}
+                </StepperNav>
+              </Stepper>
+            </div>
+          )}
+          <div
+            ref={stepScrollRef}
+            className={cn(
+              "relative z-10 flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16",
+              step === "intro" ? "pt-16" : "pt-4"
+            )}
+          >
+          {step === "intro" && loading && (
+            <BookingLoadingState message={t.loadingProfile} />
+          )}
+          {step === "intro" && user && (
+            <ClientProfile
+              user={user}
+              reviews={publicReviews}
+              onBookNow={goToNextStep}
+            />
+          )}
+          {step === "intro" && !user && !loading && (
+            <p className="text-sm text-muted-foreground">{t.profileNotFound}</p>
+          )}
+          {step === "name" && (
+            <div className="relative flex w-full max-w-md flex-1 flex-col items-center justify-center">
+              <div className="absolute bottom-[calc(50%+3rem)] flex w-full flex-col items-center px-6">
+                <TextGenerateEffect
+                  key={locale}
+                  words={t.nameQuestion}
+                  className="mb-6 w-full max-w-md text-center text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
+                />
+              </div>
+              <div className="flex w-full flex-col items-end gap-12">
+                <div className="relative max-w-full self-center">
+                  <span
+                    aria-hidden
+                    className="invisible block whitespace-pre px-1 text-2xl font-medium tracking-tight"
+                  >
+                    {contact.name || t.namePlaceholder}
+                  </span>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder={t.namePlaceholder}
+                    value={contact.name}
+                    onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && contact.name.trim()) {
+                        e.preventDefault()
+                        goToNextStep()
+                      }
+                    }}
+                    className="absolute inset-0 w-full min-w-0 border-0 bg-transparent px-1 text-left text-2xl font-medium tracking-tight text-zinc-900 caret-zinc-900 outline-none placeholder:text-zinc-400 focus:ring-0 dark:text-zinc-50 dark:caret-zinc-50 dark:placeholder:text-zinc-500"
+                  />
+                </div>
                 <Button
                   size="lg"
-                  className="bg-rose-800 text-white hover:bg-rose-800/90"
-                  disabled={!allSessionsScheduled}
+                  className="mr-4 bg-rose-800 text-white hover:bg-rose-800/90"
+                  disabled={!contact.name.trim()}
                   onClick={goToNextStep}
                 >
                   {t.next}
                   <ChevronRightIcon />
                 </Button>
-              )}
+              </div>
             </div>
-          </div>
-        </div>
-      )}
-      {step === "location" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
-          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {t.bookingLocation}
-          </h1>
-
-          <div className="flex w-full flex-col items-end gap-4">
-            <SessionLocationPicker
-              sessions={sessions}
-              sameLocationForAll={sameLocationForAll}
-              onSameLocationForAllChange={setSameLocationForAll}
-              sharedLocation={sharedLocation}
-              onSharedLocationChange={(location) => {
-                setSharedLocation(location);
-                // Apply immediately so Next enables without waiting on the sync effect.
-                if (sameLocationForAll || sessions.length === 1) {
-                  setSessions((current) =>
-                    current.map((session) => ({ ...session, location }))
-                  );
-                }
-              }}
-              sharedLocationHelperText={sharedLocationHelperText}
-              sessionLocationHelperTextByKey={sessionLocationHelperTextByKey}
-              onSessionLocationChange={(clientKey, location) =>
-                setSessions((current) =>
-                  current.map((session) =>
-                    session.client_key === clientKey
-                      ? { ...session, location }
-                      : session
-                  )
-                )
-              }
-            />
-
-            <div className="w-full space-y-2">
-              <p className="text-sm font-medium text-foreground">{t.summary}</p>
-              <BookingSessionList sessions={sessions} showLocation frosted />
-            </div>
-
-            {regionMessage ? (
-              <p
-                className={cn(
-                  "w-full text-sm",
-                  regionMessage.isError
-                    ? "text-destructive"
-                    : "text-muted-foreground"
-                )}
-              >
-                {regionMessage.text}
+          )}
+          {step === "events" && (
+            <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+              <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {t.eventQuestion}
+              </h1>
+              <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+                {t.eventHelper}
               </p>
-            ) : null}
 
-            <Button
-              size="lg"
-              className="bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={
-                !allLocationsSet ||
-                !allDistancesReady ||
-                (!regionReady && !unservedRegion) ||
-                unservedCheck.status === "loading" ||
-                outOfStateCheck.status === "loading"
-              }
-              onClick={() => {
-                if (unservedRegion) {
-                  setUnservedDialogOpen(true);
-                  return;
-                }
-                if (
-                  outOfStateCheck.status === "ready" &&
-                  outOfStateCheck.outOfState
-                ) {
-                  setAccommodationDialogOpen(true);
-                  return;
-                }
-                goToNextStep();
-              }}
-            >
-              {t.next}
-              <ChevronRightIcon />
-            </Button>
-          </div>
-
-          <AlertDialog
-            open={accommodationDialogOpen}
-            onOpenChange={setAccommodationDialogOpen}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t.accommodationTitle}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {format(t.accommodationDescription, {
-                    state: baseRegion ? getRegionLabel(baseRegion) : "",
-                    role: (user?.role
-                      ? roleLabel(user.role, t)
-                      : "stylist"
-                    ).toLowerCase(),
-                  })}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t.accommodationCancel}</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={() => {
-                    setAccommodationDialogOpen(false);
-                    goToNextStep();
-                  }}
-                >
-                  {t.accommodationAgree}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
-          <AlertDialog
-            open={unservedDialogOpen}
-            onOpenChange={setUnservedDialogOpen}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t.unservedRegionTitle}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {format(t.unservedRegionDescription, {
-                    state: unservedRegion ? getRegionLabel(unservedRegion) : "",
-                  })}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogAction onClick={() => setUnservedDialogOpen(false)}>
-                  {t.accommodationCancel}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      )}
-      {step === "style" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
-          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {styleText.choose}
-          </h1>
-          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {styleText.helper}
-          </p>
-          <div className="flex w-full flex-col items-end gap-4">
-            {currentStyleSession ? (
-              <div
-                key={currentStyleSession.client_key}
-                className="mx-auto flex w-full max-w-sm flex-col gap-3 px-2"
-              >
-                {sessions.length > 1 ? (
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {format(t.sessionOfTotal, {
-                      current: currentStyleSessionIndex + 1,
-                      total: sessions.length,
-                    })}
-                  </p>
-                ) : null}
-                <p className="text-sm font-medium text-foreground">
-                  {format(styleText.forSession, {
-                    sessionName: currentStyleSession.name,
-                  })}
-                </p>
-                <BookingStylePicker
-                  layout={usesLooks ? "rows" : "carousel"}
-                  categories={styleCategories}
-                  emptyMessage={styleText.noneAvailable}
-                  selectedCategoryId={
-                    styleCategoryBySessionKey[currentStyleSession.client_key] ??
-                    null
-                  }
-                  selectedVariantId={
-                    styleVariantBySessionKey[currentStyleSession.client_key] ??
-                    null
-                  }
-                  onCategoryChange={(categoryId) =>
-                    setStyleCategoryBySessionKey((current) => ({
-                      ...current,
-                      [currentStyleSession.client_key]: categoryId,
-                    }))
-                  }
-                  onVariantChange={(variantId) =>
-                    setStyleVariantBySessionKey((current) => ({
-                      ...current,
-                      [currentStyleSession.client_key]: variantId,
-                    }))
-                  }
-                />
-              </div>
-            ) : null}
-            <div className="flex w-full justify-end">
-              <Button
-                size="lg"
-                className="bg-rose-800 text-white hover:bg-rose-800/90"
-                disabled={
-                  currentStyleSessionIndex < sessions.length - 1
-                    ? !currentStyleSession ||
-                      !styleVariantBySessionKey[currentStyleSession.client_key]
-                    : !allSessionsStyled
-                }
-                onClick={goToNextStep}
-              >
-                {t.next}
-                <ChevronRightIcon />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {step === "addons" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
-          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {t.addOnsTitle}
-          </h1>
-          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {t.addOnsHelper}
-          </p>
-          <div className="flex w-full flex-col items-end gap-4">
-            <div className="mx-auto w-full max-w-xs px-2">
-              <BookingAddOnPicker
-                addOns={
-                  includeProcessingFee
-                    ? addOnOptions.map((addOn) => ({
-                        ...addOn,
-                        price: withClientFeesRm(addOn.price, false),
-                      }))
-                    : addOnOptions
-                }
-                selectedAddOnIds={selectedAddOnIds}
-                onSelectionChange={setSelectedAddOnIds}
-                showPrices={settings?.show_add_on_prices !== false}
-              />
-            </div>
-            <div className="mt-4 flex items-center gap-2">
-              <Button
-                size="lg"
-                variant="outline"
-                className="bg-white text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
-                onClick={goToNextStep}
-              >
-                {t.skip}
-              </Button>
-              <Button
-                size="lg"
-                className="bg-rose-800 text-white hover:bg-rose-800/90"
-                onClick={goToNextStep}
-              >
-                {t.next}
-                <ChevronRightIcon />
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {step === "details" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center pb-24">
-          <TextGenerateEffect
-              key={locale}
-              words={t.almostThere}
-              className="mb-6 w-full max-w-md text-center text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
-            />
-          <div className="flex w-full flex-col items-end gap-4">
-            <BookingContactForm value={contact} onChange={setContact}>
-              <BookingInstagramField
-                clientInfo={clientInfo}
-                value={instagram}
-                onChange={setInstagram}
-              />
-            </BookingContactForm>
-            <BookingClientInfoForm
-              clientInfo={clientInfo}
-              answers={clientAnswers}
-              onAnswersChange={setClientAnswers}
-              moodboard={moodboard}
-              onMoodboardChange={setMoodboard}
-            />
-            <Button
-              size="lg"
-              className="mt-2 bg-rose-800 text-white hover:bg-rose-800/90"
-              disabled={!contactDetailsValid}
-              onClick={goToNextStep}
-            >
-              {t.next}
-              <ChevronRightIcon />
-            </Button>
-          </div>
-        </div>
-      )}
-      {step === "review" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center">
-          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {t.reviewBookingTitle}
-          </h1>
-          <div className="flex w-full flex-col items-end gap-4">
-            <BookingReviewDetails
-              eventName={selectedEvent?.name}
-              sessions={sessions}
-              styleBySessionKey={reviewStyleBySessionKey}
-              styleLabel={usesLooks ? t.reviewLook : t.styleLabel}
-              addOnNames={selectedAddOnItems.map((addOn) => addOn.name)}
-              contact={contact}
-              clientInfo={clientInfo}
-              instagram={instagram}
-              answers={clientAnswers}
-              moodboard={moodboard}
-            />
-            <BookingQuotation
-              quotation={payableQuotation}
-              companyName={settings?.invoice.company_name}
-              balanceDueBeforeDays={balanceDueBeforeDays}
-              paymentOption={effectivePaymentOption}
-            />
-            <Button
-              size="lg"
-              className="bg-rose-800 text-white hover:bg-rose-800/90"
-              onClick={goToNextStep}
-            >
-              {t.next}
-              <ChevronRightIcon />
-            </Button>
-          </div>
-        </div>
-      )}
-      {step === "t&c" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center">
-          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {t.termsTitle}
-          </h1>
-          <div className="flex w-full flex-col items-end gap-4">
-            <Card className="mx-auto w-full min-h-128 min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
-              <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
-                <div className="max-h-96 overflow-y-auto rounded-md border border-white/40 bg-white/20 p-3 dark:border-white/15 dark:bg-white/5">
-                  <p className="whitespace-pre-line text-xs text-muted-foreground">
-                    {settings?.invoice.terms_and_conditions ??
-                      t.noTermsAvailable}
-                  </p>
-                </div>
-                <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
-                  <input
-                    type="checkbox"
-                    checked={termsAccepted}
-                    onChange={(event) => setTermsAccepted(event.target.checked)}
-                    className="mt-0.5 size-4 shrink-0 rounded border-border accent-rose-800"
+              <div className="flex w-full flex-col items-end gap-4">
+                {loading ? (
+                  <BookingLoadingState
+                    message={t.loadingPackages}
+                    className="w-full py-10"
                   />
-                  <span>{t.agreeCheckbox}</span>
-                </label>
-              </CardContent>
-            </Card>
-            {requestMode ? (
-              <Button
-                size="lg"
-                className="bg-rose-800 text-white hover:bg-rose-800/90"
-                disabled={!termsAccepted}
-                onClick={() => {
-                  setPaymentError(null);
-                  setRequestDialogOpen(true);
-                }}
-              >
-                {t.requestBooking}
-                <ChevronRightIcon />
-              </Button>
-            ) : (
-              <Button
-                size="lg"
-                className="bg-rose-800 text-white hover:bg-rose-800/90"
-                disabled={!termsAccepted}
-                onClick={goToNextStep}
-              >
-                {t.agreeContinue}
-                <ChevronRightIcon />
-              </Button>
-            )}
-          </div>
-          <AlertDialog
-            open={requestDialogOpen}
-            onOpenChange={(open) => {
-              if (!isPaying) setRequestDialogOpen(open);
-            }}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t.requestDialogTitle}</AlertDialogTitle>
-                <AlertDialogDescription>
-                  {format(t.requestDialogBody, {
-                    name: user?.name?.trim() || t.stylist,
-                    email: contact.email.trim(),
-                  })}
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              {paymentError && (
-                <p className="text-sm text-destructive" role="alert">
-                  {paymentError}
-                </p>
-              )}
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isPaying}>
-                  {t.requestDialogCancel}
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  disabled={isPaying}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    void handlePay();
-                  }}
-                >
-                  {isPaying ? t.sendingRequest : t.requestDialogConfirm}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </div>
-      )}
-      {step === "payment" && (
-        <div className="flex w-full max-w-md flex-1 flex-col items-center">
-          <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {effectivePaymentOption === "full"
-              ? t.payInFull
-              : t.choosePayment}
-          </h1>
-          <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {mustPayFull
-              ? format(t.sessionWithinDays, { days: balanceDueBeforeDays })
-              : (settings?.payment.method ?? "manual_transfer") ===
-                  "manual_transfer"
-                ? t.paymentManualSecure
-                : t.paymentSecure}
-          </p>
-          <div className="flex w-full flex-col items-end gap-4">
-            {!mustPayFull && quotation.depositRm > 0 && (
-              <div
-                className="flex w-full flex-col gap-2"
-                role="radiogroup"
-                aria-label={t.paymentOptionLabel}
-              >
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={effectivePaymentOption === "full"}
-                  onClick={() => setPaymentOption("full")}
-                  className={cn(
-                    "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
-                    effectivePaymentOption === "full"
-                      ? "bg-rose-800 text-white shadow-sm"
-                      : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-                  )}
-                >
-                  <span className="font-medium">
-                    {format(t.payFullOption, {
-                      amount: formatRm(quotation.totalRm),
-                    })}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xs",
-                      effectivePaymentOption === "full"
-                        ? "text-white/80"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {t.noBalanceLater}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={effectivePaymentOption === "deposit"}
-                  onClick={() => setPaymentOption("deposit")}
-                  className={cn(
-                    "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
-                    effectivePaymentOption === "deposit"
-                      ? "bg-rose-800 text-white shadow-sm"
-                      : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-                  )}
-                >
-                  <span className="font-medium">
-                    {format(t.payDepositOption, {
-                      amount: formatRm(quotation.depositRm),
-                    })}
-                  </span>
-                  <span
-                    className={cn(
-                      "text-xs",
-                      effectivePaymentOption === "deposit"
-                        ? "text-white/80"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {format(t.balanceDue, {
-                      amount: formatRm(quotation.balanceRm),
-                      days: balanceDueBeforeDays,
-                    })}
-                  </span>
-                </button>
-              </div>
-            )}
-            <BookingQuotation
-              quotation={payableQuotation}
-              sessions={sessions}
-              companyName={settings?.invoice.company_name}
-              balanceDueBeforeDays={balanceDueBeforeDays}
-              paymentOption={effectivePaymentOption}
-            />
-            {(settings?.payment.method ?? "manual_transfer") ===
-            "manual_transfer" ? (
-              manualTransfer ? (
-                <ManualPaymentStep
-                  amountLabel={format(t.transferAmountDue, {
-                    amount: formatRm(
-                      effectivePaymentOption === "full"
-                        ? payableQuotation.totalRm
-                        : payableQuotation.depositRm
-                    ),
-                  })}
-                  submitLabel={t.submitReceipt}
-                  submittingLabel={t.submittingReceipt}
-                  isSubmitting={isPaying}
-                  error={paymentError}
-                  transfer={manualTransfer}
-                  onSubmit={(file) => void handlePay(file)}
-                />
-              ) : (
-                <p className="w-full text-sm text-destructive" role="alert">
-                  This stylist has not set up payment details yet. Please
-                  contact them to complete your booking.
-                </p>
-              )
-            ) : (
-              <>
-                {paymentError && (
-                  <p className="w-full text-sm text-destructive" role="alert">
-                    {paymentError}
-                  </p>
+                ) : (
+                  <div className="mx-auto w-full max-w-xs px-2">
+                    <BookingPackagePicker
+                      packages={packages}
+                      selectedPackageId={selectedPackageId}
+                      onPackageChange={setSelectedPackageId}
+                    />
+                  </div>
                 )}
                 <Button
                   size="lg"
-                  className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
-                  disabled={isPaying || payableQuotation.depositRm <= 0}
-                  onClick={() => void handlePay()}
+                  className="mt-4 bg-rose-800 text-white hover:bg-rose-800/90"
+                  disabled={!selectedEvent}
+                  onClick={goToNextStep}
                 >
-                  {isPaying
-                    ? t.redirectingStripe
-                    : effectivePaymentOption === "full"
-                      ? format(t.payNow, {
-                          amount: formatRm(payableQuotation.depositRm),
-                        })
-                      : format(t.payDepositNow, {
-                          amount: formatRm(payableQuotation.depositRm),
-                        })}
+                  {t.next}
+                  <ChevronRightIcon />
                 </Button>
-              </>
-            )}
+              </div>
+            </div>
+          )}
+
+          {step === "datetime" && (
+            <div className="flex w-full max-w-md flex-1 flex-col items-center">
+              <h1
+                className={cn(
+                  "max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50",
+                  isSingleSessionEvent ? "mb-6" : "mb-2"
+                )}
+              >
+                {nextSessionToSchedule
+                  ? format(t.bookSession, { sessionName: nextSessionToSchedule.name })
+                  : t.allSessionsScheduled}
+              </h1>
+              {!isSingleSessionEvent && (
+                <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+                  {format(t.sessionsScheduledCount, {
+                    scheduled: sessions.length,
+                    total: eventSessions.length,
+                  })}
+                  {" · "}
+                  {dayMode === "same_day" ? t.sameDayHint : t.differentDayHint}
+                </p>
+              )}
+
+              <div className="flex w-full flex-col items-end gap-4">
+                {nextSessionToSchedule && (
+                  <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+                    <CardContent className="flex flex-col items-center gap-4 pt-1">
+                      <Calendar
+                        mode="single"
+                        locale={dateFnsLocale}
+                        selected={selectedDate}
+                        onSelect={(date) => {
+                          setSelectedDate(date);
+                          setSelectedTimeSlot(null);
+                        }}
+                        disabled={[
+                          { before: new Date() },
+                          (date) => isDateFullyBooked(date),
+                          (date) => isDateBlocked(date, blockedDateKeys),
+                          (date) => isPastBookingWindow(date, bookingUntil),
+                          (date) =>
+                            !isDateAllowedForEvent(dayMode, date, scheduledDates),
+                        ]}
+                        endMonth={bookingCalendarEndMonth}
+                        captionLayout="dropdown"
+                        className="mx-auto p-0 [--cell-size:--spacing(10)] md:[--cell-size:--spacing(12)] [&_button[data-selected-single=true]]:bg-rose-800 [&_button[data-selected-single=true]]:text-white [&_button[data-selected-single=true]]:hover:bg-rose-800/90 [&_button[data-selected-single=true]]:hover:text-white"
+                        classNames={{
+                          today:
+                            "rounded-(--cell-radius) bg-transparent data-[selected=true]:rounded-none [&_button]:bg-zinc-700 [&_button]:text-white [&_button]:hover:bg-zinc-700/90 [&_button]:hover:text-white",
+                        }}
+                      />
+                    </CardContent>
+                    <CardFooter className="w-full flex-col items-stretch gap-3 border-t border-white/40 bg-transparent dark:border-white/15">
+                      <p className="text-sm font-medium text-foreground">
+                        {t.availableSlots}
+                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {timeSlots.map((slot) => {
+                          const slotTaken = isSlotTaken(
+                            selectedDate,
+                            slot,
+                            bookedSlots,
+                            sessions
+                          );
+                          const selected = isSlotSelected(slot);
+
+                          return (
+                          <Button
+                            key={`${slot.startTime}-${slot.endTime}`}
+                            type="button"
+                            variant={selected ? "default" : "outline"}
+                            size="lg"
+                            aria-pressed={selected}
+                            disabled={!selectedDate || slotTaken}
+                            className={cn(
+                              "h-8 w-full",
+                              selected &&
+                                "bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white",
+                              slotTaken && "opacity-50"
+                            )}
+                            onClick={() =>
+                              setSelectedTimeSlot(selected ? null : slot)
+                            }
+                          >
+                            {formatTimeSlot(slot)}
+                          </Button>
+                          );
+                        })}
+                      </div>
+                      {selectedDateKey &&
+                        timeSlots.every((slot) =>
+                          isSlotTaken(selectedDate, slot, bookedSlots, sessions)
+                        ) && (
+                          <p className="text-sm text-muted-foreground">
+                            {t.allSlotsBooked}
+                          </p>
+                        )}
+                      {selectedTimeSlot && (
+                        <div className="flex flex-col gap-1.5 pt-1">
+                          <Label htmlFor="ready-by" className="text-sm font-medium">
+                            {t.readyByLabel}
+                          </Label>
+                          <Input
+                            id="ready-by"
+                            type="time"
+                            value={readyBy}
+                            onChange={(event) => setReadyBy(event.target.value)}
+                            className="bg-white/50 dark:bg-white/10"
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {t.readyByHelper}
+                          </p>
+                        </div>
+                      )}
+                    </CardFooter>
+                  </Card>
+                )}
+
+                {(!isSingleSessionEvent || allSessionsScheduled) && (
+                  <div className="w-full space-y-2">
+                    <p className="text-sm font-medium text-foreground">
+                      {t.yourBookings}
+                    </p>
+                    <BookingSessionList
+                      sessions={sessions}
+                      onRemove={handleRemoveSession}
+                      emptyMessage={t.noSessionsYet}
+                      frosted
+                    />
+                  </div>
+                )}
+
+                <div className="flex w-full justify-end gap-2">
+                  {nextSessionToSchedule && (
+                    <Button
+                      type="button"
+                      variant={isSingleSessionEvent ? "default" : "outline"}
+                      size="lg"
+                      className={
+                        isSingleSessionEvent
+                          ? "bg-rose-800 text-white hover:bg-rose-800/90"
+                          : undefined
+                      }
+                      disabled={!selectedTimeSlot || !readyBy || selectionTaken}
+                      onClick={handleAddSession}
+                    >
+                      {format(t.addSession, {
+                        sessionName: nextSessionToSchedule.name,
+                      })}
+                    </Button>
+                  )}
+                  {(!isSingleSessionEvent || allSessionsScheduled) && (
+                    <Button
+                      size="lg"
+                      className="bg-rose-800 text-white hover:bg-rose-800/90"
+                      disabled={!allSessionsScheduled}
+                      onClick={goToNextStep}
+                    >
+                      {t.next}
+                      <ChevronRightIcon />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {step === "location" && (
+            <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+              <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {t.bookingLocation}
+              </h1>
+
+              <div className="flex w-full flex-col items-end gap-4">
+                <SessionLocationPicker
+                  sessions={sessions}
+                  sameLocationForAll={sameLocationForAll}
+                  onSameLocationForAllChange={setSameLocationForAll}
+                  sharedLocation={sharedLocation}
+                  onSharedLocationChange={(location) => {
+                    setSharedLocation(location);
+                    // Apply immediately so Next enables without waiting on the sync effect.
+                    if (sameLocationForAll || sessions.length === 1) {
+                      setSessions((current) =>
+                        current.map((session) => ({ ...session, location }))
+                      );
+                    }
+                  }}
+                  sharedLocationHelperText={sharedLocationHelperText}
+                  sessionLocationHelperTextByKey={sessionLocationHelperTextByKey}
+                  onSessionLocationChange={(clientKey, location) =>
+                    setSessions((current) =>
+                      current.map((session) =>
+                        session.client_key === clientKey
+                          ? { ...session, location }
+                          : session
+                      )
+                    )
+                  }
+                />
+
+                <div className="w-full space-y-2 @4xl/client:hidden">
+                  <p className="text-sm font-medium text-foreground">{t.summary}</p>
+                  <BookingSessionList sessions={sessions} showLocation frosted />
+                </div>
+
+                {regionMessage ? (
+                  <p
+                    className={cn(
+                      "w-full text-sm",
+                      regionMessage.isError
+                        ? "text-destructive"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    {regionMessage.text}
+                  </p>
+                ) : null}
+
+                <Button
+                  size="lg"
+                  className="bg-rose-800 text-white hover:bg-rose-800/90"
+                  disabled={
+                    !allLocationsSet ||
+                    !allDistancesReady ||
+                    (!regionReady && !unservedRegion) ||
+                    unservedCheck.status === "loading" ||
+                    outOfStateCheck.status === "loading"
+                  }
+                  onClick={() => {
+                    if (unservedRegion) {
+                      setUnservedDialogOpen(true);
+                      return;
+                    }
+                    if (
+                      outOfStateCheck.status === "ready" &&
+                      outOfStateCheck.outOfState
+                    ) {
+                      setAccommodationDialogOpen(true);
+                      return;
+                    }
+                    goToNextStep();
+                  }}
+                >
+                  {t.next}
+                  <ChevronRightIcon />
+                </Button>
+              </div>
+
+              <AlertDialog
+                open={accommodationDialogOpen}
+                onOpenChange={setAccommodationDialogOpen}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t.accommodationTitle}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {format(t.accommodationDescription, {
+                        state: baseRegion ? getRegionLabel(baseRegion) : "",
+                        role: (user?.role
+                          ? roleLabel(user.role, t)
+                          : "stylist"
+                        ).toLowerCase(),
+                      })}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t.accommodationCancel}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        setAccommodationDialogOpen(false);
+                        goToNextStep();
+                      }}
+                    >
+                      {t.accommodationAgree}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
+              <AlertDialog
+                open={unservedDialogOpen}
+                onOpenChange={setUnservedDialogOpen}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t.unservedRegionTitle}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {format(t.unservedRegionDescription, {
+                        state: unservedRegion ? getRegionLabel(unservedRegion) : "",
+                      })}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogAction onClick={() => setUnservedDialogOpen(false)}>
+                      {t.accommodationCancel}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+          {step === "style" && (
+            <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+              <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {styleText.choose}
+              </h1>
+              <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+                {styleText.helper}
+              </p>
+              <div className="flex w-full flex-col items-end gap-4">
+                {currentStyleSession ? (
+                  <div
+                    key={currentStyleSession.client_key}
+                    className="mx-auto flex w-full max-w-sm flex-col gap-3 px-2"
+                  >
+                    {sessions.length > 1 ? (
+                      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        {format(t.sessionOfTotal, {
+                          current: currentStyleSessionIndex + 1,
+                          total: sessions.length,
+                        })}
+                      </p>
+                    ) : null}
+                    <p className="text-sm font-medium text-foreground">
+                      {format(styleText.forSession, {
+                        sessionName: currentStyleSession.name,
+                      })}
+                    </p>
+                    <BookingStylePicker
+                      layout={usesLooks ? "rows" : "carousel"}
+                      categories={styleCategories}
+                      emptyMessage={styleText.noneAvailable}
+                      selectedCategoryId={
+                        styleCategoryBySessionKey[currentStyleSession.client_key] ??
+                        null
+                      }
+                      selectedVariantId={
+                        styleVariantBySessionKey[currentStyleSession.client_key] ??
+                        null
+                      }
+                      onCategoryChange={(categoryId) =>
+                        setStyleCategoryBySessionKey((current) => ({
+                          ...current,
+                          [currentStyleSession.client_key]: categoryId,
+                        }))
+                      }
+                      onVariantChange={(variantId) =>
+                        setStyleVariantBySessionKey((current) => ({
+                          ...current,
+                          [currentStyleSession.client_key]: variantId,
+                        }))
+                      }
+                    />
+                  </div>
+                ) : null}
+                <div className="flex w-full justify-end">
+                  <Button
+                    size="lg"
+                    className="bg-rose-800 text-white hover:bg-rose-800/90"
+                    disabled={
+                      currentStyleSessionIndex < sessions.length - 1
+                        ? !currentStyleSession ||
+                          !styleVariantBySessionKey[currentStyleSession.client_key]
+                        : !allSessionsStyled
+                    }
+                    onClick={goToNextStep}
+                  >
+                    {t.next}
+                    <ChevronRightIcon />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          {step === "addons" && (
+            <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center">
+              <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {t.addOnsTitle}
+              </h1>
+              <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+                {t.addOnsHelper}
+              </p>
+              <div className="flex w-full flex-col items-end gap-4">
+                <div className="mx-auto w-full max-w-xs px-2">
+                  <BookingAddOnPicker
+                    addOns={
+                      includeProcessingFee
+                        ? addOnOptions.map((addOn) => ({
+                            ...addOn,
+                            price: withClientFeesRm(addOn.price, false),
+                          }))
+                        : addOnOptions
+                    }
+                    selectedAddOnIds={selectedAddOnIds}
+                    onSelectionChange={setSelectedAddOnIds}
+                    showPrices={settings?.show_add_on_prices !== false}
+                  />
+                </div>
+                <div className="mt-4 flex items-center gap-2">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="bg-white text-zinc-500 hover:bg-zinc-100 hover:text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 dark:hover:text-zinc-300"
+                    onClick={goToNextStep}
+                  >
+                    {t.skip}
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="bg-rose-800 text-white hover:bg-rose-800/90"
+                    onClick={goToNextStep}
+                  >
+                    {t.next}
+                    <ChevronRightIcon />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+          {step === "details" && (
+            <div className="flex w-full max-w-md flex-1 flex-col items-center justify-center pb-24">
+              <TextGenerateEffect
+                  key={locale}
+                  words={t.almostThere}
+                  className="mb-6 w-full max-w-md text-center text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
+                />
+              <div className="flex w-full flex-col items-end gap-4">
+                <BookingContactForm value={contact} onChange={setContact}>
+                  <BookingInstagramField
+                    clientInfo={clientInfo}
+                    value={instagram}
+                    onChange={setInstagram}
+                  />
+                </BookingContactForm>
+                <BookingClientInfoForm
+                  clientInfo={clientInfo}
+                  answers={clientAnswers}
+                  onAnswersChange={setClientAnswers}
+                  moodboard={moodboard}
+                  onMoodboardChange={setMoodboard}
+                />
+                <Button
+                  size="lg"
+                  className="mt-2 bg-rose-800 text-white hover:bg-rose-800/90"
+                  disabled={!contactDetailsValid}
+                  onClick={goToNextStep}
+                >
+                  {t.next}
+                  <ChevronRightIcon />
+                </Button>
+              </div>
+            </div>
+          )}
+          {step === "review" && (
+            <div className="flex w-full max-w-md flex-1 flex-col items-center">
+              <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {t.reviewBookingTitle}
+              </h1>
+              <div className="flex w-full flex-col items-end gap-4">
+                <BookingReviewDetails
+                  eventName={selectedEvent?.name}
+                  sessions={sessions}
+                  styleBySessionKey={reviewStyleBySessionKey}
+                  styleLabel={usesLooks ? t.reviewLook : t.styleLabel}
+                  addOnNames={selectedAddOnItems.map((addOn) => addOn.name)}
+                  contact={contact}
+                  clientInfo={clientInfo}
+                  instagram={instagram}
+                  answers={clientAnswers}
+                  moodboard={moodboard}
+                />
+                <BookingQuotation
+                  quotation={payableQuotation}
+                  companyName={settings?.invoice.company_name}
+                  balanceDueBeforeDays={balanceDueBeforeDays}
+                  paymentOption={effectivePaymentOption}
+                />
+                <Button
+                  size="lg"
+                  className="bg-rose-800 text-white hover:bg-rose-800/90"
+                  onClick={goToNextStep}
+                >
+                  {t.next}
+                  <ChevronRightIcon />
+                </Button>
+              </div>
+            </div>
+          )}
+          {step === "t&c" && (
+            <div className="flex w-full max-w-md flex-1 flex-col items-center">
+              <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {t.termsTitle}
+              </h1>
+              <div className="flex w-full flex-col items-end gap-4">
+                <Card className="mx-auto w-full min-h-128 min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+                  <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
+                    <div className="max-h-96 overflow-y-auto rounded-md border border-white/40 bg-white/20 p-3 dark:border-white/15 dark:bg-white/5">
+                      <p className="whitespace-pre-line text-xs text-muted-foreground">
+                        {settings?.invoice.terms_and_conditions ??
+                          t.noTermsAvailable}
+                      </p>
+                    </div>
+                    <label className="flex cursor-pointer items-start gap-2 text-sm text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={termsAccepted}
+                        onChange={(event) => setTermsAccepted(event.target.checked)}
+                        className="mt-0.5 size-4 shrink-0 rounded border-border accent-rose-800"
+                      />
+                      <span>{t.agreeCheckbox}</span>
+                    </label>
+                  </CardContent>
+                </Card>
+                {requestMode ? (
+                  <Button
+                    size="lg"
+                    className="bg-rose-800 text-white hover:bg-rose-800/90"
+                    disabled={!termsAccepted}
+                    onClick={() => {
+                      setPaymentError(null);
+                      setRequestDialogOpen(true);
+                    }}
+                  >
+                    {t.requestBooking}
+                    <ChevronRightIcon />
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    className="bg-rose-800 text-white hover:bg-rose-800/90"
+                    disabled={!termsAccepted}
+                    onClick={goToNextStep}
+                  >
+                    {t.agreeContinue}
+                    <ChevronRightIcon />
+                  </Button>
+                )}
+              </div>
+              <AlertDialog
+                open={requestDialogOpen}
+                onOpenChange={(open) => {
+                  if (!isPaying) setRequestDialogOpen(open);
+                }}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t.requestDialogTitle}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {format(t.requestDialogBody, {
+                        name: user?.name?.trim() || t.stylist,
+                        email: contact.email.trim(),
+                      })}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  {paymentError && (
+                    <p className="text-sm text-destructive" role="alert">
+                      {paymentError}
+                    </p>
+                  )}
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={isPaying}>
+                      {t.requestDialogCancel}
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      disabled={isPaying}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        void handlePay();
+                      }}
+                    >
+                      {isPaying ? t.sendingRequest : t.requestDialogConfirm}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+          )}
+          {step === "payment" && (
+            <div className="flex w-full max-w-md flex-1 flex-col items-center">
+              <h1 className="mb-4 max-w-md text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+                {effectivePaymentOption === "full"
+                  ? t.payInFull
+                  : t.choosePayment}
+              </h1>
+              <p className="mb-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
+                {mustPayFull
+                  ? format(t.sessionWithinDays, { days: balanceDueBeforeDays })
+                  : (settings?.payment.method ?? "manual_transfer") ===
+                      "manual_transfer"
+                    ? t.paymentManualSecure
+                    : t.paymentSecure}
+              </p>
+              <div className="flex w-full flex-col items-end gap-4">
+                {!mustPayFull && quotation.depositRm > 0 && (
+                  <div
+                    className="flex w-full flex-col gap-2"
+                    role="radiogroup"
+                    aria-label={t.paymentOptionLabel}
+                  >
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={effectivePaymentOption === "full"}
+                      onClick={() => setPaymentOption("full")}
+                      className={cn(
+                        "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
+                        effectivePaymentOption === "full"
+                          ? "bg-rose-800 text-white shadow-sm"
+                          : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
+                      )}
+                    >
+                      <span className="font-medium">
+                        {format(t.payFullOption, {
+                          amount: formatRm(quotation.totalRm),
+                        })}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs",
+                          effectivePaymentOption === "full"
+                            ? "text-white/80"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {t.noBalanceLater}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={effectivePaymentOption === "deposit"}
+                      onClick={() => setPaymentOption("deposit")}
+                      className={cn(
+                        "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
+                        effectivePaymentOption === "deposit"
+                          ? "bg-rose-800 text-white shadow-sm"
+                          : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
+                      )}
+                    >
+                      <span className="font-medium">
+                        {format(t.payDepositOption, {
+                          amount: formatRm(quotation.depositRm),
+                        })}
+                      </span>
+                      <span
+                        className={cn(
+                          "text-xs",
+                          effectivePaymentOption === "deposit"
+                            ? "text-white/80"
+                            : "text-muted-foreground"
+                        )}
+                      >
+                        {format(t.balanceDue, {
+                          amount: formatRm(quotation.balanceRm),
+                          days: balanceDueBeforeDays,
+                        })}
+                      </span>
+                    </button>
+                  </div>
+                )}
+                <BookingQuotation
+                  quotation={payableQuotation}
+                  sessions={sessions}
+                  companyName={settings?.invoice.company_name}
+                  balanceDueBeforeDays={balanceDueBeforeDays}
+                  paymentOption={effectivePaymentOption}
+                />
+                {(settings?.payment.method ?? "manual_transfer") ===
+                "manual_transfer" ? (
+                  manualTransfer ? (
+                    <ManualPaymentStep
+                      amountLabel={format(t.transferAmountDue, {
+                        amount: formatRm(
+                          effectivePaymentOption === "full"
+                            ? payableQuotation.totalRm
+                            : payableQuotation.depositRm
+                        ),
+                      })}
+                      submitLabel={t.submitReceipt}
+                      submittingLabel={t.submittingReceipt}
+                      isSubmitting={isPaying}
+                      error={paymentError}
+                      transfer={manualTransfer}
+                      onSubmit={(file) => void handlePay(file)}
+                    />
+                  ) : (
+                    <p className="w-full text-sm text-destructive" role="alert">
+                      This stylist has not set up payment details yet. Please
+                      contact them to complete your booking.
+                    </p>
+                  )
+                ) : (
+                  <>
+                    {paymentError && (
+                      <p className="w-full text-sm text-destructive" role="alert">
+                        {paymentError}
+                      </p>
+                    )}
+                    <Button
+                      size="lg"
+                      className="h-11 w-full bg-rose-800 text-white hover:bg-rose-800/90"
+                      disabled={isPaying || payableQuotation.depositRm <= 0}
+                      onClick={() => void handlePay()}
+                    >
+                      {isPaying
+                        ? t.redirectingStripe
+                        : effectivePaymentOption === "full"
+                          ? format(t.payNow, {
+                              amount: formatRm(payableQuotation.depositRm),
+                            })
+                          : format(t.payDepositNow, {
+                              amount: formatRm(payableQuotation.depositRm),
+                            })}
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
           </div>
         </div>
-      )}
       </div>
       {step !== "intro" && whatsappUrl ? (
         <DraggableWhatsAppButton href={whatsappUrl} />

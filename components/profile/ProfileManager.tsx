@@ -311,15 +311,20 @@ export function ProfileManager({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <section className="pr-12">
-        <h2 className="text-xl font-semibold tracking-tight">Profile</h2>
+    <div className="flex flex-col gap-4 px-4 md:px-8 @4xl/main:grid @4xl/main:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @4xl/main:grid-rows-[auto_auto_auto_1fr_auto] @4xl/main:items-start @4xl/main:gap-x-8">
+      <section className="pr-12 md:pr-0 @4xl/main:col-span-full @4xl/main:row-start-1">
+        <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+          Profile
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Update how clients find and contact you.
         </p>
       </section>
 
-      <SettingsSection title="Reviews">
+      <SettingsSection
+        title="Reviews"
+        className="@4xl/main:col-start-2 @4xl/main:row-start-2"
+      >
         <nav aria-label="Reviews" className={settingsListClassName}>
           <Link
             href="/dashboard/profile/reviews"
@@ -342,6 +347,7 @@ export function ProfileManager({
 
       <SettingsSection
         title="Public profile"
+        className="@4xl/main:col-start-1 @4xl/main:row-span-3 @4xl/main:row-start-2"
         action={
           previewUrl ? (
             <Button
@@ -498,7 +504,10 @@ export function ProfileManager({
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Social links">
+      <SettingsSection
+        title="Social links"
+        className="@4xl/main:col-start-2 @4xl/main:row-start-3"
+      >
         <div className={settingsCardClassName}>
           <Field label="Instagram" htmlFor="social-instagram">
             <Input
@@ -550,7 +559,10 @@ export function ProfileManager({
         </div>
       </SettingsSection>
 
-      <SettingsSection title="Account">
+      <SettingsSection
+        title="Account"
+        className="@4xl/main:col-start-2 @4xl/main:row-start-4"
+      >
         <div className={settingsListClassName}>
           <div className={cn(settingsRowClassName, "hover:bg-transparent dark:hover:bg-transparent")}>
             <IconBadge icon={IconMail} />
@@ -568,16 +580,18 @@ export function ProfileManager({
         </div>
       </SettingsSection>
 
-      <SettingsFeedback error={error} success={success} />
-      <Button
-        type="button"
-        size="lg"
-        className="min-h-11"
-        onClick={handleSave}
-        disabled={busy}
-      >
-        {saving ? "Saving…" : "Save profile"}
-      </Button>
+      <div className="flex flex-col gap-4 @4xl/main:col-span-full @4xl/main:row-start-5">
+        <SettingsFeedback error={error} success={success} />
+        <Button
+          type="button"
+          size="lg"
+          className="min-h-11"
+          onClick={handleSave}
+          disabled={busy}
+        >
+          {saving ? "Saving…" : "Save profile"}
+        </Button>
+      </div>
     </div>
   );
 }

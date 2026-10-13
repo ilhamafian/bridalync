@@ -121,10 +121,13 @@ export function BookingDetailsSections({
   booking,
   sectionClassName,
   sessionClassName = "rounded-lg border border-border/60 p-3",
+  includePayment = true,
 }: {
   booking: SerializedBooking;
   sectionClassName?: string;
   sessionClassName?: string;
+  /** False when the caller renders `BookingPaymentSection` elsewhere. */
+  includePayment?: boolean;
 }) {
   const phone = formatWhatsAppDisplay(
     booking.contact.country_code,
@@ -290,27 +293,41 @@ export function BookingDetailsSections({
         )}
       </div>
 
-      <div className={sectionClassName}>
-        <div className="flex items-center justify-between gap-3">
-          <SectionLabel>Payment</SectionLabel>
-          {booking.source !== "google_calendar" &&
-          (booking.status === "confirmed" || booking.status === "completed") ? (
-            <InvoiceDownloadButton
-              bookingId={booking._id}
-              label="Invoice"
-              className="-my-1"
-            />
-          ) : null}
-        </div>
-        {booking.source === "google_calendar" ? (
-          <p className="mt-0.5 text-muted-foreground">
-            Imported bookings have no Bridalync invoice.
-          </p>
-        ) : (
-          <PriceBreakdown booking={booking} />
-        )}
-      </div>
+      {includePayment ? (
+        <BookingPaymentSection booking={booking} className={sectionClassName} />
+      ) : null}
     </>
+  );
+}
+
+export function BookingPaymentSection({
+  booking,
+  className,
+}: {
+  booking: SerializedBooking;
+  className?: string;
+}) {
+  return (
+    <div className={className}>
+      <div className="flex items-center justify-between gap-3">
+        <SectionLabel>Payment</SectionLabel>
+        {booking.source !== "google_calendar" &&
+        (booking.status === "confirmed" || booking.status === "completed") ? (
+          <InvoiceDownloadButton
+            bookingId={booking._id}
+            label="Invoice"
+            className="-my-1"
+          />
+        ) : null}
+      </div>
+      {booking.source === "google_calendar" ? (
+        <p className="mt-0.5 text-muted-foreground">
+          Imported bookings have no Bridalync invoice.
+        </p>
+      ) : (
+        <PriceBreakdown booking={booking} />
+      )}
+    </div>
   );
 }
 

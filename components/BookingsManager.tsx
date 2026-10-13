@@ -445,7 +445,7 @@ export function BookingsManager({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <BackButton />
 
       <div>
@@ -456,7 +456,7 @@ export function BookingsManager({
       </div>
 
       <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 md:max-w-xl">
           <div className="relative min-w-0 flex-1">
             <IconSearch className="pointer-events-none absolute top-1/2 left-3 z-10 size-4 -translate-y-1/2 text-foreground/70" />
             <Input
@@ -498,7 +498,7 @@ export function BookingsManager({
         <div
           role="group"
           aria-label="Filter bookings"
-          className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 no-scrollbar lg:-mx-6 lg:px-6"
+          className="-mx-4 flex gap-2 overflow-x-auto px-4 py-1 no-scrollbar md:-mx-8 md:px-8"
         >
           {BOOKING_FILTERS.map((filter) => {
             const active = statusFilter === filter.value;
@@ -573,7 +573,7 @@ export function BookingsManager({
           </CardHeader>
         </Card>
       ) : (
-        <ul className="flex flex-col gap-3">
+        <ul className="grid gap-3 @3xl/main:grid-cols-2 @6xl/main:grid-cols-3">
           {filteredBookings.map((booking) => {
             const earliest = getEarliestSessionDate(booking.sessions);
             const paidLabel = paymentLabel(booking);
@@ -594,7 +594,7 @@ export function BookingsManager({
                   role="button"
                   tabIndex={0}
                   className={cn(
-                    "cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                    "h-full cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
                     needsReview
                       ? "border-amber-500/35 bg-amber-500/4 hover:bg-amber-500/8"
                       : cn(

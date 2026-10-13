@@ -236,7 +236,7 @@ export default function BookingReviewPage() {
     <ReviewLayout>
       <form
         onSubmit={handleSubmit}
-        className="flex w-full max-w-md flex-col gap-6"
+        className="flex w-full max-w-md flex-col gap-6 md:max-w-lg"
       >
         <div className="flex flex-col gap-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -268,14 +268,14 @@ export default function BookingReviewPage() {
               {imageUrls.map((url) => (
                 <div
                   key={url}
-                  className="relative size-20 overflow-hidden rounded-md ring-1 ring-white/60 dark:ring-white/15"
+                  className="relative size-20 overflow-hidden rounded-md ring-1 ring-white/60 md:size-24 dark:ring-white/15"
                 >
                   <Image
                     src={url}
                     alt=""
                     fill
                     className="object-cover"
-                    sizes="80px"
+                    sizes="96px"
                   />
                   <button
                     type="button"

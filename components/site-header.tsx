@@ -20,7 +20,7 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end gap-2 px-4">
+    <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex h-14 items-center justify-end gap-2 px-4 md:hidden">
       {section === "home" ? (
         <Link
           href="/dashboard/bookings"

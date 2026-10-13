@@ -95,9 +95,9 @@ export function DashboardHome({
   const bookings = showToday ? todaysSchedule : upcoming;
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
-      <section className="pr-24">
-        <h2 className="text-xl font-semibold tracking-tight">
+    <div className="flex flex-col gap-4 px-4 md:gap-6 md:px-8">
+      <section className="pr-24 md:pr-0">
+        <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
           {greeting}, {firstName}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -106,76 +106,83 @@ export function DashboardHome({
         </p>
       </section>
 
-      {requests && requests.items.length > 0 ? (
-        <section className="flex flex-col gap-3">
-          <h3 className="text-sm font-medium">
-            Booking requests
-            <span className="text-muted-foreground"> · {requests.total}</span>
-          </h3>
-          <CardCarousel
-            items={requests.items}
-            getKey={(item) => item.booking._id}
-            seeMoreHref="/dashboard/bookings?filter=requests"
-            renderItem={(item, className) => (
-              <HomeRequestCard
-                item={item}
-                className={className}
-                onBookingUpdated={onBookingUpdated}
-                onBookingsDeclined={onBookingsDeclined}
+      <div className="flex flex-col gap-4 md:gap-6 @5xl/main:grid @5xl/main:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] @5xl/main:items-start @5xl/main:gap-8">
+        <div className="flex min-w-0 flex-col gap-4 md:gap-6">
+          {requests && requests.items.length > 0 ? (
+            <section className="flex flex-col gap-3">
+              <h3 className="text-sm font-medium">
+                Booking requests
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {requests.total}
+                </span>
+              </h3>
+              <CardCarousel
+                items={requests.items}
+                getKey={(item) => item.booking._id}
+                seeMoreHref="/dashboard/bookings?filter=requests"
+                renderItem={(item, className) => (
+                  <HomeRequestCard
+                    item={item}
+                    className={className}
+                    onBookingUpdated={onBookingUpdated}
+                    onBookingsDeclined={onBookingsDeclined}
+                  />
+                )}
+              />
+            </section>
+          ) : null}
+
+          <section className="flex flex-col gap-3">
+            <h3 className="text-sm font-medium">
+              {showToday ? "Today's bookings" : "Upcoming bookings"}
+            </h3>
+            {bookings.length === 0 ? (
+              <EmptyCard>No upcoming bookings.</EmptyCard>
+            ) : (
+              <BookingCarousel
+                items={bookings}
+                showDate={!showToday}
+                seeMoreHref="/dashboard/bookings?filter=active&sort=upcoming"
               />
             )}
-          />
+          </section>
+
+          <section className="flex flex-col gap-3">
+            <h3 className="text-sm font-medium">Completed bookings</h3>
+            {completed.length === 0 ? (
+              <EmptyCard>No completed bookings yet.</EmptyCard>
+            ) : (
+              <BookingCarousel
+                items={completed}
+                showDate
+                seeMoreHref="/dashboard/bookings?filter=completed&sort=latest"
+                renderAction={(item) => <LeaveReviewButton item={item} />}
+              />
+            )}
+          </section>
+        </div>
+
+        <section className="flex min-w-0 flex-col gap-3 @5xl/main:sticky @5xl/main:top-4">
+          <h3 className="text-sm font-medium">Recent activity</h3>
+          {activity.length === 0 ? (
+            <EmptyCard>No recent activity yet.</EmptyCard>
+          ) : (
+            <ActivityList
+              items={activity}
+              isUnread={isActivityUnread}
+              onOpen={onOpenActivity}
+            />
+          )}
+          <Link
+            href="/dashboard/notifications"
+            scroll={false}
+            className="self-end text-sm font-medium text-primary hover:underline"
+          >
+            See more
+          </Link>
         </section>
-      ) : null}
-
-      <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">
-          {showToday ? "Today's bookings" : "Upcoming bookings"}
-        </h3>
-        {bookings.length === 0 ? (
-          <EmptyCard>No upcoming bookings.</EmptyCard>
-        ) : (
-          <BookingCarousel
-            items={bookings}
-            showDate={!showToday}
-            seeMoreHref="/dashboard/bookings?filter=active&sort=upcoming"
-          />
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">Completed bookings</h3>
-        {completed.length === 0 ? (
-          <EmptyCard>No completed bookings yet.</EmptyCard>
-        ) : (
-          <BookingCarousel
-            items={completed}
-            showDate
-            seeMoreHref="/dashboard/bookings?filter=completed&sort=latest"
-            renderAction={(item) => <LeaveReviewButton item={item} />}
-          />
-        )}
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">Recent activity</h3>
-        {activity.length === 0 ? (
-          <EmptyCard>No recent activity yet.</EmptyCard>
-        ) : (
-          <ActivityList
-            items={activity}
-            isUnread={isActivityUnread}
-            onOpen={onOpenActivity}
-          />
-        )}
-        <Link
-          href="/dashboard/notifications"
-          scroll={false}
-          className="self-end text-sm font-medium text-primary hover:underline"
-        >
-          See more
-        </Link>
-      </section>
+      </div>
     </div>
   );
 }

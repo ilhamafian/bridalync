@@ -19,14 +19,16 @@ export const settingsRowClassName =
 export function SettingsSection({
   title,
   action,
+  className,
   children,
 }: {
   title: string;
   action?: React.ReactNode;
+  className?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3">
+    <section className={cn("flex flex-col gap-3", className)}>
       <div className="flex items-center justify-between gap-3">
         <h3 className="text-sm font-medium">{title}</h3>
         {action}

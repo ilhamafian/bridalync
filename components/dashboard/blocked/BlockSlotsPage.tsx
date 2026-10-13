@@ -15,6 +15,7 @@ import {
 } from "@/components/dashboard/DashboardCalendar";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { SplitColumns } from "@/components/dashboard/SplitColumns";
 import {
   IconBadge,
   RowText,
@@ -185,7 +186,7 @@ export function BlockSlotsPage({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <BackButton fallbackHref="/dashboard/blocked" />
 
       <div>
@@ -195,119 +196,133 @@ export function BlockSlotsPage({
         </p>
       </div>
 
-      <SettingsSection title="Pick a date">
-        <div className={cn(glassCardClassName, "overflow-hidden")}>
-          <DashboardCalendar
-            mode="single"
-            selected={date}
-            onSelect={(next) => {
-              setDate(next);
-              setSelected(new Set());
-              setError(null);
-            }}
-            disabled={[{ before: startOfToday() }, ...blockedDays]}
-            modifiers={{ blocked: blockedDays }}
-            modifiersClassNames={{ blocked: blockedDayClassName }}
-          />
-          <p className="flex items-center gap-2 border-t border-white/50 px-4 py-3 text-xs text-muted-foreground dark:border-white/10">
-            <span className="size-2.5 rounded-full bg-destructive/40" />
-            Whole day already blocked
-          </p>
-        </div>
-      </SettingsSection>
-
-      <SettingsSection title="Slots">
-        {sortedSlots.length === 0 ? (
-          <EmptyCard>
-            You have no time slots yet.{" "}
-            <Link
-              href="/dashboard/settings/time-slots"
-              scroll={false}
-              className="font-medium text-primary hover:underline"
-            >
-              Set them up in Settings
-            </Link>
-          </EmptyCard>
-        ) : !dateKey ? (
-          <EmptyCard>Pick a date to see its slots.</EmptyCard>
-        ) : (
-          <div className={settingsListClassName}>
-            {sortedSlots.map((slot) => {
-              const key = slotKey(slot);
-              const state = slotStates.get(key) ?? { kind: "available" };
-              const disabled = state.kind !== "available";
-              const description =
-                state.kind === "booked"
-                  ? `Booked · ${state.clientName}`
-                  : state.kind === "blocked"
-                    ? "Already blocked"
-                    : "Available";
-              return (
-                <label
-                  key={key}
-                  className={cn(
-                    settingsRowClassName,
-                    disabled
-                      ? "cursor-not-allowed opacity-60 hover:bg-transparent dark:hover:bg-transparent"
-                      : "cursor-pointer"
-                  )}
-                >
-                  <IconBadge icon={IconClock} />
-                  <RowText title={formatSlot(slot)} description={description} />
-                  <Checkbox
-                    checked={state.kind === "blocked" || selected.has(key)}
-                    disabled={disabled}
-                    onCheckedChange={(checked) =>
-                      toggleSlot(slot, checked === true)
-                    }
-                    aria-label={`Block ${formatSlot(slot)}`}
-                  />
-                </label>
-              );
-            })}
-          </div>
-        )}
-      </SettingsSection>
-
-      <SettingsSection title="Summary">
-        <div className={settingsListClassName}>
-          <SummaryRow
-            label="Date"
-            value={date ? format(date, "EEE, d MMM yyyy") : "None selected"}
-          />
-          <SummaryRow
-            label={count === 1 ? "Slot" : "Slots"}
-            value={
-              count === 0 ? (
-                "None selected"
+      <SplitColumns
+        primary={
+          <SettingsSection title="Pick a date">
+            <div className={cn(glassCardClassName, "overflow-hidden")}>
+              <DashboardCalendar
+                mode="single"
+                selected={date}
+                onSelect={(next) => {
+                  setDate(next);
+                  setSelected(new Set());
+                  setError(null);
+                }}
+                disabled={[{ before: startOfToday() }, ...blockedDays]}
+                modifiers={{ blocked: blockedDays }}
+                modifiersClassNames={{ blocked: blockedDayClassName }}
+              />
+              <p className="flex items-center gap-2 border-t border-white/50 px-4 py-3 text-xs text-muted-foreground dark:border-white/10">
+                <span className="size-2.5 rounded-full bg-destructive/40" />
+                Whole day already blocked
+              </p>
+            </div>
+          </SettingsSection>
+        }
+        secondary={
+          <>
+            <SettingsSection title="Slots">
+              {sortedSlots.length === 0 ? (
+                <EmptyCard>
+                  You have no time slots yet.{" "}
+                  <Link
+                    href="/dashboard/settings/time-slots"
+                    scroll={false}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Set them up in Settings
+                  </Link>
+                </EmptyCard>
+              ) : !dateKey ? (
+                <EmptyCard>Pick a date to see its slots.</EmptyCard>
               ) : (
-                <span className="flex flex-col items-end gap-0.5">
-                  {selectedSlots.map((slot) => (
-                    <span key={slotKey(slot)} className="tabular-nums">
-                      {formatSlot(slot)}
-                    </span>
-                  ))}
-                </span>
-              )
-            }
-          />
-        </div>
-      </SettingsSection>
+                <div className={settingsListClassName}>
+                  {sortedSlots.map((slot) => {
+                    const key = slotKey(slot);
+                    const state = slotStates.get(key) ?? { kind: "available" };
+                    const disabled = state.kind !== "available";
+                    const description =
+                      state.kind === "booked"
+                        ? `Booked · ${state.clientName}`
+                        : state.kind === "blocked"
+                          ? "Already blocked"
+                          : "Available";
+                    return (
+                      <label
+                        key={key}
+                        className={cn(
+                          settingsRowClassName,
+                          disabled
+                            ? "cursor-not-allowed opacity-60 hover:bg-transparent dark:hover:bg-transparent"
+                            : "cursor-pointer"
+                        )}
+                      >
+                        <IconBadge icon={IconClock} />
+                        <RowText
+                          title={formatSlot(slot)}
+                          description={description}
+                        />
+                        <Checkbox
+                          checked={
+                            state.kind === "blocked" || selected.has(key)
+                          }
+                          disabled={disabled}
+                          onCheckedChange={(checked) =>
+                            toggleSlot(slot, checked === true)
+                          }
+                          aria-label={`Block ${formatSlot(slot)}`}
+                        />
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </SettingsSection>
 
-      <SettingsFeedback error={error} />
-      <Button
-        type="button"
-        size="lg"
-        className="min-h-11"
-        onClick={() => void handleSubmit()}
-        disabled={saving || !dateKey || count === 0}
-      >
-        {saving
-          ? "Blocking…"
-          : count > 1
-            ? `Block ${count} slots`
-            : "Block slots"}
-      </Button>
+            <SettingsSection title="Summary">
+              <div className={settingsListClassName}>
+                <SummaryRow
+                  label="Date"
+                  value={
+                    date ? format(date, "EEE, d MMM yyyy") : "None selected"
+                  }
+                />
+                <SummaryRow
+                  label={count === 1 ? "Slot" : "Slots"}
+                  value={
+                    count === 0 ? (
+                      "None selected"
+                    ) : (
+                      <span className="flex flex-col items-end gap-0.5">
+                        {selectedSlots.map((slot) => (
+                          <span key={slotKey(slot)} className="tabular-nums">
+                            {formatSlot(slot)}
+                          </span>
+                        ))}
+                      </span>
+                    )
+                  }
+                />
+              </div>
+            </SettingsSection>
+
+            <SettingsFeedback error={error} />
+            <Button
+              type="button"
+              size="lg"
+              className="min-h-11"
+              onClick={() => void handleSubmit()}
+              disabled={saving || !dateKey || count === 0}
+            >
+              {saving
+                ? "Blocking…"
+                : count > 1
+                  ? `Block ${count} slots`
+                  : "Block slots"}
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }

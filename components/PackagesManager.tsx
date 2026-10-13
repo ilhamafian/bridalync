@@ -636,10 +636,10 @@ export function PackagesManager({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <div className="flex items-start justify-between gap-3">
         <section>
-          <h2 className="text-xl font-semibold tracking-tight">
+          <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
             Events & {styleTerms.many}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -683,7 +683,7 @@ export function PackagesManager({
           <p className="text-sm text-destructive">{error}</p>
         ) : null}
 
-        <TabsContent value="packages" className="mt-0">
+        <TabsContent value="packages" className="@container/catalog mt-0">
           {packages.length === 0 ? (
             <EmptyCard>No events yet. Tap + to add your first event.</EmptyCard>
           ) : (
@@ -693,6 +693,8 @@ export function PackagesManager({
               onReorder={handleReorderPackages}
               disabled={reordering}
               handleClassName="mt-4"
+              grid
+              className="@2xl/catalog:grid-cols-2"
               renderItem={(pkg) => (
                 <CatalogItemCard
                   icon={IconPackage}
@@ -719,7 +721,7 @@ export function PackagesManager({
           )}
         </TabsContent>
 
-        <TabsContent value="styles" className="mt-0">
+        <TabsContent value="styles" className="@container/catalog mt-0">
           {styles.length === 0 ? (
             <EmptyCard>
               No {styleTerms.many} yet. Tap + to add your first{" "}
@@ -732,6 +734,8 @@ export function PackagesManager({
               onReorder={handleReorderStyles}
               disabled={reordering}
               handleClassName="mt-4"
+              grid
+              className="@2xl/catalog:grid-cols-2"
               renderItem={(style) => (
                 <CatalogItemCard
                   icon={IconSparkles}
@@ -799,7 +803,7 @@ export function PackagesManager({
           )}
         </TabsContent>
 
-        <TabsContent value="addons" className="mt-0 flex flex-col gap-3">
+        <TabsContent value="addons" className="@container/catalog mt-0 flex flex-col gap-3">
           <SettingsSection title="Add-on prices">
             <RadioGroup
               value={showAddOnPrices ? "show" : "hide"}
@@ -840,6 +844,8 @@ export function PackagesManager({
               onReorder={handleReorderAddOns}
               disabled={reordering || sheetOpen}
               handleClassName="mt-4"
+              grid
+              className="@2xl/catalog:grid-cols-2"
               renderItem={(addOn) => (
                 <CatalogItemCard
                   icon={IconGift}

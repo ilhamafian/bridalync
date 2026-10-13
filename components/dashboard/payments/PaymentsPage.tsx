@@ -39,35 +39,39 @@ export function PaymentsPage({
   invoices,
 }: PaymentsPageProps) {
   return (
-    <div className="flex flex-col gap-6 px-4 lg:px-6">
-      <section className="pr-12">
-        <h2 className="text-xl font-semibold tracking-tight">Payments</h2>
+    <div className="flex flex-col gap-6 px-4 md:px-8">
+      <section className="pr-12 md:pr-0">
+        <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+          Payments
+        </h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Track your revenue, unpaid balances and invoices.
         </p>
       </section>
 
-      <section className="-mt-2 flex flex-col gap-3">
-        <h3 className="text-sm font-medium">This week</h3>
-        <div
-          className={cn(
-            glassCardClassName,
-            "grid grid-cols-3 divide-x divide-white/50 dark:divide-white/10"
-          )}
-        >
-          <WeekStat label="Revenue" value={formatRmShort(week.revenueRm)} />
-          <WeekStat label="Payments" value={String(week.paymentCount)} />
-          <WeekStat label="Clients" value={String(week.clientCount)} />
-        </div>
-      </section>
+      <div className="-mt-2 flex flex-col gap-6 @3xl/main:grid @3xl/main:grid-cols-2 @3xl/main:items-start">
+        <section className="flex min-w-0 flex-col gap-3">
+          <h3 className="text-sm font-medium">This week</h3>
+          <div
+            className={cn(
+              glassCardClassName,
+              "grid grid-cols-3 divide-x divide-white/50 dark:divide-white/10"
+            )}
+          >
+            <WeekStat label="Revenue" value={formatRmShort(week.revenueRm)} />
+            <WeekStat label="Payments" value={String(week.paymentCount)} />
+            <WeekStat label="Clients" value={String(week.clientCount)} />
+          </div>
+        </section>
 
-      <section className="flex flex-col gap-3">
-        <h3 className="text-sm font-medium">Outstanding payments</h3>
-        <OutstandingPaymentsCard
-          totalRm={outstanding.totalRm}
-          clients={outstanding.clients}
-        />
-      </section>
+        <section className="flex min-w-0 flex-col gap-3">
+          <h3 className="text-sm font-medium">Outstanding payments</h3>
+          <OutstandingPaymentsCard
+            totalRm={outstanding.totalRm}
+            clients={outstanding.clients}
+          />
+        </section>
+      </div>
 
       <section className="flex flex-col gap-3">
         <h3 className="text-sm font-medium">Reports overview</h3>

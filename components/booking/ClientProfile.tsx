@@ -229,8 +229,8 @@ export function ClientProfile({
 
   return (
     <>
-      <div className="relative z-10 mx-auto flex w-full max-w-md min-w-72 shrink-0 flex-col gap-10 sm:min-w-80">
-        <div className="flex flex-col items-center text-center">
+      <div className="relative z-10 mx-auto flex w-full max-w-md min-w-72 shrink-0 flex-col gap-10 sm:min-w-80 @4xl/client:grid @4xl/client:max-w-5xl @4xl/client:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] @4xl/client:items-start @4xl/client:gap-12">
+        <div className="flex flex-col items-center text-center @4xl/client:sticky @4xl/client:top-0">
           <div className="relative size-28 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
             {user.profile_photo_url ? (
               <Image
@@ -289,7 +289,7 @@ export function ClientProfile({
           ) : null}
         </div>
 
-        <section className="mx-auto flex w-full max-w-xs flex-col gap-4">
+        <section className="mx-auto flex w-full max-w-xs flex-col gap-4 @4xl/client:mx-0 @4xl/client:max-w-none">
           <div>
             <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
               {t.reviews}
@@ -305,7 +305,7 @@ export function ClientProfile({
             </p>
           ) : (
             <ul
-              className="grid h-fit w-full grid-cols-1 content-start gap-3"
+              className="grid h-fit w-full grid-cols-1 content-start items-start gap-3 @6xl/client:grid-cols-2"
               aria-busy={loading}
             >
               {reviews.map((review) => (

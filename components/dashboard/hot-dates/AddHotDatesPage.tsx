@@ -15,6 +15,7 @@ import {
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { SplitColumns } from "@/components/dashboard/SplitColumns";
 import {
   RowText,
   SettingsFeedback,
@@ -249,7 +250,7 @@ export function AddHotDatesPage({
   }
 
   return (
-    <div className="flex flex-col gap-4 px-4 lg:px-6">
+    <div className="flex flex-col gap-4 px-4 md:px-8">
       <BackButton fallbackHref="/dashboard/hot-dates" />
 
       <div>
@@ -261,209 +262,216 @@ export function AddHotDatesPage({
         </p>
       </div>
 
-      <SettingsSection title="Pick dates">
-        <div className={cn(glassCardClassName, "overflow-hidden")}>
-          <DashboardCalendar
-            mode="multiple"
-            selected={dates}
-            onSelect={handleDatesChange}
-            defaultMonth={dates?.[0]}
-            disabled={{ before: startOfToday() }}
-            modifiers={{ hot: hotDays }}
-            modifiersClassNames={{ hot: hotDayClassName }}
-          />
-          <p className="flex items-center gap-2 border-t border-white/50 px-4 py-3 text-xs text-muted-foreground dark:border-white/10">
-            <span className="size-2.5 rounded-full bg-amber-500/50" />
-            Hot date · tap dates to select or unselect them
-          </p>
-        </div>
-      </SettingsSection>
-
-      <SettingsSection title="Prices">
-        {catalog.length === 0 ? (
-          <EmptyCard>
-            {chargeBy === "package"
-              ? "You have no events yet."
-              : `You have no ${styleTerms.many} yet.`}{" "}
-            <Link
-              href="/dashboard/settings/events"
-              scroll={false}
-              className="font-medium text-primary hover:underline"
-            >
-              Set them up in Settings
-            </Link>
-          </EmptyCard>
-        ) : count === 0 ? (
-          <EmptyCard>Pick dates to set their prices.</EmptyCard>
-        ) : (
-          <>
-            <div className={settingsListClassName}>
-              <div className="flex items-center gap-3 px-4 py-3">
-                <RowText
-                  title="Increase by"
-                  description={
-                    isPercent
-                      ? hotDateIsExtraCharge
-                        ? "A percentage of the state price"
-                        : "A percentage of the usual price"
-                      : hotDateIsExtraCharge
-                        ? "A fixed amount in RM"
-                        : "A new price in RM"
-                  }
-                />
-                <div
-                  className="flex h-10 shrink-0 rounded-md border border-border bg-white/60 p-0.5 dark:bg-white/5"
-                  role="radiogroup"
-                  aria-label="Increase by"
-                >
-                  {PRICE_TYPE_OPTIONS.map((option) => {
-                    const selected = option.value === priceType;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        disabled={saving}
-                        onClick={() =>
-                          setDraft((current) => ({
-                            ...current,
-                            priceType: option.value,
-                          }))
-                        }
-                        className={cn(
-                          "min-w-10 rounded px-2 text-sm font-medium transition-colors",
-                          selected
-                            ? "bg-primary text-primary-foreground"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        {option.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+      <SplitColumns
+        primary={
+          <SettingsSection title="Pick dates">
+            <div className={cn(glassCardClassName, "overflow-hidden")}>
+              <DashboardCalendar
+                mode="multiple"
+                selected={dates}
+                onSelect={handleDatesChange}
+                defaultMonth={dates?.[0]}
+                disabled={{ before: startOfToday() }}
+                modifiers={{ hot: hotDays }}
+                modifiersClassNames={{ hot: hotDayClassName }}
+              />
+              <p className="flex items-center gap-2 border-t border-white/50 px-4 py-3 text-xs text-muted-foreground dark:border-white/10">
+                <span className="size-2.5 rounded-full bg-amber-500/50" />
+                Hot date · tap dates to select or unselect them
+              </p>
             </div>
-            <div className={settingsListClassName}>
-              {catalog.map((row) => {
-                const raw = (values[row.key] ?? "").trim();
-                const amount = raw === "" ? NaN : Number(raw);
-                const hotPriceRm =
-                  Number.isFinite(amount) && amount >= 0
-                    ? isPercent
-                      ? hotDateIsExtraCharge
-                        ? null
-                        : resolveHotDatePrice(row.catalogPrice, {
-                            price: amount,
-                            type: "percent",
-                          })
-                      : amount
-                    : null;
-                return (
-                  <div key={row.key} className="flex flex-col gap-1 px-4 py-3">
-                    <div className="flex items-center gap-3">
+          </SettingsSection>
+        }
+        secondary={
+          <>
+            <SettingsSection title="Prices">
+              {catalog.length === 0 ? (
+                <EmptyCard>
+                  {chargeBy === "package"
+                    ? "You have no events yet."
+                    : `You have no ${styleTerms.many} yet.`}{" "}
+                  <Link
+                    href="/dashboard/settings/events"
+                    scroll={false}
+                    className="font-medium text-primary hover:underline"
+                  >
+                    Set them up in Settings
+                  </Link>
+                </EmptyCard>
+              ) : count === 0 ? (
+                <EmptyCard>Pick dates to set their prices.</EmptyCard>
+              ) : (
+                <>
+                  <div className={settingsListClassName}>
+                    <div className="flex items-center gap-3 px-4 py-3">
                       <RowText
-                        title={row.label}
+                        title="Increase by"
                         description={
-                          hotDateIsExtraCharge
-                            ? "Increase in price from the state price"
-                            : isPercent && hotPriceRm !== null
-                              ? `Usual ${formatRm(row.catalogPrice)} → ${formatRm(hotPriceRm)}`
-                              : `Usual ${formatRm(row.catalogPrice)}`
+                          isPercent
+                            ? hotDateIsExtraCharge
+                              ? "A percentage of the state price"
+                              : "A percentage of the usual price"
+                            : hotDateIsExtraCharge
+                              ? "A fixed amount in RM"
+                              : "A new price in RM"
                         }
                       />
-                      <div className="relative w-28 shrink-0">
-                        <span
-                          className={cn(
-                            "pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs text-muted-foreground",
-                            isPercent ? "right-3" : "left-3"
-                          )}
-                        >
-                          {isPercent ? "%" : "RM"}
-                        </span>
-                        <Input
-                          type="number"
-                          min={0}
-                          max={isPercent ? MAX_HOT_DATE_PERCENT : undefined}
-                          step={1}
-                          inputMode="numeric"
-                          className={cn(
-                            inputClassName,
-                            isPercent && "pr-8 pl-3"
-                          )}
-                          placeholder={
-                            isPercent || hotDateIsExtraCharge
-                              ? "0"
-                              : String(row.catalogPrice)
-                          }
-                          value={values[row.key] ?? ""}
-                          onChange={(event) =>
-                            setDraft((current) => ({
-                              ...current,
-                              values: {
-                                ...current.values,
-                                [row.key]: event.target.value,
-                              },
-                            }))
-                          }
-                          disabled={saving}
-                          aria-label={
-                            isPercent
-                              ? `Hot date increase (%) for ${row.label}`
-                              : `Hot date price for ${row.label}`
-                          }
-                        />
+                      <div
+                        className="flex h-10 shrink-0 rounded-md border border-border bg-white/60 p-0.5 dark:bg-white/5"
+                        role="radiogroup"
+                        aria-label="Increase by"
+                      >
+                        {PRICE_TYPE_OPTIONS.map((option) => {
+                          const selected = option.value === priceType;
+                          return (
+                            <button
+                              key={option.value}
+                              type="button"
+                              role="radio"
+                              aria-checked={selected}
+                              disabled={saving}
+                              onClick={() =>
+                                setDraft((current) => ({
+                                  ...current,
+                                  priceType: option.value,
+                                }))
+                              }
+                              className={cn(
+                                "min-w-10 rounded px-2 text-sm font-medium transition-colors",
+                                selected
+                                  ? "bg-primary text-primary-foreground"
+                                  : "text-muted-foreground hover:text-foreground"
+                              )}
+                            >
+                              {option.label}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                    <ProcessingFeeHint
-                      amountRm={hotPriceRm}
-                      includeFixed={!hotDateIsExtraCharge}
-                    />
                   </div>
-                );
-              })}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Leave a field blank to keep the usual price.
-            </p>
+                  <div className={settingsListClassName}>
+                    {catalog.map((row) => {
+                      const raw = (values[row.key] ?? "").trim();
+                      const amount = raw === "" ? NaN : Number(raw);
+                      const hotPriceRm =
+                        Number.isFinite(amount) && amount >= 0
+                          ? isPercent
+                            ? hotDateIsExtraCharge
+                              ? null
+                              : resolveHotDatePrice(row.catalogPrice, {
+                                  price: amount,
+                                  type: "percent",
+                                })
+                            : amount
+                          : null;
+                      return (
+                        <div key={row.key} className="flex flex-col gap-1 px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <RowText
+                              title={row.label}
+                              description={
+                                hotDateIsExtraCharge
+                                  ? "Increase in price from the state price"
+                                  : isPercent && hotPriceRm !== null
+                                    ? `Usual ${formatRm(row.catalogPrice)} → ${formatRm(hotPriceRm)}`
+                                    : `Usual ${formatRm(row.catalogPrice)}`
+                              }
+                            />
+                            <div className="relative w-28 shrink-0">
+                              <span
+                                className={cn(
+                                  "pointer-events-none absolute top-1/2 -translate-y-1/2 text-xs text-muted-foreground",
+                                  isPercent ? "right-3" : "left-3"
+                                )}
+                              >
+                                {isPercent ? "%" : "RM"}
+                              </span>
+                              <Input
+                                type="number"
+                                min={0}
+                                max={isPercent ? MAX_HOT_DATE_PERCENT : undefined}
+                                step={1}
+                                inputMode="numeric"
+                                className={cn(
+                                  inputClassName,
+                                  isPercent && "pr-8 pl-3"
+                                )}
+                                placeholder={
+                                  isPercent || hotDateIsExtraCharge
+                                    ? "0"
+                                    : String(row.catalogPrice)
+                                }
+                                value={values[row.key] ?? ""}
+                                onChange={(event) =>
+                                  setDraft((current) => ({
+                                    ...current,
+                                    values: {
+                                      ...current.values,
+                                      [row.key]: event.target.value,
+                                    },
+                                  }))
+                                }
+                                disabled={saving}
+                                aria-label={
+                                  isPercent
+                                    ? `Hot date increase (%) for ${row.label}`
+                                    : `Hot date price for ${row.label}`
+                                }
+                              />
+                            </div>
+                          </div>
+                          <ProcessingFeeHint
+                            amountRm={hotPriceRm}
+                            includeFixed={!hotDateIsExtraCharge}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Leave a field blank to keep the usual price.
+                  </p>
+                </>
+              )}
+            </SettingsSection>
+
+            <SettingsSection title="Summary">
+              <div className={settingsListClassName}>
+                <SummaryRow
+                  label="Dates"
+                  value={formatDateKeysLabel(selectedKeys) ?? "None selected"}
+                />
+                <SummaryRow label="Days" value={count === 0 ? "—" : String(count)} />
+                <SummaryRow label="Status" value={statusText} />
+              </div>
+            </SettingsSection>
+
+            <SettingsFeedback
+              error={
+                error ??
+                (tooMany ? `Choose up to ${MAX_DATE_RANGE_DAYS} dates at a time.` : null)
+              }
+            />
+            <Button
+              type="button"
+              size="lg"
+              variant={removing ? "outline" : "default"}
+              className="min-h-11"
+              onClick={() => void handleSubmit()}
+              disabled={
+                saving ||
+                count === 0 ||
+                tooMany ||
+                catalog.length === 0 ||
+                (removing && alreadyHot === 0)
+              }
+            >
+              {actionLabel}
+            </Button>
           </>
-        )}
-      </SettingsSection>
-
-      <SettingsSection title="Summary">
-        <div className={settingsListClassName}>
-          <SummaryRow
-            label="Dates"
-            value={formatDateKeysLabel(selectedKeys) ?? "None selected"}
-          />
-          <SummaryRow label="Days" value={count === 0 ? "—" : String(count)} />
-          <SummaryRow label="Status" value={statusText} />
-        </div>
-      </SettingsSection>
-
-      <SettingsFeedback
-        error={
-          error ??
-          (tooMany ? `Choose up to ${MAX_DATE_RANGE_DAYS} dates at a time.` : null)
         }
       />
-      <Button
-        type="button"
-        size="lg"
-        variant={removing ? "outline" : "default"}
-        className="min-h-11"
-        onClick={() => void handleSubmit()}
-        disabled={
-          saving ||
-          count === 0 ||
-          tooMany ||
-          catalog.length === 0 ||
-          (removing && alreadyHot === 0)
-        }
-      >
-        {actionLabel}
-      </Button>
     </div>
   );
 }

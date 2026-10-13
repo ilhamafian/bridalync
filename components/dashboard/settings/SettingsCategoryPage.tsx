@@ -11,6 +11,7 @@ import { usePaymentMethod } from "@/components/dashboard/PaymentMethodProvider";
 import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import { GoogleCalendarImport } from "@/components/dashboard/settings/GoogleCalendarImport";
 import { ResetPasswordSettings } from "@/components/dashboard/settings/ResetPasswordSettings";
+import { SettingsMenu } from "@/components/dashboard/settings/SettingsPage";
 import { ThemeSettings } from "@/components/dashboard/settings/ThemeSettings";
 import { PackagesManager } from "@/components/PackagesManager";
 import { PwaSettingsCard } from "@/components/PwaSettingsCard";
@@ -55,66 +56,83 @@ export function SettingsCategoryPage({
   const isCatalogEditor = getCatalogEditorTarget(usePathname()) !== null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-4 px-4 empty:hidden lg:px-6">
-        {isCatalogEditor ? null : (
-          <BackButton fallbackHref="/dashboard/settings" />
-        )}
-        {meta && !isPackages ? (
-          <section>
-            <h2 className="text-xl font-semibold tracking-tight">
-              {meta.label}
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {meta.description}
-            </p>
-          </section>
-        ) : null}
-      </div>
+    <div className="@4xl/main:grid @4xl/main:grid-cols-[22rem_minmax(0,1fr)] @4xl/main:items-start">
+      <aside className="sticky top-4 hidden flex-col gap-4 pl-8 @4xl/main:flex">
+        <h2 className="text-2xl font-semibold tracking-tight">Settings</h2>
+        <SettingsMenu activeCategory={category} />
+      </aside>
+      <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex flex-col gap-4 px-4 empty:hidden md:px-8">
+          {isCatalogEditor ? null : (
+            <div className="@4xl/main:hidden">
+              <BackButton fallbackHref="/dashboard/settings" />
+            </div>
+          )}
+          {meta && !isPackages ? (
+            <section>
+              <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+                {meta.label}
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {meta.description}
+              </p>
+            </section>
+          ) : null}
+        </div>
 
-      <div className={cn(!isPackages && "hidden")}>
-        <PackagesManager
-          initialPackages={packages.initialPackages}
-          initialStyles={packages.initialStyles}
-          initialAddOns={packages.initialAddOns}
-          initialShowAddOnPrices={packages.showAddOnPrices}
-          chargeBy={chargeBy}
-          regionPricesPerEvent={regionPricesPerEvent}
-          unservedRegions={unservedRegions}
-          styleTerms={styleTerms}
-        />
-      </div>
-
-      <div className="px-4 empty:hidden lg:px-6">
-        <Suspense fallback={null}>
-          <SettingsManager
-            category={category}
-            initialSettings={settings.initialSettings}
-            isStripeConnected={settings.isStripeConnected}
-            hasStripeAccount={settings.hasStripeAccount}
-            freelancerName={settings.freelancerName}
-            initialRole={role}
-            onChargeByChange={setChargeBy}
-            onTravelChange={setTravel}
-            onPaymentMethodChange={setPaymentMethod}
+        <div className={cn(!isPackages && "hidden")}>
+          <PackagesManager
+            initialPackages={packages.initialPackages}
+            initialStyles={packages.initialStyles}
+            initialAddOns={packages.initialAddOns}
+            initialShowAddOnPrices={packages.showAddOnPrices}
+            chargeBy={chargeBy}
+            regionPricesPerEvent={regionPricesPerEvent}
+            unservedRegions={unservedRegions}
+            styleTerms={styleTerms}
           />
-          {category === "google-calendar" ? <GoogleCalendarImport /> : null}
-        </Suspense>
-        {category === "theme" ? <ThemeSettings /> : null}
-        {category === "notifications" ? <PwaSettingsCard /> : null}
-        {category === "password" ? <ResetPasswordSettings email={email} /> : null}
-      </div>
+        </div>
 
-      <div className={cn("px-4 lg:px-6", category !== "client-info" && "hidden")}>
-        <ClientInfoSettings
-          initialClientInfo={settings.initialSettings.client_info}
-        />
-      </div>
+        <div className="px-4 empty:hidden md:px-8">
+          <Suspense fallback={null}>
+            <SettingsManager
+              category={category}
+              initialSettings={settings.initialSettings}
+              isStripeConnected={settings.isStripeConnected}
+              hasStripeAccount={settings.hasStripeAccount}
+              freelancerName={settings.freelancerName}
+              initialRole={role}
+              onChargeByChange={setChargeBy}
+              onTravelChange={setTravel}
+              onPaymentMethodChange={setPaymentMethod}
+            />
+            {category === "google-calendar" ? <GoogleCalendarImport /> : null}
+          </Suspense>
+          {category === "theme" ? <ThemeSettings /> : null}
+          {category === "notifications" ? <PwaSettingsCard /> : null}
+          {category === "password" ? (
+            <ResetPasswordSettings email={email} />
+          ) : null}
+        </div>
 
-      <div className={cn("px-4 lg:px-6", category !== "booking-requests" && "hidden")}>
-        <BookingRequestSettings
-          initialEnabled={settings.initialSettings.booking_requests}
-        />
+        <div
+          className={cn("px-4 md:px-8", category !== "client-info" && "hidden")}
+        >
+          <ClientInfoSettings
+            initialClientInfo={settings.initialSettings.client_info}
+          />
+        </div>
+
+        <div
+          className={cn(
+            "px-4 md:px-8",
+            category !== "booking-requests" && "hidden"
+          )}
+        >
+          <BookingRequestSettings
+            initialEnabled={settings.initialSettings.booking_requests}
+          />
+        </div>
       </div>
     </div>
   );

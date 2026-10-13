@@ -63,6 +63,15 @@ export const NAVBAR_SECTIONS: readonly DashboardSection[] = [
   "profile",
 ];
 
+/** Sections rendered in a narrow centered column on tablet/desktop; the rest are wide. */
+export const NARROW_SECTIONS: readonly DashboardSection[] = [
+  "notifications",
+  "blocked",
+  "hot-dates",
+  "booking-form",
+  "profile-reviews",
+];
+
 export type DashboardData = {
   home: DashboardHomeProps;
   payments: PaymentsPageProps;
