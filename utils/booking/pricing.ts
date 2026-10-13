@@ -27,6 +27,13 @@ export type BookingQuotationBreakdown = {
   processingFeeRm?: number;
   /** Bridalync's platform fee within `processingFeeRm`; collected as the Stripe application fee. */
   platformFeeRm?: number;
+  /** Part of `platformFeeRm` collected with the deposit charge; the balance charge takes the rest. */
+  depositPlatformFeeRm?: number;
+  /**
+   * Stripe's fixed fee on the second (balance) charge, grossed up, when paying deposit + balance.
+   * Included in the first session and `processingFeeRm`; dropped when the client pays in full.
+   */
+  splitPaymentFeeRm?: number;
 };
 
 export type BookingQuotationSummary = {
@@ -82,9 +89,19 @@ export type CalculateQuotationInput = {
   travel?: TravelQuotationInput;
 };
 
-/** Round money to whole ringgit; `formatRm` still shows `.00`. */
+/** Round money to whole ringgit. */
 export function roundRm(amount: number) {
   return Math.round(amount);
+}
+
+/** Smallest currency unit. Stripe charges and fees are in sen. */
+export function toSen(amountRm: number) {
+  return Math.round(amountRm * 100);
+}
+
+/** Round money to the nearest sen. */
+export function roundSen(amountRm: number) {
+  return toSen(amountRm) / 100;
 }
 
 /** Splits `amountRm` into `count` whole-ringgit shares; leftover ringgit go to the first shares. */
@@ -94,6 +111,17 @@ export function splitEvenlyRm(amountRm: number, count: number): number[] {
   const base = Math.floor(total / count);
   const remainder = total - base * count;
   return Array.from({ length: count }, (_, index) => base + (index < remainder ? 1 : 0));
+}
+
+/** Splits `amountRm` into `count` sen shares; leftover sen go to the first shares. */
+function splitEvenlySen(amountRm: number, count: number): number[] {
+  if (count <= 0) return [];
+  const total = toSen(amountRm);
+  const base = Math.floor(total / count);
+  const remainder = total - base * count;
+  return Array.from({ length: count }, (_, index) =>
+    (base + (index < remainder ? 1 : 0)) / 100
+  );
 }
 
 /** Deposit in RM for an item charged at `priceRm`; percent deposits are a share of that price. */
@@ -128,11 +156,34 @@ export function calculatePlatformFeeRm(amountRm: number) {
   return Math.ceil((rounded * PLATFORM_FEE_PERCENT) / 100);
 }
 
+/** Stripe's percentage fee on a charge, in sen, rounded to the nearest sen (half up). */
+function stripePercentFeeSen(chargeSen: number) {
+  return Math.round((chargeSen * PAYMENT_PROCESSING_FEE_PERCENT) / 100);
+}
+
 /**
- * Fees added to the client's price for payment-gateway stylists: the platform fee,
- * then the payment processing fee on top of it (3% rounded up + RM1 once per booking).
- * `includeFixed` = false for amounts added on top of another item, which already
- * carries the RM1. `platformFee` = false for bookings priced before the platform fee.
+ * Smallest charge, in sen, that still leaves `afterPercentFeeSen` after Stripe's
+ * percentage fee. The percentage applies to the full charge, so the fee has to be
+ * grossed up; rounding to the nearest sen can move the charge by a sen or two.
+ */
+function chargeSenCovering(afterPercentFeeSen: number) {
+  if (afterPercentFeeSen <= 0) return 0;
+  const keptPercent = 100 - PAYMENT_PROCESSING_FEE_PERCENT;
+  let chargeSen = Math.ceil((afterPercentFeeSen * 100) / keptPercent);
+  const kept = (charge: number) => charge - stripePercentFeeSen(charge);
+  while (kept(chargeSen) < afterPercentFeeSen) chargeSen += 1;
+  while (chargeSen > 0 && kept(chargeSen - 1) >= afterPercentFeeSen) chargeSen -= 1;
+  return chargeSen;
+}
+
+/**
+ * Fees added to the client's price for payment-gateway stylists, in sen.
+ * The platform fee (3% rounded up to the next ringgit) is taken as the Stripe
+ * application fee. Stripe then charges 3% of the full charge, to the nearest sen,
+ * plus RM1 once per charge. The amount returned is the gross-up that leaves the
+ * stylist's price after both. `includeFixed` = false for amounts added on top of
+ * another item, which already carries the RM1. `platformFee` = false for bookings
+ * priced before the platform fee.
  */
 export function calculateClientFeesRm(
   amountRm: number,
@@ -142,10 +193,15 @@ export function calculateClientFeesRm(
   const rounded = roundRm(amountRm);
   if (rounded <= 0) return 0;
   const platformRm = platformFee ? calculatePlatformFeeRm(rounded) : 0;
+  return roundSen(grossChargeRm(rounded + platformRm, includeFixed) - rounded);
+}
+
+/** One Stripe charge that leaves `netRm` (stylist's share + application fee) after Stripe's fee. */
+function grossChargeRm(netRm: number, includeFixed = true) {
   return (
-    platformRm +
-    Math.ceil(((rounded + platformRm) * PAYMENT_PROCESSING_FEE_PERCENT) / 100) +
-    (includeFixed ? PAYMENT_PROCESSING_FEE_FIXED_RM : 0)
+    chargeSenCovering(
+      toSen(netRm) + (includeFixed ? toSen(PAYMENT_PROCESSING_FEE_FIXED_RM) : 0)
+    ) / 100
   );
 }
 
@@ -155,30 +211,51 @@ export function withClientFeesRm(
   includeFixed = true,
   platformFee = true
 ) {
-  return roundRm(amountRm) + calculateClientFeesRm(amountRm, includeFixed, platformFee);
+  return roundSen(
+    roundRm(amountRm) + calculateClientFeesRm(amountRm, includeFixed, platformFee)
+  );
 }
 
 /**
  * Adds the fees into a quotation's prices (no separate line): each item gets its
- * percentage share, the first session the RM1 plus rounding, so the total is
- * `withClientFeesRm(totalRm)`. Apply before any discount.
+ * percentage share, the first session the RM1 plus rounding. Priced for deposit +
+ * balance (two Stripe charges, each grossed up to leave the stylist her share) when
+ * there's a deposit; `applyPaymentOption(..., "full")` drops the second charge's fee.
+ * Apply before any discount.
  */
 export function applyPaymentProcessingFee(
   quotation: BookingQuotationSummary,
   { platformFee = true }: { platformFee?: boolean } = {}
 ): BookingQuotationSummary {
   if (quotation.totalRm <= 0) return quotation;
-  const feeRm = calculateClientFeesRm(quotation.totalRm, true, platformFee);
   const platformFeeRm = platformFee ? calculatePlatformFeeRm(quotation.totalRm) : 0;
+  const fullTotalRm = withClientFeesRm(quotation.totalRm, true, platformFee);
+  const splitsPayment =
+    quotation.depositRm > 0 && quotation.depositRm < quotation.totalRm;
+
+  let totalRm = fullTotalRm;
+  let depositRm = quotation.depositRm > 0 ? fullTotalRm : 0;
+  let depositPlatformFeeRm = 0;
+  let splitPaymentFeeRm = 0;
+  if (splitsPayment) {
+    depositPlatformFeeRm = platformFee
+      ? Math.min(calculatePlatformFeeRm(quotation.depositRm), platformFeeRm)
+      : 0;
+    depositRm = grossChargeRm(roundRm(quotation.depositRm) + depositPlatformFeeRm);
+    const balanceChargeRm = grossChargeRm(
+      quotation.totalRm - roundRm(quotation.depositRm) + platformFeeRm - depositPlatformFeeRm
+    );
+    totalRm = roundSen(depositRm + balanceChargeRm);
+    splitPaymentFeeRm = roundSen(totalRm - fullTotalRm);
+  }
+
+  const feeRm = roundSen(totalRm - quotation.totalRm);
   const feeBreakdown = {
     processingFeeRm: feeRm,
     ...(platformFeeRm > 0 ? { platformFeeRm } : {}),
+    ...(splitsPayment && platformFeeRm > 0 ? { depositPlatformFeeRm } : {}),
+    ...(splitPaymentFeeRm !== 0 ? { splitPaymentFeeRm } : {}),
   };
-  const totalRm = quotation.totalRm + feeRm;
-  const depositRm =
-    quotation.depositRm > 0
-      ? Math.min(withClientFeesRm(quotation.depositRm, true, platformFee), totalRm)
-      : 0;
   const share = (amountRm: number) =>
     calculateClientFeesRm(amountRm, false, platformFee);
 
@@ -194,62 +271,68 @@ export function applyPaymentProcessingFee(
     const [first, ...rest] = quotation.lineItems;
     return {
       ...quotation,
-      lineItems: first ? [{ ...first, amountRm: first.amountRm + feeRm }, ...rest] : [],
+      lineItems: first
+        ? [{ ...first, amountRm: roundSen(first.amountRm + feeRm) }, ...rest]
+        : [],
       totalRm,
       depositRm,
-      balanceRm: totalRm - depositRm,
+      balanceRm: roundSen(totalRm - depositRm),
       ...(breakdown ? { breakdown: { ...breakdown, ...feeBreakdown } } : {}),
     };
   }
 
   const sessions = breakdown.sessions.map((item) => ({
     ...item,
-    amountRm: item.amountRm + share(item.amountRm),
+    amountRm: roundSen(item.amountRm + share(item.amountRm)),
     ...(item.morningCallRm
-      ? { morningCallRm: item.morningCallRm + share(item.morningCallRm) }
+      ? { morningCallRm: roundSen(item.morningCallRm + share(item.morningCallRm)) }
       : {}),
     ...(item.styleExtras
       ? {
           styleExtras: item.styleExtras.map((extra) => ({
             ...extra,
-            amountRm: extra.amountRm + share(extra.amountRm),
+            amountRm: roundSen(extra.amountRm + share(extra.amountRm)),
           })),
         }
       : {}),
   }));
   const addOns = breakdown.addOns.map((item) => ({
     ...item,
-    amountRm: item.amountRm + share(item.amountRm),
+    amountRm: roundSen(item.amountRm + share(item.amountRm)),
   }));
-  const travelFeeRm = breakdown.travelFeeRm + share(breakdown.travelFeeRm);
-  const assignedRm =
-    [...sessions, ...addOns].reduce((sum, item) => sum + item.amountRm, 0) +
-    travelFeeRm -
-    quotation.totalRm;
-  sessions[0] = { ...sessions[0], amountRm: sessions[0].amountRm + feeRm - assignedRm };
-  const travelShares = splitEvenlyRm(travelFeeRm, sessions.length);
+  const travelFeeRm = roundSen(breakdown.travelFeeRm + share(breakdown.travelFeeRm));
+  const assignedSen =
+    [...sessions, ...addOns].reduce((sum, item) => sum + toSen(item.amountRm), 0) +
+    toSen(travelFeeRm) -
+    toSen(quotation.totalRm);
+  sessions[0] = {
+    ...sessions[0],
+    amountRm: roundSen(sessions[0].amountRm + feeRm - assignedSen / 100),
+  };
+  const travelShares = splitEvenlySen(travelFeeRm, sessions.length);
 
   return {
     lineItems: [
       ...sessions.map((item, index) => ({
         label: item.label,
-        amountRm: item.amountRm + travelShares[index],
+        amountRm: roundSen(item.amountRm + travelShares[index]),
       })),
       ...addOns.map(({ label, amountRm }) => ({ label, amountRm })),
     ],
     totalRm,
     depositRm,
-    balanceRm: totalRm - depositRm,
+    balanceRm: roundSen(totalRm - depositRm),
     breakdown: { ...breakdown, sessions, addOns, travelFeeRm, ...feeBreakdown },
   };
 }
 
 export function formatRm(amount: number) {
-  const rounded = roundRm(amount);
-  return `${rounded < 0 ? "-" : ""}RM${Math.abs(rounded).toLocaleString(
-    "en-MY",
-    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
-  )}`;
+  const sen = toSen(amount);
+  const sign = sen < 0 ? "-" : "";
+  const abs = Math.abs(sen);
+  const ringgit = Math.trunc(abs / 100);
+  const cents = abs % 100;
+  return `${sign}RM${ringgit.toLocaleString("en-MY")}.${String(cents).padStart(2, "0")}`;
 }
 
 export function getEarliestSessionDate(
@@ -316,14 +399,45 @@ export function applyPaymentOption(
   quotation: BookingQuotationSummary,
   paymentOption: "deposit" | "full"
 ): BookingQuotationSummary {
-  if (paymentOption === "full") {
+  if (paymentOption !== "full") return quotation;
+  const splitFeeRm = quotation.breakdown?.splitPaymentFeeRm ?? 0;
+  if (!quotation.breakdown || splitFeeRm === 0) {
     return {
       ...quotation,
       depositRm: quotation.totalRm,
       balanceRm: 0,
     };
   }
-  return quotation;
+
+  // One charge instead of deposit + balance: the second charge's fee no longer applies.
+  const {
+    splitPaymentFeeRm: _splitFee,
+    depositPlatformFeeRm: _depositPlatformFee,
+    ...breakdown
+  } = quotation.breakdown;
+  const totalRm = roundSen(quotation.totalRm - splitFeeRm);
+  const [firstItem, ...restItems] = quotation.lineItems;
+  const [firstSession, ...restSessions] = breakdown.sessions;
+  return {
+    lineItems: firstItem
+      ? [{ ...firstItem, amountRm: roundSen(firstItem.amountRm - splitFeeRm) }, ...restItems]
+      : [],
+    totalRm,
+    depositRm: totalRm,
+    balanceRm: 0,
+    breakdown: {
+      ...breakdown,
+      sessions: firstSession
+        ? [
+            { ...firstSession, amountRm: roundSen(firstSession.amountRm - splitFeeRm) },
+            ...restSessions,
+          ]
+        : [],
+      ...(breakdown.processingFeeRm !== undefined
+        ? { processingFeeRm: roundSen(breakdown.processingFeeRm - splitFeeRm) }
+        : {}),
+    },
+  };
 }
 
 /** Lowers the total to `totalRm`, recording the difference as a discount. */
@@ -331,17 +445,21 @@ export function applyDiscountedTotal(
   quotation: BookingQuotationSummary,
   totalRm: number
 ): BookingQuotationSummary {
-  const discountedTotalRm = roundRm(totalRm);
-  if (discountedTotalRm > quotation.totalRm) {
+  const discountedTotalRm = roundSen(totalRm);
+  if (toSen(discountedTotalRm) > toSen(quotation.totalRm)) {
     throw new Error(
       `Total can't be more than the full price of ${formatRm(quotation.totalRm)}.`
     );
   }
-  const discountRm = quotation.totalRm - discountedTotalRm;
+  const discountRm = roundSen(quotation.totalRm - discountedTotalRm);
   if (discountRm <= 0) return quotation;
 
   const depositRm = Math.min(quotation.depositRm, discountedTotalRm);
   const platformFeeRm = quotation.breakdown?.platformFeeRm;
+  const discountedPlatformFeeRm = platformFeeRm
+    ? roundRm((platformFeeRm * discountedTotalRm) / quotation.totalRm)
+    : 0;
+  const depositPlatformFeeRm = quotation.breakdown?.depositPlatformFeeRm;
   return {
     lineItems: [
       ...quotation.lineItems,
@@ -349,16 +467,18 @@ export function applyDiscountedTotal(
     ],
     totalRm: discountedTotalRm,
     depositRm,
-    balanceRm: discountedTotalRm - depositRm,
+    balanceRm: roundSen(discountedTotalRm - depositRm),
     ...(quotation.breakdown
       ? {
           breakdown: {
             ...quotation.breakdown,
             discountRm,
-            ...(platformFeeRm
+            ...(platformFeeRm ? { platformFeeRm: discountedPlatformFeeRm } : {}),
+            ...(depositPlatformFeeRm !== undefined
               ? {
-                  platformFeeRm: roundRm(
-                    (platformFeeRm * discountedTotalRm) / quotation.totalRm
+                  depositPlatformFeeRm: Math.min(
+                    depositPlatformFeeRm,
+                    discountedPlatformFeeRm
                   ),
                 }
               : {}),
@@ -369,8 +489,9 @@ export function applyDiscountedTotal(
 }
 
 /**
- * Platform fee to collect on one Stripe charge: the deposit takes its share of the
- * booking's platform fee, the balance the rest, a full payment all of it.
+ * Platform fee to collect on one Stripe charge: the deposit takes the part its price
+ * was grossed up for (older bookings: its share by amount), the balance the rest, a
+ * full payment all of it.
  */
 export function getPlatformFeeForCharge(
   invoice: Pick<BookingQuotationSummary, "totalRm" | "depositRm" | "breakdown">,
@@ -379,9 +500,11 @@ export function getPlatformFeeForCharge(
 ): number {
   const platformFeeRm = invoice.breakdown?.platformFeeRm ?? 0;
   if (platformFeeRm <= 0 || invoice.totalRm <= 0 || chargeRm <= 0) return 0;
-  const depositShareRm = roundRm(
-    (platformFeeRm * Math.min(invoice.depositRm, invoice.totalRm)) / invoice.totalRm
-  );
+  const depositShareRm =
+    invoice.breakdown?.depositPlatformFeeRm ??
+    roundRm(
+      (platformFeeRm * Math.min(invoice.depositRm, invoice.totalRm)) / invoice.totalRm
+    );
   const feeRm =
     purpose === "full"
       ? platformFeeRm

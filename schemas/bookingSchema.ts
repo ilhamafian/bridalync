@@ -45,6 +45,10 @@ export const quotationBreakdownSchema = z.object({
   processingFeeRm: z.number().optional(),
   /** Bridalync's platform fee within `processingFeeRm`; collected as the Stripe application fee. */
   platformFeeRm: z.number().optional(),
+  /** Part of `platformFeeRm` collected with the deposit charge; the balance charge takes the rest. */
+  depositPlatformFeeRm: z.number().optional(),
+  /** Stripe's fee on the second (balance) charge; included in the first session, dropped when paying in full. */
+  splitPaymentFeeRm: z.number().optional(),
 });
 
 export const quotationSummarySchema = z.object({

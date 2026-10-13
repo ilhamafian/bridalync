@@ -6,7 +6,7 @@ import type { InvoiceSetting, PaymentSetting } from "@/schemas/settingSchema";
 import {
   formatRm,
   getEarliestSessionDate,
-  roundRm,
+  roundSen,
 } from "@/utils/booking/pricing";
 import { MORNING_CALL_LABEL } from "@/utils/booking/morningCall";
 import { invoiceNumberFromBookingId } from "@/utils/invoice/invoiceNumber";
@@ -130,13 +130,13 @@ function buildLineRows(booking: PersistedBooking): InvoiceLineRow[] {
   const rows: InvoiceLineRow[] = [];
 
   for (const item of invoiceItems(booking)) {
-    const amount = roundRm(item.amountRm);
+    const amount = roundSen(item.amountRm);
     const existing = rows.find(
       (row) => row.label === item.label && row.unitPriceRm === amount
     );
     if (existing) {
       existing.quantity += 1;
-      existing.totalRm = roundRm(existing.unitPriceRm * existing.quantity);
+      existing.totalRm = roundSen(existing.unitPriceRm * existing.quantity);
       continue;
     }
     rows.push({
@@ -151,8 +151,8 @@ function buildLineRows(booking: PersistedBooking): InvoiceLineRow[] {
     rows.push({
       label: booking.packageNames,
       quantity: 1,
-      unitPriceRm: roundRm(booking.invoice.totalRm),
-      totalRm: roundRm(booking.invoice.totalRm),
+      unitPriceRm: roundSen(booking.invoice.totalRm),
+      totalRm: roundSen(booking.invoice.totalRm),
     });
   }
 
@@ -224,8 +224,8 @@ export async function generateBookingInvoicePdf(
   const bookingId = String(booking._id);
   const invoiceNo = invoiceNumberFromBookingId(bookingId);
   const paidRm = amountPaidRm(booking);
-  const balanceRm = roundRm(booking.invoice.balanceRm);
-  const totalRm = roundRm(booking.invoice.totalRm);
+  const balanceRm = roundSen(booking.invoice.balanceRm);
+  const totalRm = roundSen(booking.invoice.totalRm);
   const lineRows = buildLineRows(booking);
 
   const earliestSession = getEarliestSessionDate(booking.sessions);
@@ -541,7 +541,7 @@ export async function generateBookingInvoicePdf(
       rightY += 16;
     };
 
-    const discountRm = roundRm(
+    const discountRm = roundSen(
       -booking.invoice.lineItems
         .filter((item) => item.amountRm < 0)
         .reduce((sum, item) => sum + item.amountRm, 0)

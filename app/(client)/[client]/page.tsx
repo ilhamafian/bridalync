@@ -2508,7 +2508,9 @@ export default function ClientPage() {
                     >
                       <span className="font-medium">
                         {format(t.payFullOption, {
-                          amount: formatRm(quotation.totalRm),
+                          amount: formatRm(
+                            applyPaymentOption(quotation, "full").totalRm
+                          ),
                         })}
                       </span>
                       <span

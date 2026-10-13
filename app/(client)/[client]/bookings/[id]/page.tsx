@@ -496,8 +496,9 @@ function BookingResultPageContent() {
     ) === "deposit";
   const requestOption = requestCanPayDeposit ? requestPayOption : "full";
   const requestPaysInFull = requestOption === "full";
+  const requestFullTotalRm = applyPaymentOption(booking.invoice, "full").totalRm;
   const requestAmountDueRm = requestPaysInFull
-    ? booking.invoice.totalRm
+    ? requestFullTotalRm
     : booking.invoice.depositRm;
   const freelancerName = booking.freelancer?.name ?? t.stylist;
   const whatsAppUrl =
@@ -683,7 +684,7 @@ function BookingResultPageContent() {
                     <span className="font-medium">
                       {option === "full"
                         ? format(t.payFullOption, {
-                            amount: formatRm(booking.invoice.totalRm),
+                            amount: formatRm(requestFullTotalRm),
                           })
                         : format(t.payDepositOption, {
                             amount: formatRm(booking.invoice.depositRm),

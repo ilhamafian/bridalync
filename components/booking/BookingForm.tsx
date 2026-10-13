@@ -63,6 +63,8 @@ import {
   calculateClientFeesRm,
   formatRm,
   roundRm,
+  roundSen,
+  toSen,
 } from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
@@ -674,7 +676,7 @@ export function BookingForm({
   const processingFeeRm = includesProcessingFee
     ? calculateClientFeesRm(basePriceRm, true, includesPlatformFee)
     : 0;
-  const fullPriceRm = basePriceRm + processingFeeRm;
+  const fullPriceRm = roundSen(basePriceRm + processingFeeRm);
 
   const editedTotalRm =
     form.totalRm === null || form.totalRm.trim() === ""
@@ -685,12 +687,12 @@ export function BookingForm({
       ? null
       : !Number.isFinite(editedTotalRm) || editedTotalRm < 0
         ? "Enter a valid total."
-        : roundRm(editedTotalRm) > fullPriceRm
+        : toSen(editedTotalRm) > toSen(fullPriceRm)
           ? `Total can't be more than the full price of ${formatRm(fullPriceRm)}.`
           : null;
   const discountRm =
     editedTotalRm !== null && !totalError
-      ? fullPriceRm - roundRm(editedTotalRm)
+      ? roundSen(fullPriceRm - roundSen(editedTotalRm))
       : 0;
 
   /** Settings slots plus any legacy/imported times a session already uses. */
@@ -937,7 +939,7 @@ export function BookingForm({
               paymentOption: form.paymentOption,
               ...(!editingId && form.payByLink ? { payByLink: true } : {}),
               ...(discountRm > 0 && editedTotalRm !== null
-                ? { totalRm: roundRm(editedTotalRm) }
+                ? { totalRm: roundSen(editedTotalRm) }
                 : {}),
             }),
       },
@@ -1451,11 +1453,16 @@ export function BookingForm({
                       "pl-11 text-base font-semibold tabular-nums"
                     )}
                     type="number"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     min={0}
                     max={fullPriceRm}
-                    step={1}
-                    value={form.totalRm ?? String(fullPriceRm)}
+                    step={0.01}
+                    value={
+                      form.totalRm ??
+                      (Number.isInteger(fullPriceRm)
+                        ? String(fullPriceRm)
+                        : fullPriceRm.toFixed(2))
+                    }
                     onChange={(event) =>
                       setForm((current) => ({
                         ...current,
