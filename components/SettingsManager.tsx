@@ -836,16 +836,14 @@ export function SettingsManager({
             onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
             className={settingsListClassName}
           >
-            {(settings.payment.method ?? "manual_transfer") === "manual_transfer" ? (
-              <label className={cn(settingsRowClassName, "cursor-pointer")}>
-                <IconBadge icon={IconBuildingBank} />
-                <RowText
-                  title="Manual Transfer"
-                  description="Clients pay via your QR or bank transfer and upload a receipt. You verify payments in Bookings before the booking is confirmed."
-                />
-                <RadioGroupItem value="manual_transfer" aria-label="Manual Transfer" />
-              </label>
-            ) : null}
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconBuildingBank} />
+              <RowText
+                title="Manual Transfer"
+                description="Clients pay via your QR or bank transfer and upload a receipt. You verify payments in Bookings before the booking is confirmed."
+              />
+              <RadioGroupItem value="manual_transfer" aria-label="Manual Transfer" />
+            </label>
             <label className={cn(settingsRowClassName, "cursor-pointer")}>
               <IconBadge icon={IconCreditCard} />
               <RowText

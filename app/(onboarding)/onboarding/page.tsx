@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   IconBrush,
+  IconBuildingBank,
   IconCheck,
   IconCreditCard,
   IconReceipt,
@@ -13,6 +14,7 @@ import {
 } from "@tabler/icons-react";
 
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
+import { PaymentQrUpload } from "@/components/PaymentQrUpload";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { PaymentMethodProvider } from "@/components/dashboard/PaymentMethodProvider";
 import {
@@ -35,6 +37,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_TERMS_AND_CONDITIONS,
+  type PaymentMethod,
   type TravelSetting,
 } from "@/schemas/settingSchema";
 import { getStyleTerms } from "@/utils/styleTerms";
@@ -301,6 +304,13 @@ function OnboardingPageContent() {
   const [companyRegistrationNumber, setCompanyRegistrationNumber] = useState("");
   const [companyLogo, setCompanyLogo] = useState("");
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethod>("payment_gateway");
+  const [qrImageUrl, setQrImageUrl] = useState("");
+  const [payeeName, setPayeeName] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [accountNumber, setAccountNumber] = useState("");
+  const [isUploadingQr, setIsUploadingQr] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [mobile, setMobile] = useState("");
@@ -478,6 +488,38 @@ function OnboardingPageContent() {
   }
 
   async function handleContinueFromPayment() {
+    if (isUploadingQr) {
+      setError("Wait for the QR upload to finish.");
+      return;
+    }
+
+    if (paymentMethod === "manual_transfer") {
+      if (
+        !qrImageUrl.trim() ||
+        !payeeName.trim() ||
+        !bankName.trim() ||
+        !accountNumber.trim()
+      ) {
+        setError(
+          "Upload your payment QR and fill in payee name, bank, and account number."
+        );
+        return;
+      }
+
+      await runStep(
+        {
+          step: "payment",
+          method: "manual_transfer",
+          qr_image_url: qrImageUrl.trim(),
+          payee_name: payeeName.trim(),
+          bank_name: bankName.trim(),
+          account_number: accountNumber.trim(),
+        },
+        "username"
+      );
+      return;
+    }
+
     await runStep(
       {
         step: "payment",
@@ -557,7 +599,7 @@ function OnboardingPageContent() {
   const continueLabel =
     step === "preview_profile"
       ? "Go to dashboard"
-      : step === "payment"
+      : step === "payment" && paymentMethod === "payment_gateway"
         ? isSubmitting
           ? "Opening Stripe…"
           : "Continue to Stripe"
@@ -684,34 +726,99 @@ function OnboardingPageContent() {
               {step === "payment" && (
                 <>
                   <SettingsSection title="How clients pay">
-                    <div className={settingsListClassName}>
-                      <div className={settingsRowClassName}>
+                    <RadioGroup
+                      value={paymentMethod}
+                      onValueChange={(value) => {
+                        setPaymentMethod(value as PaymentMethod);
+                        setError(null);
+                      }}
+                      className={settingsListClassName}
+                    >
+                      <label className={cn(settingsRowClassName, "cursor-pointer")}>
                         <IconBadge icon={IconCreditCard} />
                         <RowText
                           title="Payment Gateway"
                           description="Clients pay online with Stripe (card / FPX). Setup takes about 3 minutes and requires your SSM and Tax Identification Number."
                         />
-                      </div>
-                    </div>
-                  </SettingsSection>
-
-                  <SettingsSection title="Fees">
-                    <div className={settingsListClassName}>
-                      <div className={settingsRowClassName}>
-                        <IconBadge icon={IconReceipt} />
+                        <RadioGroupItem value="payment_gateway" aria-label="Payment Gateway" />
+                      </label>
+                      <label className={cn(settingsRowClassName, "cursor-pointer")}>
+                        <IconBadge icon={IconBuildingBank} />
                         <RowText
-                          title="Built into client prices"
-                          description={`A ${PLATFORM_FEE_PERCENT}% Bridalync platform fee, then Stripe's ${PAYMENT_PROCESSING_FEE_PERCENT}% + RM${PAYMENT_PROCESSING_FEE_FIXED_RM} payment processing fee, are added to the prices your clients pay. You keep your full price.`}
+                          title="Manual Transfer"
+                          description="Clients pay via your QR or bank transfer and upload a receipt. You verify payments in Bookings."
                         />
-                      </div>
-                    </div>
+                        <RadioGroupItem value="manual_transfer" aria-label="Manual Transfer" />
+                      </label>
+                    </RadioGroup>
                   </SettingsSection>
 
-                  <p className="text-xs text-muted-foreground">
-                    Continue opens Stripe setup in about 3 minutes. Have your
-                    SSM and Tax Identification Number ready. When you finish,
-                    you&apos;ll return here to complete your profile.
-                  </p>
+                  {paymentMethod === "manual_transfer" ? (
+                    <SettingsSection title="Transfer details">
+                      <div className={settingsCardClassName}>
+                        <PaymentQrUpload
+                          value={qrImageUrl}
+                          onChange={(url) => {
+                            setError(null);
+                            setQrImageUrl(url);
+                          }}
+                          disabled={isSubmitting}
+                          uploadEndpoint="/api/onboarding/upload"
+                          uploadFolder="payment-qr"
+                          onUploadingChange={setIsUploadingQr}
+                          onError={(message) => setError(message)}
+                        />
+                        <Field label="Payee / account name">
+                          <input
+                            type="text"
+                            value={payeeName}
+                            onChange={(event) => setPayeeName(event.target.value)}
+                            placeholder="e.g. Your business name"
+                            className={inputClassName}
+                          />
+                        </Field>
+                        <Field label="Bank name">
+                          <input
+                            type="text"
+                            value={bankName}
+                            onChange={(event) => setBankName(event.target.value)}
+                            placeholder="e.g. Maybank"
+                            className={inputClassName}
+                          />
+                        </Field>
+                        <Field label="Account number">
+                          <input
+                            type="text"
+                            value={accountNumber}
+                            onChange={(event) => setAccountNumber(event.target.value)}
+                            placeholder="e.g. 1234 5678 9012"
+                            className={inputClassName}
+                          />
+                        </Field>
+                      </div>
+                    </SettingsSection>
+                  ) : (
+                    <>
+                      <SettingsSection title="Fees">
+                        <div className={settingsListClassName}>
+                          <div className={settingsRowClassName}>
+                            <IconBadge icon={IconReceipt} />
+                            <RowText
+                              title="Built into client prices"
+                              description={`A ${PLATFORM_FEE_PERCENT}% Bridalync platform fee, then Stripe's ${PAYMENT_PROCESSING_FEE_PERCENT}% + RM${PAYMENT_PROCESSING_FEE_FIXED_RM} payment processing fee, are added to the prices your clients pay. You keep your full price.`}
+                            />
+                          </div>
+                        </div>
+                      </SettingsSection>
+
+                      <p className="text-xs text-muted-foreground">
+                        Continue opens Stripe setup in about 3 minutes. Have
+                        your SSM and Tax Identification Number ready. When you
+                        finish, you&apos;ll return here to complete your
+                        profile.
+                      </p>
+                    </>
+                  )}
                 </>
               )}
 
@@ -850,6 +957,7 @@ function OnboardingPageContent() {
                   disabled={
                     isSubmitting ||
                     isUploadingLogo ||
+                    isUploadingQr ||
                     (step === "role" && !selectedRole)
                   }
                   onClick={() => {

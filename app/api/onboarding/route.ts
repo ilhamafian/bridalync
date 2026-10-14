@@ -349,11 +349,38 @@ export async function POST(req: NextRequest) {
           );
         }
 
-        if (stepData.method !== "payment_gateway") {
-          return createResponse(
-            { error: "Manual transfer is no longer available. Set up the payment gateway." },
-            400
-          );
+        if (stepData.method === "manual_transfer") {
+          const qrImageUrl = stepData.qr_image_url?.trim();
+          const payeeName = stepData.payee_name?.trim();
+          const bankName = stepData.bank_name?.trim();
+          const accountNumber = stepData.account_number?.trim();
+
+          if (!qrImageUrl || !payeeName || !bankName || !accountNumber) {
+            return createResponse(
+              {
+                error:
+                  "Upload your payment QR and fill in payee name, bank, and account number.",
+              },
+              400
+            );
+          }
+
+          await settingsModel.updateSettingsByUserId(userId, {
+            payment: {
+              ...existing.payment,
+              method: "manual_transfer",
+              qr_image_url: qrImageUrl,
+              payee_name: payeeName,
+              bank_name: bankName,
+              account_number: accountNumber,
+            },
+          });
+
+          await updateOnboardingProgress(userId, {
+            configureBankAccount: true,
+          });
+          await refreshSession(userId);
+          return createResponse({ ok: true }, 200);
         }
 
         await settingsModel.updateSettingsByUserId(userId, {
