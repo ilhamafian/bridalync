@@ -35,6 +35,8 @@ import { useNotificationReads } from "@/components/dashboard/useNotificationRead
 import { ReviewsManager } from "@/components/profile/ReviewsManager";
 import { cn } from "@/lib/utils";
 import { getRecentActivity } from "@/utils/activity";
+import { needsPaymentVerification } from "@/utils/booking/paymentVerification";
+import { toPendingPaymentItem } from "@/components/dashboard/HomePendingPaymentCard";
 import { bookingSessionsOverlap } from "@/utils/booking/availability";
 import { findTravelDayClashes } from "@/utils/booking/travelBuffer";
 import { buildHotDateCatalog } from "@/utils/booking/hotDates";
@@ -182,6 +184,20 @@ export function DashboardShell({ data }: { data: DashboardData }) {
       ? findBookedClashes(detailsBooking)
       : [];
 
+  const pendingPaymentBookings = allBookings
+    .filter(needsPaymentVerification)
+    .sort((a, b) => firstSessionTime(a) - firstSessionTime(b));
+  const homePendingPayments =
+    pendingPaymentBookings.length > 0
+      ? {
+          total: pendingPaymentBookings.length,
+          items: pendingPaymentBookings
+            .slice(0, 3)
+            .map(toPendingPaymentItem)
+            .filter((item) => item != null),
+        }
+      : null;
+
   const homeRequests =
     data.settings.initialSettings.booking_requests || openRequests.length > 0
       ? {
@@ -213,6 +229,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
         <DashboardHome
           {...data.home}
           requests={homeRequests}
+          pendingPayments={homePendingPayments}
           isActivityUnread={notifications.isUnread}
           onOpenActivity={notifications.markRead}
           onBookingUpdated={handleBookingSaved}

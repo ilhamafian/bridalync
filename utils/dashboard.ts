@@ -159,7 +159,9 @@ export function flattenScheduleItems(
       booking.status === "cancelled" ||
       booking.status === "failed" ||
       booking.status === "enquiry" ||
-      booking.status === "requested"
+      booking.status === "requested" ||
+      (booking.status === "pending" &&
+        booking.depositVerificationStatus === "pending")
     ) {
       continue;
     }

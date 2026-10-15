@@ -7,6 +7,7 @@ import {
   IconCashBanknote,
   IconChecks,
   IconCircleCheck,
+  IconReceipt,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -51,6 +52,7 @@ export function formatTimeAgo(value: string, now: number) {
 
 const activityIcons: Record<ActivityKind, Icon> = {
   request: IconCalendarQuestion,
+  verification: IconReceipt,
   new: IconCalendarPlus,
   deposit: IconCash,
   balance: IconCashBanknote,

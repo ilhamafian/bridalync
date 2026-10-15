@@ -39,6 +39,12 @@ import {
   formatRm,
   getEarliestSessionDate,
 } from "@/utils/booking/pricing";
+import {
+  isBalanceVerificationPending,
+  isDepositVerificationPending,
+  needsPaymentVerification,
+  pendingPaymentAmountRm,
+} from "@/utils/booking/paymentVerification";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import { formatLocationAddress } from "@/utils/session";
 import {
@@ -89,39 +95,8 @@ function isDepositPaid(booking: SerializedBooking) {
   );
 }
 
-function isDepositVerificationPending(booking: SerializedBooking) {
-  return (
-    booking.depositVerificationStatus === "pending" &&
-    booking.status === "pending"
-  );
-}
-
-function isBalanceVerificationPending(booking: SerializedBooking) {
-  return booking.balanceVerificationStatus === "pending";
-}
-
-function needsPaymentVerification(booking: SerializedBooking) {
-  return (
-    isDepositVerificationPending(booking) ||
-    isBalanceVerificationPending(booking)
-  );
-}
-
-function verificationAmountRm(booking: SerializedBooking): number | null {
-  if (isDepositVerificationPending(booking)) {
-    return booking.paymentOption === "full" ||
-      booking.requestPaymentOption === "full"
-      ? booking.invoice.totalRm
-      : booking.invoice.depositRm;
-  }
-  if (isBalanceVerificationPending(booking)) {
-    return booking.invoice.balanceRm;
-  }
-  return null;
-}
-
 function verificationHint(booking: SerializedBooking): string | null {
-  const amount = verificationAmountRm(booking);
+  const amount = pendingPaymentAmountRm(booking);
   if (amount == null) return null;
   if (isDepositVerificationPending(booking)) {
     return `Deposit receipt waiting · ${formatRm(amount)}`;

@@ -40,6 +40,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import {
   awaitsClientPayment,
@@ -48,6 +54,13 @@ import {
   isDashboardPaymentLink,
 } from "@/utils/booking/paymentLink";
 import { formatRm } from "@/utils/booking/pricing";
+import {
+  isBalanceVerificationPending,
+  needsPaymentVerification,
+  pendingPaymentAmountRm,
+  pendingPaymentKind,
+  pendingPaymentLabel,
+} from "@/utils/booking/paymentVerification";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
 function BookingIdRow({ id }: { id: string }) {
@@ -291,6 +304,124 @@ function BookingRequestActions({
   );
 }
 
+function PaymentReviewCard({
+  booking,
+  onBookingUpdated,
+}: {
+  booking: SerializedBooking;
+  onBookingUpdated?: (booking: SerializedBooking) => void;
+}) {
+  const router = useRouter();
+  const kind = pendingPaymentKind(booking);
+  const amountRm = pendingPaymentAmountRm(booking);
+  const receiptUrl = isBalanceVerificationPending(booking)
+    ? booking.balanceReceiptUrl
+    : booking.depositReceiptUrl;
+  const type = isBalanceVerificationPending(booking) ? "balance" : "deposit";
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+
+  if (!kind || amountRm == null) return null;
+
+  async function verify(action: "approve" | "reject") {
+    setVerifying(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/bookings/${encodeURIComponent(booking._id)}/verify-payment`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, type }),
+        }
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setError(
+          typeof data.error === "string"
+            ? data.error
+            : "Could not update payment verification."
+        );
+        return;
+      }
+      const updated = data.booking as SerializedBooking | null;
+      if (updated) onBookingUpdated?.(updated);
+      router.refresh();
+    } catch {
+      setError(
+        "Couldn't reach the server. Refreshing to check whether it went through."
+      );
+      router.refresh();
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  const approveLabel =
+    type === "balance" ? "Approve balance" : "Approve deposit";
+  const rejectLabel = type === "balance" ? "Reject balance" : "Reject deposit";
+
+  return (
+    <div className={cn(glassCardClassName, "flex flex-col gap-3 p-4 text-sm")}>
+      <div>
+        <p className="font-medium">Payment pending</p>
+        <p className="mt-0.5 text-muted-foreground">
+          {pendingPaymentLabel(kind)} receipt waiting · {formatRm(amountRm)}
+        </p>
+      </div>
+      {receiptUrl ? (
+        <button
+          type="button"
+          className="self-start text-rose-800 underline-offset-2 hover:underline dark:text-rose-400"
+          onClick={() => setReceiptOpen(true)}
+        >
+          View receipt
+        </button>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={verifying}
+          onClick={() => void verify("approve")}
+        >
+          {verifying ? "Working…" : approveLabel}
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={verifying}
+          onClick={() => void verify("reject")}
+        >
+          {rejectLabel}
+        </Button>
+      </div>
+      {error ? <p className="text-destructive">{error}</p> : null}
+      <Dialog open={receiptOpen} onOpenChange={setReceiptOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {type === "balance" ? "Balance receipt" : "Deposit receipt"}
+            </DialogTitle>
+          </DialogHeader>
+          {receiptUrl ? (
+            <div className="relative max-h-[70vh] overflow-auto rounded-md border border-border bg-muted/20">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={receiptUrl}
+                alt={type === "balance" ? "Balance receipt" : "Deposit receipt"}
+                className="mx-auto h-auto max-h-[70vh] w-full object-contain"
+              />
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export function BookingDetailsPage({
   booking,
   competingRequests = [],
@@ -359,6 +490,13 @@ export function BookingDetailsPage({
           bookedClashes={bookedClashes}
           onBookingUpdated={onBookingUpdated}
           onBookingsDeclined={onBookingsDeclined}
+        />
+      ) : null}
+
+      {needsPaymentVerification(booking) ? (
+        <PaymentReviewCard
+          booking={booking}
+          onBookingUpdated={onBookingUpdated}
         />
       ) : null}
 

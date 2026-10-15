@@ -44,6 +44,7 @@ function useNow() {
 type NotificationFilter =
   | "all"
   | "request"
+  | "verification"
   | "deposit"
   | "balance"
   | "full"
@@ -52,6 +53,7 @@ type NotificationFilter =
 const NOTIFICATION_FILTERS: { value: NotificationFilter; label: string }[] = [
   { value: "all", label: "All" },
   { value: "request", label: "Requests" },
+  { value: "verification", label: "Pending" },
   { value: "deposit", label: "Deposit" },
   { value: "balance", label: "Balance payment" },
   { value: "full", label: "Full payment" },

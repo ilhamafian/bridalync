@@ -10,6 +10,10 @@ import {
 } from "@/components/dashboard/BookingCarousel";
 import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
+  HomePendingPaymentCard,
+  type PendingPaymentItem,
+} from "@/components/dashboard/HomePendingPaymentCard";
+import {
   HomeRequestCard,
   type HomeRequestItem,
 } from "@/components/dashboard/HomeRequestCard";
@@ -79,6 +83,7 @@ export function DashboardHome({
   completed,
   activity,
   requests,
+  pendingPayments,
   isActivityUnread,
   onOpenActivity,
   onBookingUpdated,
@@ -86,6 +91,8 @@ export function DashboardHome({
 }: DashboardHomeProps & {
   /** Open booking requests (first 3) and the total; `null` or none hides the section. */
   requests: { items: HomeRequestItem[]; total: number } | null;
+  /** Receipts waiting for review (first 3) and the total; `null` or none hides the section. */
+  pendingPayments: { items: PendingPaymentItem[]; total: number } | null;
   isActivityUnread?: (item: ActivityItem) => boolean;
   onOpenActivity?: (item: ActivityItem) => void;
   onBookingUpdated?: (booking: SerializedBooking) => void;
@@ -128,6 +135,26 @@ export function DashboardHome({
                     onBookingUpdated={onBookingUpdated}
                     onBookingsDeclined={onBookingsDeclined}
                   />
+                )}
+              />
+            </section>
+          ) : null}
+
+          {pendingPayments && pendingPayments.items.length > 0 ? (
+            <section className="flex flex-col gap-3">
+              <h3 className="text-sm font-medium">
+                Pending payments
+                <span className="text-muted-foreground">
+                  {" "}
+                  · {pendingPayments.total}
+                </span>
+              </h3>
+              <CardCarousel
+                items={pendingPayments.items}
+                getKey={(item) => item.booking._id}
+                seeMoreHref="/dashboard/bookings?filter=needs_verification"
+                renderItem={(item, className) => (
+                  <HomePendingPaymentCard item={item} className={className} />
                 )}
               />
             </section>

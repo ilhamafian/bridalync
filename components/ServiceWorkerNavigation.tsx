@@ -14,6 +14,11 @@ export function ServiceWorkerNavigation() {
       const data = event.data as { type?: string; url?: string } | null;
       if (data?.type !== "bridalync:navigate" || !data.url) return;
       if (!data.url.startsWith("/") || data.url.startsWith("//")) return;
+      // A full load leaves the public booking page and picks up the new booking.
+      if (!window.location.pathname.startsWith("/dashboard")) {
+        window.location.assign(data.url);
+        return;
+      }
       router.push(data.url);
       router.refresh();
     }

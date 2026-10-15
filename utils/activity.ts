@@ -1,9 +1,14 @@
 import type { Booking } from "@/schemas/bookingSchema";
+import {
+  needsPaymentVerification,
+  pendingPaymentAmountRm,
+} from "@/utils/booking/paymentVerification";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import { getBookingPayments } from "@/utils/payments";
 
 export type ActivityKind =
   | "request"
+  | "verification"
   | "new"
   | "deposit"
   | "balance"
@@ -35,6 +40,7 @@ export type NotificationReadState = {
 
 const ACTIVITY_LABELS: Record<ActivityKind, string> = {
   request: "Booking request",
+  verification: "Payment pending",
   new: "New booking",
   deposit: "Deposit received",
   balance: "Balance payment received",
@@ -81,6 +87,16 @@ function getBookingActivity(booking: SerializedBooking): ActivityItem[] {
   if (booking.status === "cancelled") {
     return [
       event("cancelled", booking.invoice.totalRm, bookingUpdatedAt(booking)),
+    ];
+  }
+
+  if (needsPaymentVerification(booking)) {
+    return [
+      event(
+        "verification",
+        pendingPaymentAmountRm(booking) ?? booking.invoice.totalRm,
+        bookingUpdatedAt(booking)
+      ),
     ];
   }
 
