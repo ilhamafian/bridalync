@@ -494,7 +494,11 @@ function BookingResultPageContent() {
       balanceDueBeforeDays,
       "deposit"
     ) === "deposit";
-  const requestOption = requestCanPayDeposit ? requestPayOption : "full";
+  const requestOption = isPaymentLink
+    ? booking.paymentOption
+    : requestCanPayDeposit
+      ? requestPayOption
+      : "full";
   const requestPaysInFull = requestOption === "full";
   const requestFullTotalRm = applyPaymentOption(booking.invoice, "full").totalRm;
   const requestAmountDueRm = requestPaysInFull
@@ -640,6 +644,11 @@ function BookingResultPageContent() {
             </p>
             <div className={frostedPanelClassName}>
               <p className="font-medium text-foreground">{booking.packageNames}</p>
+              {booking.customEvent?.description ? (
+                <p className="mt-1 text-sm whitespace-pre-wrap break-words text-muted-foreground">
+                  {booking.customEvent.description}
+                </p>
+              ) : null}
               <p className="mt-1 text-xs text-muted-foreground">
                 {booking.contact.name} · {booking.contact.email}
               </p>
@@ -659,7 +668,7 @@ function BookingResultPageContent() {
         </div>
 
         <div className="flex w-full flex-col gap-6 @4xl/client:sticky @4xl/client:top-0">
-          {requestState === "approved" && requestCanPayDeposit ? (
+          {requestState === "approved" && requestCanPayDeposit && !isPaymentLink ? (
             <div
               className="flex w-full flex-col gap-2"
               role="radiogroup"

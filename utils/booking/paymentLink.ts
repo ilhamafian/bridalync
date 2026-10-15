@@ -10,6 +10,14 @@ type PayableBooking = {
  * Approved requests and dashboard bookings sent a payment link: the client pays (deposit or full) from the booking
  * page, and a failed/expired payment or rejected receipt keeps them payable.
  */
+/** A dashboard booking sent as a payment link, as opposed to an approved booking request. */
+export function isDashboardPaymentLink(booking: {
+  requestApprovedAt?: Date | string;
+  paymentLinkAt?: Date | string;
+}): boolean {
+  return Boolean(booking.paymentLinkAt) && !booking.requestApprovedAt;
+}
+
 export function awaitsClientPayment(booking: PayableBooking): boolean {
   return (
     booking.status === "pending" &&

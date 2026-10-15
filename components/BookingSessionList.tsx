@@ -22,6 +22,7 @@ type SessionListItem = Pick<
   | "order"
 > & {
   client_key?: string
+  styleName?: string
 }
 
 type BookingSessionListProps = {
@@ -77,6 +78,9 @@ export function BookingSessionList({
             <p className="font-medium text-foreground">
               {formatSessionSummary(session, intlLocale)}
             </p>
+            {session.styleName ? (
+              <p className="text-muted-foreground">{session.styleName}</p>
+            ) : null}
             {(session.slot_count ?? 1) > 1 && (
               <p className="mt-0.5 text-xs text-muted-foreground">
                 {format(t.slotCount, { count: session.slot_count ?? 1 })}

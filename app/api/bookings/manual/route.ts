@@ -10,6 +10,7 @@ import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
 import { assertSessionsAvailable } from "@/utils/booking/availability.server";
+import { resolveOptionalInstagram } from "@/utils/booking/clientInfo";
 import { resolveBookingQuotation } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import { scheduleBookingCalendarSync } from "@/utils/google/syncBookingCalendar";
@@ -38,15 +39,18 @@ export async function POST(req: NextRequest) {
     }
 
     const data = parsed.data;
+    if (!data.customEvent && data.packageIds.length < 1) {
+      return createResponse({ error: "Choose an event." }, 400);
+    }
+
     const quotationInput: CreateBookingRequest = {
       freelancerUsername: username,
       intent: "booking",
       contact: data.contact,
-      packageIds: data.packageIds,
+      packageIds: data.customEvent ? [] : data.packageIds,
       addOns: data.addOns,
       sessions: data.sessions,
-      // Payment-link clients pick deposit or full when paying, so the invoice keeps its deposit split.
-      paymentOption: data.payByLink ? "deposit" : data.paymentOption,
+      paymentOption: data.paymentOption,
     };
 
     try {
@@ -63,23 +67,35 @@ export async function POST(req: NextRequest) {
       await resolveBookingQuotation(userId, quotationInput, {
         relaxPaymentDeadline: true,
         discountedTotalRm: data.totalRm,
+        customEvent: data.customEvent,
+        customAddOns: data.customAddOns,
       });
+
+    const instagram =
+      data.instagram !== undefined
+        ? resolveOptionalInstagram(data.instagram)
+        : undefined;
 
     const booking = await createBooking({
       freelancerUsername: username,
       freelancerUserId: userId,
       contact: data.contact,
-      packageIds: data.packageIds,
+      ...(instagram ? { clientDetails: { instagram } } : {}),
+      packageIds: data.customEvent ? [] : data.packageIds,
       packageNames,
+      ...(data.customEvent ? { customEvent: data.customEvent } : {}),
+      ...(data.customAddOns.length > 0
+        ? { customAddOns: data.customAddOns }
+        : {}),
       dayMode,
       addOnIds: data.addOns.map((addOn) => addOn.id),
       sessions,
       invoice,
       paymentOption,
       ...(data.remarks ? { remarks: data.remarks } : {}),
-      ...(data.payByLink
-        ? { status: "pending" as const, paymentLinkAt: new Date() }
-        : { status: data.status }),
+      // The client always pays from the booking link. Deposit vs full is the stylist's choice.
+      status: "pending",
+      paymentLinkAt: new Date(),
     });
     scheduleBookingCalendarSync(booking._id.toString());
 

@@ -33,6 +33,19 @@ export function isValidInstagramUsername(username: string): boolean {
   return INSTAGRAM_USERNAME_PATTERN.test(username);
 }
 
+/**
+ * Instagram on a manual booking: blank clears it, and a value is optional even when
+ * the stylist's client-info setting requires one. Throws when the value isn't a username.
+ */
+export function resolveOptionalInstagram(raw: string | undefined): string | undefined {
+  const username = normalizeInstagramUsername(raw ?? "");
+  if (!username) return undefined;
+  if (!isValidInstagramUsername(username)) {
+    throw new Error("Enter a valid Instagram username.");
+  }
+  return username;
+}
+
 export function buildInstagramProfileUrl(username: string): string {
   return `https://instagram.com/${encodeURIComponent(username)}`;
 }

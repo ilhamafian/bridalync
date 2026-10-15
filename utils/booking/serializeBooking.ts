@@ -11,6 +11,8 @@ export type SerializedBooking = {
   clientDetails?: Booking["clientDetails"];
   packageIds: string[];
   packageNames: string;
+  customEvent?: NonNullable<Booking["customEvent"]>;
+  customAddOns?: NonNullable<Booking["customAddOns"]>;
   dayMode?: Booking["dayMode"];
   addOnIds: string[];
   sessions: Array<{
@@ -68,6 +70,10 @@ export function serializeBooking(
     ...(booking.clientDetails ? { clientDetails: booking.clientDetails } : {}),
     packageIds: booking.packageIds,
     packageNames: booking.packageNames,
+    ...(booking.customEvent ? { customEvent: booking.customEvent } : {}),
+    ...(booking.customAddOns?.length
+      ? { customAddOns: booking.customAddOns }
+      : {}),
     ...(booking.dayMode ? { dayMode: booking.dayMode } : {}),
     addOnIds: booking.addOnIds,
     sessions: booking.sessions.map((session) => ({

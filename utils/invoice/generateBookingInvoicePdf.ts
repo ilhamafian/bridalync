@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import { format, subDays } from "date-fns";
 
-import type { PersistedBooking } from "@/schemas/bookingSchema";
+import { OTHERS_EVENT_ID, type PersistedBooking } from "@/schemas/bookingSchema";
 import type { InvoiceSetting, PaymentSetting } from "@/schemas/settingSchema";
 import {
   formatRm,
@@ -55,6 +55,8 @@ type InvoiceLineRow = {
   quantity: number;
   unitPriceRm: number;
   totalRm: number;
+  /** Shown under the item label, e.g. an Others event description. */
+  detail?: string;
 };
 
 function toDate(value: Date | string | undefined): Date | null {
@@ -139,11 +141,17 @@ function buildLineRows(booking: PersistedBooking): InvoiceLineRow[] {
       existing.totalRm = roundSen(existing.unitPriceRm * existing.quantity);
       continue;
     }
+    const detail =
+      booking.customEvent?.description &&
+      item.label === booking.customEvent.name
+        ? booking.customEvent.description
+        : undefined;
     rows.push({
       label: item.label,
       quantity: 1,
       unitPriceRm: amount,
       totalRm: amount,
+      ...(detail ? { detail } : {}),
     });
   }
 
@@ -433,7 +441,12 @@ export async function generateBookingInvoicePdf(
       const labelHeight = doc.heightOfString(label, {
         width: CONTENT_WIDTH * 0.46,
       });
-      const rowHeight = Math.max(labelHeight, 12) + rowPadY * 2;
+      const detailHeight = row.detail
+        ? doc.font("Helvetica").fontSize(8).heightOfString(row.detail, {
+            width: CONTENT_WIDTH * 0.46,
+          }) + 3
+        : 0;
+      const rowHeight = Math.max(labelHeight, 12) + detailHeight + rowPadY * 2;
       ensureSpace(rowHeight);
 
       if (index % 2 === 1) {
@@ -446,6 +459,16 @@ export async function generateBookingInvoicePdf(
         .fontSize(10)
         .fillColor(INK)
         .text(label, colItem + 10, textY, { width: CONTENT_WIDTH * 0.46 });
+      if (row.detail) {
+        doc
+          .font("Helvetica")
+          .fontSize(8)
+          .fillColor(MUTED)
+          .text(row.detail, colItem + 10, textY + labelHeight + 2, {
+            width: CONTENT_WIDTH * 0.46,
+          });
+      }
+      doc.font("Helvetica").fontSize(10).fillColor(INK);
       doc.text(String(row.quantity), colQty, textY, {
         width: colQtyW,
         align: "right",
@@ -482,7 +505,10 @@ export async function generateBookingInvoicePdf(
       const sessionDate = toDate(session.date);
       if (!sessionDate) continue;
 
-      const title = session.styleName?.trim() || session.name;
+      const isOthersSession = session.packageId === OTHERS_EVENT_ID;
+      const title = isOthersSession
+        ? session.name
+        : session.styleName?.trim() || session.name;
       const blockTop = leftY;
       const blockPad = 10;
       const lines = [
@@ -492,6 +518,9 @@ export async function generateBookingInvoicePdf(
         `${formatTimeLabel(session.time_slot.startTime)} – ${formatTimeLabel(session.time_slot.endTime)}${
           (session.slot_count ?? 1) > 1 ? ` (${session.slot_count} slots)` : ""
         }`,
+        ...(isOthersSession && session.styleName?.trim()
+          ? [session.styleName.trim()]
+          : []),
       ];
 
       const blockHeight = blockPad * 2 + lines.length * 13;

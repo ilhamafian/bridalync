@@ -2,7 +2,12 @@ import { AddOnModel } from "@/models/AddOn";
 import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
-import type { CreateBookingRequest } from "@/schemas/bookingSchema";
+import {
+  OTHERS_EVENT_ID,
+  type CreateBookingRequest,
+  type CustomAddOnInput,
+  type CustomEventInput,
+} from "@/schemas/bookingSchema";
 import type { Package, PackageDayMode } from "@/schemas/packageSchema";
 import { toIdString } from "@/schemas/objectId";
 import { toDbSession } from "@/schemas/sessionSchema";
@@ -304,6 +309,10 @@ export async function resolveBookingQuotation(
     enforceServiceArea?: boolean;
     /** Charging by event: every session needs a style/look (client bookings when one is offered). */
     requireSessionStyle?: boolean;
+    /** One-off event that isn't in the catalog. Skips the package lookup and uses this price. */
+    customEvent?: CustomEventInput | null;
+    /** Add-ons priced as entered, appended after the catalog add-ons. */
+    customAddOns?: CustomAddOnInput[];
   }
 ): Promise<{
   invoice: BookingQuotationSummary;
@@ -315,18 +324,28 @@ export async function resolveBookingQuotation(
   paymentOption: "deposit" | "full";
 }> {
   const legacy = options?.legacy === true;
-  if (!legacy && input.packageIds.length !== 1) {
+  const customEvent = options?.customEvent ?? null;
+  if (!legacy && !customEvent && input.packageIds.length !== 1) {
     throw new Error("Choose one event per booking.");
   }
 
   const packageModel = new PackageModel();
   const settingsModel = new SettingModel();
 
-  const [loadedPackages, settings, selectedAddOns] = await Promise.all([
-    Promise.all(input.packageIds.map((id) => packageModel.findById(id))),
+  const [loadedPackages, settings, catalogAddOns] = await Promise.all([
+    customEvent
+      ? Promise.resolve([])
+      : Promise.all(input.packageIds.map((id) => packageModel.findById(id))),
     settingsModel.findSettingsByUserId(freelancerUserId),
     resolveSelectedAddOns(freelancerUserId, input.addOns),
   ]);
+  const selectedAddOns = [
+    ...catalogAddOns,
+    ...(options?.customAddOns ?? []).map((addOn) => ({
+      name: addOn.name,
+      price: addOn.price,
+    })),
+  ];
 
   if (!settings) {
     throw new Error("Freelancer settings not found");
@@ -345,9 +364,25 @@ export async function resolveBookingQuotation(
   }
 
   const eventId = input.packageIds[0];
-  const event = packagesById.get(eventId);
+  const event = customEvent ? undefined : packagesById.get(eventId);
   let sessions: BookingSessionInput[];
-  if (legacy) {
+  if (customEvent) {
+    if (input.sessions.length !== 1) {
+      throw new Error("An Others booking has one session.");
+    }
+    const session = input.sessions[0];
+    if (session.packageId !== OTHERS_EVENT_ID) {
+      throw new Error("Session event mismatch");
+    }
+    sessions = [
+      {
+        ...session,
+        name: customEvent.name,
+        packageId: OTHERS_EVENT_ID,
+        order: 0,
+      },
+    ];
+  } else if (legacy) {
     validateLegacyPackageSelection(input, packagesById);
     sessions = input.sessions;
   } else {
@@ -374,7 +409,9 @@ export async function resolveBookingQuotation(
       (session) =>
         [
           session.client_key,
-          countSessionSlots(session.time_slot, settings.time_slots),
+          customEvent
+            ? 1
+            : countSessionSlots(session.time_slot, settings.time_slots),
         ] as const
     )
   );
@@ -388,7 +425,20 @@ export async function resolveBookingQuotation(
     slotCount?: number;
     morningCall?: { count: number; amountRm: number };
   }>;
-  if (legacy) {
+  if (customEvent) {
+    selectedPackages = [
+      {
+        name: customEvent.name,
+        price: customEvent.price,
+        deposit: resolveDepositRm(
+          customEvent.deposit,
+          customEvent.depositType,
+          customEvent.price
+        ),
+        morningCall: getMorningCallCharge(morningCall, sessions),
+      },
+    ];
+  } else if (legacy) {
     const sessionByPackageId = new Map(
       sessions.map((session) => [session.packageId, session] as const)
     );
@@ -448,7 +498,9 @@ export async function resolveBookingQuotation(
     | undefined;
   const selectedStyleExtras: Array<{ name: string; price: number }> = [];
 
-  if (chargeBy === "style") {
+  const pricingChargeBy = customEvent ? "package" : chargeBy;
+
+  if (!customEvent && chargeBy === "style") {
     selectedSessionStyles = [];
     for (const session of sessions) {
       if (!session.style) {
@@ -484,7 +536,7 @@ export async function resolveBookingQuotation(
         session.style
       );
       resolvedSessionStyles.set(session.client_key, resolved);
-      if (extraRm > 0) {
+      if (!customEvent && extraRm > 0) {
         selectedStyleExtras.push({
           name: styleExtraLabel(session.name, resolved.styleName),
           price: extraRm,
@@ -582,7 +634,7 @@ export async function resolveBookingQuotation(
   }
 
   const quotation = calculateBookingQuotation({
-    chargeBy,
+    chargeBy: pricingChargeBy,
     selectedPackages,
     selectedSessionStyles,
     selectedStyleExtras,
@@ -603,7 +655,10 @@ export async function resolveBookingQuotation(
   const balanceDueBeforeDays = settings.payment?.balance_due_before ?? 3;
   const mustPayFull = requiresFullPayment(sessions, balanceDueBeforeDays);
   const paymentOption: "deposit" | "full" =
-    mustPayFull || input.paymentOption === "full" ? "full" : "deposit";
+    input.paymentOption === "full" ||
+    (mustPayFull && !options?.relaxPaymentDeadline)
+      ? "full"
+      : "deposit";
 
   if (
     input.paymentOption === "deposit" &&
@@ -638,7 +693,15 @@ export async function resolveBookingQuotation(
       slotCountBySessionKey,
       regionsBySessionKey
     ),
-    ...(legacy || !event ? {} : { dayMode: getEventDayMode(event) }),
+    ...(legacy
+      ? {}
+      : {
+          dayMode: customEvent
+            ? ("same_day" as const)
+            : event
+              ? getEventDayMode(event)
+              : undefined,
+        }),
     paymentOption,
   };
 }

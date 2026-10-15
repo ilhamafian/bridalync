@@ -7,7 +7,10 @@ import {
   paymentSettingSchema,
 } from "@/schemas/settingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
-import { awaitsClientPayment } from "@/utils/booking/paymentLink";
+import {
+  awaitsClientPayment,
+  isDashboardPaymentLink,
+} from "@/utils/booking/paymentLink";
 import { resolveRequestPaymentOption } from "@/utils/booking/pricing";
 import {
   attachManualDepositReceipt,
@@ -88,12 +91,14 @@ export async function POST(
     );
 
     const requestedOption = formData.get("paymentOption");
-    const paymentOption = resolveRequestPaymentOption(
-      booking.invoice,
-      booking.sessions,
-      paymentSettings.balance_due_before,
-      requestedOption === "full" ? "full" : "deposit"
-    );
+    const paymentOption = isDashboardPaymentLink(booking)
+      ? booking.paymentOption
+      : resolveRequestPaymentOption(
+          booking.invoice,
+          booking.sessions,
+          paymentSettings.balance_due_before,
+          requestedOption === "full" ? "full" : "deposit"
+        );
 
     const updated = await attachManualDepositReceipt(id, blob.url, paymentOption);
     if (updated) {

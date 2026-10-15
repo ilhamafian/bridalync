@@ -45,6 +45,7 @@ import {
   awaitsClientPayment,
   buildBookingPaymentUrl,
   hasPayableBalance,
+  isDashboardPaymentLink,
 } from "@/utils/booking/paymentLink";
 import { formatRm } from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
@@ -118,7 +119,13 @@ function PaymentLinkCard({
         <p className="mt-0.5 text-muted-foreground">
           {balanceOnly
             ? `Send this to ${booking.contact.name} to pay the remaining ${formatRm(booking.invoice.balanceRm)}.`
-            : `Send this to ${booking.contact.name} to pay the deposit or in full. The booking is confirmed once they pay.`}
+            : isDashboardPaymentLink(booking)
+              ? `Send this to ${booking.contact.name} to pay ${
+                  booking.paymentOption === "full"
+                    ? formatRm(booking.invoice.totalRm)
+                    : `the ${formatRm(booking.invoice.depositRm)} deposit`
+                }. The booking is confirmed once they pay.`
+              : `Send this to ${booking.contact.name} to pay the deposit or in full. The booking is confirmed once they pay.`}
         </p>
         {error ? (
           <p className="mt-2 break-all text-xs text-muted-foreground select-all">
@@ -332,6 +339,11 @@ export function BookingDetailsPage({
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">{booking.packageNames}</p>
+        {booking.customEvent?.description ? (
+          <p className="text-sm whitespace-pre-wrap break-words text-muted-foreground">
+            {booking.customEvent.description}
+          </p>
+        ) : null}
         <BookingIdRow id={booking._id} />
         {booking.source === "google_calendar" ? (
           <p className="text-xs text-muted-foreground">

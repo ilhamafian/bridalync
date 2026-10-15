@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { DepositField } from "@/components/catalog/DepositField";
+import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { usePaymentMethod } from "@/components/dashboard/PaymentMethodProvider";
 import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
@@ -27,15 +29,26 @@ import { cn } from "@/lib/utils";
 import type { Address, LatLng } from "@/schemas/addressSchema";
 import {
   BOOKING_REMARKS_MAX_LENGTH,
+  CUSTOM_EVENT_DESCRIPTION_MAX_LENGTH,
+  CUSTOM_EVENT_NAME_MAX_LENGTH,
+  OTHERS_EVENT_ID,
   type Booking,
 } from "@/schemas/bookingSchema";
-import type { PackageDayMode, PackageSession } from "@/schemas/packageSchema";
+import type {
+  DepositType,
+  PackageDayMode,
+  PackageSession,
+} from "@/schemas/packageSchema";
 import type {
   MorningCallSetting,
   RegionPrices,
   TimeSlot,
 } from "@/schemas/settingSchema";
 import { useRegionQuote } from "@/hooks/use-venue-regions";
+import {
+  isValidInstagramUsername,
+  normalizeInstagramUsername,
+} from "@/utils/booking/clientInfo";
 import {
   SLOT_HOLDING_STATUSES,
   timeRangesOverlap,
@@ -159,9 +172,18 @@ type SessionFormRow = {
   date: string;
   /** Consecutive slots for this session; saved as their merged span. */
   time_slots: TimeSlot[];
+  /** Others bookings: the typed start/end, kept even while the range is incomplete. */
+  customStart: string;
+  customEnd: string;
   /** HH:mm the client must be ready by; blank = not set. */
   ready_by: string;
   location: Address | null;
+};
+
+type CustomAddOnRow = {
+  id: string;
+  name: string;
+  price: string;
 };
 
 type BookingFormState = {
@@ -169,13 +191,23 @@ type BookingFormState = {
   contact_email: string;
   contact_mobile: string;
   contact_country_code: string;
+  /** Optional on this form, whatever Client information is set to. */
+  instagram: string;
   packageIds: string[];
+  /** A one-off event instead of a catalog event. */
+  isOthers: boolean;
+  othersName: string;
+  othersDescription: string;
+  othersPrice: string;
+  othersDeposit: string;
+  othersDepositType: DepositType;
   addOnIds: string[];
+  /** Custom add-on rows, shown when Others is ticked in Add-ons. */
+  customAddOnsEnabled: boolean;
+  customAddOnRows: CustomAddOnRow[];
   sessions: SessionFormRow[];
   status: DashboardStatus;
   paymentOption: "deposit" | "full";
-  /** New bookings only: create it unpaid for the client to pay from a link. */
-  payByLink: boolean;
   remarks: string;
   /** Edited (discounted) total as typed; null = use the full price. */
   totalRm: string | null;
@@ -221,6 +253,24 @@ function createRowId() {
   return crypto.randomUUID();
 }
 
+/** `<input type="time">` may include seconds; slots are stored as HH:mm. */
+function toHmTime(value: string) {
+  const match = /^(\d{2}:\d{2})/.exec(value);
+  return match?.[1] ?? "";
+}
+
+function emptyCustomAddOn(): CustomAddOnRow {
+  return { id: createRowId(), name: "", price: "" };
+}
+
+function parseRmInput(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const amount = Number(trimmed);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  return roundRm(amount);
+}
+
 function timeSlotKey(slot: TimeSlot) {
   return `${slot.startTime}|${slot.endTime}`;
 }
@@ -263,6 +313,8 @@ function sessionsFromEvent(
         : defaultSlot
           ? [defaultSlot]
           : [],
+      customStart: "",
+      customEnd: "",
       ready_by: existing?.ready_by ?? "",
       location: existing?.location ?? null,
     };
@@ -275,18 +327,42 @@ function sameIds(left: string[], right: string[]) {
   );
 }
 
+function emptySession(name = ""): SessionFormRow {
+  return {
+    client_key: createRowId(),
+    name,
+    packageId: OTHERS_EVENT_ID,
+    styleId: "",
+    order: 0,
+    date: "",
+    time_slots: [],
+    customStart: "",
+    customEnd: "",
+    ready_by: "",
+    location: null,
+  };
+}
+
 function emptyForm(): BookingFormState {
   return {
     contact_name: "",
     contact_email: "",
     contact_mobile: "",
     contact_country_code: DEFAULT_COUNTRY_CODE,
+    instagram: "",
     packageIds: [],
+    isOthers: false,
+    othersName: "",
+    othersDescription: "",
+    othersPrice: "",
+    othersDeposit: "",
+    othersDepositType: "fixed",
     addOnIds: [],
+    customAddOnsEnabled: false,
+    customAddOnRows: [],
     sessions: [],
-    status: "confirmed",
+    status: "pending",
     paymentOption: "deposit",
-    payByLink: false,
     remarks: "",
     totalRm: null,
   };
@@ -297,32 +373,57 @@ function bookingToForm(
   timeSlots: TimeSlot[]
 ): BookingFormState {
   const fallbackSlot = timeSlots[0];
+  const isOthers = Boolean(booking.customEvent);
 
   return {
     contact_name: booking.contact.name,
     contact_email: booking.contact.email,
     contact_mobile: booking.contact.mobile ?? "",
     contact_country_code: booking.contact.country_code ?? DEFAULT_COUNTRY_CODE,
-    packageIds: booking.packageIds,
+    instagram: booking.clientDetails?.instagram ?? "",
+    packageIds: isOthers ? [] : booking.packageIds,
+    isOthers,
+    othersName: booking.customEvent?.name ?? "",
+    othersDescription: booking.customEvent?.description ?? "",
+    othersPrice:
+      booking.customEvent?.price != null ? String(booking.customEvent.price) : "",
+    othersDeposit:
+      booking.customEvent?.deposit != null
+        ? String(booking.customEvent.deposit)
+        : "",
+    othersDepositType: booking.customEvent?.depositType ?? "fixed",
     addOnIds: booking.addOnIds,
-    sessions: booking.sessions.map((session, index) => ({
-      client_key: session.client_key ?? createRowId(),
-      name: session.name,
-      packageId: session.packageId,
-      styleId: session.styleId ?? "",
-      order: session.order ?? index,
-      date: toDateInputValue(session.date),
-      time_slots: session.time_slot
-        ? expandSessionSlots(session.time_slot, timeSlots)
+    customAddOnsEnabled: (booking.customAddOns?.length ?? 0) > 0,
+    customAddOnRows: (booking.customAddOns ?? []).map((addOn) => ({
+      id: createRowId(),
+      name: addOn.name,
+      price: String(addOn.price),
+    })),
+    sessions: booking.sessions.map((session, index) => {
+      const slots = session.time_slot
+        ? isOthers
+          ? [session.time_slot]
+          : expandSessionSlots(session.time_slot, timeSlots)
         : fallbackSlot
           ? [fallbackSlot]
-          : [],
-      ready_by: session.ready_by ?? "",
-      location: session.location ?? null,
-    })),
+          : [];
+      const span = slots.length > 0 ? mergeSlots(slots) : null;
+      return {
+        client_key: session.client_key ?? createRowId(),
+        name: session.name,
+        packageId: isOthers ? OTHERS_EVENT_ID : session.packageId,
+        styleId: session.styleId ?? "",
+        order: session.order ?? index,
+        date: toDateInputValue(session.date),
+        time_slots: slots,
+        customStart: isOthers ? (span?.startTime ?? "") : "",
+        customEnd: isOthers ? (span?.endTime ?? "") : "",
+        ready_by: session.ready_by ?? "",
+        location: session.location ?? null,
+      };
+    }),
     status: booking.status,
     paymentOption: booking.paymentOption,
-    payByLink: false,
     remarks: booking.remarks ?? "",
     totalRm: booking.invoice.breakdown?.discountRm
       ? String(booking.invoice.totalRm)
@@ -374,7 +475,8 @@ export function BookingForm({
   const [form, setForm] = useState<BookingFormState>(() =>
     booking ? bookingToForm(booking, timeSlots) : emptyForm()
   );
-  const payByLink = !editingId && form.payByLink;
+  const creating = !editingId;
+  const isOthers = form.isOthers && !isGoogleImport;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hotDates, setHotDates] = useState<HotDateLookup[]>([]);
@@ -519,12 +621,14 @@ export function BookingForm({
   }, [distanceTravel, form.sessions, venueDistances, timeSlots]);
 
   const styleExtrasOffered = chargeBy === "package" && hasStyleExtras(styles);
-  const styleOptional = chargeBy === "package" && styleTerms.kind !== "look";
+  const styleOptional =
+    isOthers || (chargeBy === "package" && styleTerms.kind !== "look");
   const styleOptions = useMemo(
     () =>
       styles.flatMap((style) =>
         style.variants.map((variant) => {
-          const extraRm = chargeBy === "package" ? getStyleExtraRm(variant) : 0;
+          const extraRm =
+            !isOthers && chargeBy === "package" ? getStyleExtraRm(variant) : 0;
           return {
             id: `${style._id}:${variant.order}`,
             label: `${style.name} — ${variant.name}${
@@ -538,7 +642,7 @@ export function BookingForm({
           };
         })
       ),
-    [styles, chargeBy]
+    [styles, chargeBy, isOthers]
   );
 
   const resolveSessionStyle = useCallback(
@@ -575,7 +679,19 @@ export function BookingForm({
     [styleOptions, hotDatePriceMap]
   );
 
+  const customAddOnsRm = useMemo(
+    () =>
+      form.customAddOnsEnabled
+        ? form.customAddOnRows.reduce((sum, row) => {
+            const price = parseRmInput(row.price);
+            return price === null ? sum : sum + price;
+          }, 0)
+        : 0,
+    [form.customAddOnsEnabled, form.customAddOnRows]
+  );
+
   const basePriceRm = useMemo(() => {
+    const othersPrice = parseRmInput(form.othersPrice);
     const eventHotDatePrice = selectedEvent
       ? getEventHotDatePrice(
           hotDatePriceMap,
@@ -585,8 +701,9 @@ export function BookingForm({
           selectedEvent._id
         )
       : [];
-    const sessionsRm =
-      chargeBy === "package" && selectedEvent
+    const sessionsRm = isOthers
+      ? roundRm(othersPrice ?? 0)
+      : chargeBy === "package" && selectedEvent
         ? roundRm(
             regionPricing?.perEvent && regionPriceRm !== null
               ? getRegionEventPrice(regionPriceRm, eventHotDatePrice)
@@ -617,15 +734,17 @@ export function BookingForm({
               ),
             0
           );
-    const addOnsRm = addOns
-      .filter((addOn) => form.addOnIds.includes(addOn._id))
-      .reduce((sum, addOn) => sum + roundRm(addOn.price), 0);
+    const addOnsRm =
+      addOns
+        .filter((addOn) => form.addOnIds.includes(addOn._id))
+        .reduce((sum, addOn) => sum + roundRm(addOn.price), 0) + customAddOnsRm;
     const regionFeeRm =
       regionPricing && !regionPricing.perEvent && regionPriceRm !== null
         ? roundRm(regionPriceRm)
         : 0;
-    const styleExtrasRm =
-      chargeBy === "package"
+    const styleExtrasRm = isOthers
+      ? 0
+      : chargeBy === "package"
         ? form.sessions.reduce(
             (sum, session) =>
               sum +
@@ -657,6 +776,9 @@ export function BookingForm({
     regionPriceRm,
     chargeBy,
     selectedEvent,
+    isOthers,
+    form.othersPrice,
+    customAddOnsRm,
     form.packageIds,
     form.sessions,
     form.addOnIds,
@@ -707,6 +829,10 @@ export function BookingForm({
   }, [timeSlots, form.sessions]);
 
   function selectEvent(packageId: string) {
+    if (packageId === OTHERS_EVENT_ID) {
+      selectOthers();
+      return;
+    }
     const event = packages.find((pkg) => pkg._id === packageId);
     if (!event) return;
     setForm((current) => {
@@ -714,6 +840,7 @@ export function BookingForm({
       const sharedDate = sessions.find((session) => session.date)?.date ?? "";
       return {
         ...current,
+        isOthers: false,
         packageIds: [packageId],
         sessions:
           event.dayMode === "same_day"
@@ -723,13 +850,60 @@ export function BookingForm({
     });
   }
 
+  function selectOthers() {
+    setForm((current) => {
+      const existing = current.sessions[0];
+      const span =
+        existing && existing.time_slots.length > 0
+          ? mergeSlots(existing.time_slots)
+          : null;
+      const session: SessionFormRow = {
+        ...(existing ?? emptySession()),
+        name: current.othersName.trim() || "Session",
+        packageId: OTHERS_EVENT_ID,
+        order: 0,
+        time_slots: span ? [span] : [],
+        customStart: existing?.customStart || span?.startTime || "",
+        customEnd: existing?.customEnd || span?.endTime || "",
+      };
+      return {
+        ...current,
+        isOthers: true,
+        packageIds: [],
+        sessions: [session],
+      };
+    });
+  }
+
+  function updateCustomTime(
+    session: SessionFormRow,
+    patch: { start?: string; end?: string }
+  ) {
+    const start = toHmTime(
+      patch.start ??
+        (session.customStart || session.time_slots[0]?.startTime || "")
+    );
+    const end = toHmTime(
+      patch.end ??
+        (session.customEnd ||
+          (session.time_slots.length > 0
+            ? mergeSlots(session.time_slots).endTime
+            : ""))
+    );
+    updateSession(session.client_key, {
+      customStart: start,
+      customEnd: end,
+      time_slots: start && end && start < end ? [{ startTime: start, endTime: end }] : [],
+    });
+  }
+
   function updateSessionDate(clientKey: string, date: string) {
     const withDate = (session: SessionFormRow): SessionFormRow => ({
       ...session,
       date,
-      time_slots: session.time_slots.filter(
-        (slot) => !getSlotConflict(date, slot)
-      ),
+      time_slots: isOthers
+        ? session.time_slots
+        : session.time_slots.filter((slot) => !getSlotConflict(date, slot)),
     });
     setForm((current) => ({
       ...current,
@@ -814,7 +988,7 @@ export function BookingForm({
   }
 
   function buildPayload() {
-    if (!isGoogleImport && !isLegacy && !selectedEvent) {
+    if (!isGoogleImport && !isLegacy && !selectedEvent && !isOthers) {
       return { error: "Choose an event." };
     }
 
@@ -824,6 +998,53 @@ export function BookingForm({
 
     if (!form.contact_email.trim()) {
       return { error: "Client email is required." };
+    }
+
+    const instagram = normalizeInstagramUsername(form.instagram);
+    if (instagram && !isValidInstagramUsername(instagram)) {
+      return { error: "Enter a valid Instagram username." };
+    }
+
+    let othersEvent: {
+      name: string;
+      description?: string;
+      price: number;
+      deposit: number;
+      depositType: DepositType;
+    } | null = null;
+    if (isOthers) {
+      const name = form.othersName.trim();
+      if (!name) return { error: "Enter a title for this event." };
+      const price = parseRmInput(form.othersPrice);
+      if (price === null) return { error: "Enter a price for this event." };
+      const deposit = parseRmInput(form.othersDeposit);
+      if (deposit === null) return { error: "Enter the deposit." };
+      if (form.othersDepositType === "percent" && deposit > 100) {
+        return { error: "Deposit can't be more than 100%." };
+      }
+      const description = form.othersDescription.trim();
+      othersEvent = {
+        name,
+        ...(description ? { description } : {}),
+        price,
+        deposit,
+        depositType: form.othersDepositType,
+      };
+    }
+
+    const customAddOns: { name: string; price: number }[] = [];
+    if (!isGoogleImport && form.customAddOnsEnabled) {
+      if (form.customAddOnRows.length === 0) {
+        return { error: "Add a title and price, or turn off Others." };
+      }
+      for (const row of form.customAddOnRows) {
+        const name = row.name.trim();
+        const price = parseRmInput(row.price);
+        if (!name || price === null) {
+          return { error: "Each custom add-on needs a title and a price." };
+        }
+        customAddOns.push({ name, price });
+      }
     }
 
     if (form.sessions.length === 0) {
@@ -841,14 +1062,38 @@ export function BookingForm({
       if (!session.packageId) {
         return { error: "Each session needs an event." };
       }
-      if (!isGoogleImport && chargeBy === "style" && !session.styleId) {
+      if (
+        !isGoogleImport &&
+        !isOthers &&
+        chargeBy === "style" &&
+        !session.styleId
+      ) {
         return { error: `Each session needs a ${styleTerms.one}.` };
       }
       if (!session.date) {
         return { error: "Each session needs a date." };
       }
+      if (isOthers) {
+        if (!session.customStart || !session.customEnd) {
+          return { error: "Enter a start and end time." };
+        }
+        if (session.customStart >= session.customEnd) {
+          return { error: "End time must be after the start time." };
+        }
+      }
       if (session.time_slots.length === 0) {
-        return { error: "Each session needs a time slot." };
+        return { error: isOthers ? "Enter a start and end time." : "Each session needs a time slot." };
+      }
+      if (isOthers) {
+        const conflict = getSlotConflict(session.date, mergeSlots(session.time_slots));
+        if (conflict) {
+          return {
+            error:
+              conflict === "Date blocked"
+                ? "This date is blocked."
+                : `That time is unavailable (${conflict}).`,
+          };
+        }
       }
       if (!session.location) {
         return { error: "Each session needs a location." };
@@ -917,11 +1162,12 @@ export function BookingForm({
           mobile: form.contact_mobile.trim() || undefined,
           country_code: form.contact_country_code || undefined,
         },
+        instagram,
         sessions: form.sessions.map((session, index) => ({
           client_key: session.client_key,
           status: "scheduled" as const,
-          name: session.name.trim(),
-          packageId: session.packageId,
+          name: (isOthers ? othersEvent?.name : session.name.trim()) || session.name.trim(),
+          packageId: isOthers ? OTHERS_EVENT_ID : session.packageId,
           order: index,
           date: new Date(`${session.date}T12:00:00`),
           time_slot: mergeSlots(session.time_slots),
@@ -929,15 +1175,16 @@ export function BookingForm({
           location: session.location!,
           style: resolveSessionStyle(session),
         })),
-        status: form.status,
+        status: creating ? "pending" : form.status,
         remarks: form.remarks.trim(),
         ...(isGoogleImport
           ? {}
           : {
-              packageIds: form.packageIds,
+              packageIds: isOthers ? [] : form.packageIds,
+              customEvent: othersEvent,
+              customAddOns,
               addOns: selectedAddOns,
               paymentOption: form.paymentOption,
-              ...(!editingId && form.payByLink ? { payByLink: true } : {}),
               ...(discountRm > 0 && editedTotalRm !== null
                 ? { totalRm: roundSen(editedTotalRm) }
                 : {}),
@@ -1034,6 +1281,25 @@ export function BookingForm({
           />
         </Field>
 
+        <Field label="Instagram (optional)">
+          <Input
+            className={inputClassName}
+            value={form.instagram}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                instagram: event.target.value,
+              }))
+            }
+            placeholder="username"
+            autoCapitalize="off"
+            autoCorrect="off"
+          />
+          <p className="text-xs text-muted-foreground">
+            Optional. A name, @name, or profile link.
+          </p>
+        </Field>
+
         <Separator />
 
         {isGoogleImport ? (
@@ -1053,7 +1319,7 @@ export function BookingForm({
                 </p>
               ) : null}
               <RadioGroup
-                value={selectedEvent?._id ?? ""}
+                value={isOthers ? OTHERS_EVENT_ID : (selectedEvent?._id ?? "")}
                 onValueChange={selectEvent}
                 className="gap-2"
               >
@@ -1083,42 +1349,232 @@ export function BookingForm({
                     ) : null}
                   </label>
                 ))}
+                <label
+                  htmlFor="package-others"
+                  className="flex cursor-pointer items-center gap-3 rounded-md border border-border px-3 py-2 text-sm"
+                >
+                  <RadioGroupItem value={OTHERS_EVENT_ID} id="package-others" />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span>Others</span>
+                    <span className="text-xs text-muted-foreground">
+                      A booking you don&apos;t usually offer
+                    </span>
+                  </span>
+                </label>
               </RadioGroup>
+              {isOthers ? (
+                <div className="mt-1 flex flex-col gap-3">
+                  <Field label="Title">
+                    <Input
+                      className={inputClassName}
+                      value={form.othersName}
+                      maxLength={CUSTOM_EVENT_NAME_MAX_LENGTH}
+                      onChange={(event) => {
+                        const name = event.target.value;
+                        setForm((current) => ({
+                          ...current,
+                          othersName: name,
+                          sessions: current.sessions.map((session, index) =>
+                            index === 0
+                              ? { ...session, name: name.trim() || "Session" }
+                              : session
+                          ),
+                        }));
+                      }}
+                      placeholder="Trial for a friend"
+                    />
+                  </Field>
+                  <Field label="Description (optional)">
+                    <Textarea
+                      value={form.othersDescription}
+                      maxLength={CUSTOM_EVENT_DESCRIPTION_MAX_LENGTH}
+                      rows={3}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          othersDescription: event.target.value,
+                        }))
+                      }
+                      placeholder="What this booking includes"
+                    />
+                  </Field>
+                  <Field label="Price (RM)">
+                    <Input
+                      className={inputClassName}
+                      type="number"
+                      min="0"
+                      step="1"
+                      inputMode="decimal"
+                      value={form.othersPrice}
+                      onChange={(event) =>
+                        setForm((current) => ({
+                          ...current,
+                          othersPrice: event.target.value,
+                        }))
+                      }
+                      placeholder="350"
+                    />
+                    <ProcessingFeeHint amountRm={form.othersPrice} />
+                  </Field>
+                  <DepositField
+                    value={form.othersDeposit}
+                    type={form.othersDepositType}
+                    onValueChange={(value) =>
+                      setForm((current) => ({ ...current, othersDeposit: value }))
+                    }
+                    onTypeChange={(type) =>
+                      setForm((current) => ({
+                        ...current,
+                        othersDepositType: type,
+                      }))
+                    }
+                  />
+                </div>
+              ) : null}
             </div>
 
-            {addOns.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                <Label>Add-ons</Label>
-                <ul className="flex flex-col gap-2">
-                  {addOns.map((addOn) => {
-                    const checked = form.addOnIds.includes(addOn._id);
-                    return (
-                      <li
-                        key={addOn._id}
-                        className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+            <div className="flex flex-col gap-2">
+              <Label>Add-ons</Label>
+              <ul className="flex flex-col gap-2">
+                {addOns.map((addOn) => {
+                  const checked = form.addOnIds.includes(addOn._id);
+                  return (
+                    <li
+                      key={addOn._id}
+                      className="flex items-center gap-3 rounded-md border border-border px-3 py-2"
+                    >
+                      <Checkbox
+                        checked={checked}
+                        onCheckedChange={(value) =>
+                          toggleAddOn(addOn._id, value === true)
+                        }
+                        id={`addon-${addOn._id}`}
+                      />
+                      <label
+                        htmlFor={`addon-${addOn._id}`}
+                        className="flex flex-1 cursor-pointer items-center justify-between gap-2 text-sm"
                       >
-                        <Checkbox
-                          checked={checked}
-                          onCheckedChange={(value) =>
-                            toggleAddOn(addOn._id, value === true)
-                          }
-                          id={`addon-${addOn._id}`}
-                        />
-                        <label
-                          htmlFor={`addon-${addOn._id}`}
-                          className="flex flex-1 cursor-pointer items-center justify-between gap-2 text-sm"
-                        >
-                          <span>{addOn.name}</span>
-                          <span className="text-muted-foreground">
-                            {formatRm(addOn.price)}
-                          </span>
-                        </label>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ) : null}
+                        <span>{addOn.name}</span>
+                        <span className="text-muted-foreground">
+                          {formatRm(addOn.price)}
+                        </span>
+                      </label>
+                    </li>
+                  );
+                })}
+                <li className="flex flex-col gap-3 rounded-md border border-border px-3 py-2">
+                  <div className="flex items-center gap-3">
+                    <Checkbox
+                      checked={form.customAddOnsEnabled}
+                      onCheckedChange={(value) =>
+                        setForm((current) => ({
+                          ...current,
+                          customAddOnsEnabled: value === true,
+                          customAddOnRows:
+                            value === true && current.customAddOnRows.length === 0
+                              ? [emptyCustomAddOn()]
+                              : current.customAddOnRows,
+                        }))
+                      }
+                      id="addon-others"
+                    />
+                    <label htmlFor="addon-others" className="cursor-pointer text-sm">
+                      Others
+                    </label>
+                  </div>
+                  {form.customAddOnsEnabled
+                    ? form.customAddOnRows.map((row, index) => (
+                        <div key={row.id} className="flex flex-col gap-2 pl-7">
+                          <Input
+                            className={inputClassName}
+                            value={row.name}
+                            onChange={(event) =>
+                              setForm((current) => ({
+                                ...current,
+                                customAddOnRows: current.customAddOnRows.map((item) =>
+                                  item.id === row.id
+                                    ? { ...item, name: event.target.value }
+                                    : item
+                                ),
+                              }))
+                            }
+                            placeholder="Title"
+                            aria-label={`Custom add-on ${index + 1} title`}
+                          />
+                          <div className="flex items-start gap-2">
+                            <div className="flex min-w-0 flex-1 flex-col gap-1">
+                              <Input
+                                className={inputClassName}
+                                type="number"
+                                min="0"
+                                step="1"
+                                inputMode="decimal"
+                                value={row.price}
+                                onChange={(event) =>
+                                  setForm((current) => ({
+                                    ...current,
+                                    customAddOnRows: current.customAddOnRows.map(
+                                      (item) =>
+                                        item.id === row.id
+                                          ? { ...item, price: event.target.value }
+                                          : item
+                                    ),
+                                  }))
+                                }
+                                placeholder="Price (RM)"
+                                aria-label={`Custom add-on ${index + 1} price`}
+                              />
+                              <ProcessingFeeHint
+                                amountRm={row.price}
+                                includeFixed={false}
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="shrink-0"
+                              onClick={() =>
+                                setForm((current) => {
+                                  const customAddOnRows = current.customAddOnRows.filter(
+                                    (item) => item.id !== row.id
+                                  );
+                                  return {
+                                    ...current,
+                                    customAddOnRows,
+                                    customAddOnsEnabled: customAddOnRows.length > 0,
+                                  };
+                                })
+                              }
+                            >
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    : null}
+                  {form.customAddOnsEnabled ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="ml-7 self-start"
+                      onClick={() =>
+                        setForm((current) => ({
+                          ...current,
+                          customAddOnRows: [
+                            ...current.customAddOnRows,
+                            emptyCustomAddOn(),
+                          ],
+                        }))
+                      }
+                    >
+                      Add another
+                    </Button>
+                  ) : null}
+                </li>
+              </ul>
+            </div>
           </>
         )}
 
@@ -1163,9 +1619,11 @@ export function BookingForm({
                   {session.name || `Session ${index + 1}`}
                 </p>
               )}
-              {(chargeBy === "style" ||
-                styleTerms.kind === "look" ||
-                styleExtrasOffered) &&
+              {(isOthers
+                ? styleOptions.length > 0
+                : chargeBy === "style" ||
+                  styleTerms.kind === "look" ||
+                  styleExtrasOffered) &&
               !isGoogleImport ? (
                 <Field
                   label={
@@ -1211,6 +1669,30 @@ export function BookingForm({
                   }
                 />
               </Field>
+              {isOthers ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Field label="Start time">
+                    <Input
+                      className={inputClassName}
+                      type="time"
+                      value={session.customStart}
+                      onChange={(event) =>
+                        updateCustomTime(session, { start: event.target.value })
+                      }
+                    />
+                  </Field>
+                  <Field label="End time">
+                    <Input
+                      className={inputClassName}
+                      type="time"
+                      value={session.customEnd}
+                      onChange={(event) =>
+                        updateCustomTime(session, { end: event.target.value })
+                      }
+                    />
+                  </Field>
+                </div>
+              ) : (
               <Field label={isLegacy ? "Time slots" : "Time slot"}>
                 <div className="grid grid-cols-2 gap-2">
                   {availableTimeSlots.map((slot) => {
@@ -1254,6 +1736,21 @@ export function BookingForm({
                   </p>
                 ) : null}
               </Field>
+              )}
+              {isOthers && session.date && blockedDateKeys.has(session.date) ? (
+                <p className="text-xs text-destructive">
+                  This date is blocked. Pick another date or unblock it first.
+                </p>
+              ) : null}
+              {isOthers &&
+              session.time_slots.length > 0 &&
+              getSlotConflict(session.date, mergeSlots(session.time_slots)) &&
+              getSlotConflict(session.date, mergeSlots(session.time_slots)) !==
+                "Date blocked" ? (
+                <p className="text-xs text-destructive">
+                  {getSlotConflict(session.date, mergeSlots(session.time_slots))}
+                </p>
+              ) : null}
               <Field label="Ready by">
                 <Input
                   className={inputClassName}
@@ -1288,8 +1785,8 @@ export function BookingForm({
         <div className="grid grid-cols-2 gap-3">
           <Field label="Status">
             <Select
-              value={payByLink ? "pending" : form.status}
-              disabled={payByLink}
+              value={creating ? "pending" : form.status}
+              disabled={creating}
               onValueChange={(value) =>
                 setForm((current) => ({
                   ...current,
@@ -1301,7 +1798,7 @@ export function BookingForm({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {payByLink ? (
+                {creating ? (
                   <SelectItem value="pending">Awaiting payment</SelectItem>
                 ) : (
                   getStatusOptions(booking?.status).map((status) => (
@@ -1316,17 +1813,12 @@ export function BookingForm({
           {isGoogleImport ? null : (
             <Field label="Payment">
               <Select
-                value={payByLink ? "link" : form.paymentOption}
+                value={form.paymentOption}
                 onValueChange={(value) =>
-                  setForm((current) =>
-                    value === "link"
-                      ? { ...current, payByLink: true }
-                      : {
-                          ...current,
-                          payByLink: false,
-                          paymentOption: value as "deposit" | "full",
-                        }
-                  )
+                  setForm((current) => ({
+                    ...current,
+                    paymentOption: value as "deposit" | "full",
+                  }))
                 }
               >
                 <SelectTrigger className="w-full">
@@ -1335,19 +1827,16 @@ export function BookingForm({
                 <SelectContent>
                   <SelectItem value="deposit">Deposit</SelectItem>
                   <SelectItem value="full">Full</SelectItem>
-                  {editingId ? null : (
-                    <SelectItem value="link">Client pays by link</SelectItem>
-                  )}
                 </SelectContent>
               </Select>
             </Field>
           )}
         </div>
-        {payByLink ? (
+        {creating && !isGoogleImport ? (
           <p className="-mt-1 text-xs text-muted-foreground">
-            The slot is held for this client. After creating the booking, copy
-            its payment link and send it to them; they choose to pay the
-            deposit or in full.
+            The slot is held until the client pays. After creating the booking,
+            copy its payment link and send it to them. They pay the deposit or
+            the full amount, whichever you choose here.
           </p>
         ) : null}
 

@@ -5,7 +5,7 @@ import {
   bookingClientDetailsSchema,
   clientDetailsInputSchema,
 } from "@/schemas/clientInfoSchema";
-import { packageDayModeSchema } from "@/schemas/packageSchema";
+import { depositTypeSchema, packageDayModeSchema } from "@/schemas/packageSchema";
 import { sessionSchema } from "@/schemas/sessionSchema";
 import {
   type ManualTransferDetails,
@@ -77,15 +77,57 @@ export const paymentVerificationStatusSchema = z.enum([
 
 export const BOOKING_REMARKS_MAX_LENGTH = 2000;
 
+/** Session `packageId` for a one-off event that isn't in the catalog. */
+export const OTHERS_EVENT_ID = "others";
+
+export const CUSTOM_EVENT_NAME_MAX_LENGTH = 120;
+export const CUSTOM_EVENT_DESCRIPTION_MAX_LENGTH = 500;
+export const CUSTOM_ADD_ON_NAME_MAX_LENGTH = 120;
+
+/** Price and deposit the stylist typed for an Others event. Stored so edits restore the pre-fee amounts. */
+export const customEventSchema = z
+  .object({
+    name: z.string().trim().min(1).max(CUSTOM_EVENT_NAME_MAX_LENGTH),
+    description: z
+      .string()
+      .trim()
+      .max(CUSTOM_EVENT_DESCRIPTION_MAX_LENGTH)
+      .optional(),
+    price: z.number().min(0),
+    deposit: z.number().min(0),
+    depositType: depositTypeSchema,
+  })
+  .superRefine((value, ctx) => {
+    if (value.depositType === "percent" && value.deposit > 100) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Deposit can't be more than 100%.",
+        path: ["deposit"],
+      });
+    }
+  });
+
+export const customAddOnSchema = z.object({
+  name: z.string().trim().min(1).max(CUSTOM_ADD_ON_NAME_MAX_LENGTH),
+  price: z.number().min(0),
+});
+
+export type CustomEventInput = z.infer<typeof customEventSchema>;
+export type CustomAddOnInput = z.infer<typeof customAddOnSchema>;
+
 export const bookingSchema = z.object({
   _id: z.unknown().optional(),
   freelancerUsername: z.string(),
   freelancerUserId: z.string(),
   contact: bookingContactSchema,
   /** Instagram, moodboard and requested info from the client booking wizard. */
-  clientDetails: bookingClientDetailsSchema.optional(),
+  clientDetails: bookingClientDetailsSchema.nullish(),
   packageIds: z.array(z.string()).default([]),
   packageNames: z.string(),
+  /** Set for an Others booking: a one-off event that isn't in the catalog. */
+  customEvent: customEventSchema.nullish(),
+  /** Add-ons typed on an Others (or any manual) booking, priced as entered rather than from the catalog. */
+  customAddOns: z.array(customAddOnSchema).optional(),
   /**
    * The event's day rule when booked. Missing = booked before multi-session events
    * (several events, one session each, multi-slot sessions); those keep their old rules when edited.
@@ -258,14 +300,26 @@ export const bookingStatusSchema = bookingSchema.shape.status;
 
 export const manualBookingInputSchema = z.object({
   contact: bookingContactSchema,
-  packageIds: z.array(z.string()).min(1),
+  /** Empty when `customEvent` is set. */
+  packageIds: z.array(z.string()).default([]),
+  /** One-off event. When set, `packageIds` is ignored. */
+  customEvent: customEventSchema.nullish(),
+  customAddOns: z.array(customAddOnSchema).default([]),
+  /**
+   * Optional on manual bookings even when Client information requires it.
+   * Blank clears it. Normalized server-side.
+   */
+  instagram: z.string().max(100).optional(),
   addOns: z.array(bookingLineItemInputSchema).default([]),
   sessions: z.array(bookingSessionInputSchema).min(1),
   paymentOption: z.enum(["deposit", "full"]).default("deposit"),
   status: bookingStatusSchema.default("confirmed"),
   /** Discounted total; omitted = full price. Must not exceed the calculated subtotal. */
   totalRm: z.number().min(0).optional(),
-  /** Create it unpaid (`pending`, slot held) for the client to pay from a link; `status` is ignored. */
+  /**
+   * Ignored. New manual bookings are always created unpaid for the client to pay from a link.
+   * Kept so older clients don't fail validation.
+   */
   payByLink: z.boolean().optional(),
   /** Blank clears it. */
   remarks: z.string().trim().max(BOOKING_REMARKS_MAX_LENGTH).optional(),

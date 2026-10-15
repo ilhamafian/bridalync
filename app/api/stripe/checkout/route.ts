@@ -11,7 +11,10 @@ import {
   applyPaymentOption,
   resolveRequestPaymentOption,
 } from "@/utils/booking/pricing";
-import { awaitsClientPayment } from "@/utils/booking/paymentLink";
+import {
+  awaitsClientPayment,
+  isDashboardPaymentLink,
+} from "@/utils/booking/paymentLink";
 import { getBookingById, markBookingPaymentFailed } from "@/utils/bookings";
 import {
   createBalanceCheckoutSession,
@@ -94,14 +97,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Approved requests / payment links keep the deposit invoice until paid; paying in full is applied on confirmation.
+    // Approved requests keep the deposit invoice until paid; the client can still choose full.
+    // Dashboard payment links charge the deposit or full amount the stylist already chose.
     const requestOption = awaitsClientPayment(booking)
-      ? resolveRequestPaymentOption(
-          booking.invoice,
-          booking.sessions,
-          paymentSettingSchema.parse(settings?.payment ?? {}).balance_due_before,
-          parsed.data.paymentOption ?? booking.paymentOption
-        )
+      ? isDashboardPaymentLink(booking)
+        ? booking.paymentOption
+        : resolveRequestPaymentOption(
+            booking.invoice,
+            booking.sessions,
+            paymentSettingSchema.parse(settings?.payment ?? {}).balance_due_before,
+            parsed.data.paymentOption ?? booking.paymentOption
+          )
       : null;
     const chargeBooking =
       requestOption === "full"

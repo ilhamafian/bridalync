@@ -22,12 +22,32 @@ import {
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
+import { resolveOptionalInstagram } from "@/utils/booking/clientInfo";
 import { resolveBookingQuotation } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import { normalizeSessionDate } from "@/utils/booking/availability";
 import { GOOGLE_IMPORT_PACKAGE_ID } from "@/utils/google/calendar";
 import { SettingModel } from "@/models/Setting";
 import { getFreelancerByUsername } from "@/utils/users";
+
+/** Keeps answers and the moodboard; a blank Instagram username removes only that field. */
+function withInstagram(
+  existing: Booking["clientDetails"],
+  raw: string | undefined
+): Booking["clientDetails"] {
+  const username = resolveOptionalInstagram(raw);
+  const next = { ...(existing ?? {}) };
+  if (username) next.instagram = username;
+  else delete next.instagram;
+  if (
+    !next.instagram &&
+    !(next.answers && next.answers.length > 0) &&
+    !(next.moodboardUrls && next.moodboardUrls.length > 0)
+  ) {
+    return null;
+  }
+  return next;
+}
 
 const UNPAID_STATUSES = new Set<Booking["status"]>([
   "requested",
@@ -207,6 +227,12 @@ export async function PATCH(
       if (data.remarks !== undefined) {
         updatePayload.remarks = data.remarks;
       }
+      if (data.instagram !== undefined) {
+        updatePayload.clientDetails = withInstagram(
+          existing.clientDetails,
+          data.instagram
+        );
+      }
 
       if (isGoogleImportWithoutPackages && data.sessions) {
         updatePayload.sessions = data.sessions.map((session, index) => ({
@@ -244,7 +270,9 @@ export async function PATCH(
           paymentOption: data.paymentOption ?? existing.paymentOption,
         };
 
+        const savingCustom = Boolean(data.customEvent);
         const isLegacyBooking =
+          !savingCustom &&
           !existing.dayMode &&
           existing.packageIds.length === packageIds.length &&
           existing.packageIds.every((id, index) => id === packageIds[index]);
@@ -256,12 +284,16 @@ export async function PATCH(
             legacy: isLegacyBooking,
             processingFee: Boolean(existing.invoice.breakdown?.processingFeeRm),
             platformFee: Boolean(existing.invoice.breakdown?.platformFeeRm),
+            customEvent: data.customEvent,
+            customAddOns: data.customAddOns ?? existing.customAddOns,
           });
 
         updatePayload = {
           ...updatePayload,
-          packageIds,
+          packageIds: savingCustom ? [] : packageIds,
           packageNames,
+          customEvent: savingCustom ? data.customEvent : null,
+          customAddOns: data.customAddOns ?? existing.customAddOns ?? [],
           ...(dayMode ? { dayMode } : {}),
           addOnIds: (data.addOns ?? []).map((addOn) => addOn.id),
           sessions: storedSessions,
