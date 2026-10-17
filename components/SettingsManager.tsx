@@ -207,7 +207,7 @@ function SettingsPanel({
         onClick={onSave}
         disabled={saving || disabled}
       >
-        {saving ? "Savingâ€¦" : "Save"}
+        {saving ? "Saving..." : "Save"}
       </Button>
     </div>
   );
@@ -930,7 +930,7 @@ export function SettingsManager({
                 disabled={connectingStripe}
               >
                 {connectingStripe
-                  ? "Opening Stripeâ€¦"
+                  ? "Opening Stripe..."
                   : stripeConnected
                     ? "Manage Stripe account"
                     : stripeSetupPhase === "verifying"
@@ -1022,7 +1022,7 @@ export function SettingsManager({
     const preview = buildReviewRequestMessage({
       clientName: "Aisyah Rahman",
       freelancerName,
-      reviewUrl: "https://bridalync.com/you/review/â€¦",
+      reviewUrl: "https://bridalync.com/you/review/...",
       template: reviewTemplate,
     });
 
@@ -1108,7 +1108,7 @@ export function SettingsManager({
                     updateTimeSlot(index, { startTime: event.target.value })
                   }
                 />
-                <span className="text-muted-foreground">â€“</span>
+                <span className="text-muted-foreground"> - </span>
                 <Input
                   className={cn(inputClassName, "min-w-0 flex-1 px-2")}
                   type="time"
@@ -1195,7 +1195,7 @@ export function SettingsManager({
               <p className="text-xs text-muted-foreground">
                 {morningCallSlots.length > 0
                   ? `Charged on your ${morningCallSlots
-                      .map((slot) => `${slot.startTime}â€“${slot.endTime}`)
+                      .map((slot) => `${slot.startTime} - ${slot.endTime}`)
                       .join(", ")} slot${morningCallSlots.length === 1 ? "" : "s"}. `
                   : "None of your slots start before this time. "}
                 It&apos;s included in the session price clients see and
