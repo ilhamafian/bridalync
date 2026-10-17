@@ -169,10 +169,15 @@ export function formatDeposit(
 }
 
 export const PLATFORM_FEE_PERCENT = 3;
+/**
+ * Bridalync's platform fee is off during beta. Set this to true to charge
+ * `PLATFORM_FEE_PERCENT` again. Stripe's processing fee is unchanged.
+ */
+export const PLATFORM_FEE_ENABLED = false;
 export const PAYMENT_PROCESSING_FEE_PERCENT = 3;
 export const PAYMENT_PROCESSING_FEE_FIXED_RM = 1;
 
-/** Bridalync's platform fee on a price: 3% rounded up. */
+/** Bridalync's platform fee on a price: 3% rounded up. Callers skip this while `PLATFORM_FEE_ENABLED` is false. */
 export function calculatePlatformFeeRm(amountRm: number) {
   const rounded = roundRm(amountRm);
   if (rounded <= 0) return 0;
@@ -205,13 +210,13 @@ function chargeSenCovering(afterPercentFeeSen: number) {
  * application fee. Stripe then charges 3% of the full charge, to the nearest sen,
  * plus RM1 once per charge. The amount returned is the gross-up that leaves the
  * stylist's price after both. `includeFixed` = false for amounts added on top of
- * another item, which already carries the RM1. `platformFee` = false for bookings
- * priced before the platform fee.
+ * another item, which already carries the RM1. `platformFee` follows
+ * `PLATFORM_FEE_ENABLED` unless a booking already priced with the fee passes true.
  */
 export function calculateClientFeesRm(
   amountRm: number,
   includeFixed = true,
-  platformFee = true
+  platformFee = PLATFORM_FEE_ENABLED
 ) {
   const rounded = roundRm(amountRm);
   if (rounded <= 0) return 0;
@@ -232,7 +237,7 @@ function grossChargeRm(netRm: number, includeFixed = true) {
 export function withClientFeesRm(
   amountRm: number,
   includeFixed = true,
-  platformFee = true
+  platformFee = PLATFORM_FEE_ENABLED
 ) {
   return roundSen(
     roundRm(amountRm) + calculateClientFeesRm(amountRm, includeFixed, platformFee)
@@ -248,7 +253,7 @@ export function withClientFeesRm(
  */
 export function applyPaymentProcessingFee(
   quotation: BookingQuotationSummary,
-  { platformFee = true }: { platformFee?: boolean } = {}
+  { platformFee = PLATFORM_FEE_ENABLED }: { platformFee?: boolean } = {}
 ): BookingQuotationSummary {
   if (quotation.totalRm <= 0) return quotation;
   const platformFeeRm = platformFee ? calculatePlatformFeeRm(quotation.totalRm) : 0;

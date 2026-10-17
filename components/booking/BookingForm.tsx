@@ -77,6 +77,7 @@ import { getStyleExtraRm, hasStyleExtras } from "@/utils/booking/styleExtras";
 import {
   calculateClientFeesRm,
   formatRm,
+  PLATFORM_FEE_ENABLED,
   roundRm,
   roundSen,
   toSen,
@@ -806,7 +807,7 @@ export function BookingForm({
     : usesPaymentGateway;
   const includesPlatformFee = booking
     ? Boolean(booking.invoice.breakdown?.platformFeeRm)
-    : true;
+    : PLATFORM_FEE_ENABLED;
   const processingFeeRm = includesProcessingFee
     ? calculateClientFeesRm(basePriceRm, true, includesPlatformFee)
     : 0;

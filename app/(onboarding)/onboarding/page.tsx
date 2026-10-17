@@ -44,6 +44,7 @@ import { getStyleTerms } from "@/utils/styleTerms";
 import {
   PAYMENT_PROCESSING_FEE_FIXED_RM,
   PAYMENT_PROCESSING_FEE_PERCENT,
+  PLATFORM_FEE_ENABLED,
   PLATFORM_FEE_PERCENT,
 } from "@/utils/booking/pricing";
 import {
@@ -805,7 +806,11 @@ function OnboardingPageContent() {
                             <IconBadge icon={IconReceipt} />
                             <RowText
                               title="Built into client prices"
-                              description={`A ${PLATFORM_FEE_PERCENT}% Bridalync platform fee, then Stripe's ${PAYMENT_PROCESSING_FEE_PERCENT}% + RM${PAYMENT_PROCESSING_FEE_FIXED_RM} payment processing fee, are added to the prices your clients pay. You keep your full price.`}
+                              description={
+                                PLATFORM_FEE_ENABLED
+                                  ? `A ${PLATFORM_FEE_PERCENT}% Bridalync platform fee, then Stripe's ${PAYMENT_PROCESSING_FEE_PERCENT}% + RM${PAYMENT_PROCESSING_FEE_FIXED_RM} payment processing fee, are added to the prices your clients pay. You keep your full price.`
+                                  : `Stripe's ${PAYMENT_PROCESSING_FEE_PERCENT}% + RM${PAYMENT_PROCESSING_FEE_FIXED_RM} payment processing fee is added to the prices your clients pay. You keep your full price.`
+                              }
                             />
                           </div>
                         </div>

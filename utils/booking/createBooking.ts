@@ -20,6 +20,7 @@ import {
   applyPaymentOption,
   applyPaxToPricedItems,
   calculateBookingQuotation,
+  PLATFORM_FEE_ENABLED,
   requiresFullPayment,
   resolveDepositRm,
   type BookingQuotationSummary,
@@ -306,7 +307,7 @@ export async function resolveBookingQuotation(
     legacy?: boolean;
     /** Add the payment processing fee; defaults to whether the stylist uses the payment gateway. */
     processingFee?: boolean;
-    /** Include the platform fee with the processing fee; defaults to true. */
+    /** Include the platform fee with the processing fee; defaults to `PLATFORM_FEE_ENABLED`. */
     platformFee?: boolean;
     /** Reject venues in states the stylist doesn't serve (client bookings only). */
     enforceServiceArea?: boolean;
@@ -694,7 +695,7 @@ export async function resolveBookingQuotation(
     options?.processingFee ?? settings.payment?.method === "payment_gateway";
   const clientQuotation = includeProcessingFee
     ? applyPaymentProcessingFee(quotation, {
-        platformFee: options?.platformFee ?? true,
+        platformFee: options?.platformFee ?? PLATFORM_FEE_ENABLED,
       })
     : quotation;
   const discounted =
