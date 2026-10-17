@@ -69,7 +69,7 @@ export function BookingPackagePicker({
                 {pkg.description ? (
                   <span
                     className={cn(
-                      "block text-xs font-normal",
+                      "block whitespace-pre-line text-xs font-normal",
                       isSelected ? "text-white/80" : "text-muted-foreground"
                     )}
                   >

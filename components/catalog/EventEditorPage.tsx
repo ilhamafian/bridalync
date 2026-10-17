@@ -244,8 +244,11 @@ export function EventEditorPage({
                   description: event.target.value,
                 }))
               }
-              placeholder="Same day"
+              placeholder={"What's included\n\nTiming notes"}
             />
+            <p className="text-xs text-muted-foreground">
+              Press Enter for a new line. Clients see paragraphs as you write them.
+            </p>
           </div>
         </div>
       </SettingsSection>
