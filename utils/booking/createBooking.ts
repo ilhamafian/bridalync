@@ -3,6 +3,7 @@ import { hotDateModel } from "@/models/HotDate";
 import { PackageModel } from "@/models/Package";
 import { SettingModel } from "@/models/Setting";
 import {
+  MAX_BOOKING_PAX,
   OTHERS_EVENT_ID,
   type CreateBookingRequest,
   type CustomAddOnInput,
@@ -17,6 +18,7 @@ import {
   applyDiscountedTotal,
   applyPaymentProcessingFee,
   applyPaymentOption,
+  applyPaxToPricedItems,
   calculateBookingQuotation,
   requiresFullPayment,
   resolveDepositRm,
@@ -633,11 +635,20 @@ export async function resolveBookingQuotation(
     }
   }
 
+  // Shared slot/style: event & style lines (and their deposits / extras) × pax;
+  // add-ons, travel and morning call stay once.
+  const pax = Math.min(Math.max(1, input.pax ?? 1), MAX_BOOKING_PAX);
+  const pricedPackages = applyPaxToPricedItems(selectedPackages, pax);
+  const pricedSessionStyles = selectedSessionStyles
+    ? applyPaxToPricedItems(selectedSessionStyles, pax)
+    : undefined;
+  const pricedStyleExtras = applyPaxToPricedItems(selectedStyleExtras, pax);
+
   const quotation = calculateBookingQuotation({
     chargeBy: pricingChargeBy,
-    selectedPackages,
-    selectedSessionStyles,
-    selectedStyleExtras,
+    selectedPackages: pricedPackages,
+    selectedSessionStyles: pricedSessionStyles,
+    selectedStyleExtras: pricedStyleExtras,
     selectedAddOns,
     travel:
       travelPricing.kind === "distance"

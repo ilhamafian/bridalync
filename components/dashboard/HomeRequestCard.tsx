@@ -66,7 +66,14 @@ export function HomeRequestCard({
       />
       <div className="pointer-events-none relative flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-base font-semibold">{booking.contact.name}</p>
+          <p className="truncate text-base font-semibold">
+            {booking.contact.name}
+            {(booking.pax ?? 1) > 1 ? (
+              <span className="ml-1.5 font-normal text-muted-foreground">
+                · {booking.pax} pax
+              </span>
+            ) : null}
+          </p>
           <p className="truncate text-xs text-muted-foreground">
             {booking.packageNames}
           </p>

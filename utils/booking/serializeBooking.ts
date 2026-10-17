@@ -8,6 +8,8 @@ export type SerializedBooking = {
   freelancerUsername: string;
   freelancerUserId: string;
   contact: Booking["contact"];
+  pax?: number;
+  party?: NonNullable<Booking["party"]>;
   clientDetails?: Booking["clientDetails"];
   packageIds: string[];
   packageNames: string;
@@ -67,9 +69,10 @@ export function serializeBooking(
     freelancerUsername: booking.freelancerUsername,
     freelancerUserId: booking.freelancerUserId,
     contact: booking.contact,
+    ...(booking.pax != null ? { pax: booking.pax } : {}),
+    ...(booking.party?.length ? { party: booking.party } : {}),
     ...(booking.clientDetails ? { clientDetails: booking.clientDetails } : {}),
-    packageIds: booking.packageIds,
-    packageNames: booking.packageNames,
+    packageIds: booking.packageIds,    packageNames: booking.packageNames,
     ...(booking.customEvent ? { customEvent: booking.customEvent } : {}),
     ...(booking.customAddOns?.length
       ? { customAddOns: booking.customAddOns }

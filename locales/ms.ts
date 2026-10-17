@@ -38,6 +38,13 @@ export const ms = {
   namePlaceholder: "Nama anda",
   phonePlaceholder: "cth. 123456789",
   countryCode: "Kod negara",
+  paxQuestion: "Berapa orang?",
+  paxHelper: "Termasuk anda. Semua orang berkongsi tarikh, masa, dan gaya yang sama.",
+  paxDecrease: "Kurangkan orang",
+  paxIncrease: "Tambah orang",
+  paxCountLabel: "{count} orang",
+  partyYou: "Anda",
+  partyGuest: "Tetamu {n}",
 
   // Events / packages
   eventQuestion: "Majlis apa yang anda ingin tempah?",
@@ -141,6 +148,7 @@ export const ms = {
   reviewLook: "Look",
   reviewAddOns: "Tambahan",
   reviewYourDetails: "Maklumat anda",
+  reviewParty: "Orang",
   reviewName: "Nama",
   // Booking summary (wide screens)
   summaryTitle: "Tempahan anda",

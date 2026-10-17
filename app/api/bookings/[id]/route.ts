@@ -22,7 +22,12 @@ import {
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
-import { resolveOptionalInstagram } from "@/utils/booking/clientInfo";
+import {
+  getBookingParty,
+  getBookingPax,
+  resolveManualBookingParty,
+  resolveOptionalInstagram,
+} from "@/utils/booking/clientInfo";
 import { resolveBookingQuotation } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import { normalizeSessionDate } from "@/utils/booking/availability";
@@ -214,7 +219,8 @@ export async function PATCH(
           data.addOns !== undefined ||
           data.sessions !== undefined ||
           data.paymentOption !== undefined ||
-          data.totalRm !== undefined);
+          data.totalRm !== undefined ||
+          data.pax !== undefined);
 
       let updatePayload: Parameters<typeof updateDashboardBooking>[1] = {};
 
@@ -227,10 +233,68 @@ export async function PATCH(
       if (data.remarks !== undefined) {
         updatePayload.remarks = data.remarks;
       }
-      if (data.instagram !== undefined) {
-        updatePayload.clientDetails = withInstagram(
-          existing.clientDetails,
-          data.instagram
+
+      const contactForParty = data.contact ?? existing.contact;
+      try {
+        if (data.pax !== undefined || data.party !== undefined) {
+          const bookerInstagram =
+            data.instagram !== undefined
+              ? resolveOptionalInstagram(data.instagram)
+              : getBookingParty(existing)[0]?.clientDetails?.instagram;
+          const partyInput =
+            data.party ??
+            getBookingParty(existing).map((member, index) => ({
+              name: index === 0 ? contactForParty.name : member.name,
+              ...(member.clientDetails?.instagram
+                ? {
+                    clientDetails: {
+                      instagram: member.clientDetails.instagram,
+                    },
+                  }
+                : {}),
+            }));
+          const partyResult = resolveManualBookingParty(
+            contactForParty.name,
+            data.pax ?? getBookingPax(existing),
+            partyInput,
+            bookerInstagram
+          );
+          updatePayload.pax = partyResult.pax;
+          updatePayload.party = partyResult.party;
+          updatePayload.clientDetails = partyResult.clientDetails ?? null;
+        } else if (data.instagram !== undefined) {
+          const nextDetails = withInstagram(
+            existing.clientDetails,
+            data.instagram
+          );
+          updatePayload.clientDetails = nextDetails;
+          const party = getBookingParty(existing);
+          updatePayload.pax = getBookingPax(existing);
+          updatePayload.party = party.map((member, index) =>
+            index === 0
+              ? {
+                  name: contactForParty.name,
+                  ...(nextDetails ? { clientDetails: nextDetails } : {}),
+                }
+              : member
+          );
+        } else if (data.contact) {
+          const party = getBookingParty(existing);
+          updatePayload.pax = getBookingPax(existing);
+          updatePayload.party = [
+            { ...party[0], name: data.contact.name },
+            ...party.slice(1),
+          ];
+        }
+      } catch (error) {
+        return createResponse(
+          {
+            error:
+              error instanceof Error
+                ? error.message
+                : "Check the party details.",
+          },
+          400
         );
       }
 
@@ -264,6 +328,10 @@ export async function PATCH(
           freelancerUsername: existing.freelancerUsername,
           intent: "booking",
           contact: data.contact ?? existing.contact,
+          pax:
+            typeof updatePayload.pax === "number"
+              ? updatePayload.pax
+              : getBookingPax(existing),
           packageIds,
           addOns: data.addOns ?? [],
           sessions,

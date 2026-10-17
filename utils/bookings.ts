@@ -374,6 +374,8 @@ export async function markBookingPaymentFailed(bookingId: string) {
 
 const bookingDashboardFieldsSchema = bookingSchema.pick({
   contact: true,
+  pax: true,
+  party: true,
   clientDetails: true,
   packageIds: true,
   packageNames: true,

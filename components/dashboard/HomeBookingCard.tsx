@@ -69,7 +69,14 @@ export function HomeBookingCard({
             {showDate ? `${formatScheduleDate(item.date)} · ` : null}
             {item.startTime} – {item.endTime}
           </p>
-          <p className="truncate text-base font-semibold">{item.clientName}</p>
+          <p className="truncate text-base font-semibold">
+            {item.clientName}
+            {item.pax && item.pax > 1 ? (
+              <span className="ml-1.5 font-normal text-muted-foreground">
+                · {item.pax} pax
+              </span>
+            ) : null}
+          </p>
           <p className="truncate text-xs text-muted-foreground">
             {item.packageName}
             {item.sessionName ? ` · ${item.sessionName}` : ""}

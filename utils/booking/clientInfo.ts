@@ -5,6 +5,11 @@ import type {
   ClientQuestion,
   InstagramRequirement,
 } from "@/schemas/clientInfoSchema";
+import {
+  MAX_BOOKING_PAX,
+  type PartyMember,
+  type PartyMemberInput,
+} from "@/schemas/bookingSchema";
 
 const INSTAGRAM_USERNAME_PATTERN = /^[A-Za-z0-9._]{1,30}$/;
 
@@ -121,6 +126,181 @@ export function resolveClientDetails(
   if (answers.length > 0) details.answers = answers;
 
   return Object.keys(details).length > 0 ? details : undefined;
+}
+
+/** Headcount stored on the booking; older bookings without `pax` count as 1. */
+export function getBookingPax(booking: {
+  pax?: number;
+  party?: PartyMember[];
+}): number {
+  if (typeof booking.pax === "number" && booking.pax >= 1) {
+    return Math.min(booking.pax, MAX_BOOKING_PAX);
+  }
+  if (booking.party?.length) {
+    return Math.min(booking.party.length, MAX_BOOKING_PAX);
+  }
+  return 1;
+}
+
+/**
+ * Party list for display. Legacy bookings (no `party`) become one member from
+ * the contact name + top-level `clientDetails`.
+ */
+export function getBookingParty(booking: {
+  contact: { name: string };
+  clientDetails?: BookingClientDetails | null;
+  party?: PartyMember[];
+}): PartyMember[] {
+  if (booking.party && booking.party.length > 0) {
+    return booking.party;
+  }
+  return [
+    {
+      name: booking.contact.name,
+      ...(booking.clientDetails
+        ? { clientDetails: booking.clientDetails }
+        : {}),
+    },
+  ];
+}
+
+/**
+ * Validates every party member against Client information settings.
+ * When `party` is omitted, builds a single member from the contact + legacy details.
+ */
+export function resolveBookingParty(
+  clientInfo: ClientInfoSetting | undefined,
+  contactName: string,
+  pax: number,
+  party: PartyMemberInput[] | undefined,
+  legacyClientDetails: ClientDetailsInput | undefined
+): {
+  pax: number;
+  party: PartyMember[];
+  clientDetails: BookingClientDetails | undefined;
+} {
+  const headcount = Math.min(Math.max(1, pax), MAX_BOOKING_PAX);
+  const bookerName = contactName.trim();
+  if (!bookerName) {
+    throw new Error("Name is required.");
+  }
+
+  if (party) {
+    if (party.length !== headcount) {
+      throw new Error("Add details for each person.");
+    }
+    if (party[0].name.trim() !== bookerName) {
+      throw new Error("The first person must match the booking contact name.");
+    }
+    const resolved: PartyMember[] = party.map((member) => {
+      const name = member.name.trim();
+      if (!name) {
+        throw new Error("Every person needs a name.");
+      }
+      const details = resolveClientDetails(clientInfo, member.clientDetails);
+      return {
+        name,
+        ...(details ? { clientDetails: details } : {}),
+      };
+    });
+    return {
+      pax: headcount,
+      party: resolved,
+      clientDetails: resolved[0]?.clientDetails,
+    };
+  }
+
+  if (headcount !== 1) {
+    throw new Error("Add details for each person.");
+  }
+  const details = resolveClientDetails(clientInfo, legacyClientDetails);
+  return {
+    pax: 1,
+    party: [
+      {
+        name: bookerName,
+        ...(details ? { clientDetails: details } : {}),
+      },
+    ],
+    clientDetails: details,
+  };
+}
+
+/**
+ * Manual / dashboard bookings: Instagram is always optional. Builds `party` from
+ * the contact, optional booker Instagram, and any supplied party list.
+ */
+export function resolveManualBookingParty(
+  contactName: string,
+  pax: number,
+  party: PartyMemberInput[] | undefined,
+  bookerInstagram: string | undefined
+): {
+  pax: number;
+  party: PartyMember[];
+  clientDetails: BookingClientDetails | undefined;
+} {
+  const headcount = Math.min(Math.max(1, pax), MAX_BOOKING_PAX);
+  const bookerName = contactName.trim();
+  if (!bookerName) {
+    throw new Error("Name is required.");
+  }
+
+  const bookerDetails: BookingClientDetails | undefined = bookerInstagram
+    ? { instagram: bookerInstagram }
+    : undefined;
+
+  if (party && party.length > 0) {
+    if (party.length !== headcount) {
+      throw new Error("Add a name for each person.");
+    }
+    if (party[0].name.trim() !== bookerName) {
+      throw new Error("The first person must match the booking contact name.");
+    }
+    const resolved: PartyMember[] = party.map((member, index) => {
+      const name = member.name.trim();
+      if (!name) {
+        throw new Error("Every person needs a name.");
+      }
+      if (index === 0) {
+        const fromMember = member.clientDetails?.instagram
+          ? resolveOptionalInstagram(member.clientDetails.instagram)
+          : undefined;
+        const instagram = fromMember ?? bookerInstagram;
+        return {
+          name,
+          ...(instagram ? { clientDetails: { instagram } } : {}),
+        };
+      }
+      const instagram = member.clientDetails?.instagram
+        ? resolveOptionalInstagram(member.clientDetails.instagram)
+        : undefined;
+      return {
+        name,
+        ...(instagram ? { clientDetails: { instagram } } : {}),
+      };
+    });
+    return {
+      pax: headcount,
+      party: resolved,
+      clientDetails: resolved[0]?.clientDetails,
+    };
+  }
+
+  if (headcount !== 1) {
+    throw new Error("Add a name for each person.");
+  }
+
+  return {
+    pax: 1,
+    party: [
+      {
+        name: bookerName,
+        ...(bookerDetails ? { clientDetails: bookerDetails } : {}),
+      },
+    ],
+    clientDetails: bookerDetails,
+  };
 }
 
 export const MOODBOARD_PDF_TYPE = "application/pdf";

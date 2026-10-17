@@ -17,6 +17,8 @@ export type ScheduleLocation = {
 export type ScheduleItem = {
   bookingId: string;
   clientName: string;
+  /** Headcount when more than one person shares the booking. */
+  pax?: number;
   packageName: string;
   sessionName: string;
   date: string;
@@ -175,6 +177,7 @@ export function flattenScheduleItems(
       items.push({
         bookingId: booking._id,
         clientName: booking.contact.name,
+        ...(booking.pax && booking.pax > 1 ? { pax: booking.pax } : {}),
         packageName: booking.packageNames,
         sessionName: session.name,
         date: session.date,

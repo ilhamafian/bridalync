@@ -590,6 +590,11 @@ export function BookingsManager({
                       <div className="flex flex-wrap items-center gap-2">
                         <CardTitle className="truncate text-base">
                           {booking.contact.name}
+                          {(booking.pax ?? 1) > 1 ? (
+                            <span className="ml-1.5 font-normal text-muted-foreground">
+                              · {booking.pax} pax
+                            </span>
+                          ) : null}
                         </CardTitle>
                         <Badge variant={bookingBadgeVariant(booking)}>
                           {statusLabel(booking)}

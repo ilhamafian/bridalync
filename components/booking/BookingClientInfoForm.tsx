@@ -32,7 +32,7 @@ const inputClassName = cn(
   "dark:bg-input/30"
 );
 
-/** Moodboard / questions; Instagram sits in the contact card (`BookingInstagramField`). */
+/** Moodboard / questions (Instagram may sit here or in the contact card). */
 function hasClientInfoFields(clientInfo: ClientInfoSetting | undefined) {
   return (
     Boolean(clientInfo?.moodboard) || getClientQuestions(clientInfo).length > 0
@@ -183,15 +183,17 @@ function MoodboardPicker({
   );
 }
 
-/** Instagram username, rendered inside the contact (phone + email) card. */
+/** Instagram username, rendered inside a contact or party-member card. */
 export function BookingInstagramField({
   clientInfo,
   value,
   onChange,
+  id = "client-instagram",
 }: {
   clientInfo: ClientInfoSetting | undefined;
   value: string;
   onChange: (value: string) => void;
+  id?: string;
 }) {
   const { t } = useLocale();
   const requirement = getInstagramRequirement(clientInfo);
@@ -202,10 +204,7 @@ export function BookingInstagramField({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <FieldLabel
-        htmlFor="client-instagram"
-        optional={requirement === "optional"}
-      >
+      <FieldLabel htmlFor={id} optional={requirement === "optional"}>
         {t.instagramUsername}
       </FieldLabel>
       <div className="relative">
@@ -213,7 +212,7 @@ export function BookingInstagramField({
           @
         </span>
         <input
-          id="client-instagram"
+          id={id}
           type="text"
           autoComplete="off"
           autoCapitalize="none"
@@ -238,17 +237,38 @@ export function BookingClientInfoForm({
   onAnswersChange,
   moodboard,
   onMoodboardChange,
+  title,
+  name,
+  onNameChange,
+  nameLabel,
+  namePlaceholder,
+  instagram,
+  onInstagramChange,
+  idPrefix = "client",
 }: {
   clientInfo: ClientInfoSetting | undefined;
   answers: Record<string, string>;
   onAnswersChange: (answers: Record<string, string>) => void;
   moodboard: MoodboardPhoto[];
   onMoodboardChange: (photos: MoodboardPhoto[]) => void;
+  /** Optional card heading (e.g. "You" / "Guest 2"). */
+  title?: string;
+  name?: string;
+  onNameChange?: (name: string) => void;
+  nameLabel?: string;
+  namePlaceholder?: string;
+  /** When set with `onInstagramChange`, Instagram is shown in this card. */
+  instagram?: string;
+  onInstagramChange?: (value: string) => void;
+  idPrefix?: string;
 }) {
   const { t, format } = useLocale();
   const questions = getClientQuestions(clientInfo);
+  const showName = onNameChange !== undefined;
+  const showInstagram = onInstagramChange !== undefined;
+  const showInfoFields = hasClientInfoFields(clientInfo);
 
-  if (!hasClientInfoFields(clientInfo)) return null;
+  if (!showName && !showInstagram && !showInfoFields) return null;
 
   function setAnswer(questionId: string, answer: string) {
     onAnswersChange({ ...answers, [questionId]: answer });
@@ -257,6 +277,35 @@ export function BookingClientInfoForm({
   return (
     <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
       <CardContent className="flex flex-col gap-4">
+        {title ? (
+          <p className="text-sm font-medium text-foreground">{title}</p>
+        ) : null}
+
+        {showName ? (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-foreground">
+              {nameLabel ?? t.reviewName}
+            </span>
+            <input
+              type="text"
+              autoComplete="name"
+              placeholder={namePlaceholder ?? t.namePlaceholder}
+              value={name ?? ""}
+              onChange={(event) => onNameChange?.(event.target.value)}
+              className={inputClassName}
+            />
+          </label>
+        ) : null}
+
+        {showInstagram ? (
+          <BookingInstagramField
+            clientInfo={clientInfo}
+            value={instagram ?? ""}
+            onChange={onInstagramChange!}
+            id={`${idPrefix}-instagram`}
+          />
+        ) : null}
+
         {questions.map((question) => {
           const answer = answers[question.id] ?? "";
           return (
@@ -264,7 +313,7 @@ export function BookingClientInfoForm({
               <FieldLabel
                 htmlFor={
                   question.options.length === 0
-                    ? `client-question-${question.id}`
+                    ? `${idPrefix}-question-${question.id}`
                     : undefined
                 }
                 optional={!question.required}
@@ -273,7 +322,7 @@ export function BookingClientInfoForm({
               </FieldLabel>
               {question.options.length === 0 ? (
                 <textarea
-                  id={`client-question-${question.id}`}
+                  id={`${idPrefix}-question-${question.id}`}
                   rows={2}
                   maxLength={CLIENT_ANSWER_MAX_LENGTH}
                   placeholder={t.typeYourAnswer}

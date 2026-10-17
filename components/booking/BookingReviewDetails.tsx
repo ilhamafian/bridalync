@@ -58,6 +58,13 @@ function Block({
   );
 }
 
+export type ReviewPartyMember = {
+  name: string;
+  instagram: string;
+  answers: Record<string, string>;
+  moodboard: MoodboardPhoto[];
+};
+
 export function BookingReviewDetails({
   eventName,
   sessions,
@@ -66,9 +73,7 @@ export function BookingReviewDetails({
   addOnNames,
   contact,
   clientInfo,
-  instagram,
-  answers,
-  moodboard,
+  party,
 }: {
   eventName?: string;
   sessions: SessionForm[];
@@ -78,27 +83,14 @@ export function BookingReviewDetails({
   addOnNames: string[];
   contact: Client;
   clientInfo: ClientInfoSetting | undefined;
-  instagram: string;
-  answers: Record<string, string>;
-  moodboard: MoodboardPhoto[];
+  party: ReviewPartyMember[];
 }) {
-  const { t, intlLocale } = useLocale();
+  const { t, format, intlLocale } = useLocale();
   const sortedSessions = [...sessions].sort((a, b) => a.order - b.order);
-  const instagramUsername =
-    getInstagramRequirement(clientInfo) !== "off"
-      ? normalizeInstagramUsername(instagram)
-      : "";
-  const answeredQuestions = getClientQuestions(clientInfo)
-    .map((question) => ({
-      id: question.id,
-      title: question.title,
-      answer: answers[question.id]?.trim() ?? "",
-    }))
-    .filter((question) => question.answer.length > 0);
-  const moodboardFiles = clientInfo?.moodboard ? moodboard : [];
   const phone = contact.mobile?.trim()
     ? `${contact.country_code ?? ""} ${contact.mobile.trim()}`.trim()
     : "";
+  const members = party.length > 0 ? party : [{ name: contact.name, instagram: "", answers: {}, moodboard: [] }];
 
   return (
     <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(4)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
@@ -152,48 +144,78 @@ export function BookingReviewDetails({
           ) : null}
 
           <Block title={t.reviewYourDetails}>
-            <Field label={t.reviewName} value={contact.name} />
             {phone ? <Field label={t.phoneNumber} value={phone} /> : null}
             <Field label={t.email} value={contact.email} wide />
-            {instagramUsername ? (
-              <Field label={t.instagramUsername} value={`@${instagramUsername}`} wide />
-            ) : null}
-            {answeredQuestions.map((question) => (
-              <Field
-                key={question.id}
-                label={question.title}
-                value={question.answer}
-                wide
-              />
-            ))}
-            {moodboardFiles.length > 0 ? (
-              <Field
-                label={t.moodboard}
-                wide
-                value={
-                  <span className="mt-1 flex gap-1.5">
-                    {moodboardFiles.map((photo) => (
-                      <span
-                        key={photo.previewUrl}
-                        className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/40 dark:bg-white/10"
-                      >
-                        {photo.file.type === MOODBOARD_PDF_TYPE ? (
-                          <FileTextIcon className="size-4 text-rose-900 dark:text-rose-400" />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={photo.previewUrl}
-                            alt=""
-                            className="size-full object-cover"
-                          />
-                        )}
-                      </span>
-                    ))}
-                  </span>
-                }
-              />
-            ) : null}
           </Block>
+
+          {members.map((member, index) => {
+            const title =
+              members.length === 1
+                ? t.reviewParty
+                : index === 0
+                  ? t.partyYou
+                  : format(t.partyGuest, { n: index + 1 });
+            const instagramUsername =
+              getInstagramRequirement(clientInfo) !== "off"
+                ? normalizeInstagramUsername(member.instagram)
+                : "";
+            const answeredQuestions = getClientQuestions(clientInfo)
+              .map((question) => ({
+                id: question.id,
+                title: question.title,
+                answer: member.answers[question.id]?.trim() ?? "",
+              }))
+              .filter((question) => question.answer.length > 0);
+            const moodboardFiles = clientInfo?.moodboard ? member.moodboard : [];
+
+            return (
+              <Block key={index} title={title}>
+                <Field label={t.reviewName} value={member.name} wide />
+                {instagramUsername ? (
+                  <Field
+                    label={t.instagramUsername}
+                    value={`@${instagramUsername}`}
+                    wide
+                  />
+                ) : null}
+                {answeredQuestions.map((question) => (
+                  <Field
+                    key={question.id}
+                    label={question.title}
+                    value={question.answer}
+                    wide
+                  />
+                ))}
+                {moodboardFiles.length > 0 ? (
+                  <Field
+                    label={t.moodboard}
+                    wide
+                    value={
+                      <span className="mt-1 flex gap-1.5">
+                        {moodboardFiles.map((photo) => (
+                          <span
+                            key={photo.previewUrl}
+                            className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-white/40 dark:bg-white/10"
+                          >
+                            {photo.file.type === MOODBOARD_PDF_TYPE ? (
+                              <FileTextIcon className="size-4 text-rose-900 dark:text-rose-400" />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={photo.previewUrl}
+                                alt=""
+                                className="size-full object-cover"
+                              />
+                            )}
+                          </span>
+                        ))}
+                      </span>
+                    }
+                  />
+                ) : null}
+              </Block>
+            );
+          })}
         </div>
       </CardContent>
     </Card>

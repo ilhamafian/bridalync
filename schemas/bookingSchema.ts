@@ -20,6 +20,29 @@ export const bookingContactSchema = z.object({
   country_code: z.string().optional(),
 });
 
+/** Total people on a booking (booker included). */
+export const MAX_BOOKING_PAX = 10;
+
+export const bookingPaxSchema = z
+  .number()
+  .int()
+  .min(1)
+  .max(MAX_BOOKING_PAX);
+
+/** One person sharing the booking's event / slots / style. */
+export const partyMemberSchema = z.object({
+  name: z.string().trim().min(1),
+  clientDetails: bookingClientDetailsSchema.optional(),
+});
+
+export const partyMemberInputSchema = z.object({
+  name: z.string().trim().min(1),
+  clientDetails: clientDetailsInputSchema.optional(),
+});
+
+export type PartyMember = z.infer<typeof partyMemberSchema>;
+export type PartyMemberInput = z.infer<typeof partyMemberInputSchema>;
+
 const quotationAmountSchema = z.object({
   label: z.string(),
   amountRm: z.number(),
@@ -120,7 +143,16 @@ export const bookingSchema = z.object({
   freelancerUsername: z.string(),
   freelancerUserId: z.string(),
   contact: bookingContactSchema,
-  /** Instagram, moodboard and requested info from the client booking wizard. */
+  /**
+   * People on the booking (booker first). Missing on older bookings = one person
+   * from `contact` + top-level `clientDetails`.
+   */
+  pax: bookingPaxSchema.optional(),
+  party: z.array(partyMemberSchema).min(1).max(MAX_BOOKING_PAX).optional(),
+  /**
+   * Instagram, moodboard and requested info for the booker.
+   * Mirrored from `party[0].clientDetails` when a party is stored.
+   */
   clientDetails: bookingClientDetailsSchema.nullish(),
   packageIds: z.array(z.string()).default([]),
   packageNames: z.string(),
@@ -205,22 +237,59 @@ const bookingSessionInputSchema = z.object({
   style: bookingLineItemInputSchema.optional(),
 });
 
-export const createBookingRequestSchema = z.object({
-  freelancerUsername: z.string().min(1),
-  intent: z.enum(["booking", "enquiry"]).default("booking"),
-  contact: bookingContactSchema,
-  clientDetails: clientDetailsInputSchema.optional(),
-  packageIds: z.array(z.string()).min(1),
-  addOns: z.array(bookingLineItemInputSchema).default([]),
-  /** Clients must give every session a ready-by time. */
-  sessions: z
-    .array(bookingSessionInputSchema)
-    .min(1)
-    .refine((sessions) => sessions.every((session) => session.ready_by), {
-      message: "Every session needs a ready-by time.",
-    }),
-  paymentOption: z.enum(["deposit", "full"]).default("deposit"),
-});
+export const createBookingRequestSchema = z
+  .object({
+    freelancerUsername: z.string().min(1),
+    intent: z.enum(["booking", "enquiry"]).default("booking"),
+    contact: bookingContactSchema,
+    /** Total people including the booker. Missing = 1. */
+    pax: bookingPaxSchema.optional(),
+    /**
+     * One entry per person. Required when `pax` > 1.
+     * When omitted with `pax` 1, `clientDetails` is used for the booker.
+     */
+    party: z.array(partyMemberInputSchema).min(1).max(MAX_BOOKING_PAX).optional(),
+    /** Booker-only fallback when `party` is omitted. */
+    clientDetails: clientDetailsInputSchema.optional(),
+    packageIds: z.array(z.string()).min(1),
+    addOns: z.array(bookingLineItemInputSchema).default([]),
+    /** Clients must give every session a ready-by time. */
+    sessions: z
+      .array(bookingSessionInputSchema)
+      .min(1)
+      .refine((sessions) => sessions.every((session) => session.ready_by), {
+        message: "Every session needs a ready-by time.",
+      }),
+    paymentOption: z.enum(["deposit", "full"]).default("deposit"),
+  })
+  .superRefine((value, ctx) => {
+    const pax = value.pax ?? 1;
+    if (value.party) {
+      if (value.party.length !== pax) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Add details for each person.",
+          path: ["party"],
+        });
+      }
+      if (
+        value.party[0] &&
+        value.party[0].name.trim() !== value.contact.name.trim()
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          message: "The first person must match the booking contact name.",
+          path: ["party", 0, "name"],
+        });
+      }
+    } else if (pax !== 1) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Add details for each person.",
+        path: ["party"],
+      });
+    }
+  });
 
 export type CreateBookingRequest = z.infer<typeof createBookingRequestSchema>;
 
@@ -298,8 +367,16 @@ export const updateBookingStatusSchema = z.object({
 
 export const bookingStatusSchema = bookingSchema.shape.status;
 
-export const manualBookingInputSchema = z.object({
+/** Base object only — refinements live on the exported schemas so `.partial()` still works. */
+const manualBookingInputObjectSchema = z.object({
   contact: bookingContactSchema,
+  /** Total people including the booker. Missing = 1. */
+  pax: bookingPaxSchema.optional(),
+  /**
+   * Guest names (and optional Instagram) beyond the booker.
+   * Booker is always `contact` + `instagram`; length should be `pax` when sent.
+   */
+  party: z.array(partyMemberInputSchema).max(MAX_BOOKING_PAX).optional(),
   /** Empty when `customEvent` is set. */
   packageIds: z.array(z.string()).default([]),
   /** One-off event. When set, `packageIds` is ignored. */
@@ -307,7 +384,7 @@ export const manualBookingInputSchema = z.object({
   customAddOns: z.array(customAddOnSchema).default([]),
   /**
    * Optional on manual bookings even when Client information requires it.
-   * Blank clears it. Normalized server-side.
+   * Blank clears it. Normalized server-side. Applied to the booker (party[0]).
    */
   instagram: z.string().max(100).optional(),
   addOns: z.array(bookingLineItemInputSchema).default([]),
@@ -325,12 +402,62 @@ export const manualBookingInputSchema = z.object({
   remarks: z.string().trim().max(BOOKING_REMARKS_MAX_LENGTH).optional(),
 });
 
+function refineManualBookingParty(
+  value: {
+    contact?: { name: string };
+    pax?: number;
+    party?: PartyMemberInput[];
+  },
+  ctx: z.RefinementCtx
+) {
+  const pax = value.pax ?? 1;
+  if (!value.party) {
+    if (pax !== 1) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Add a name for each person.",
+        path: ["party"],
+      });
+    }
+    return;
+  }
+  if (value.party.length !== pax) {
+    ctx.addIssue({
+      code: "custom",
+      message: "Add a name for each person.",
+      path: ["party"],
+    });
+  }
+  if (
+    value.contact &&
+    value.party[0] &&
+    value.party[0].name.trim() !== value.contact.name.trim()
+  ) {
+    ctx.addIssue({
+      code: "custom",
+      message: "The first person must match the booking contact name.",
+      path: ["party", 0, "name"],
+    });
+  }
+}
+
+export const manualBookingInputSchema = manualBookingInputObjectSchema.superRefine(
+  refineManualBookingParty
+);
+
 export type ManualBookingInput = z.infer<typeof manualBookingInputSchema>;
 
-export const dashboardBookingUpdateSchema = manualBookingInputSchema.partial().extend({
-  contact: bookingContactSchema.optional(),
-  sessions: z.array(bookingSessionInputSchema).min(1).optional(),
-});
+export const dashboardBookingUpdateSchema = manualBookingInputObjectSchema
+  .partial()
+  .extend({
+    contact: bookingContactSchema.optional(),
+    sessions: z.array(bookingSessionInputSchema).min(1).optional(),
+  })
+  .superRefine((value, ctx) => {
+    // Only check party shape when the patch touches pax/party (contact may be omitted).
+    if (value.pax === undefined && value.party === undefined) return;
+    refineManualBookingParty(value, ctx);
+  });
 
 export type DashboardBookingUpdate = z.infer<typeof dashboardBookingUpdateSchema>;
 

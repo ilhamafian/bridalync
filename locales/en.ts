@@ -40,6 +40,13 @@ export const en: Locale = {
   namePlaceholder: "Your name",
   phonePlaceholder: "e.g. 123456789",
   countryCode: "Country code",
+  paxQuestion: "How many people?",
+  paxHelper: "Including you. Everyone shares the same date, time, and style.",
+  paxDecrease: "Fewer people",
+  paxIncrease: "More people",
+  paxCountLabel: "{count} {count, person, people}",
+  partyYou: "You",
+  partyGuest: "Guest {n}",
 
   // Events / packages
   eventQuestion: "What event are you booking for?",
@@ -145,6 +152,7 @@ export const en: Locale = {
   reviewLook: "Look",
   reviewAddOns: "Add-ons",
   reviewYourDetails: "Your details",
+  reviewParty: "People",
   reviewName: "Name",
   // Booking summary (wide screens)
   summaryTitle: "Your booking",

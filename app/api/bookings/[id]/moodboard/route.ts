@@ -1,4 +1,4 @@
-import { list, put } from "@vercel/blob";
+import { put } from "@vercel/blob";
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
@@ -8,8 +8,10 @@ import {
   bookingClientDetailsSchema,
   MAX_MOODBOARD_IMAGES,
 } from "@/schemas/clientInfoSchema";
+import { partyMemberSchema } from "@/schemas/bookingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import {
+  getBookingParty,
   getMoodboardPrefix,
   MOODBOARD_PDF_TYPE,
 } from "@/utils/booking/clientInfo";
@@ -40,9 +42,17 @@ export async function POST(
     const formData = await req.formData();
     const file = formData.get("file");
     const client = formData.get("client");
+    const memberIndexRaw = formData.get("memberIndex");
+    const memberIndex =
+      typeof memberIndexRaw === "string" && memberIndexRaw.trim() !== ""
+        ? Number.parseInt(memberIndexRaw, 10)
+        : 0;
 
     if (typeof client !== "string" || !client.trim()) {
       return createResponse({ error: "Client is required" }, 400);
+    }
+    if (!Number.isInteger(memberIndex) || memberIndex < 0) {
+      return createResponse({ error: "Invalid party member." }, 400);
     }
 
     const booking = await getBookingById(id);
@@ -75,6 +85,11 @@ export async function POST(
       return createResponse({ error: "Moodboard uploads are turned off." }, 409);
     }
 
+    const party = getBookingParty(booking);
+    if (memberIndex >= party.length) {
+      return createResponse({ error: "Invalid party member." }, 400);
+    }
+
     if (!(file instanceof File)) {
       return createResponse({ error: "No file provided." }, 400);
     }
@@ -89,15 +104,16 @@ export async function POST(
       return createResponse({ error: "PDFs must be 4 MB or smaller." }, 400);
     }
 
-    const prefix = getMoodboardPrefix(booking.freelancerUserId, id);
-    const existing = await list({ prefix, limit: MAX_MOODBOARD_IMAGES });
-    if (existing.blobs.length >= MAX_MOODBOARD_IMAGES) {
+    const member = party[memberIndex];
+    const existingUrls = member.clientDetails?.moodboardUrls ?? [];
+    if (existingUrls.length >= MAX_MOODBOARD_IMAGES) {
       return createResponse(
         { error: `You can add up to ${MAX_MOODBOARD_IMAGES} files.` },
         429
       );
     }
 
+    const prefix = getMoodboardPrefix(booking.freelancerUserId, id);
     const prepared = isPdf
       ? await preparePdf(file)
       : await prepareFileForUpload(file);
@@ -110,14 +126,32 @@ export async function POST(
       contentType: prepared.contentType,
     });
 
-    const moodboardUrls = [
-      ...(booking.clientDetails?.moodboardUrls ?? []),
-      blob.url,
-    ].slice(0, MAX_MOODBOARD_IMAGES);
+    const moodboardUrls = [...existingUrls, blob.url].slice(
+      0,
+      MAX_MOODBOARD_IMAGES
+    );
+    const nextMemberDetails = {
+      ...(member.clientDetails ?? {}),
+      moodboardUrls,
+    };
+    const nextParty = party.map((entry, index) =>
+      index === memberIndex
+        ? { name: entry.name, clientDetails: nextMemberDetails }
+        : entry
+    );
+
     await bookingModel.update(
       id,
-      { clientDetails: { ...booking.clientDetails, moodboardUrls } },
-      z.object({ clientDetails: bookingClientDetailsSchema })
+      {
+        party: nextParty,
+        ...(memberIndex === 0
+          ? { clientDetails: nextMemberDetails }
+          : {}),
+      },
+      z.object({
+        party: z.array(partyMemberSchema).min(1),
+        clientDetails: bookingClientDetailsSchema.optional(),
+      })
     );
 
     return createResponse({ url: blob.url }, 200);

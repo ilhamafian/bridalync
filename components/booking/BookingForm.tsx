@@ -31,9 +31,11 @@ import {
   BOOKING_REMARKS_MAX_LENGTH,
   CUSTOM_EVENT_DESCRIPTION_MAX_LENGTH,
   CUSTOM_EVENT_NAME_MAX_LENGTH,
+  MAX_BOOKING_PAX,
   OTHERS_EVENT_ID,
   type Booking,
 } from "@/schemas/bookingSchema";
+import { getBookingParty, getBookingPax } from "@/utils/booking/clientInfo";
 import type {
   DepositType,
   PackageDayMode,
@@ -193,6 +195,10 @@ type BookingFormState = {
   contact_country_code: string;
   /** Optional on this form, whatever Client information is set to. */
   instagram: string;
+  /** Total people including the booker. */
+  pax: number;
+  /** Names for guests after the booker (length should be pax - 1). */
+  guestNames: string[];
   packageIds: string[];
   /** A one-off event instead of a catalog event. */
   isOthers: boolean;
@@ -350,6 +356,8 @@ function emptyForm(): BookingFormState {
     contact_mobile: "",
     contact_country_code: DEFAULT_COUNTRY_CODE,
     instagram: "",
+    pax: 1,
+    guestNames: [],
     packageIds: [],
     isOthers: false,
     othersName: "",
@@ -375,14 +383,17 @@ function bookingToForm(
   const fallbackSlot = timeSlots[0];
   const isOthers = Boolean(booking.customEvent);
 
+  const party = getBookingParty(booking);
+  const pax = getBookingPax(booking);
   return {
     contact_name: booking.contact.name,
     contact_email: booking.contact.email,
     contact_mobile: booking.contact.mobile ?? "",
     contact_country_code: booking.contact.country_code ?? DEFAULT_COUNTRY_CODE,
     instagram: booking.clientDetails?.instagram ?? "",
-    packageIds: isOthers ? [] : booking.packageIds,
-    isOthers,
+    pax,
+    guestNames: party.slice(1).map((member) => member.name),
+    packageIds: isOthers ? [] : booking.packageIds,    isOthers,
     othersName: booking.customEvent?.name ?? "",
     othersDescription: booking.customEvent?.description ?? "",
     othersPrice:
@@ -761,9 +772,9 @@ export function BookingForm({
           .map((session) => ({ time_slot: mergeSlots(session.time_slots) }))
       )?.amountRm ?? 0;
     return (
-      sessionsRm +
+      sessionsRm * form.pax +
+      styleExtrasRm * form.pax +
       addOnsRm +
-      styleExtrasRm +
       travelQuote.feeRm +
       regionFeeRm +
       morningCallRm
@@ -778,6 +789,7 @@ export function BookingForm({
     selectedEvent,
     isOthers,
     form.othersPrice,
+    form.pax,
     customAddOnsRm,
     form.packageIds,
     form.sessions,
@@ -1154,14 +1166,33 @@ export function BookingForm({
         price: addOn.price,
       }));
 
+    const contactName = form.contact_name.trim();
+    const guestNames = form.guestNames
+      .slice(0, Math.max(0, form.pax - 1))
+      .map((name) => name.trim());
+    while (guestNames.length < form.pax - 1) {
+      guestNames.push("");
+    }
+    if (form.pax > 1 && guestNames.some((name) => !name)) {
+      return { error: "Add a name for each person." };
+    }
+
     return {
       payload: {
         contact: {
-          name: form.contact_name.trim(),
+          name: contactName,
           email: form.contact_email.trim(),
           mobile: form.contact_mobile.trim() || undefined,
           country_code: form.contact_country_code || undefined,
         },
+        pax: form.pax,
+        party: [
+          {
+            name: contactName,
+            ...(instagram ? { clientDetails: { instagram } } : {}),
+          },
+          ...guestNames.map((name) => ({ name })),
+        ],
         instagram,
         sessions: form.sessions.map((session, index) => ({
           client_key: session.client_key,
@@ -1299,6 +1330,71 @@ export function BookingForm({
             Optional. A name, @name, or profile link.
           </p>
         </Field>
+
+        <Field label="People">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="size-9 shrink-0"
+              disabled={form.pax <= 1}
+              aria-label="Fewer people"
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  pax: current.pax - 1,
+                  guestNames: current.guestNames.slice(0, current.pax - 2),
+                }))
+              }
+            >
+              −
+            </Button>
+            <span className="min-w-16 text-center text-sm tabular-nums">
+              {form.pax}
+            </span>
+            <Button
+              type="button"
+              size="icon"
+              variant="outline"
+              className="size-9 shrink-0"
+              disabled={form.pax >= MAX_BOOKING_PAX}
+              aria-label="More people"
+              onClick={() =>
+                setForm((current) => ({
+                  ...current,
+                  pax: current.pax + 1,
+                  guestNames: [...current.guestNames, ""],
+                }))
+              }
+            >
+              +
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Including the client. Event/style price × people; add-ons and travel
+            once.
+          </p>
+        </Field>
+
+        {form.pax > 1
+          ? Array.from({ length: form.pax - 1 }, (_, index) => (
+              <Field key={index} label={`Guest ${index + 2} name`}>
+                <Input
+                  className={inputClassName}
+                  value={form.guestNames[index] ?? ""}
+                  onChange={(event) =>
+                    setForm((current) => {
+                      const guestNames = [...current.guestNames];
+                      guestNames[index] = event.target.value;
+                      return { ...current, guestNames };
+                    })
+                  }
+                  placeholder={`Guest ${index + 2}`}
+                />
+              </Field>
+            ))
+          : null}
 
         <Separator />
 

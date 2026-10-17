@@ -10,7 +10,10 @@ import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
 import { assertSessionsAvailable } from "@/utils/booking/availability.server";
-import { resolveOptionalInstagram } from "@/utils/booking/clientInfo";
+import {
+  resolveManualBookingParty,
+  resolveOptionalInstagram,
+} from "@/utils/booking/clientInfo";
 import { resolveBookingQuotation } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import { scheduleBookingCalendarSync } from "@/utils/google/syncBookingCalendar";
@@ -43,10 +46,47 @@ export async function POST(req: NextRequest) {
       return createResponse({ error: "Choose an event." }, 400);
     }
 
+    let bookerInstagram: string | undefined;
+    try {
+      bookerInstagram =
+        data.instagram !== undefined
+          ? resolveOptionalInstagram(data.instagram)
+          : undefined;
+    } catch (error) {
+      return createResponse(
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : "Enter a valid Instagram username.",
+        },
+        400
+      );
+    }
+
+    let partyResult: ReturnType<typeof resolveManualBookingParty>;
+    try {
+      partyResult = resolveManualBookingParty(
+        data.contact.name,
+        data.pax ?? 1,
+        data.party,
+        bookerInstagram
+      );
+    } catch (error) {
+      return createResponse(
+        {
+          error:
+            error instanceof Error ? error.message : "Check the party details.",
+        },
+        400
+      );
+    }
+
     const quotationInput: CreateBookingRequest = {
       freelancerUsername: username,
       intent: "booking",
       contact: data.contact,
+      pax: partyResult.pax,
       packageIds: data.customEvent ? [] : data.packageIds,
       addOns: data.addOns,
       sessions: data.sessions,
@@ -71,16 +111,15 @@ export async function POST(req: NextRequest) {
         customAddOns: data.customAddOns,
       });
 
-    const instagram =
-      data.instagram !== undefined
-        ? resolveOptionalInstagram(data.instagram)
-        : undefined;
-
     const booking = await createBooking({
       freelancerUsername: username,
       freelancerUserId: userId,
       contact: data.contact,
-      ...(instagram ? { clientDetails: { instagram } } : {}),
+      pax: partyResult.pax,
+      party: partyResult.party,
+      ...(partyResult.clientDetails
+        ? { clientDetails: partyResult.clientDetails }
+        : {}),
       packageIds: data.customEvent ? [] : data.packageIds,
       packageNames,
       ...(data.customEvent ? { customEvent: data.customEvent } : {}),

@@ -64,6 +64,29 @@ export function sessionLineItemLabel(name: string, slotCount = 1) {
   return slotCount > 1 ? `${name} × ${slotCount} slots` : name;
 }
 
+/** Appends ` × N` when more than one person shares the priced item. */
+export function paxLineItemLabel(name: string, pax: number) {
+  return pax > 1 ? `${name} × ${pax}` : name;
+}
+
+/**
+ * Scales event/style prices and deposits by headcount. Morning call and other
+ * attached fields are left alone (charged once for the shared session).
+ */
+export function applyPaxToPricedItems<
+  T extends { name: string; price: number; deposit?: number },
+>(items: T[], pax: number): T[] {
+  if (pax <= 1) return items;
+  return items.map((item) => ({
+    ...item,
+    name: paxLineItemLabel(item.name, pax),
+    price: item.price * pax,
+    ...(typeof item.deposit === "number"
+      ? { deposit: item.deposit * pax }
+      : {}),
+  }));
+}
+
 export type TravelQuotationInput =
   | DistanceTravelQuotationInput
   /** Fixed region fee, split evenly across the priced items (no separate travel fee). */

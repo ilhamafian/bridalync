@@ -8,7 +8,7 @@ import { createBookingRequestSchema } from "@/schemas/bookingSchema";
 import { paymentSettingSchema, hasManualTransferDetails } from "@/schemas/settingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { assertSessionsAvailable } from "@/utils/booking/availability.server";
-import { resolveClientDetails } from "@/utils/booking/clientInfo";
+import { resolveBookingParty } from "@/utils/booking/clientInfo";
 import {
   resolveBookingQuotation,
   resolveFreelancerForBooking,
@@ -138,10 +138,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    let clientDetails: ReturnType<typeof resolveClientDetails>;
+    let partyResult: ReturnType<typeof resolveBookingParty>;
     try {
-      clientDetails = resolveClientDetails(
+      partyResult = resolveBookingParty(
         settings?.client_info,
+        data.contact.name,
+        data.pax ?? 1,
+        data.party,
         data.clientDetails
       );
     } catch (error) {
@@ -176,10 +179,14 @@ export async function POST(req: NextRequest) {
         ));
 
     const { invoice, packageNames, sessions, dayMode, paymentOption } =
-      await resolveBookingQuotation(freelancer.userId, data, {
-        enforceServiceArea: true,
-        requireSessionStyle,
-      });
+      await resolveBookingQuotation(
+        freelancer.userId,
+        { ...data, pax: partyResult.pax },
+        {
+          enforceServiceArea: true,
+          requireSessionStyle,
+        }
+      );
 
     const isManualBooking =
       data.intent === "booking" &&
@@ -190,7 +197,11 @@ export async function POST(req: NextRequest) {
       freelancerUsername: data.freelancerUsername.toLowerCase(),
       freelancerUserId: freelancer.userId,
       contact: data.contact,
-      ...(clientDetails ? { clientDetails } : {}),
+      pax: partyResult.pax,
+      party: partyResult.party,
+      ...(partyResult.clientDetails
+        ? { clientDetails: partyResult.clientDetails }
+        : {}),
       packageIds: data.packageIds,
       packageNames,
       dayMode,

@@ -4,12 +4,12 @@ import { BookingAddOnPicker } from "@/components/BookingAddOnPicker";
 import { BookingContactForm } from "@/components/BookingContactForm";
 import {
   BookingClientInfoForm,
-  BookingInstagramField,
   type MoodboardPhoto,
 } from "@/components/booking/BookingClientInfoForm";
 import { BookingReviewDetails } from "@/components/booking/BookingReviewDetails";
 import { isClientInfoComplete } from "@/utils/booking/clientInfo";
 import { BookingQuotation } from "@/components/BookingQuotation";
+import { MAX_BOOKING_PAX } from "@/schemas/bookingSchema";
 import {
   BookingPackagePicker,
   type PackageOption,
@@ -54,6 +54,7 @@ import { cn } from "@/lib/utils";
 import {
   applyPaymentOption,
   applyPaymentProcessingFee,
+  applyPaxToPricedItems,
   calculateBookingQuotation,
   formatRm,
   requiresFullPayment,
@@ -119,7 +120,12 @@ import {
   getUnservedRegions,
 } from "@/utils/booking/regions";
 import { toManualTransferDetails } from "@/schemas/settingSchema";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  MinusIcon,
+  PlusIcon,
+} from "lucide-react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Suspense,
@@ -684,9 +690,15 @@ export default function ClientPage() {
   );
   const [readyBy, setReadyBy] = useState("");
   const [contact, setContact] = useState<Client>(EMPTY_CONTACT);
-  const [instagram, setInstagram] = useState("");
-  const [clientAnswers, setClientAnswers] = useState<Record<string, string>>({});
-  const [moodboard, setMoodboard] = useState<MoodboardPhoto[]>([]);
+  const [pax, setPax] = useState(1);
+  const [party, setParty] = useState<
+    Array<{
+      name: string;
+      instagram: string;
+      answers: Record<string, string>;
+      moodboard: MoodboardPhoto[];
+    }>
+  >([{ name: "", instagram: "", answers: {}, moodboard: [] }]);
   const [styleCategoryBySessionKey, setStyleCategoryBySessionKey] = useState<
     Record<string, string | null>
   >({});
@@ -1041,32 +1053,35 @@ export default function ClientPage() {
 
   const includeProcessingFee = settings?.payment.method === "payment_gateway";
   const quotation = useMemo(() => {
+    const packages =
+      selectedEvent && selectedPackageId
+        ? [
+            {
+              name: selectedEvent.name,
+              price: eventPriceRm,
+              deposit:
+                chargeBy === "style"
+                  ? 0
+                  : resolveDepositRm(
+                      selectedEvent.deposit,
+                      selectedEvent.deposit_type,
+                      eventPriceRm
+                    ),
+              morningCall: getMorningCallCharge(
+                settings?.morning_call,
+                sessions
+              ),
+            },
+          ]
+        : [];
     const base = calculateBookingQuotation({
       chargeBy,
-      selectedPackages:
-        selectedEvent && selectedPackageId
-          ? [
-              {
-                name: selectedEvent.name,
-                price: eventPriceRm,
-                deposit:
-                  chargeBy === "style"
-                    ? 0
-                    : resolveDepositRm(
-                        selectedEvent.deposit,
-                        selectedEvent.deposit_type,
-                        eventPriceRm
-                      ),
-                morningCall: getMorningCallCharge(
-                  settings?.morning_call,
-                  sessions
-                ),
-              },
-            ]
-          : [],
+      selectedPackages: applyPaxToPricedItems(packages, pax),
       selectedSessionStyles:
-        chargeBy === "style" ? selectedSessionStyles : undefined,
-      selectedStyleExtras,
+        chargeBy === "style"
+          ? applyPaxToPricedItems(selectedSessionStyles, pax)
+          : undefined,
+      selectedStyleExtras: applyPaxToPricedItems(selectedStyleExtras, pax),
       selectedAddOns: selectedAddOnItems.map((addOn) => ({
         name: addOn.name,
         price: addOn.price,
@@ -1100,6 +1115,7 @@ export default function ClientPage() {
     selectedAddOnItems,
     sessions,
     distanceKmBySessionKey,
+    pax,
   ]);
 
   const balanceDueBeforeDays = settings?.payment.balance_due_before ?? 3;
@@ -1131,7 +1147,47 @@ export default function ClientPage() {
   const contactDetailsValid =
     contact.name.trim().length > 0 &&
     contact.email.trim().length > 0 &&
-    isClientInfoComplete(clientInfo, { instagram, answers: clientAnswers });
+    party.length === pax &&
+    party.every(
+      (member) =>
+        member.name.trim().length > 0 &&
+        isClientInfoComplete(clientInfo, {
+          instagram: member.instagram,
+          answers: member.answers,
+        })
+    );
+
+  function resizeParty(nextPax: number) {
+    const clamped = Math.min(MAX_BOOKING_PAX, Math.max(1, nextPax));
+    setPax(clamped);
+    setParty((current) => {
+      if (clamped === current.length) return current;
+      if (clamped < current.length) return current.slice(0, clamped);
+      return [
+        ...current,
+        ...Array.from({ length: clamped - current.length }, () => ({
+          name: "",
+          instagram: "",
+          answers: {},
+          moodboard: [] as MoodboardPhoto[],
+        })),
+      ];
+    });
+  }
+
+  function updatePartyMember(
+    index: number,
+    patch: Partial<(typeof party)[number]>
+  ) {
+    setParty((current) =>
+      current.map((member, i) =>
+        i === index ? { ...member, ...patch } : member
+      )
+    );
+    if (index === 0 && patch.name !== undefined) {
+      setContact((current) => ({ ...current, name: patch.name! }));
+    }
+  }
 
   const fetchClient = async () => {
     setLoading(true);
@@ -1534,20 +1590,23 @@ export default function ClientPage() {
 
   /** Sequential so the server appends each URL; a failed photo doesn't block the booking. */
   async function uploadMoodboard(bookingId: string) {
-    for (const photo of moodboard) {
-      try {
-        const formData = new FormData();
-        formData.append("file", photo.file);
-        formData.append("client", client);
-        const response = await fetch(
-          `/api/bookings/${encodeURIComponent(bookingId)}/moodboard`,
-          { method: "POST", body: formData }
-        );
-        if (!response.ok) {
-          console.error("Moodboard upload failed:", await response.text());
+    for (let memberIndex = 0; memberIndex < party.length; memberIndex++) {
+      for (const photo of party[memberIndex].moodboard) {
+        try {
+          const formData = new FormData();
+          formData.append("file", photo.file);
+          formData.append("client", client);
+          formData.append("memberIndex", String(memberIndex));
+          const response = await fetch(
+            `/api/bookings/${encodeURIComponent(bookingId)}/moodboard`,
+            { method: "POST", body: formData }
+          );
+          if (!response.ok) {
+            console.error("Moodboard upload failed:", await response.text());
+          }
+        } catch (error) {
+          console.error("Moodboard upload failed:", error);
         }
-      } catch (error) {
-        console.error("Moodboard upload failed:", error);
       }
     }
   }
@@ -1572,13 +1631,20 @@ export default function ClientPage() {
       const bookingPayloadBody = {
         freelancerUsername: client,
         intent: "booking",
-        contact,
-        clientDetails: {
-          instagram: instagram.trim() || undefined,
-          answers: Object.entries(clientAnswers)
-            .filter(([, answer]) => answer.trim())
-            .map(([questionId, answer]) => ({ questionId, answer })),
+        contact: {
+          ...contact,
+          name: party[0]?.name.trim() || contact.name,
         },
+        pax,
+        party: party.map((member) => ({
+          name: member.name.trim(),
+          clientDetails: {
+            instagram: member.instagram.trim() || undefined,
+            answers: Object.entries(member.answers)
+              .filter(([, answer]) => answer.trim())
+              .map(([questionId, answer]) => ({ questionId, answer })),
+          },
+        })),
         packageIds: [selectedPackageId],
         addOns: selectedAddOnItems,
         sessions: sessions.map((session) => {
@@ -1659,7 +1725,10 @@ export default function ClientPage() {
         throw new Error(t.couldNotCreateBooking);
       }
 
-      if (clientInfo?.moodboard) {
+      if (
+        clientInfo?.moodboard &&
+        party.some((member) => member.moodboard.length > 0)
+      ) {
         await uploadMoodboard(bookingId);
       }
 
@@ -1836,7 +1905,11 @@ export default function ClientPage() {
                     autoFocus
                     placeholder={t.namePlaceholder}
                     value={contact.name}
-                    onChange={(e) => setContact({ ...contact, name: e.target.value })}
+                    onChange={(e) => {
+                      const name = e.target.value;
+                      setContact({ ...contact, name });
+                      updatePartyMember(0, { name });
+                    }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && contact.name.trim()) {
                         e.preventDefault()
@@ -1882,9 +1955,36 @@ export default function ClientPage() {
                     />
                   </div>
                 )}
+                <div className="mx-auto flex items-center gap-3">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="size-9 rounded-full bg-white/40"
+                    disabled={pax <= 1}
+                    aria-label={t.paxDecrease}
+                    onClick={() => resizeParty(pax - 1)}
+                  >
+                    <MinusIcon className="size-4" />
+                  </Button>
+                  <span className="min-w-20 text-center text-sm font-medium tabular-nums text-foreground">
+                    {format(t.paxCountLabel, { count: pax })}
+                  </span>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="size-9 rounded-full bg-white/40"
+                    disabled={pax >= MAX_BOOKING_PAX}
+                    aria-label={t.paxIncrease}
+                    onClick={() => resizeParty(pax + 1)}
+                  >
+                    <PlusIcon className="size-4" />
+                  </Button>
+                </div>
                 <Button
                   size="lg"
-                  className="mt-4 bg-rose-800 text-white hover:bg-rose-800/90"
+                  className="mt-2 bg-rose-800 text-white hover:bg-rose-800/90"
                   disabled={!selectedEvent}
                   onClick={goToNextStep}
                 >
@@ -2322,20 +2422,36 @@ export default function ClientPage() {
                   className="mb-6 w-full max-w-md text-center text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50"
                 />
               <div className="flex w-full flex-col items-end gap-4">
-                <BookingContactForm value={contact} onChange={setContact}>
-                  <BookingInstagramField
+                <BookingContactForm value={contact} onChange={setContact} />
+                {party.map((member, index) => (
+                  <BookingClientInfoForm
+                    key={index}
                     clientInfo={clientInfo}
-                    value={instagram}
-                    onChange={setInstagram}
+                    title={
+                      index === 0
+                        ? t.partyYou
+                        : format(t.partyGuest, { n: index + 1 })
+                    }
+                    name={member.name}
+                    onNameChange={(name) => updatePartyMember(index, { name })}
+                    namePlaceholder={
+                      index === 0 ? t.namePlaceholder : format(t.partyGuest, { n: index + 1 })
+                    }
+                    instagram={member.instagram}
+                    onInstagramChange={(instagram) =>
+                      updatePartyMember(index, { instagram })
+                    }
+                    answers={member.answers}
+                    onAnswersChange={(answers) =>
+                      updatePartyMember(index, { answers })
+                    }
+                    moodboard={member.moodboard}
+                    onMoodboardChange={(moodboard) =>
+                      updatePartyMember(index, { moodboard })
+                    }
+                    idPrefix={`party-${index}`}
                   />
-                </BookingContactForm>
-                <BookingClientInfoForm
-                  clientInfo={clientInfo}
-                  answers={clientAnswers}
-                  onAnswersChange={setClientAnswers}
-                  moodboard={moodboard}
-                  onMoodboardChange={setMoodboard}
-                />
+                ))}
                 <Button
                   size="lg"
                   className="mt-2 bg-rose-800 text-white hover:bg-rose-800/90"
@@ -2360,11 +2476,17 @@ export default function ClientPage() {
                   styleBySessionKey={reviewStyleBySessionKey}
                   styleLabel={usesLooks ? t.reviewLook : t.styleLabel}
                   addOnNames={selectedAddOnItems.map((addOn) => addOn.name)}
-                  contact={contact}
+                  contact={{
+                    ...contact,
+                    name: party[0]?.name.trim() || contact.name,
+                  }}
                   clientInfo={clientInfo}
-                  instagram={instagram}
-                  answers={clientAnswers}
-                  moodboard={moodboard}
+                  party={party.map((member) => ({
+                    name: member.name,
+                    instagram: member.instagram,
+                    answers: member.answers,
+                    moodboard: member.moodboard,
+                  }))}
                 />
                 <BookingQuotation
                   quotation={payableQuotation}

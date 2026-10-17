@@ -15,6 +15,8 @@ import { NavigateButton } from "@/components/dashboard/NavigateButton";
 import { cn } from "@/lib/utils";
 import {
   buildInstagramProfileUrl,
+  getBookingParty,
+  getBookingPax,
   isMoodboardPdfUrl,
 } from "@/utils/booking/clientInfo";
 import { formatRm } from "@/utils/booking/pricing";
@@ -137,15 +139,23 @@ export function BookingDetailsSections({
     booking.contact.country_code,
     booking.contact.mobile
   );
-  const clientDetails = booking.clientDetails;
-  const answers = clientDetails?.answers ?? [];
-  const moodboardUrls = clientDetails?.moodboardUrls ?? [];
+  const party = getBookingParty(booking);
+  const pax = getBookingPax(booking);
+  const bookerDetails = party[0]?.clientDetails ?? booking.clientDetails;
 
   return (
     <>
       <div className={sectionClassName}>
         <SectionLabel>Contact</SectionLabel>
         <div className="mt-1 flex flex-col gap-1 text-muted-foreground">
+          <span className="text-foreground">
+            {booking.contact.name}
+            {pax > 1 ? (
+              <span className="ml-1.5 text-muted-foreground">
+                · {pax} people
+              </span>
+            ) : null}
+          </span>
           {whatsappUrl && phone && phone !== "Not set" ? (
             <a
               href={whatsappUrl}
@@ -169,15 +179,15 @@ export function BookingDetailsSections({
               {booking.contact.email}
             </a>
           ) : null}
-          {clientDetails?.instagram ? (
+          {bookerDetails?.instagram ? (
             <a
-              href={buildInstagramProfileUrl(clientDetails.instagram)}
+              href={buildInstagramProfileUrl(bookerDetails.instagram)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1.5 hover:text-foreground"
             >
               <IconBrandInstagram className="size-4 shrink-0" />@
-              {clientDetails.instagram}
+              {bookerDetails.instagram}
             </a>
           ) : null}
         </div>
@@ -192,51 +202,84 @@ export function BookingDetailsSections({
         </div>
       ) : null}
 
-      {answers.length > 0 || moodboardUrls.length > 0 ? (
-        <div className={sectionClassName}>
-          <SectionLabel>Client details</SectionLabel>
-          {answers.length > 0 ? (
-            <dl className="mt-2 flex flex-col gap-2">
-              {answers.map((item) => (
-                <div key={item.questionId}>
-                  <dt className="text-muted-foreground">{item.title}</dt>
-                  <dd className="break-words whitespace-pre-wrap">{item.answer}</dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
-          {moodboardUrls.length > 0 ? (
-            <div className="mt-3">
-              <p className="text-muted-foreground">Moodboard</p>
-              <div className="mt-1.5 grid grid-cols-3 gap-2">
-                {moodboardUrls.map((url, index) => (
-                  <a
-                    key={url}
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block aspect-square overflow-hidden rounded-md bg-muted"
-                  >
-                    {isMoodboardPdfUrl(url) ? (
-                      <span className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
-                        <IconFileTypePdf className="size-7 text-rose-900 dark:text-rose-400" />
-                        <span className="text-xs">PDF {index + 1}</span>
-                      </span>
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={url}
-                        alt={`Moodboard photo ${index + 1}`}
-                        className="size-full object-cover"
-                      />
-                    )}
-                  </a>
+      {party.map((member, index) => {
+        const details = member.clientDetails;
+        const answers = details?.answers ?? [];
+        const moodboardUrls = details?.moodboardUrls ?? [];
+        const hasDetails =
+          Boolean(details?.instagram) ||
+          answers.length > 0 ||
+          moodboardUrls.length > 0;
+        if (party.length === 1 && !hasDetails) return null;
+
+        return (
+          <div key={`${member.name}-${index}`} className={sectionClassName}>
+            <SectionLabel>
+              {party.length === 1
+                ? "Client details"
+                : index === 0
+                  ? `${member.name} (booker)`
+                  : member.name}
+            </SectionLabel>
+            {party.length > 1 && !hasDetails ? (
+              <p className="mt-1 text-muted-foreground">No extra details</p>
+            ) : null}
+            {details?.instagram && index > 0 ? (
+              <a
+                href={buildInstagramProfileUrl(details.instagram)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+              >
+                <IconBrandInstagram className="size-4 shrink-0" />@
+                {details.instagram}
+              </a>
+            ) : null}
+            {answers.length > 0 ? (
+              <dl className="mt-2 flex flex-col gap-2">
+                {answers.map((item) => (
+                  <div key={item.questionId}>
+                    <dt className="text-muted-foreground">{item.title}</dt>
+                    <dd className="break-words whitespace-pre-wrap">
+                      {item.answer}
+                    </dd>
+                  </div>
                 ))}
+              </dl>
+            ) : null}
+            {moodboardUrls.length > 0 ? (
+              <div className="mt-3">
+                <p className="text-muted-foreground">Moodboard</p>
+                <div className="mt-1.5 grid grid-cols-3 gap-2">
+                  {moodboardUrls.map((url, fileIndex) => (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block aspect-square overflow-hidden rounded-md bg-muted"
+                    >
+                      {isMoodboardPdfUrl(url) ? (
+                        <span className="flex size-full flex-col items-center justify-center gap-1 text-muted-foreground">
+                          <IconFileTypePdf className="size-7 text-rose-900 dark:text-rose-400" />
+                          <span className="text-xs">PDF {fileIndex + 1}</span>
+                        </span>
+                      ) : (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={url}
+                          alt={`Moodboard photo ${fileIndex + 1}`}
+                          className="size-full object-cover"
+                        />
+                      )}
+                    </a>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+            ) : null}
+          </div>
+        );
+      })}
 
       <div className={sectionClassName}>
         <SectionLabel>Sessions</SectionLabel>
