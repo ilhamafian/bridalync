@@ -312,6 +312,7 @@ export async function loadDashboardData(
         messages: { review_request: settings.messages?.review_request ?? "" },
         client_info: settings.client_info ?? {},
         booking_requests: settings.booking_requests ?? false,
+        show_whatsapp_button: settings.show_whatsapp_button ?? true,
         max_booking_year: settings.max_booking_year,
       },
       freelancerName,

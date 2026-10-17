@@ -207,6 +207,8 @@ export const settingSchema = z.object({
   client_info: clientInfoSettingSchema.optional(),
   /** Clients send a request the stylist approves before paying. Missing = off (pay straight away). */
   booking_requests: z.boolean().optional(),
+  /** Draggable WhatsApp button on the booking wizard. Missing = shown. */
+  show_whatsapp_button: z.boolean().optional(),
   /** Legacy: highest calendar year clients may book. Superseded by `booking_until`. */
   max_booking_year: z.number().int().optional(),
   /** Last date (YYYY-MM-DD, inclusive) clients may book. Unset = 31 Dec of `max_booking_year`. */
@@ -233,6 +235,7 @@ export const settingUpdateSchema = z.object({
   show_add_on_prices: z.boolean().optional(),
   client_info: clientInfoSettingSchema.optional(),
   booking_requests: z.boolean().optional(),
+  show_whatsapp_button: z.boolean().optional(),
   max_booking_year: z.number().int().optional(),
   booking_until: bookingUntilSchema.optional(),
 });

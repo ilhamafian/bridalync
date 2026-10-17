@@ -2,8 +2,10 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import {
+  IconBrandWhatsapp,
   IconBriefcase,
   IconChevronRight,
   IconMail,
@@ -30,6 +32,7 @@ import {
   isValidPhoneNumber,
 } from "@/components/PhoneNumberInput";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -102,12 +105,19 @@ export function ProfileManager({
   initialProfile,
   appUrl,
   reviewCount,
+  showWhatsAppButton,
 }: {
   initialProfile: ProfileItem;
   appUrl: string | null;
   reviewCount: number;
+  /** Draggable chat button on the booking wizard. Missing = shown. */
+  showWhatsAppButton?: boolean;
 }) {
+  const router = useRouter();
   const [profile, setProfile] = useState(initialProfile);
+  const [whatsAppButton, setWhatsAppButton] = useState(showWhatsAppButton !== false);
+  const [savingWhatsAppButton, setSavingWhatsAppButton] = useState(false);
+  const [whatsAppButtonError, setWhatsAppButtonError] = useState<string | null>(null);
   const [name, setName] = useState(initialProfile.name);
   const [username, setUsername] = useState(initialProfile.username);
   const [mobile, setMobile] = useState(initialProfile.mobile);
@@ -135,6 +145,33 @@ export function ProfileManager({
   const previewUrl = profile.username
     ? buildProfilePreviewUrl(`/${profile.username}`)
     : null;
+
+  async function handleWhatsAppButtonChange(next: boolean) {
+    setWhatsAppButton(next);
+    setWhatsAppButtonError(null);
+    setSavingWhatsAppButton(true);
+    try {
+      const response = await fetch("/api/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ show_whatsapp_button: next }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        setWhatsAppButton(!next);
+        setWhatsAppButtonError(
+          typeof data.error === "string" ? data.error : "Failed to save."
+        );
+        return;
+      }
+      router.refresh();
+    } catch {
+      setWhatsAppButton(!next);
+      setWhatsAppButtonError("Something went wrong. Please try again.");
+    } finally {
+      setSavingWhatsAppButton(false);
+    }
+  }
 
   function setSocialField(key: keyof ProfileSocialLinks, value: string) {
     setSocials((prev) => ({ ...prev, [key]: value }));
@@ -502,6 +539,25 @@ export function ProfileManager({
             />
           </Field>
         </div>
+        <div className={settingsListClassName}>
+          <label className={cn(settingsRowClassName, "cursor-pointer")}>
+            <IconBadge icon={IconBrandWhatsapp} />
+            <RowText
+              title="WhatsApp button"
+              description={
+                whatsAppButton
+                  ? "Clients can drag a chat button while they book. Saves on its own."
+                  : "Hidden on the booking page. Your number still shows with your social links."
+              }
+            />
+            <Switch
+              checked={whatsAppButton}
+              disabled={savingWhatsAppButton}
+              onCheckedChange={(next) => void handleWhatsAppButtonChange(next)}
+            />
+          </label>
+        </div>
+        <SettingsFeedback error={whatsAppButtonError} />
       </SettingsSection>
 
       <SettingsSection

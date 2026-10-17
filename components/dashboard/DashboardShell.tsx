@@ -390,6 +390,9 @@ export function DashboardShell({ data }: { data: DashboardData }) {
           initialProfile={data.profile.initialProfile}
           appUrl={data.profile.appUrl}
           reviewCount={reviews.length}
+          showWhatsAppButton={
+            data.settings.initialSettings.show_whatsapp_button !== false
+          }
         />
       </Section>
 

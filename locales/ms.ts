@@ -212,6 +212,10 @@ export const ms = {
   // WhatsApp
   chatOnWhatsApp: "Bersembang di WhatsApp",
   dragToChat: "Seret untuk alih · Ketik untuk bersembang",
+  whatsappBusyTitle: "Balasan mungkin mengambil masa",
+  whatsappBusyBody:
+    "{role} anda sedang sibuk dengan pelanggan, jadi balasan mungkin mengambil sedikit masa.",
+  whatsappBusyDismiss: "Bukan sekarang",
   whatsapp: "WhatsApp {name}",
   stylist: "stylist",
 

@@ -105,6 +105,7 @@ export type SettingsItem = {
   messages: { review_request?: string };
   client_info: ClientInfoSetting;
   booking_requests: boolean;
+  show_whatsapp_button?: boolean;
   max_booking_year?: number;
 };
 

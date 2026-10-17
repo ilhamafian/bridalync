@@ -32,6 +32,7 @@ function serializeSetting(setting: WithId<Setting>) {
     show_add_on_prices: setting.show_add_on_prices ?? true,
     client_info: setting.client_info ?? {},
     booking_requests: setting.booking_requests ?? false,
+    show_whatsapp_button: setting.show_whatsapp_button ?? true,
     max_booking_year: setting.max_booking_year,
     booking_until: setting.booking_until,
     created_at: setting.created_at,
@@ -108,6 +109,10 @@ function mergeSettingsUpdate(
 
   if (patch.booking_requests !== undefined) {
     update.booking_requests = patch.booking_requests;
+  }
+
+  if (patch.show_whatsapp_button !== undefined) {
+    update.show_whatsapp_button = patch.show_whatsapp_button;
   }
 
   if (patch.max_booking_year !== undefined) {

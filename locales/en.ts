@@ -217,6 +217,10 @@ export const en: Locale = {
   // WhatsApp
   chatOnWhatsApp: "Chat on WhatsApp",
   dragToChat: "Drag to move · Tap to chat",
+  whatsappBusyTitle: "A reply may take a while",
+  whatsappBusyBody:
+    "Your {role} is busy with clients, so they may take some time to reply.",
+  whatsappBusyDismiss: "Not now",
   whatsapp: "WhatsApp {name}",
   stylist: "stylist",
 

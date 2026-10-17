@@ -137,7 +137,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import type { PublicProfile } from "@/schemas/userSchema";
@@ -256,9 +255,18 @@ function saveFabPosition(position: FabPosition) {
   }
 }
 
-function DraggableWhatsAppButton({ href }: { href: string }) {
-  const { t } = useLocale();
-  const linkRef = useRef<HTMLAnchorElement>(null);
+function DraggableWhatsAppButton({
+  href,
+  name,
+  role,
+}: {
+  href: string;
+  name: string;
+  role: string;
+}) {
+  const { t, format } = useLocale();
+  const linkRef = useRef<HTMLButtonElement>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [position, setPosition] = useState<FabPosition | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const positionRef = useRef<FabPosition | null>(null);
@@ -323,7 +331,7 @@ function DraggableWhatsAppButton({ href }: { href: string }) {
     };
   }
 
-  function handlePointerDown(event: ReactPointerEvent<HTMLAnchorElement>) {
+  function handlePointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
     if (event.button !== 0) return;
     const el = linkRef.current;
     if (!el) return;
@@ -347,7 +355,7 @@ function DraggableWhatsAppButton({ href }: { href: string }) {
     setIsDragging(true);
   }
 
-  function handlePointerMove(event: ReactPointerEvent<HTMLAnchorElement>) {
+  function handlePointerMove(event: ReactPointerEvent<HTMLButtonElement>) {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
 
@@ -372,7 +380,7 @@ function DraggableWhatsAppButton({ href }: { href: string }) {
     setPosition(next);
   }
 
-  function endDrag(event: ReactPointerEvent<HTMLAnchorElement>) {
+  function endDrag(event: ReactPointerEvent<HTMLButtonElement>) {
     const drag = dragRef.current;
     if (!drag || drag.pointerId !== event.pointerId) return;
 
@@ -394,41 +402,62 @@ function DraggableWhatsAppButton({ href }: { href: string }) {
     }
   }
 
-  function handleClick(event: ReactMouseEvent<HTMLAnchorElement>) {
+  function handleClick() {
     if (suppressClickRef.current) {
-      event.preventDefault();
       suppressClickRef.current = false;
+      return;
     }
+    setConfirmOpen(true);
   }
 
   return (
-    <a
-      ref={linkRef}
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={t.chatOnWhatsApp}
-      title={t.dragToChat}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-      onClick={handleClick}
-      style={
-        position
-          ? { left: position.x, top: position.y, right: "auto", bottom: "auto" }
-          : undefined
-      }
-      className={cn(
-        "absolute z-20 flex size-12 touch-none items-center justify-center rounded-full border border-zinc-900/10 bg-white/40 text-rose-900 shadow-md backdrop-blur-sm select-none hover:bg-white/55 hover:text-rose-900 hover:shadow-lg dark:border-white/20 dark:bg-white/10 dark:text-rose-400 dark:hover:bg-white/15 dark:hover:text-rose-300",
-        position ? null : "right-4 bottom-[22%]",
-        isDragging
-          ? "cursor-grabbing transition-none"
-          : "cursor-grab transition-colors active:scale-95"
-      )}
-    >
-      <WhatsAppIcon className="pointer-events-none size-6" />
-    </a>
+    <>
+      <button
+        type="button"
+        ref={linkRef}
+        aria-label={t.chatOnWhatsApp}
+        title={t.dragToChat}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onClick={handleClick}
+        style={
+          position
+            ? { left: position.x, top: position.y, right: "auto", bottom: "auto" }
+            : undefined
+        }
+        className={cn(
+          "absolute z-20 flex size-12 touch-none items-center justify-center rounded-full border border-zinc-900/10 bg-white/40 text-rose-900 shadow-md backdrop-blur-sm select-none hover:bg-white/55 hover:text-rose-900 hover:shadow-lg dark:border-white/20 dark:bg-white/10 dark:text-rose-400 dark:hover:bg-white/15 dark:hover:text-rose-300",
+          position ? null : "right-4 bottom-[22%]",
+          isDragging
+            ? "cursor-grabbing transition-none"
+            : "cursor-grab transition-colors active:scale-95"
+        )}
+      >
+        <WhatsAppIcon className="pointer-events-none size-6" />
+      </button>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t.whatsappBusyTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {format(t.whatsappBusyBody, { role: role.toLowerCase() })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t.whatsappBusyDismiss}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                window.open(href, "_blank", "noopener,noreferrer");
+              }}
+            >
+              {format(t.whatsapp, { name })}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 
@@ -2750,8 +2779,15 @@ export default function ClientPage() {
           </div>
         </div>
       </div>
-      {step !== "intro" && whatsappUrl ? (
-        <DraggableWhatsAppButton href={whatsappUrl} />
+      {step !== "intro" &&
+      whatsappUrl &&
+      user &&
+      settings?.show_whatsapp_button !== false ? (
+        <DraggableWhatsAppButton
+          href={whatsappUrl}
+          name={user.name?.trim() || user.username || t.stylist}
+          role={user.role ? roleLabel(user.role, t) : t.stylist}
+        />
       ) : null}
     </div>
   );
