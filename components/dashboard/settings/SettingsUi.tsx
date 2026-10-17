@@ -66,9 +66,11 @@ export function RowText({
 }) {
   return (
     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span className="truncate text-sm font-medium">{title}</span>
+      <span className="min-w-0 truncate text-sm font-medium">{title}</span>
       {description ? (
-        <span className="text-xs text-muted-foreground">{description}</span>
+        <span className="min-w-0 text-xs break-words text-muted-foreground">
+          {description}
+        </span>
       ) : null}
     </span>
   );

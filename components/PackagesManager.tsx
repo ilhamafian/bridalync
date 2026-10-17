@@ -242,7 +242,7 @@ function CatalogItemCard({
         <div className="flex min-w-0 flex-1 flex-col">
           <RowText title={title} description={description} />
           {footer ? (
-            <p className="truncate text-xs text-muted-foreground">{footer}</p>
+            <p className="min-w-0 truncate text-xs text-muted-foreground">{footer}</p>
           ) : null}
         </div>
         <div className="flex shrink-0 gap-1">

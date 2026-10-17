@@ -66,7 +66,7 @@ function SortableRow({
         transition,
       }}
       className={cn(
-        "flex items-start gap-2",
+        "flex min-w-0 items-start gap-2",
         isDragging && "relative z-10",
         className
       )}
@@ -138,7 +138,9 @@ export function SortableList<T>({
       >
         <div
           className={cn(
-            grid ? "grid items-start gap-3" : "flex flex-col gap-3",
+            grid
+              ? "grid grid-cols-1 items-start gap-3"
+              : "flex flex-col gap-3",
             className
           )}
         >
