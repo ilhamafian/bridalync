@@ -12,7 +12,12 @@ import { bookingSessionsOverlap } from "@/utils/booking/availability";
 import { awaitsClientPayment } from "@/utils/booking/paymentLink";
 import { resolveSessionRegions } from "@/utils/booking/region.server";
 import { showsMorningCallPrice } from "@/utils/booking/morningCall";
-import { applyPaymentOption } from "@/utils/booking/pricing";
+import {
+  getCollectedRm,
+  getPlatformFeeCollectedRm,
+  platformFeeOnBalanceCharge,
+} from "@/utils/booking/clientEdits";
+import { applyPaymentOption, roundSen } from "@/utils/booking/pricing";
 import { sendBalancePaymentReceivedEmail } from "@/utils/email/balance-payment-received";
 import { sendBookingPaymentConfirmationEmail } from "@/utils/email/booking-confirmation";
 import {
@@ -51,6 +56,8 @@ const bookingBalanceUpdateSchema = bookingSchema.pick({
   balanceVerificationStatus: true,
   balancePaidAt: true,
   balancePaidRm: true,
+  collectedRm: true,
+  platformFeeCollectedRm: true,
 });
 
 export async function updateBookingStatus(
@@ -171,6 +178,12 @@ export async function confirmBookingBalancePayment(
       invoice: settledInvoice,
       balancePaidAt: new Date(),
       balancePaidRm: existing.invoice.balanceRm,
+      collectedRm: roundSen(
+        getCollectedRm(existing) + existing.invoice.balanceRm
+      ),
+      platformFeeCollectedRm: roundSen(
+        getPlatformFeeCollectedRm(existing) + platformFeeOnBalanceCharge(existing)
+      ),
       ...(existing.balanceVerificationStatus === "pending"
         ? { balanceVerificationStatus: "approved" as const }
         : {}),

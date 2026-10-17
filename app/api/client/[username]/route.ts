@@ -64,6 +64,11 @@ export async function GET(request: NextRequest) {
       freelancerUserId: user_id,
       status: { $in: SLOT_HOLDING_STATUSES },
     });
+    // The client date editor passes its own booking so that slot and its travel days stay open.
+    const excludeBooking = request.nextUrl.searchParams.get("excludeBooking");
+    const slotBookings = excludeBooking
+      ? bookings.filter((booking) => String(booking._id) !== excludeBooking)
+      : bookings;
     const todayKey = toDateKey(new Date());
     const [hotDateDocs, blockedDateDocs, blockedSlotDocs] = await Promise.all([
       hotDateModel.findByUserId(user_id, {
@@ -78,13 +83,16 @@ export async function GET(request: NextRequest) {
     ]);
     // Blocked slots are exposed as taken so clients can't tell them apart from bookings.
     const booked_slots = [
-      ...getOccupiedSlotsFromBookings(bookings),
+      ...getOccupiedSlotsFromBookings(slotBookings),
       ...blockedSlotDocs.map(toPublicBlockedSlot),
     ];
     const hot_dates = hotDateDocs.map((doc) => toHotDateLookup(doc));
     // Travel buffer days look like any other blocked date to clients.
     const bufferDates = [
-      ...getTravelBufferDateKeys(bookings, settings.travel.travel_buffer_regions),
+      ...getTravelBufferDateKeys(
+        slotBookings,
+        settings.travel.travel_buffer_regions
+      ),
     ].filter((dateKey) => !todayKey || dateKey >= todayKey);
     const blocked_dates = [
       ...new Set([...blockedDateDocs.map((doc) => doc.date), ...bufferDates]),

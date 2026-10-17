@@ -9,16 +9,11 @@ import {
 import {
   dashboardBookingUpdateSchema,
   rescheduleSessionSchema,
-  toPublicBooking,
   updateBookingStatusSchema,
   type Booking,
   type CreateBookingRequest,
 } from "@/schemas/bookingSchema";
 import { toIdString } from "@/schemas/objectId";
-import {
-  paymentSettingSchema,
-  toManualTransferDetails,
-} from "@/schemas/settingSchema";
 import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
@@ -32,8 +27,7 @@ import { resolveBookingQuotation } from "@/utils/booking/createBooking";
 import { serializeBooking } from "@/utils/booking/serializeBooking";
 import { normalizeSessionDate } from "@/utils/booking/availability";
 import { GOOGLE_IMPORT_PACKAGE_ID } from "@/utils/google/calendar";
-import { SettingModel } from "@/models/Setting";
-import { getFreelancerByUsername } from "@/utils/users";
+import { toClientFacingBooking } from "@/utils/booking/publicClientBooking";
 
 /** Keeps answers and the moodboard; a blank Instagram username removes only that field. */
 function withInstagram(
@@ -61,20 +55,6 @@ const UNPAID_STATUSES = new Set<Booking["status"]>([
   "enquiry",
 ]);
 
-function toPublicBookingFreelancer(
-  freelancer: NonNullable<Awaited<ReturnType<typeof getFreelancerByUsername>>>
-) {
-  if (!freelancer.mobile || !freelancer.country_code) {
-    return null;
-  }
-
-  return {
-    name: freelancer.name?.trim() || freelancer.username || "Stylist",
-    mobile: freelancer.mobile,
-    country_code: freelancer.country_code,
-  };
-}
-
 async function getAuthorizedOwnerId() {
   const user = await getSessionUser();
   if (!user || !isOnboardingComplete(user.onboarding)) {
@@ -101,29 +81,7 @@ export async function GET(
       return createResponse({ error: "Booking not found" }, 404);
     }
 
-    const freelancer = await getFreelancerByUsername(freelancerUsername);
-    const freelancerId = freelancer?._id
-      ? toIdString(freelancer._id as never)
-      : null;
-    const settings = freelancerId
-      ? await new SettingModel().findSettingsByUserId(freelancerId)
-      : null;
-    const paymentSettings = paymentSettingSchema.parse(
-      settings?.payment ?? {}
-    );
-    const paymentMethod = paymentSettings.method;
-    const manualTransfer = toManualTransferDetails(paymentSettings);
-
-    return createResponse(
-      toPublicBooking(
-        booking,
-        freelancer ? toPublicBookingFreelancer(freelancer) : null,
-        paymentMethod,
-        manualTransfer,
-        paymentSettings.balance_due_before,
-        settings?.morning_call?.show_price !== false
-      )
-    );
+    return createResponse(await toClientFacingBooking(booking));
   } catch (error) {
     return handleError(error);
   }
@@ -402,11 +360,7 @@ export async function PATCH(
       return createResponse({ error: "Booking not found" }, 404);
     }
 
-    const freelancer = await getFreelancerByUsername(parsed.data.freelancerUsername);
-
-    return createResponse(
-      toPublicBooking(updated, freelancer ? toPublicBookingFreelancer(freelancer) : null)
-    );
+    return createResponse(await toClientFacingBooking(updated));
   } catch (error) {
     if (error instanceof Error) {
       return createResponse({ error: error.message }, 400);

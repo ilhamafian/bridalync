@@ -201,6 +201,13 @@ export const bookingSchema = z.object({
   balancePaidAt: z.coerce.date().optional(),
   /** Balance amount settled at `balancePaidAt`; the invoice folds it into `depositRm`. */
   balancePaidRm: z.number().optional(),
+  /**
+   * Ringgit the client has actually paid. Set when they change the date after paying,
+   * so a later edit doesn't treat the rewritten invoice as the amount collected.
+   */
+  collectedRm: z.number().optional(),
+  /** Platform fee already taken on those payments. Omitted from the public booking. */
+  platformFeeCollectedRm: z.number().optional(),
   stripeCheckoutSessionId: z.string().optional(),
   stripePaymentIntentId: z.string().optional(),
   /** Keys of sessions that already received an upcoming-session push. */
@@ -307,6 +314,7 @@ export const publicBookingSchema = bookingSchema
     sessionRemindersSent: true,
     balanceReminderSentAt: true,
     remarks: true,
+    platformFeeCollectedRm: true,
   })
   .extend({
     _id: z.string(),
@@ -366,7 +374,8 @@ export function toPublicBooking(
 
 export const updateBookingStatusSchema = z.object({
   freelancerUsername: z.string().min(1),
-  status: z.enum(["pending", "confirmed", "failed", "cancelled"]),
+  /** Payment confirmation stays on Stripe and receipt review — never this public update. */
+  status: z.enum(["pending", "failed", "cancelled"]),
 });
 
 export const bookingStatusSchema = bookingSchema.shape.status;

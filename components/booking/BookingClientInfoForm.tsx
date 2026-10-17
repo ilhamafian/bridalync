@@ -15,6 +15,7 @@ import {
 import {
   getClientQuestions,
   getInstagramRequirement,
+  isMoodboardPdfUrl,
   isValidInstagramUsername,
   MOODBOARD_PDF_TYPE,
   normalizeInstagramUsername,
@@ -66,9 +67,13 @@ export type MoodboardPhoto = { file: File; previewUrl: string };
 function MoodboardPicker({
   photos,
   onChange,
+  existing = [],
+  onExistingChange,
 }: {
   photos: MoodboardPhoto[];
   onChange: (photos: MoodboardPhoto[]) => void;
+  existing?: string[];
+  onExistingChange?: (urls: string[]) => void;
 }) {
   const { t, format } = useLocale();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -94,7 +99,7 @@ function MoodboardPicker({
           UPLOAD_IMAGE_ALLOWED_TYPES.has(file.type) ||
           (file.type === MOODBOARD_PDF_TYPE && file.size <= UPLOAD_IMAGE_MAX_BYTES)
       )
-      .slice(0, MAX_MOODBOARD_IMAGES - photos.length);
+      .slice(0, MAX_MOODBOARD_IMAGES - existing.length - photos.length);
     if (accepted.length === 0) {
       if (inputRef.current) inputRef.current.value = "";
       return;
@@ -128,8 +133,38 @@ function MoodboardPicker({
 
   return (
     <div className="flex flex-col gap-2">
-      {photos.length > 0 ? (
+      {existing.length + photos.length > 0 ? (
         <div className="grid grid-cols-3 gap-2">
+          {existing.map((url, index) => (
+            <div
+              key={url}
+              className="relative aspect-square overflow-hidden rounded-md bg-white/40 dark:bg-white/10"
+            >
+              {isMoodboardPdfUrl(url) ? (
+                <div className="flex size-full flex-col items-center justify-center gap-1 p-2 text-center">
+                  <FileTextIcon className="size-6 text-rose-900 dark:text-rose-400" />
+                  <span className="line-clamp-2 text-[10px] text-muted-foreground">
+                    PDF
+                  </span>
+                </div>
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={url} alt="" className="size-full object-cover" />
+              )}
+              {onExistingChange ? (
+                <button
+                  type="button"
+                  aria-label={format(t.removePhoto, { index: index + 1 })}
+                  onClick={() =>
+                    onExistingChange(existing.filter((item) => item !== url))
+                  }
+                  className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/55 text-white hover:bg-black/70"
+                >
+                  <XIcon className="size-3.5" />
+                </button>
+              ) : null}
+            </div>
+          ))}
           {photos.map((photo, index) => (
             <div
               key={photo.previewUrl}
@@ -158,7 +193,7 @@ function MoodboardPicker({
           ))}
         </div>
       ) : null}
-      {photos.length < MAX_MOODBOARD_IMAGES ? (
+      {existing.length + photos.length < MAX_MOODBOARD_IMAGES ? (
         <Button
           type="button"
           variant="outline"
@@ -237,6 +272,8 @@ export function BookingClientInfoForm({
   onAnswersChange,
   moodboard,
   onMoodboardChange,
+  existingMoodboard,
+  onExistingMoodboardChange,
   title,
   name,
   onNameChange,
@@ -251,6 +288,9 @@ export function BookingClientInfoForm({
   onAnswersChange: (answers: Record<string, string>) => void;
   moodboard: MoodboardPhoto[];
   onMoodboardChange: (photos: MoodboardPhoto[]) => void;
+  /** Files already saved on the booking. */
+  existingMoodboard?: string[];
+  onExistingMoodboardChange?: (urls: string[]) => void;
   /** Optional card heading (e.g. "You" / "Guest 2"). */
   title?: string;
   name?: string;
@@ -370,7 +410,12 @@ export function BookingClientInfoForm({
             <p className="text-xs text-muted-foreground">
               {format(t.moodboardHelper, { max: MAX_MOODBOARD_IMAGES })}
             </p>
-            <MoodboardPicker photos={moodboard} onChange={onMoodboardChange} />
+            <MoodboardPicker
+              photos={moodboard}
+              onChange={onMoodboardChange}
+              existing={existingMoodboard}
+              onExistingChange={onExistingMoodboardChange}
+            />
           </div>
         ) : null}
       </CardContent>

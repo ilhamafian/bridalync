@@ -123,6 +123,40 @@ export async function notifyBookingConfirmed(booking: PersistedBooking) {
   });
 }
 
+export async function notifyClientUpdatedDetails(booking: PersistedBooking) {
+  if (!booking.freelancerUserId) return;
+
+  await sendPushToUser(booking.freelancerUserId, {
+    title: "Client updated their details",
+    body: `${booking.contact.name} — ${formatSessionSummary(booking)}`,
+    url: bookingDetailsUrl(booking),
+  });
+}
+
+export async function notifyClientRescheduled(
+  booking: PersistedBooking,
+  dueRm: number
+) {
+  if (!booking.freelancerUserId) return;
+
+  const dueNote = dueRm > 0 ? ` · ${formatRm(dueRm)} still due` : "";
+  await sendPushToUser(booking.freelancerUserId, {
+    title: "Client changed the date",
+    body: `${booking.contact.name} — ${formatSessionSummary(booking)} · ${formatRm(booking.invoice.totalRm)}${dueNote}`,
+    url: bookingDetailsUrl(booking),
+  });
+}
+
+export async function notifyClientCancelled(booking: PersistedBooking) {
+  if (!booking.freelancerUserId) return;
+
+  await sendPushToUser(booking.freelancerUserId, {
+    title: "Booking cancelled by client",
+    body: `${booking.contact.name} — ${formatSessionSummary(booking)}`,
+    url: bookingDetailsUrl(booking),
+  });
+}
+
 export async function notifyBalancePaymentReceived(
   booking: PersistedBooking,
   amountRm: number

@@ -10,6 +10,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 
 import { AnimatedFlow } from "@/components/animated-flow";
+import { ClientBookingManage } from "@/components/booking/ClientBookingManage";
 import { ManualPaymentStep } from "@/components/booking/ManualPaymentStep";
 import { BookingInvoice } from "@/components/BookingQuotation";
 import { BookingSessionList } from "@/components/BookingSessionList";
@@ -474,6 +475,13 @@ function BookingResultPageContent() {
   const isRequested = booking.status === "requested";
   const isDeclinedRequest =
     booking.status === "cancelled" && Boolean(booking.requestDeclinedAt);
+  const isClientCancelled =
+    booking.status === "cancelled" && !booking.requestDeclinedAt;
+  const collectedRm = booking.collectedRm;
+  const showsRetained =
+    typeof collectedRm === "number" && collectedRm > booking.invoice.totalRm;
+  const showsDifference =
+    typeof collectedRm === "number" && booking.invoice.balanceRm > 0;
   const awaitingRequestPayment =
     awaitsClientPayment(booking) &&
     !awaitingManualVerification &&
@@ -567,6 +575,9 @@ function BookingResultPageContent() {
             <CheckCircle2Icon className="size-12 text-rose-900 dark:text-rose-400" />
           )}
           {isFailure && <XCircleIcon className="size-12 text-rose-900 dark:text-rose-400" />}
+          {isClientCancelled && (
+            <XCircleIcon className="size-12 text-rose-900 dark:text-rose-400" />
+          )}
           {(isConfirmingDeposit || isConfirmingBalance) && (
             <div className="size-12 animate-spin rounded-full border-2 border-muted-foreground/30 border-t-rose-900 dark:border-t-rose-400" />
           )}
@@ -593,6 +604,7 @@ function BookingResultPageContent() {
               outstandingBalance &&
               t.bookingConfirmed}
             {isFailure && t.paymentFailed}
+            {isClientCancelled && t.bookingCancelledTitle}
             {awaitingManualVerification && t.bookingPending}
             {isPending &&
               !isConfirmingDeposit &&
@@ -606,18 +618,31 @@ function BookingResultPageContent() {
               !isConfirmingBalance &&
               !isCompleted &&
               isFullyPaid &&
-              format(t.paymentReceived, {
-                amount: formatRm(booking.invoice.totalRm),
-              })}
+              (showsRetained
+                ? format(t.priceRetained, {
+                    total: formatRm(booking.invoice.totalRm),
+                    paid: formatRm(collectedRm ?? 0),
+                    kept: formatRm((collectedRm ?? 0) - booking.invoice.totalRm),
+                  })
+                : format(t.paymentReceived, {
+                    amount: formatRm(booking.invoice.totalRm),
+                  }))}
             {!isConfirmingDeposit &&
               !isConfirmingBalance &&
               !isCompleted &&
               isSuccess &&
               outstandingBalance &&
-              format(t.depositReceived, {
-                depositAmount: formatRm(booking.invoice.depositRm),
-                balanceAmount: formatRm(booking.invoice.balanceRm),
-              })}
+              (showsDifference
+                ? format(t.priceDifferenceDue, {
+                    total: formatRm(booking.invoice.totalRm),
+                    paid: formatRm(collectedRm ?? 0),
+                    due: formatRm(booking.invoice.balanceRm),
+                  })
+                : format(t.depositReceived, {
+                    depositAmount: formatRm(booking.invoice.depositRm),
+                    balanceAmount: formatRm(booking.invoice.balanceRm),
+                  }))}
+            {isClientCancelled && t.bookingCancelledBody}
             {isFailure && t.paymentNotProcessed}
             {(isConfirmingDeposit || isConfirmingBalance) && t.paymentAccepted}
             {(isConfirmingDeposit || isConfirmingBalance) && confirmingTooLong && (
@@ -665,6 +690,12 @@ function BookingResultPageContent() {
               frosted
             />
           </div>
+
+          <ClientBookingManage
+            booking={booking}
+            username={client}
+            onUpdated={setBooking}
+          />
         </div>
 
         <div className="flex w-full flex-col gap-6 @4xl/client:sticky @4xl/client:top-0">

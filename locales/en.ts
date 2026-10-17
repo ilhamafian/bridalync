@@ -251,6 +251,46 @@ export const en: Locale = {
   couldNotStartBalancePayment: "Could not start balance payment.",
   balanceReceiptPending:
     "Your balance receipt is pending verification by the stylist.",
+  editDetails: "Edit details",
+  changeDate: "Change date",
+  cancelBooking: "Cancel booking",
+  editDetailsTitle: "Your details",
+  editDetailsHint: "Update your contact details and the information the stylist asked for.",
+  saveDetails: "Save details",
+  savingDetails: "Saving…",
+  couldNotSaveDetails: "Couldn't save your details.",
+  changeDateTitle: "Change the date",
+  changeDateHint: "Pick a free date and time. The total is recalculated before anything is saved.",
+  reviewNewTotal: "Review new total",
+  checkingNewTotal: "Checking the new total…",
+  confirmDateChange: "Confirm new date",
+  savingDate: "Saving…",
+  couldNotChangeDate: "Couldn't change the date.",
+  dateChangePaused:
+    "Dates can't be changed while a payment receipt is being reviewed.",
+  newTotalIs: "The new total is {total} (was {previous}).",
+  dateChangeDue:
+    "You've paid {paid}, so {due} will still be due.",
+  dateChangeKept:
+    "You've paid {paid}. The extra {kept} is not refunded automatically — contact the stylist.",
+  dateChangeUnchanged: "The total stays {total}.",
+  customStartTime: "Start time",
+  customEndTime: "End time",
+  pickDateAndTime: "Pick a date and time for every session.",
+  cancelBookingTitle: "Cancel this booking?",
+  cancelBookingUnpaid: "This cancels the booking and frees the date.",
+  cancelBookingPaid:
+    "This cancels the booking and frees the date. Bridalync won't refund the payment. Contact {name} if you want to ask — a refund depends on their terms.",
+  keepBooking: "Keep booking",
+  confirmCancel: "Cancel booking",
+  cancellingBooking: "Cancelling…",
+  couldNotCancelBooking: "Couldn't cancel the booking.",
+  bookingCancelledTitle: "Booking cancelled",
+  bookingCancelledBody: "This booking has been cancelled and the date is free.",
+  priceDifferenceDue:
+    "The new total is {total}. You've paid {paid}. Please pay the remaining {due}.",
+  priceRetained:
+    "The new total is {total}. You've paid {paid}. The extra {kept} is not refunded here — contact the stylist.",
   bookingDetails: "Booking details",
   styleLabel: "Style",
 

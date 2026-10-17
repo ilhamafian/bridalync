@@ -1,5 +1,9 @@
 import { getStripe } from "@/lib/stripe";
 import {
+  chargeAmountMatches,
+  expectedChargeSen,
+} from "@/utils/booking/clientEdits";
+import {
   confirmBookingBalancePayment,
   confirmBookingPayment,
   getBookingById,
@@ -80,6 +84,23 @@ export async function syncBookingCheckoutFromStripe(input: {
   }
 
   const paymentIntentId = getPaymentIntentId(session.payment_intent);
+  const purpose =
+    input.purpose === "balance"
+      ? "balance"
+      : session.metadata?.paymentOption === "full"
+        ? "full"
+        : "deposit";
+  if (!chargeAmountMatches(expectedChargeSen(booking, purpose), session.amount_total)) {
+    console.warn(
+      "[stripe sync] paid amount does not match the current invoice — leaving the booking unpaid",
+      { bookingId: input.bookingId, purpose, amountSen: session.amount_total }
+    );
+    return {
+      ok: false as const,
+      reason: "amount_mismatch" as const,
+      booking,
+    };
+  }
 
   if (input.purpose === "balance") {
     await confirmBookingBalancePayment(input.bookingId, paymentIntentId);

@@ -15,6 +15,7 @@ import {
   getMoodboardPrefix,
   MOODBOARD_PDF_TYPE,
 } from "@/utils/booking/clientInfo";
+import { isClientEditable } from "@/utils/booking/clientEdits";
 import { getBookingById } from "@/utils/bookings";
 import {
   prepareFileForUpload,
@@ -66,12 +67,12 @@ export async function POST(
     const createdAt = booking.created_at
       ? new Date(booking.created_at).getTime()
       : 0;
-    if (
-      (booking.status !== "pending" &&
-        booking.status !== "enquiry" &&
-        booking.status !== "requested") ||
-      Date.now() - createdAt > UPLOAD_WINDOW_MS
-    ) {
+    const withinCreateWindow =
+      (booking.status === "pending" ||
+        booking.status === "enquiry" ||
+        booking.status === "requested") &&
+      Date.now() - createdAt <= UPLOAD_WINDOW_MS;
+    if (!isClientEditable(booking) && !withinCreateWindow) {
       return createResponse(
         { error: "Moodboard files can no longer be added to this booking." },
         409

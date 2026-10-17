@@ -1,6 +1,11 @@
 import {
+  chargeAmountMatches,
+  expectedChargeSen,
+} from "@/utils/booking/clientEdits";
+import {
   confirmBookingBalancePayment,
   confirmBookingPayment,
+  getBookingById,
   markBookingPaymentFailed,
 } from "@/utils/bookings";
 import {
@@ -16,8 +21,20 @@ type CheckoutSessionLike = {
   id?: string;
   metadata?: StripeMetadata;
   payment_status?: string | null;
+  amount_total?: number | null;
   payment_intent?: string | { id?: string } | null;
 };
+
+function chargePurpose(metadata: StripeMetadata): "deposit" | "balance" | "full" {
+  if (isBookingBalancePayment(metadata)) return "balance";
+  if (
+    metadata?.type === "booking_full_payment" ||
+    metadata?.paymentOption === "full"
+  ) {
+    return "full";
+  }
+  return "deposit";
+}
 
 function getPaymentIntentId(
   paymentIntent: string | { id?: string } | null | undefined
@@ -28,7 +45,8 @@ function getPaymentIntentId(
 
 export async function handleBookingPaymentConfirmed(
   metadata: StripeMetadata,
-  paymentIntentId?: string | null
+  paymentIntentId?: string | null,
+  amountSen?: number | null
 ) {
   const bookingId = getBookingIdFromMetadata(metadata);
   if (!bookingId) {
@@ -36,7 +54,19 @@ export async function handleBookingPaymentConfirmed(
     return;
   }
 
-  if (isBookingBalancePayment(metadata)) {
+  const booking = await getBookingById(bookingId);
+  if (!booking) return;
+
+  const purpose = chargePurpose(metadata);
+  if (!chargeAmountMatches(expectedChargeSen(booking, purpose), amountSen)) {
+    console.warn(
+      "[stripe webhook] paid amount does not match the current invoice — leaving the booking unpaid",
+      { bookingId, purpose, amountSen }
+    );
+    return;
+  }
+
+  if (purpose === "balance") {
     await confirmBookingBalancePayment(bookingId, paymentIntentId);
     return;
   }
@@ -83,7 +113,8 @@ export async function handleCheckoutSessionCompleted(
 
   await handleBookingPaymentConfirmed(
     session.metadata,
-    getPaymentIntentId(session.payment_intent)
+    getPaymentIntentId(session.payment_intent),
+    session.amount_total
   );
 }
 
@@ -92,7 +123,8 @@ export async function handleCheckoutSessionAsyncPaymentSucceeded(
 ) {
   await handleBookingPaymentConfirmed(
     session.metadata,
-    getPaymentIntentId(session.payment_intent)
+    getPaymentIntentId(session.payment_intent),
+    session.amount_total
   );
 }
 
@@ -111,6 +143,7 @@ export async function handleCheckoutSessionExpired(session: {
 export async function handlePaymentIntentSucceeded(paymentIntent: {
   metadata?: StripeMetadata;
   id?: string;
+  amount?: number | null;
 }) {
   if (
     !isBookingInitialPayment(paymentIntent.metadata) &&
@@ -119,7 +152,11 @@ export async function handlePaymentIntentSucceeded(paymentIntent: {
     return;
   }
 
-  await handleBookingPaymentConfirmed(paymentIntent.metadata, paymentIntent.id);
+  await handleBookingPaymentConfirmed(
+    paymentIntent.metadata,
+    paymentIntent.id,
+    paymentIntent.amount
+  );
 }
 
 export async function handleAccountUpdated(account: { id?: string }) {

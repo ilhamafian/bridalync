@@ -59,6 +59,8 @@ export async function assertSessionsAvailable(
     requireListedSlots?: boolean;
     /** Client bookings: also reject the travel buffer days around out-of-state bookings. */
     applyTravelBuffers?: boolean;
+    /** The booking being moved, so its own slot and travel-buffer days stay free. */
+    excludeBookingId?: string;
   }
 ): Promise<void> {
   const sessionDateKeys = sessions
@@ -71,8 +73,13 @@ export async function assertSessionsAvailable(
       blockedSlotModel.findByUserIdAndDates(freelancerUserId, sessionDateKeys),
       new SettingModel().findSettingsByUserId(freelancerUserId),
     ]);
+  const otherBookings = options?.excludeBookingId
+    ? holdingBookings.filter(
+        (booking) => String(booking._id) !== options.excludeBookingId
+      )
+    : holdingBookings;
   const occupied = [
-    ...getOccupiedSlotsFromBookings(holdingBookings),
+    ...getOccupiedSlotsFromBookings(otherBookings),
     ...blockedSlotDocs.map(toPublicBlockedSlot),
   ];
   const blockedKeys = buildBlockedDateSet(
@@ -80,7 +87,7 @@ export async function assertSessionsAvailable(
   );
   const bufferKeys = options?.applyTravelBuffers
     ? getTravelBufferDateKeys(
-        holdingBookings,
+        otherBookings,
         settings?.travel.travel_buffer_regions
       )
     : new Set<string>();

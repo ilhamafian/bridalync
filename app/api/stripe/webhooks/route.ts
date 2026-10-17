@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
             id?: string;
             metadata?: Record<string, string>;
             payment_status?: string | null;
+            amount_total?: number | null;
             payment_intent?: string | { id?: string } | null;
           }
         );
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
             id?: string;
             metadata?: Record<string, string>;
             payment_status?: string | null;
+            amount_total?: number | null;
             payment_intent?: string | { id?: string } | null;
           }
         );
@@ -91,6 +93,7 @@ export async function POST(req: NextRequest) {
           event.data.object as {
             metadata?: Record<string, string>;
             id?: string;
+            amount?: number | null;
           }
         );
         break;

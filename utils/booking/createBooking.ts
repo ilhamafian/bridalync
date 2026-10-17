@@ -85,7 +85,8 @@ async function resolveSessionStyle(
   sessionName: string,
   styleInput: NonNullable<BookingSessionInput["style"]>,
   sessionDate: Date | string,
-  hotDatePriceMap: Map<string, HotDateRate>
+  hotDatePriceMap: Map<string, HotDateRate>,
+  acceptCatalogPrice = false
 ): Promise<ResolvedSessionStyle> {
   const parsed = parseStyleVariantId(styleInput.id);
   if (!parsed) {
@@ -114,7 +115,7 @@ async function resolveSessionStyle(
     )
   );
 
-  if (effectivePrice !== styleInput.price) {
+  if (!acceptCatalogPrice && effectivePrice !== styleInput.price) {
     throw new Error("Style pricing mismatch");
   }
 
@@ -315,6 +316,11 @@ export async function resolveBookingQuotation(
     customEvent?: CustomEventInput | null;
     /** Add-ons priced as entered, appended after the catalog add-ons. */
     customAddOns?: CustomAddOnInput[];
+    /**
+     * Server-built edits: price the style from the catalog (including hot dates)
+     * instead of requiring the caller to send the current price.
+     */
+    acceptCatalogPrice?: boolean;
   }
 ): Promise<{
   invoice: BookingQuotationSummary;
@@ -513,7 +519,8 @@ export async function resolveBookingQuotation(
         session.name,
         session.style,
         session.date,
-        hotDatePriceMap
+        hotDatePriceMap,
+        options?.acceptCatalogPrice === true
       );
       resolvedSessionStyles.set(session.client_key, resolved);
       selectedSessionStyles.push({
