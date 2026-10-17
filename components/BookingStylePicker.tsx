@@ -2,7 +2,6 @@
 
 import Image from "next/image"
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
-import { motion } from "motion/react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 
 import { useLocale } from "@/components/LocaleProvider"
@@ -37,7 +36,6 @@ type BookingStylePickerProps = {
 
 const CARD_WIDTH_RATIO = 0.82
 const CARD_GAP_PX = 12
-const SWIPE_THRESHOLD_RATIO = 0.2
 
 const selectedCardClassName =
   "bg-rose-800 text-white ring-2 ring-rose-800 hover:bg-rose-800/90 hover:text-white"
@@ -45,8 +43,9 @@ const glassCardClassName =
   "border-transparent bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 hover:text-foreground dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
 
 /**
- * Peeking card carousel: drag or use the arrows to move; tapping a side card
- * brings it to the centre, tapping the centred card calls `onActivate`.
+ * Peeking card carousel: native scroll-snap swipe (same idea as dashboard
+ * CardCarousel) or the arrows / dots. Tapping a side card brings it into
+ * view; tapping the active card calls `onActivate`.
  */
 function SwipeCarousel<T>({
   items,
@@ -73,27 +72,59 @@ function SwipeCarousel<T>({
     dot: (item: T, index: number) => string
   }
 }) {
-  const [activeIndex, setActiveIndex] = useState(
-    Math.min(Math.max(initialIndex, 0), Math.max(items.length - 1, 0))
+  const clampedInitial = Math.min(
+    Math.max(initialIndex, 0),
+    Math.max(items.length - 1, 0)
   )
-  const viewportRef = useRef<HTMLDivElement>(null)
+  const [activeIndex, setActiveIndex] = useState(clampedInitial)
+  const activeIndexRef = useRef(activeIndex)
+  const trackRef = useRef<HTMLDivElement>(null)
   const [viewportWidth, setViewportWidth] = useState(0)
   const suppressClickRef = useRef(false)
+  const programmaticScrollRef = useRef(false)
+  const scrollInitKeyRef = useRef<string | null>(null)
+
+  activeIndexRef.current = activeIndex
 
   useEffect(() => {
-    const viewport = viewportRef.current
-    if (!viewport) return
+    const track = trackRef.current
+    if (!track) return
 
     function updateWidth() {
-      if (!viewport) return
-      setViewportWidth(viewport.clientWidth)
+      if (!track) return
+      setViewportWidth(track.clientWidth)
     }
 
     updateWidth()
     const observer = new ResizeObserver(updateWidth)
-    observer.observe(viewport)
+    observer.observe(track)
     return () => observer.disconnect()
-  }, [])
+  }, [items.length])
+
+  // Position the track once the viewport is measured, and again after resize
+  // (card width is a % of the viewport, so scrollLeft must be recalculated).
+  useEffect(() => {
+    const track = trackRef.current
+    if (!track || viewportWidth <= 0 || items.length <= 1) return
+
+    const initKey = `${items.length}:${clampedInitial}:${getKey(items[0]!)}`
+    const isFirstLayout = scrollInitKeyRef.current !== initKey
+    scrollInitKeyRef.current = initKey
+
+    const index = isFirstLayout ? clampedInitial : activeIndexRef.current
+    programmaticScrollRef.current = true
+    track.scrollTo({
+      left: index * (viewportWidth * CARD_WIDTH_RATIO + CARD_GAP_PX),
+      behavior: "auto",
+    })
+    if (isFirstLayout) setActiveIndex(clampedInitial)
+    const timer = window.setTimeout(() => {
+      programmaticScrollRef.current = false
+    }, 50)
+    return () => window.clearTimeout(timer)
+    // getKey is stable enough per call site; items[0] identity is covered by initKey.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only re-run on size / item set
+  }, [viewportWidth, clampedInitial, items.length])
 
   if (items.length === 0) return null
 
@@ -107,20 +138,49 @@ function SwipeCarousel<T>({
   const canGoNext = activeIndex < items.length - 1
   const cardWidth =
     viewportWidth > 0 ? viewportWidth * CARD_WIDTH_RATIO : undefined
-  const slideOffset =
-    viewportWidth > 0
-      ? activeIndex * (viewportWidth * CARD_WIDTH_RATIO + CARD_GAP_PX)
-      : 0
-  const swipeThreshold =
-    (cardWidth ?? (viewportWidth * CARD_WIDTH_RATIO || 120)) *
-    SWIPE_THRESHOLD_RATIO
+
+  function slideStep() {
+    const track = trackRef.current
+    if (!track) return 0
+    return track.clientWidth * CARD_WIDTH_RATIO + CARD_GAP_PX
+  }
 
   function goToIndex(index: number) {
-    if (index < 0 || index >= items.length) return
+    const track = trackRef.current
+    if (!track || index < 0 || index >= items.length) return
+    const step = slideStep()
+    if (step <= 0) return
+    programmaticScrollRef.current = true
+    track.scrollTo({ left: index * step, behavior: "smooth" })
     setActiveIndex(index)
+    window.setTimeout(() => {
+      programmaticScrollRef.current = false
+    }, 450)
+  }
+
+  function handleScroll() {
+    const track = trackRef.current
+    if (!track) return
+    const step = slideStep()
+    if (step <= 0) return
+    const index = Math.min(
+      Math.max(Math.round(track.scrollLeft / step), 0),
+      items.length - 1
+    )
+    setActiveIndex((current) => {
+      if (index === current) return current
+      if (!programmaticScrollRef.current) {
+        suppressClickRef.current = true
+        window.setTimeout(() => {
+          suppressClickRef.current = false
+        }, 80)
+      }
+      return index
+    })
   }
 
   function handleItemClick(index: number) {
+    if (suppressClickRef.current) return
     if (index !== activeIndex) {
       goToIndex(index)
       return
@@ -131,64 +191,35 @@ function SwipeCarousel<T>({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="relative">
-        {/* `overflow-clip`, not hidden: focusing a peeking card must not scroll the viewport. */}
-        <div ref={viewportRef} className="overflow-clip touch-pan-y">
-          <motion.div
-            className="flex cursor-grab active:cursor-grabbing"
-            style={{ gap: CARD_GAP_PX }}
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.18}
-            onClickCapture={(event) => {
-              if (!suppressClickRef.current) return
-              event.stopPropagation()
-              event.preventDefault()
-            }}
-            onDragEnd={(_, info) => {
-              const dragged =
-                Math.abs(info.offset.x) > 8 || Math.abs(info.velocity.x) > 200
-              if (dragged) {
-                suppressClickRef.current = true
-                window.setTimeout(() => {
-                  suppressClickRef.current = false
-                }, 50)
-              }
-              if (
-                (info.offset.x < -swipeThreshold || info.velocity.x < -500) &&
-                canGoNext
-              ) {
-                goToIndex(activeIndex + 1)
-                return
-              }
-              if (
-                (info.offset.x > swipeThreshold || info.velocity.x > 500) &&
-                canGoPrev
-              ) {
-                goToIndex(activeIndex - 1)
-              }
-            }}
-            animate={{ x: -slideOffset }}
-            transition={{ type: "spring", stiffness: 320, damping: 34 }}
-          >
-            {items.map((item, index) => {
-              const isActive = index === activeIndex
-              return (
-                <div
-                  key={getKey(item)}
-                  className={cn(
-                    "shrink-0 transition-opacity duration-300",
-                    !isActive && "opacity-55"
-                  )}
-                  style={{ width: cardWidth ?? `${CARD_WIDTH_RATIO * 100}%` }}
-                >
-                  {renderItem(item, {
-                    isActive,
-                    onClick: () => handleItemClick(index),
-                  })}
-                </div>
-              )
-            })}
-          </motion.div>
+        <div
+          ref={trackRef}
+          onScroll={handleScroll}
+          onClickCapture={(event) => {
+            if (!suppressClickRef.current) return
+            event.stopPropagation()
+            event.preventDefault()
+          }}
+          className="no-scrollbar flex snap-x snap-mandatory overflow-x-auto overscroll-x-contain touch-pan-x"
+          style={{ gap: CARD_GAP_PX }}
+        >
+          {items.map((item, index) => {
+            const isActive = index === activeIndex
+            return (
+              <div
+                key={getKey(item)}
+                className={cn(
+                  "shrink-0 snap-start transition-opacity duration-300",
+                  !isActive && "opacity-55"
+                )}
+                style={{ width: cardWidth ?? `${CARD_WIDTH_RATIO * 100}%` }}
+              >
+                {renderItem(item, {
+                  isActive,
+                  onClick: () => handleItemClick(index),
+                })}
+              </div>
+            )
+          })}
         </div>
 
         <div
@@ -292,7 +323,8 @@ function VariantCarousel({
                 src={variant.imageSrcs[0]}
                 alt={variant.name}
                 fill
-                className="object-cover"
+                draggable={false}
+                className="pointer-events-none object-cover"
                 sizes="(max-width: 448px) 82vw, 360px"
               />
             </span>
@@ -365,7 +397,8 @@ function VariantPhotoRow({
                 src={src}
                 alt={variant.name}
                 fill
-                className="object-cover"
+                draggable={false}
+                className="pointer-events-none object-cover"
                 sizes="(max-width: 448px) 75vw, 340px"
               />
             </button>
