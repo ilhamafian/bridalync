@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { useLocale } from "@/components/LocaleProvider"
 import type { SessionForm } from "@/schemas/sessionSchema"
+import { quotationLineItemsForDisplay } from "@/utils/booking/morningCall"
 import { BookingQuotationSummary, formatRm } from "@/utils/booking/pricing"
 import { formatLocationAddress, formatSessionSummary } from "@/utils/session"
 import { cn } from "@/lib/utils"
@@ -13,6 +14,8 @@ type BookingQuotationProps = {
   companyName?: string
   balanceDueBeforeDays?: number
   paymentOption?: "deposit" | "full"
+  /** List Morning call as its own priced line. Missing = shown. */
+  showMorningCallPrice?: boolean
   className?: string
 }
 
@@ -45,6 +48,8 @@ type BookingInvoiceProps = {
   companyName?: string
   balanceDueBeforeDays?: number
   paymentOption?: "deposit" | "full"
+  /** List Morning call as its own priced line. Missing = shown. */
+  showMorningCallPrice?: boolean
   className?: string
 }
 
@@ -53,11 +58,17 @@ export function BookingInvoice({
   companyName,
   balanceDueBeforeDays,
   paymentOption,
+  showMorningCallPrice = true,
   className,
 }: BookingInvoiceProps) {
   const { t, format } = useLocale()
   const isFullPayment =
     paymentOption === "full" || invoice.balanceRm === 0
+  const displayLineItems = quotationLineItemsForDisplay(
+    invoice.lineItems,
+    invoice.breakdown,
+    showMorningCallPrice
+  )
 
   return (
     <Card
@@ -74,11 +85,11 @@ export function BookingInvoice({
           <p className="text-xs text-muted-foreground">{t.paymentSummary}</p>
         </div>
 
-        {invoice.lineItems.length > 0 ? (
+        {displayLineItems.length > 0 ? (
           <div className="space-y-2 border-b border-white/40 pb-4 dark:border-white/15">
-            {invoice.lineItems.map((item) => (
+            {displayLineItems.map((item, index) => (
               <InvoiceRow
-                key={item.label}
+                key={`${item.label}-${index}`}
                 label={item.label}
                 amount={formatRm(item.amountRm)}
               />
@@ -132,12 +143,18 @@ export function BookingQuotation({
   companyName,
   balanceDueBeforeDays,
   paymentOption,
+  showMorningCallPrice = true,
   className,
 }: BookingQuotationProps) {
   const { t, format, intlLocale } = useLocale()
   const sortedSessions = [...sessions].sort((a, b) => a.order - b.order)
   const isFullPayment =
     paymentOption === "full" || quotation.balanceRm === 0
+  const displayLineItems = quotationLineItemsForDisplay(
+    quotation.lineItems,
+    quotation.breakdown,
+    showMorningCallPrice
+  )
 
   return (
     <Card
@@ -179,11 +196,11 @@ export function BookingQuotation({
           </div>
         )}
 
-        {quotation.lineItems.length > 0 ? (
+        {displayLineItems.length > 0 ? (
           <div className="space-y-2 border-b border-white/40 pb-4 dark:border-white/15">
-            {quotation.lineItems.map((item) => (
+            {displayLineItems.map((item, index) => (
               <InvoiceRow
-                key={item.label}
+                key={`${item.label}-${index}`}
                 label={item.label}
                 amount={formatRm(item.amountRm)}
               />

@@ -120,7 +120,8 @@ export async function GET(
         freelancer ? toPublicBookingFreelancer(freelancer) : null,
         paymentMethod,
         manualTransfer,
-        paymentSettings.balance_due_before
+        paymentSettings.balance_due_before,
+        settings?.morning_call?.show_price !== false
       )
     );
   } catch (error) {

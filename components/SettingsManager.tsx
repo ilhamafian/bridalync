@@ -8,6 +8,8 @@ import {
   IconBuildingBank,
   IconClock,
   IconCreditCard,
+  IconEye,
+  IconEyeOff,
   IconPackage,
   IconPlus,
   IconSparkles,
@@ -294,6 +296,9 @@ export function SettingsManager({
   const [morningCallPrice, setMorningCallPrice] = useState(
     String(initialSettings.morning_call?.price ?? "")
   );
+  const [morningCallShowPrice, setMorningCallShowPrice] = useState(
+    initialSettings.morning_call?.show_price !== false
+  );
   const morningCallSlots = timeSlots.filter(
     (slot) => slot.startTime < morningCallBefore
   );
@@ -381,6 +386,7 @@ export function SettingsManager({
       next.morning_call?.before ?? DEFAULT_MORNING_CALL_BEFORE
     );
     setMorningCallPrice(String(next.morning_call?.price ?? ""));
+    setMorningCallShowPrice(next.morning_call?.show_price !== false);
     setReviewTemplate(
       next.messages?.review_request?.trim() || DEFAULT_REVIEW_REQUEST_TEMPLATE
     );
@@ -642,6 +648,7 @@ export function SettingsManager({
         enabled: morningCallEnabled,
         before: morningCallBefore || DEFAULT_MORNING_CALL_BEFORE,
         price: Number.isFinite(price) && price > 0 ? price : 0,
+        show_price: morningCallShowPrice,
       },
     });
     if (saved) router.refresh();
@@ -1198,9 +1205,41 @@ export function SettingsManager({
                       .map((slot) => `${slot.startTime} - ${slot.endTime}`)
                       .join(", ")} slot${morningCallSlots.length === 1 ? "" : "s"}. `
                   : "None of your slots start before this time. "}
-                It&apos;s included in the session price clients see and
-                listed as &quot;Morning call&quot; on the invoice.
+                The charge is always included in the booking total.
               </p>
+              <div className="mt-3">
+                <p className="mb-2 text-sm font-medium text-foreground">
+                  Morning call price
+                </p>
+                <RadioGroup
+                  value={morningCallShowPrice ? "show" : "hide"}
+                  onValueChange={(value) =>
+                    setMorningCallShowPrice(value === "show")
+                  }
+                  className={settingsListClassName}
+                >
+                  <label
+                    className={cn(settingsRowClassName, "cursor-pointer")}
+                  >
+                    <IconBadge icon={IconEye} />
+                    <RowText
+                      title="Show price"
+                      description="Clients see a Morning call line on the booking quotation and invoice"
+                    />
+                    <RadioGroupItem value="show" aria-label="Show price" />
+                  </label>
+                  <label
+                    className={cn(settingsRowClassName, "cursor-pointer")}
+                  >
+                    <IconBadge icon={IconEyeOff} />
+                    <RowText
+                      title="Hide price"
+                      description="Morning call stays folded into the session or event price"
+                    />
+                    <RadioGroupItem value="hide" aria-label="Hide price" />
+                  </label>
+                </RadioGroup>
+              </div>
             </div>
           ) : null}
         </SettingsSection>

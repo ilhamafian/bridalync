@@ -171,6 +171,11 @@ export const morningCallSettingSchema = z.object({
   enabled: z.boolean(),
   before: timeOfDaySchema,
   price: z.number().min(0),
+  /**
+   * Whether clients see Morning call as its own priced line on the booking
+   * quotation and invoice. Missing = shown.
+   */
+  show_price: z.boolean().optional(),
 });
 
 export type MorningCallSetting = z.infer<typeof morningCallSettingSchema>;

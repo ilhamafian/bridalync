@@ -6,6 +6,7 @@ import { isOnboardingComplete } from "@/schemas/userSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import { getSessionUser } from "@/utils/auth/session";
 import { getBookingById } from "@/utils/bookings";
+import { showsMorningCallPrice } from "@/utils/booking/morningCall";
 import {
   bookingInvoiceFilename,
   generateBookingInvoicePdf,
@@ -49,6 +50,7 @@ export async function GET(
       },
       invoiceSettings: settings?.invoice ?? null,
       paymentSettings: settings?.payment ?? null,
+      showMorningCallPrice: showsMorningCallPrice(settings?.morning_call),
       issuedAt:
         booking.balancePaidAt ??
         booking.depositPaidAt ??

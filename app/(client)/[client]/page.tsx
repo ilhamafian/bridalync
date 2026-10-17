@@ -61,7 +61,10 @@ import {
   resolveDepositRm,
   withClientFeesRm,
 } from "@/utils/booking/pricing";
-import { getMorningCallCharge } from "@/utils/booking/morningCall";
+import {
+  getMorningCallCharge,
+  showsMorningCallPrice,
+} from "@/utils/booking/morningCall";
 import {
   getStyleExtraRm,
   hasStyleExtras,
@@ -2493,6 +2496,9 @@ export default function ClientPage() {
                   companyName={settings?.invoice.company_name}
                   balanceDueBeforeDays={balanceDueBeforeDays}
                   paymentOption={effectivePaymentOption}
+                  showMorningCallPrice={showsMorningCallPrice(
+                    settings?.morning_call
+                  )}
                 />
                 <Button
                   size="lg"
@@ -2685,6 +2691,9 @@ export default function ClientPage() {
                   companyName={settings?.invoice.company_name}
                   balanceDueBeforeDays={balanceDueBeforeDays}
                   paymentOption={effectivePaymentOption}
+                  showMorningCallPrice={showsMorningCallPrice(
+                    settings?.morning_call
+                  )}
                 />
                 {(settings?.payment.method ?? "manual_transfer") ===
                 "manual_transfer" ? (

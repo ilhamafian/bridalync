@@ -8,7 +8,7 @@ import {
   getEarliestSessionDate,
   roundSen,
 } from "@/utils/booking/pricing";
-import { MORNING_CALL_LABEL } from "@/utils/booking/morningCall";
+import { expandSessionLinesWithMorningCall } from "@/utils/booking/morningCall";
 import { invoiceNumberFromBookingId } from "@/utils/invoice/invoiceNumber";
 import { formatLocationAddress } from "@/utils/session";
 
@@ -46,6 +46,11 @@ export type GenerateBookingInvoicePdfInput = {
     >
   > | null;
   paymentSettings?: Pick<PaymentSetting, "balance_due_before"> | null;
+  /**
+   * List Morning call as its own priced line (default true). When false the
+   * charge stays folded into the session/event amount.
+   */
+  showMorningCallPrice?: boolean;
   /** When the payment was confirmed / invoice issued. Defaults to now. */
   issuedAt?: Date;
 };
@@ -99,27 +104,19 @@ function amountPaidRm(booking: PersistedBooking): number {
 }
 
 /** Bookings saved before `breakdown` existed have the travel fee folded into the first line item. */
-function invoiceItems(booking: PersistedBooking) {
+function invoiceItems(
+  booking: PersistedBooking,
+  showMorningCallPrice: boolean
+) {
   const { breakdown } = booking.invoice;
   if (!breakdown) {
     return booking.invoice.lineItems.filter((item) => item.amountRm >= 0);
   }
 
   return [
-    ...breakdown.sessions.flatMap(
-      ({ label, amountRm, morningCallRm, morningCallCount }) =>
-        morningCallRm
-          ? [
-              { label, amountRm: amountRm - morningCallRm },
-              {
-                label:
-                  (morningCallCount ?? 1) > 1
-                    ? `${MORNING_CALL_LABEL} × ${morningCallCount}`
-                    : MORNING_CALL_LABEL,
-                amountRm: morningCallRm,
-              },
-            ]
-          : [{ label, amountRm }]
+    ...expandSessionLinesWithMorningCall(
+      breakdown.sessions,
+      showMorningCallPrice
     ),
     ...breakdown.addOns,
     ...(breakdown.travelFeeRm > 0
@@ -128,10 +125,13 @@ function invoiceItems(booking: PersistedBooking) {
   ];
 }
 
-function buildLineRows(booking: PersistedBooking): InvoiceLineRow[] {
+function buildLineRows(
+  booking: PersistedBooking,
+  showMorningCallPrice: boolean
+): InvoiceLineRow[] {
   const rows: InvoiceLineRow[] = [];
 
-  for (const item of invoiceItems(booking)) {
+  for (const item of invoiceItems(booking, showMorningCallPrice)) {
     const amount = roundSen(item.amountRm);
     const existing = rows.find(
       (row) => row.label === item.label && row.unitPriceRm === amount
@@ -226,6 +226,7 @@ export async function generateBookingInvoicePdf(
     freelancer,
     invoiceSettings,
     paymentSettings,
+    showMorningCallPrice = true,
     issuedAt = new Date(),
   } = input;
 
@@ -234,7 +235,7 @@ export async function generateBookingInvoicePdf(
   const paidRm = amountPaidRm(booking);
   const balanceRm = roundSen(booking.invoice.balanceRm);
   const totalRm = roundSen(booking.invoice.totalRm);
-  const lineRows = buildLineRows(booking);
+  const lineRows = buildLineRows(booking, showMorningCallPrice);
 
   const earliestSession = getEarliestSessionDate(booking.sessions);
   const balanceDueBefore = paymentSettings?.balance_due_before ?? 3;

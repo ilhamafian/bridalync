@@ -314,6 +314,8 @@ export const publicBookingSchema = bookingSchema
     stylistPaymentMethod: paymentChannelSchema.optional(),
     /** Stylist's balance-due window (days before the first session); decides if an approved request can pay a deposit. */
     balanceDueBeforeDays: z.number().optional(),
+    /** Whether Morning call is listed as its own priced line. Missing = shown. */
+    showMorningCallPrice: z.boolean().optional(),
     manualTransfer: z
       .object({
         qrImageUrl: z.string(),
@@ -332,7 +334,8 @@ export function toPublicBooking(
   freelancer?: PublicBookingFreelancer | null,
   stylistPaymentMethod?: z.infer<typeof paymentChannelSchema> | null,
   manualTransfer?: ManualTransferDetails | null,
-  balanceDueBeforeDays?: number
+  balanceDueBeforeDays?: number,
+  showMorningCallPrice?: boolean
 ): PublicBooking {
   const {
     freelancerUserId,
@@ -357,6 +360,7 @@ export function toPublicBooking(
       : {}),
     ...(manualTransfer ? { manualTransfer } : {}),
     ...(balanceDueBeforeDays != null ? { balanceDueBeforeDays } : {}),
+    ...(showMorningCallPrice != null ? { showMorningCallPrice } : {}),
   });
 }
 

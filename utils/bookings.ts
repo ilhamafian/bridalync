@@ -11,6 +11,7 @@ import {
 import { bookingSessionsOverlap } from "@/utils/booking/availability";
 import { awaitsClientPayment } from "@/utils/booking/paymentLink";
 import { resolveSessionRegions } from "@/utils/booking/region.server";
+import { showsMorningCallPrice } from "@/utils/booking/morningCall";
 import { applyPaymentOption } from "@/utils/booking/pricing";
 import { sendBalancePaymentReceivedEmail } from "@/utils/email/balance-payment-received";
 import { sendBookingPaymentConfirmationEmail } from "@/utils/email/booking-confirmation";
@@ -133,6 +134,7 @@ export async function confirmBookingPayment(
         },
         invoiceSettings: settings?.invoice ?? null,
         paymentSettings: settings?.payment ?? null,
+        showMorningCallPrice: showsMorningCallPrice(settings?.morning_call),
       });
     });
   }
