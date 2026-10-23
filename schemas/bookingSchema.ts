@@ -189,6 +189,12 @@ export const bookingSchema = z.object({
   paymentLinkAt: z.coerce.date().optional(),
   /** Set when the stylist declined a booking request (status becomes `cancelled`). */
   requestDeclinedAt: z.coerce.date().optional(),
+  /** Latest time the client changed the date, time, or ready-by. One notification per booking. */
+  clientRescheduledAt: z.coerce.date().optional(),
+  /** Latest time the client edited contact or client-information details. */
+  clientDetailsUpdatedAt: z.coerce.date().optional(),
+  /** Set when the client cancelled (status becomes `cancelled`). */
+  clientCancelledAt: z.coerce.date().optional(),
   source: z.enum(["bridalync", "google_calendar"]).default("bridalync"),
   googleEventId: z.string().min(1).optional(),
   paymentChannel: paymentChannelSchema.optional(),
@@ -313,6 +319,9 @@ export const publicBookingSchema = bookingSchema
     stripePaymentIntentId: true,
     sessionRemindersSent: true,
     balanceReminderSentAt: true,
+    clientRescheduledAt: true,
+    clientDetailsUpdatedAt: true,
+    clientCancelledAt: true,
     remarks: true,
     platformFeeCollectedRm: true,
   })

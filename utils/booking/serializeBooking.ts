@@ -47,6 +47,9 @@ export type SerializedBooking = {
   balancePaidRm?: number;
   requestApprovedAt?: string;
   requestDeclinedAt?: string;
+  clientRescheduledAt?: string;
+  clientDetailsUpdatedAt?: string;
+  clientCancelledAt?: string;
   requestPaymentOption?: Booking["requestPaymentOption"];
   paymentLinkAt?: string;
   remarks?: string;
@@ -101,6 +104,15 @@ export function serializeBooking(
     ),
     requestDeclinedAt: toIsoDate(
       booking.requestDeclinedAt as Date | string | undefined
+    ),
+    clientRescheduledAt: toIsoDate(
+      booking.clientRescheduledAt as Date | string | undefined
+    ),
+    clientDetailsUpdatedAt: toIsoDate(
+      booking.clientDetailsUpdatedAt as Date | string | undefined
+    ),
+    clientCancelledAt: toIsoDate(
+      booking.clientCancelledAt as Date | string | undefined
     ),
     requestPaymentOption: booking.requestPaymentOption,
     paymentLinkAt: toIsoDate(booking.paymentLinkAt as Date | string | undefined),

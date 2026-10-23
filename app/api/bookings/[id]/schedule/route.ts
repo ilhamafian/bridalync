@@ -42,6 +42,7 @@ const scheduleFieldsSchema = bookingSchema
     dayMode: true,
     collectedRm: true,
     platformFeeCollectedRm: true,
+    clientRescheduledAt: true,
   })
   .partial();
 
@@ -103,6 +104,7 @@ export async function POST(
               platformFeeCollectedRm: quote.platformFeeCollectedRm,
             }
           : {}),
+        clientRescheduledAt: new Date(),
       },
       scheduleFieldsSchema
     );

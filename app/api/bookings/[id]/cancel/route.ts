@@ -1,13 +1,16 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
 
+import { bookingModel } from "@/models/Booking";
+import { bookingSchema } from "@/schemas/bookingSchema";
 import { createResponse, handleError } from "@/utils/apiHelper";
 import {
   bookingMatchesClient,
   isClientEditable,
 } from "@/utils/booking/clientEdits";
 import { toClientFacingBooking } from "@/utils/booking/publicClientBooking";
-import { getBookingById, updateBookingStatus } from "@/utils/bookings";
+import { getBookingById } from "@/utils/bookings";
+import { scheduleBookingCalendarSync } from "@/utils/google/syncBookingCalendar";
 import { notifyClientCancelled } from "@/utils/push/bookingNotifications";
 import { runAfterResponse } from "@/utils/runAfterResponse";
 
@@ -38,7 +41,13 @@ export async function POST(
       );
     }
 
-    const updated = await updateBookingStatus(id, "cancelled");
+    await bookingModel.update(
+      id,
+      { status: "cancelled", clientCancelledAt: new Date() },
+      bookingSchema.pick({ status: true, clientCancelledAt: true })
+    );
+    scheduleBookingCalendarSync(id);
+    const updated = await getBookingById(id);
     if (!updated) {
       return createResponse({ error: "Booking not found" }, 404);
     }

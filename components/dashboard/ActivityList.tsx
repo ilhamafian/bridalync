@@ -2,12 +2,14 @@ import Link from "next/link";
 import {
   IconCalendarPlus,
   IconCalendarQuestion,
+  IconCalendarTime,
   IconCalendarX,
   IconCash,
   IconCashBanknote,
   IconChecks,
   IconCircleCheck,
   IconReceipt,
+  IconUserEdit,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -59,6 +61,8 @@ const activityIcons: Record<ActivityKind, Icon> = {
   full: IconChecks,
   completed: IconCircleCheck,
   cancelled: IconCalendarX,
+  rescheduled: IconCalendarTime,
+  details: IconUserEdit,
 };
 
 function activityBadgeVariant(
@@ -90,7 +94,9 @@ function ActivityRow({
 }) {
   const Icon = activityIcons[item.kind];
   const isCancelled = item.kind === "cancelled";
-  const showBalance = item.kind === "deposit" && item.balanceRm > 0;
+  const showBalance =
+    (item.kind === "deposit" || item.kind === "rescheduled") &&
+    item.balanceRm > 0;
 
   return (
     <li>

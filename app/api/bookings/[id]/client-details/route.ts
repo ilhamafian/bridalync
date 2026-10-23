@@ -45,6 +45,7 @@ const clientDetailsFieldsSchema = bookingSchema
     pax: true,
     party: true,
     clientDetails: true,
+    clientDetailsUpdatedAt: true,
   })
   .partial();
 
@@ -146,6 +147,7 @@ export async function PATCH(
         pax,
         party,
         clientDetails,
+        clientDetailsUpdatedAt: new Date(),
       },
       clientDetailsFieldsSchema
     );

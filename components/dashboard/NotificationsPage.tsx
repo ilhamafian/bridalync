@@ -48,7 +48,8 @@ type NotificationFilter =
   | "deposit"
   | "balance"
   | "full"
-  | "cancelled";
+  | "cancelled"
+  | "updates";
 
 const NOTIFICATION_FILTERS: { value: NotificationFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -58,12 +59,17 @@ const NOTIFICATION_FILTERS: { value: NotificationFilter; label: string }[] = [
   { value: "balance", label: "Balance payment" },
   { value: "full", label: "Full payment" },
   { value: "cancelled", label: "Cancelled" },
+  { value: "updates", label: "Updates" },
 ];
 
 const PAGE_SIZE = 20;
 
 function matchesFilter(kind: ActivityKind, filter: NotificationFilter) {
-  return filter === "all" || kind === filter;
+  if (filter === "all") return true;
+  if (filter === "updates") {
+    return kind === "rescheduled" || kind === "details";
+  }
+  return kind === filter;
 }
 
 export function NotificationsPage({

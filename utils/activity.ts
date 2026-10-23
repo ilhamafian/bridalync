@@ -14,7 +14,9 @@ export type ActivityKind =
   | "balance"
   | "full"
   | "completed"
-  | "cancelled";
+  | "cancelled"
+  | "rescheduled"
+  | "details";
 
 export type ActivityItem = {
   /** Stable per booking + event; used to track read state. */
@@ -47,6 +49,8 @@ const ACTIVITY_LABELS: Record<ActivityKind, string> = {
   full: "Full payment received",
   completed: "Booking completed",
   cancelled: "Booking cancelled",
+  rescheduled: "Client changed the date",
+  details: "Client updated their details",
 };
 
 function bookingUpdatedAt(booking: SerializedBooking) {
@@ -64,17 +68,30 @@ function getBookingActivity(booking: SerializedBooking): ActivityItem[] {
   const event = (
     kind: ActivityKind,
     amountRm: number,
-    at: string
+    at: string,
+    label = ACTIVITY_LABELS[kind]
   ): ActivityItem => ({
     ...base,
     id: `${booking._id}-${kind}`,
     kind,
-    label: ACTIVITY_LABELS[kind],
+    label,
     amountRm,
     at,
   });
 
-  if (booking.status === "failed") return [];
+  const clientEdits: ActivityItem[] = [];
+  if (booking.clientRescheduledAt) {
+    clientEdits.push(
+      event("rescheduled", booking.invoice.totalRm, booking.clientRescheduledAt)
+    );
+  }
+  if (booking.clientDetailsUpdatedAt) {
+    clientEdits.push(
+      event("details", booking.invoice.totalRm, booking.clientDetailsUpdatedAt)
+    );
+  }
+
+  if (booking.status === "failed") return clientEdits;
   if (booking.status === "requested") {
     return [
       event(
@@ -82,11 +99,20 @@ function getBookingActivity(booking: SerializedBooking): ActivityItem[] {
         booking.invoice.totalRm,
         booking.created_at ?? bookingUpdatedAt(booking)
       ),
+      ...clientEdits,
     ];
   }
   if (booking.status === "cancelled") {
     return [
-      event("cancelled", booking.invoice.totalRm, bookingUpdatedAt(booking)),
+      event(
+        "cancelled",
+        booking.invoice.totalRm,
+        booking.clientCancelledAt ?? bookingUpdatedAt(booking),
+        booking.clientCancelledAt
+          ? "Booking cancelled by client"
+          : ACTIVITY_LABELS.cancelled
+      ),
+      ...clientEdits,
     ];
   }
 
@@ -97,6 +123,7 @@ function getBookingActivity(booking: SerializedBooking): ActivityItem[] {
         pendingPaymentAmountRm(booking) ?? booking.invoice.totalRm,
         bookingUpdatedAt(booking)
       ),
+      ...clientEdits,
     ];
   }
 
@@ -109,6 +136,8 @@ function getBookingActivity(booking: SerializedBooking): ActivityItem[] {
       event("completed", booking.invoice.totalRm, bookingUpdatedAt(booking))
     );
   }
+
+  items.push(...clientEdits);
 
   if (items.length === 0) {
     items.push(
