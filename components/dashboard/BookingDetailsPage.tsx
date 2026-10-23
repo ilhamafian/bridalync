@@ -267,9 +267,9 @@ function BookingRequestActions({
       <div>
         <p className="font-medium">Booking request</p>
         <p className="mt-0.5 text-muted-foreground">
-          Approving emails {booking.contact.name} a link to pay and keeps the
-          slot for them. Until you approve someone, other clients can request
-          it too.
+          Approving sends {booking.contact.name} a WhatsApp message with a link
+          to pay and keeps the slot for them. Until you approve someone, other
+          clients can request it too.
         </p>
         {competingCount > 0 ? (
           <p className="mt-2 text-muted-foreground">
