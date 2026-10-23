@@ -47,6 +47,12 @@ export type ProfileSocialLinks = {
   instagram: string;
   tiktok: string;
   threads: string;
+  /** Shown on the public profile. Default true. */
+  show_instagram: boolean;
+  show_tiktok: boolean;
+  show_threads: boolean;
+  show_whatsapp: boolean;
+  show_email: boolean;
 };
 
 export type ProfileItem = {
@@ -66,7 +72,20 @@ const EMPTY_SOCIALS: ProfileSocialLinks = {
   instagram: "",
   tiktok: "",
   threads: "",
+  show_instagram: true,
+  show_tiktok: true,
+  show_threads: true,
+  show_whatsapp: true,
+  show_email: true,
 };
+
+type SocialUrlKey = "instagram" | "tiktok" | "threads";
+type SocialShowKey =
+  | "show_instagram"
+  | "show_tiktok"
+  | "show_threads"
+  | "show_whatsapp"
+  | "show_email";
 
 const inputClassName = cn(
   "h-10 w-full rounded-md border border-border bg-white/60 px-3 text-sm text-foreground dark:bg-white/5",
@@ -84,15 +103,36 @@ function Field({
   label,
   children,
   htmlFor,
+  shown,
+  onShownChange,
+  showLabel,
+  hint,
 }: {
   label: string;
   children: React.ReactNode;
   htmlFor?: string;
+  shown?: boolean;
+  onShownChange?: (next: boolean) => void;
+  showLabel?: string;
+  hint?: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
       <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">{children}</div>
+        {onShownChange ? (
+          <Switch
+            className="shrink-0"
+            checked={shown !== false}
+            onCheckedChange={onShownChange}
+            aria-label={showLabel ?? `Show ${label} on profile`}
+          />
+        ) : null}
+      </div>
+      {hint ? (
+        <p className="text-xs text-muted-foreground">{hint}</p>
+      ) : null}
     </div>
   );
 }
@@ -173,7 +213,11 @@ export function ProfileManager({
     }
   }
 
-  function setSocialField(key: keyof ProfileSocialLinks, value: string) {
+  function setSocialField(key: SocialUrlKey, value: string) {
+    setSocials((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function setSocialShown(key: SocialShowKey, value: boolean) {
     setSocials((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -565,7 +609,12 @@ export function ProfileManager({
         className="@4xl/main:col-start-2 @4xl/main:row-start-3"
       >
         <div className={settingsCardClassName}>
-          <Field label="Instagram" htmlFor="social-instagram">
+          <Field
+            label="Instagram"
+            htmlFor="social-instagram"
+            shown={socials.show_instagram}
+            onShownChange={(next) => setSocialShown("show_instagram", next)}
+          >
             <Input
               id="social-instagram"
               className={inputClassName}
@@ -577,7 +626,12 @@ export function ProfileManager({
               spellCheck={false}
             />
           </Field>
-          <Field label="TikTok" htmlFor="social-tiktok">
+          <Field
+            label="TikTok"
+            htmlFor="social-tiktok"
+            shown={socials.show_tiktok}
+            onShownChange={(next) => setSocialShown("show_tiktok", next)}
+          >
             <Input
               id="social-tiktok"
               className={inputClassName}
@@ -589,7 +643,12 @@ export function ProfileManager({
               spellCheck={false}
             />
           </Field>
-          <Field label="Threads" htmlFor="social-threads">
+          <Field
+            label="Threads"
+            htmlFor="social-threads"
+            shown={socials.show_threads}
+            onShownChange={(next) => setSocialShown("show_threads", next)}
+          >
             <Input
               id="social-threads"
               className={inputClassName}
@@ -601,16 +660,31 @@ export function ProfileManager({
               spellCheck={false}
             />
           </Field>
-          <Field label="WhatsApp">
+          <Field
+            label="WhatsApp"
+            shown={socials.show_whatsapp}
+            onShownChange={(next) => setSocialShown("show_whatsapp", next)}
+            hint="Uses your WhatsApp number above."
+          >
             <Input
               className={inputClassName}
               value={formatWhatsAppDisplay(countryCode, mobile)}
               disabled
               readOnly
             />
-            <p className="text-xs text-muted-foreground">
-              Uses your WhatsApp number above.
-            </p>
+          </Field>
+          <Field
+            label="Email"
+            shown={socials.show_email}
+            onShownChange={(next) => setSocialShown("show_email", next)}
+            hint="Uses your account email. Turn off to hide it on your public profile."
+          >
+            <Input
+              className={inputClassName}
+              value={profile.email}
+              disabled
+              readOnly
+            />
           </Field>
         </div>
       </SettingsSection>

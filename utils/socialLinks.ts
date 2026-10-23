@@ -1,5 +1,7 @@
-import type { SocialLinks } from "@/schemas/userSchema";
+import type { SocialLinks, SocialPlatform } from "@/schemas/userSchema";
 import { toWhatsAppNumber } from "@/utils/booking/messages";
+
+const PLATFORMS: SocialPlatform[] = ["instagram", "tiktok", "threads"];
 
 const INSTAGRAM_HOST = /^(?:www\.)?instagram\.com$/i;
 const TIKTOK_HOST = /^(?:www\.)?tiktok\.com$/i;
@@ -23,7 +25,7 @@ function tryParseUrl(value: string): URL | null {
 
 /** Build a clickable URL from a handle or pasted URL. */
 export function resolveSocialUrl(
-  platform: keyof SocialLinks,
+  platform: SocialPlatform,
   raw: string
 ): string | null {
   const value = raw.trim();
@@ -66,11 +68,11 @@ export function resolveSocialUrl(
 
 export function socialLinksWithUrls(
   links: SocialLinks | undefined | null
-): Partial<Record<keyof SocialLinks, string>> {
+): Partial<Record<SocialPlatform, string>> {
   if (!links) return {};
 
-  const result: Partial<Record<keyof SocialLinks, string>> = {};
-  for (const key of ["instagram", "tiktok", "threads"] as const) {
+  const result: Partial<Record<SocialPlatform, string>> = {};
+  for (const key of PLATFORMS) {
     const raw = links[key];
     if (!raw) continue;
     const url = resolveSocialUrl(key, raw);

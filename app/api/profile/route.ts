@@ -31,6 +31,11 @@ function serializeProfile(user: {
     instagram?: string;
     tiktok?: string;
     threads?: string;
+    show_instagram?: boolean;
+    show_tiktok?: boolean;
+    show_threads?: boolean;
+    show_whatsapp?: boolean;
+    show_email?: boolean;
   };
 }) {
   const username = user.username ?? "";
@@ -60,6 +65,11 @@ function serializeProfile(user: {
       instagram: user.social_links?.instagram ?? "",
       tiktok: user.social_links?.tiktok ?? "",
       threads: user.social_links?.threads ?? "",
+      show_instagram: user.social_links?.show_instagram !== false,
+      show_tiktok: user.social_links?.show_tiktok !== false,
+      show_threads: user.social_links?.show_threads !== false,
+      show_whatsapp: user.social_links?.show_whatsapp !== false,
+      show_email: user.social_links?.show_email !== false,
     },
     profileUrl,
     profileDisplayUrl,

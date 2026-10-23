@@ -59,13 +59,38 @@ export const defaultDeferredOnboarding = (): z.infer<
 
 export type DeferredOnboarding = z.infer<typeof deferredOnboardingSchema>;
 
+export const SOCIAL_PLATFORMS = ["instagram", "tiktok", "threads"] as const;
+export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
+
+/** Visibility toggles for the public profile icons. Missing = shown. */
+export const SOCIAL_SHOW_KEYS = [
+  "show_instagram",
+  "show_tiktok",
+  "show_threads",
+  "show_whatsapp",
+  "show_email",
+] as const;
+export type SocialShowKey = (typeof SOCIAL_SHOW_KEYS)[number];
+
 export const socialLinksSchema = z.object({
   instagram: z.string().optional(),
   tiktok: z.string().optional(),
   threads: z.string().optional(),
+  show_instagram: z.boolean().optional(),
+  show_tiktok: z.boolean().optional(),
+  show_threads: z.boolean().optional(),
+  show_whatsapp: z.boolean().optional(),
+  show_email: z.boolean().optional(),
 });
 
 export type SocialLinks = z.infer<typeof socialLinksSchema>;
+
+export function isSocialLinkShown(
+  links: SocialLinks | undefined | null,
+  key: SocialShowKey
+) {
+  return links?.[key] !== false;
+}
 
 export const userSchema = z.object({
   _id: objectIdSchema.optional(),
@@ -134,6 +159,8 @@ export const publicProfileSchema = z.object({
   bio: z.string().optional(),
   mobile: z.string().optional(),
   country_code: z.string().optional(),
+  /** Account email when `social_links.show_email` is on. Missing = not shown. */
+  email: z.string().optional(),
   social_links: socialLinksSchema.optional(),
 });
 
@@ -170,6 +197,11 @@ export const profileUpdateSchema = z.object({
       instagram: optionalSocialUrl.optional(),
       tiktok: optionalSocialUrl.optional(),
       threads: optionalSocialUrl.optional(),
+      show_instagram: z.boolean().optional(),
+      show_tiktok: z.boolean().optional(),
+      show_threads: z.boolean().optional(),
+      show_whatsapp: z.boolean().optional(),
+      show_email: z.boolean().optional(),
     })
     .optional(),
 });
@@ -184,6 +216,19 @@ export const profilePhotoUpdateSchema = z.object({
 export type ProfilePhotoUpdate = z.infer<typeof profilePhotoUpdateSchema>;
 
 export function toPublicProfile(user: User): PublicProfile {
+  const links = user.social_links;
+  const social_links: SocialLinks = {};
+
+  for (const key of SOCIAL_PLATFORMS) {
+    const value = links?.[key]?.trim();
+    if (value && isSocialLinkShown(links, `show_${key}`)) {
+      social_links[key] = value;
+    }
+  }
+  if (links?.show_whatsapp === false) {
+    social_links.show_whatsapp = false;
+  }
+
   return publicProfileSchema.parse({
     name: user.name,
     username: user.username,
@@ -192,26 +237,30 @@ export function toPublicProfile(user: User): PublicProfile {
     bio: user.bio,
     mobile: user.mobile,
     country_code: user.country_code,
-    social_links: user.social_links
-      ? {
-          instagram: user.social_links.instagram,
-          tiktok: user.social_links.tiktok,
-          threads: user.social_links.threads,
-        }
-      : undefined,
+    // Email was never public before — only show after an explicit opt-in save.
+    ...(links?.show_email === true && user.email
+      ? { email: user.email }
+      : {}),
+    social_links:
+      Object.keys(social_links).length > 0 ? social_links : undefined,
   });
 }
 
-/** Normalize empty strings out of social_links before persist. */
+/** Normalize empty strings out of social_links before persist. Hidden flags stay. */
 export function normalizeSocialLinks(
   links: ProfileUpdate["social_links"] | SocialLinks | undefined
 ): SocialLinks | undefined {
   if (!links) return undefined;
 
   const cleaned: SocialLinks = {};
-  for (const key of ["instagram", "tiktok", "threads"] as const) {
+  for (const key of SOCIAL_PLATFORMS) {
     const value = links[key]?.trim();
     if (value) cleaned[key] = value;
+  }
+  for (const key of SOCIAL_SHOW_KEYS) {
+    if (links[key] === false) cleaned[key] = false;
+    // Email defaults on in the form but stays private until saved as true.
+    if (key === "show_email" && links[key] === true) cleaned[key] = true;
   }
 
   return Object.keys(cleaned).length > 0 ? cleaned : undefined;

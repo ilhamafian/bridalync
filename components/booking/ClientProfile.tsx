@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { XIcon } from "lucide-react";
+import { MailIcon, XIcon } from "lucide-react";
 import { useEffect, useRef, useState, type ComponentType } from "react";
 import { createPortal } from "react-dom";
 
@@ -131,12 +131,22 @@ function buildSocialEntries(user: PublicProfile): SocialEntry[] {
   }
 
   const whatsappUrl = buildWhatsAppProfileUrl(user.country_code, user.mobile);
-  if (whatsappUrl) {
+  if (whatsappUrl && user.social_links?.show_whatsapp !== false) {
     entries.push({
       key: "whatsapp",
       label: "WhatsApp",
       href: whatsappUrl,
       icon: WhatsAppIcon,
+    });
+  }
+
+  const email = user.email?.trim();
+  if (email) {
+    entries.push({
+      key: "email",
+      label: "Email",
+      href: `mailto:${email}`,
+      icon: MailIcon,
     });
   }
 
