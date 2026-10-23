@@ -543,11 +543,11 @@ export function ProfileManager({
           <label className={cn(settingsRowClassName, "cursor-pointer")}>
             <IconBadge icon={IconBrandWhatsapp} />
             <RowText
-              title="WhatsApp button"
+              title="WhatsApp chat"
               description={
                 whatsAppButton
-                  ? "Clients can drag a chat button while they book. Saves on its own."
-                  : "Hidden on the booking page. Your number still shows with your social links."
+                  ? "Shown while clients book, and on their booking page before they pay. Saves on its own."
+                  : "Hidden while clients book, and on their booking page until they submit a payment. Your number still shows with your social links."
               }
             />
             <Switch

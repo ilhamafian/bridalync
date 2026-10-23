@@ -81,6 +81,20 @@ function hasOutstandingBalance(booking: PublicBooking) {
   );
 }
 
+/** A QR receipt is in for review, or money has already been taken. */
+function clientHasSubmittedPayment(booking: PublicBooking) {
+  return (
+    booking.status === "confirmed" ||
+    booking.status === "completed" ||
+    booking.depositVerificationStatus === "pending" ||
+    booking.depositVerificationStatus === "approved" ||
+    booking.balanceVerificationStatus === "pending" ||
+    booking.balanceVerificationStatus === "approved" ||
+    Boolean(booking.depositPaidAt) ||
+    (typeof booking.collectedRm === "number" && booking.collectedRm > 0)
+  );
+}
+
 function BookingResultPageContent() {
   const { t, format } = useLocale();
   const params = useParams();
@@ -521,6 +535,11 @@ function BookingResultPageContent() {
           buildBookingResultMessage(booking.freelancer.name, booking)
         )
       : null;
+  const showWhatsAppButton =
+    Boolean(whatsAppUrl) &&
+    (booking.showWhatsAppButton !== false ||
+      manualSubmitted ||
+      clientHasSubmittedPayment(booking));
 
   return (
     <BookingResultLayout>
@@ -851,7 +870,7 @@ function BookingResultPageContent() {
             )
           )}
 
-          {whatsAppUrl && (
+          {showWhatsAppButton && whatsAppUrl && (
             <Button
               size="lg"
               variant="outline"

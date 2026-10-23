@@ -44,6 +44,7 @@ export async function toClientFacingBooking(
     paymentSettings.method,
     toManualTransferDetails(paymentSettings),
     paymentSettings.balance_due_before,
-    settings?.morning_call?.show_price !== false
+    settings?.morning_call?.show_price !== false,
+    settings?.show_whatsapp_button !== false
   );
 }

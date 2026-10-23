@@ -324,6 +324,11 @@ export const publicBookingSchema = bookingSchema
     balanceDueBeforeDays: z.number().optional(),
     /** Whether Morning call is listed as its own priced line. Missing = shown. */
     showMorningCallPrice: z.boolean().optional(),
+    /**
+     * Profile WhatsApp chat switch. Missing = shown. Off hides the booking-page
+     * button until a payment is submitted.
+     */
+    showWhatsAppButton: z.boolean().optional(),
     manualTransfer: z
       .object({
         qrImageUrl: z.string(),
@@ -343,7 +348,8 @@ export function toPublicBooking(
   stylistPaymentMethod?: z.infer<typeof paymentChannelSchema> | null,
   manualTransfer?: ManualTransferDetails | null,
   balanceDueBeforeDays?: number,
-  showMorningCallPrice?: boolean
+  showMorningCallPrice?: boolean,
+  showWhatsAppButton?: boolean
 ): PublicBooking {
   const {
     freelancerUserId,
@@ -369,6 +375,7 @@ export function toPublicBooking(
     ...(manualTransfer ? { manualTransfer } : {}),
     ...(balanceDueBeforeDays != null ? { balanceDueBeforeDays } : {}),
     ...(showMorningCallPrice != null ? { showMorningCallPrice } : {}),
+    ...(showWhatsAppButton != null ? { showWhatsAppButton } : {}),
   });
 }
 

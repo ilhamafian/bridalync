@@ -207,7 +207,10 @@ export const settingSchema = z.object({
   client_info: clientInfoSettingSchema.optional(),
   /** Clients send a request the stylist approves before paying. Missing = off (pay straight away). */
   booking_requests: z.boolean().optional(),
-  /** Draggable WhatsApp button on the booking wizard. Missing = shown. */
+  /**
+   * WhatsApp chat while booking, and on the booking page before payment.
+   * Missing = shown. Off hides both until a payment is submitted.
+   */
   show_whatsapp_button: z.boolean().optional(),
   /** Legacy: highest calendar year clients may book. Superseded by `booking_until`. */
   max_booking_year: z.number().int().optional(),
