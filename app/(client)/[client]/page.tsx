@@ -2460,9 +2460,11 @@ export default function ClientPage() {
                     key={index}
                     clientInfo={clientInfo}
                     title={
-                      index === 0
-                        ? t.partyYou
-                        : format(t.partyGuest, { n: index + 1 })
+                      pax <= 1
+                        ? undefined
+                        : index === 0
+                          ? t.partyYou
+                          : format(t.partyGuest, { n: index + 1 })
                     }
                     name={member.name}
                     onNameChange={(name) => updatePartyMember(index, { name })}
