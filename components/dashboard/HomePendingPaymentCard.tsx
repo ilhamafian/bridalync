@@ -78,7 +78,7 @@ export function HomePendingPaymentCard({
         </div>
         <Badge variant="destructive">{pendingPaymentStatusLabel(kind)}</Badge>
       </div>
-      <div className="relative mt-auto flex items-end justify-between gap-3">
+      <div className="pointer-events-none relative mt-auto flex items-end justify-between gap-3">
         <p className="pointer-events-none text-sm font-semibold tabular-nums">
           {pendingPaymentLabel(kind)} · {formatRm(amountRm)}
         </p>
