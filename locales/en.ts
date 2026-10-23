@@ -13,6 +13,7 @@ export const en: Locale = {
   loadingProfile: "Loading profile…",
   profileNotFound: "Profile not found.",
   hijabStylist: "Hijab Stylist",
+  hairStylist: "Hairstylist",
   makeupArtist: "Makeup Artist",
   brideAssistant: "Bride Assistant",
   reviews: "Reviews",
@@ -103,6 +104,7 @@ export const en: Locale = {
 
   // Style
   chooseStyle: "Choose your hijab style",
+  chooseHairstyle: "Choose your hairstyle",
   chooseStyleHelper: "Pick a look for each session.",
   chooseStyleForSession: "Choose style for {sessionName}",
   sessionOfTotal: "Session {current} of {total}",

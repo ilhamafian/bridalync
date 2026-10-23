@@ -849,7 +849,7 @@ export default function ClientPage() {
       }
     : {
         step: t.stepStyle,
-        choose: t.chooseStyle,
+        choose: user?.role === "hairstylist" ? t.chooseHairstyle : t.chooseStyle,
         helper: t.chooseStyleHelper,
         forSession: t.chooseStyleForSession,
         noneAvailable: t.noStylesAvailable,

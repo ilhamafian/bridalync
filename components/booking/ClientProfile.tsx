@@ -29,6 +29,7 @@ import type { Locale } from "@/locales";
 
 export function roleLabel(role: UserRole, t: Locale) {
   if (role === "hijabstylist") return t.hijabStylist;
+  if (role === "hairstylist") return t.hairStylist;
   if (role === "brideassistant") return t.brideAssistant;
   return t.makeupArtist;
 }

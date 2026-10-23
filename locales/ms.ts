@@ -11,6 +11,7 @@ export const ms = {
   loadingProfile: "Memuatkan profil…",
   profileNotFound: "Profil tidak dijumpai.",
   hijabStylist: "Hijab Stylist",
+  hairStylist: "Hairstylist",
   makeupArtist: "Makeup Artist",
   brideAssistant: "Bride Assistant",
   reviews: "Ulasan",
@@ -100,6 +101,7 @@ export const ms = {
 
   // Style
   chooseStyle: "Pilih gaya hijab anda",
+  chooseHairstyle: "Pilih gaya rambut anda",
   chooseStyleHelper: "Pilih gaya untuk setiap sesi.",
   chooseStyleForSession: "Pilih gaya untuk {sessionName}",
   sessionOfTotal: "Sesi {current} daripada {total}",

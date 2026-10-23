@@ -95,6 +95,7 @@ const inputClassName = cn(
 
 const roleLabel: Record<UserRole, string> = {
   hijabstylist: "Hijab stylist",
+  hairstylist: "Hairstylist",
   makeupartist: "Makeup artist",
   brideassistant: "Bride assistant",
 };

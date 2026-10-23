@@ -15,7 +15,7 @@ export class UserModel extends ModelBase<User> {
   protected schema: ZodSchema<User> = userSchema;
 
   static userRoles: { value: UserRole; label: string }[] = (
-    ["makeupartist", "hijabstylist", "brideassistant"] as const
+    ["makeupartist", "hijabstylist", "hairstylist", "brideassistant"] as const
   ).map((value) => ({ value, label: USER_ROLE_LABELS[value] }));
 
   async findByUsername(username: string): Promise<User | null> {

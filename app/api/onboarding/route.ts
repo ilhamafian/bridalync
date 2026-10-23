@@ -58,6 +58,14 @@ const HS_PACKAGES = [
   { name: "Trial Hijab", order: 4 },
 ] as const;
 
+const HAIR_PACKAGES = [
+  { name: "Nikah", order: 0 },
+  { name: "Sanding", order: 1 },
+  { name: "Tunang", order: 2 },
+  { name: "Event", order: 3 },
+  { name: "Trial Hair", order: 4 },
+] as const;
+
 const STYLES = [
   {
     name: "SHAWL",
@@ -74,6 +82,24 @@ const STYLES = [
     order: 2,
     variants: [{ name: "Turkish Net", order: 0 , price: 400, deposit: 100}],
   }
+] as const;
+
+const HAIR_STYLES = [
+  {
+    name: "Hair Up",
+    order: 0,
+    variants: [{ name: "Hair Up", order: 0, price: 200, deposit: 50 }],
+  },
+  {
+    name: "Hair Down",
+    order: 1,
+    variants: [{ name: "Hair Down", order: 0, price: 200, deposit: 50 }],
+  },
+  {
+    name: "Pageant",
+    order: 2,
+    variants: [{ name: "Pageant", order: 0, price: 200, deposit: 50 }],
+  },
 ] as const;
 
 const ADD_ONS = [
@@ -143,13 +169,16 @@ async function seedPackages(
   }
 }
 
-async function seedStyles(userId: string) {
+async function seedStyles(
+  userId: string,
+  styles: readonly (typeof STYLES)[number][] | readonly (typeof HAIR_STYLES)[number][]
+) {
   const styleModel = new StyleModel();
   const existing = await styleModel.findOne({ user_id: userId } as never);
 
   if (!existing) {
     await Promise.all(
-      STYLES.map((style) =>
+      styles.map((style) =>
         styleModel.create(
           styleSchema.parse({
             user_id: userId,
@@ -190,10 +219,14 @@ async function ensureDefaultCatalog(
       role === "brideassistant" ? BRIDE_ASSISTANT_PACKAGES : MUA_PACKAGES
     );
   } else {
+    const hairstylist = role === "hairstylist";
     await Promise.all([
-      seedPackages(userId, HS_PACKAGES),
-      // The defaults are hijab styles; makeup artists start with no looks.
-      usesLooks(role) ? Promise.resolve() : seedStyles(userId),
+      seedPackages(userId, hairstylist ? HAIR_PACKAGES : HS_PACKAGES),
+      // Makeup artists start with no looks. Hijab stylists and hairstylists
+      // each get their own default styles.
+      usesLooks(role)
+        ? Promise.resolve()
+        : seedStyles(userId, hairstylist ? HAIR_STYLES : STYLES),
       seedAddOns(userId),
     ]);
   }
