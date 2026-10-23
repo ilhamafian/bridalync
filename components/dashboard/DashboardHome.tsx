@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { IconBrandWhatsapp } from "@tabler/icons-react";
 
 import { ActivityList } from "@/components/dashboard/ActivityList";
@@ -22,12 +23,12 @@ import { cn } from "@/lib/utils";
 import type { ActivityItem } from "@/utils/activity";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
+  getGreeting,
   type CompletedScheduleItem,
   type ScheduleItem,
 } from "@/utils/dashboard";
 
 export type DashboardHomeProps = {
-  greeting: string;
   firstName: string;
   upcomingThisWeek: number;
   todaysSchedule: ScheduleItem[];
@@ -35,6 +36,15 @@ export type DashboardHomeProps = {
   completed: CompletedScheduleItem[];
   activity: ActivityItem[];
 };
+
+/** Local-time greeting; "Hello" until mounted so SSR matches the first client paint. */
+function useLocalGreeting() {
+  const [greeting, setGreeting] = useState("Hello");
+  useEffect(() => {
+    setGreeting(getGreeting());
+  }, []);
+  return greeting;
+}
 
 function LeaveReviewButton({ item }: { item: CompletedScheduleItem }) {
   if (!item.leaveReviewUrl) {
@@ -75,7 +85,6 @@ export function EmptyCard({ children }: { children: React.ReactNode }) {
 }
 
 export function DashboardHome({
-  greeting,
   firstName,
   upcomingThisWeek,
   todaysSchedule,
@@ -98,6 +107,7 @@ export function DashboardHome({
   onBookingUpdated?: (booking: SerializedBooking) => void;
   onBookingsDeclined?: (ids: string[]) => void;
 }) {
+  const greeting = useLocalGreeting();
   const showToday = todaysSchedule.length > 0;
   const bookings = showToday ? todaysSchedule : upcoming;
 

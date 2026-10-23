@@ -50,7 +50,6 @@ import {
   type CompletedScheduleItem,
   flattenScheduleItems,
   getFirstName,
-  getGreeting,
   getRecentCompletedBookings,
   getTodaysSchedule,
   getUpcomingBookings,
@@ -211,7 +210,6 @@ export async function loadDashboardData(
 
   return {
     home: {
-      greeting: getGreeting(now),
       firstName: getFirstName(user.name),
       upcomingThisWeek: countUpcomingThisWeek(scheduleItems, now),
       todaysSchedule: getTodaysSchedule(scheduleItems, now),
