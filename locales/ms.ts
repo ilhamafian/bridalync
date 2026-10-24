@@ -128,6 +128,11 @@ export const ms = {
   // Contact
   almostThere: "Jangan pergi dulu!\nKami cuma perlukan sedikit maklumat lagi...",
   phoneNumber: "Nombor telefon",
+  phoneConfirmTitle: "Sahkan nombor telefon anda",
+  phoneConfirmDescription:
+    "Pastikan nombor ini betul. Stylist anda akan menggunakannya untuk menghubungi anda.",
+  phoneConfirmCancel: "Tukar nombor",
+  phoneConfirmConfirm: "Ya, nombor ini betul",
   email: "E-mel",
   emailPlaceholder: "emel@anda.com",
   instagramUsername: "Nama pengguna Instagram",

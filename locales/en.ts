@@ -132,6 +132,11 @@ export const en: Locale = {
   // Contact
   almostThere: "Don't go yet!\nWe just need some final info...",
   phoneNumber: "Phone number",
+  phoneConfirmTitle: "Confirm your phone number",
+  phoneConfirmDescription:
+    "Make sure this number is correct. Your stylist will use it to reach you.",
+  phoneConfirmCancel: "Change number",
+  phoneConfirmConfirm: "Yes, it's correct",
   email: "Email",
   emailPlaceholder: "your@email.com",
   instagramUsername: "Instagram username",

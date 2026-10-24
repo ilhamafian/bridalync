@@ -747,6 +747,7 @@ export default function ClientPage() {
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
+  const [phoneConfirmOpen, setPhoneConfirmOpen] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
   const [paymentOption, setPaymentOption] = useState<"deposit" | "full">(
@@ -2490,12 +2491,39 @@ export default function ClientPage() {
                   size="lg"
                   className="mt-2 bg-rose-800 text-white hover:bg-rose-800/90"
                   disabled={!contactDetailsValid}
-                  onClick={goToNextStep}
+                  onClick={() => setPhoneConfirmOpen(true)}
                 >
                   {t.next}
                   <ChevronRightIcon />
                 </Button>
               </div>
+              <AlertDialog
+                open={phoneConfirmOpen}
+                onOpenChange={setPhoneConfirmOpen}
+              >
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t.phoneConfirmTitle}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t.phoneConfirmDescription}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <p className="text-center text-base font-medium tracking-wide text-foreground sm:text-left">
+                    {`${contact.country_code || "+60"} ${contact.mobile.trim()}`.trim()}
+                  </p>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t.phoneConfirmCancel}</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        setPhoneConfirmOpen(false);
+                        goToNextStep();
+                      }}
+                    >
+                      {t.phoneConfirmConfirm}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           )}
           {step === "review" && (
