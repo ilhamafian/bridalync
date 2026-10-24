@@ -134,7 +134,7 @@ export const en: Locale = {
   phoneNumber: "Phone number",
   phoneConfirmTitle: "Confirm your phone number",
   phoneConfirmDescription:
-    "Make sure this number is correct. Your stylist will use it to reach you.",
+    "Make sure this number is correct. We will use it to reach you.",
   phoneConfirmCancel: "Change number",
   phoneConfirmConfirm: "Yes, it's correct",
   email: "Email",

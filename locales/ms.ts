@@ -130,7 +130,7 @@ export const ms = {
   phoneNumber: "Nombor telefon",
   phoneConfirmTitle: "Sahkan nombor telefon anda",
   phoneConfirmDescription:
-    "Pastikan nombor ini betul. Stylist anda akan menggunakannya untuk menghubungi anda.",
+    "Pastikan nombor ini betul. Kami akan menggunakannya untuk menghubungi anda.",
   phoneConfirmCancel: "Tukar nombor",
   phoneConfirmConfirm: "Ya, nombor ini betul",
   email: "E-mel",
