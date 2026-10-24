@@ -2509,7 +2509,7 @@ export default function ClientPage() {
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <p className="text-center text-base font-medium tracking-wide text-foreground sm:text-left">
-                    {`${contact.country_code || "+60"} ${contact.mobile.trim()}`.trim()}
+                    {`${contact.country_code || "+60"} ${contact.mobile?.trim() ?? ""}`.trim()}
                   </p>
                   <AlertDialogFooter>
                     <AlertDialogCancel>{t.phoneConfirmCancel}</AlertDialogCancel>
