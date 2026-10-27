@@ -11,7 +11,7 @@ type LegalPageProps = {
 
 export function LegalPage({ title, effectiveDate, children }: LegalPageProps) {
   return (
-    <>
+    <div className="min-h-dvh bg-landing-cream font-serif text-landing-ink">
       <header className="border-b border-landing-ink/5 bg-landing-cream/90">
         <div className="mx-auto flex h-[4.25rem] max-w-3xl items-center justify-between px-6 lg:h-20 lg:px-8">
           <LandingLogo className="[&_img]:h-10 sm:[&_img]:h-11" />
@@ -41,6 +41,6 @@ export function LegalPage({ title, effectiveDate, children }: LegalPageProps) {
       </main>
 
       <LandingFooter />
-    </>
+    </div>
   );
 }

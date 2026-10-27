@@ -8,20 +8,6 @@ import {
   isValidPhoneNumber,
 } from "@/components/PhoneNumberInput";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-
-const phoneInputClassName = cn(
-  "h-12 w-full rounded-full border border-landing-cream-text/40 bg-landing-cream-text/20 px-4 text-base text-landing-cream-text",
-  "placeholder:text-landing-cream-text/50",
-  "outline-none focus-visible:border-landing-cream-text/70 focus-visible:ring-2 focus-visible:ring-landing-cream-text/25"
-);
-
-const selectTriggerClassName = cn(
-  "h-12 w-30 rounded-full border border-landing-cream-text/40 bg-landing-cream-text/20 text-landing-cream-text",
-  "data-[size=default]:h-12",
-  "hover:bg-landing-cream-text/30 focus-visible:border-landing-cream-text/70 focus-visible:ring-landing-cream-text/25",
-  "[&_svg]:text-landing-cream-text/80"
-);
 
 export function LandingWaitlistForm() {
   const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
@@ -91,8 +77,6 @@ export function LandingWaitlistForm() {
         onCountryCodeChange={setCountryCode}
         onMobileChange={setMobile}
         mobileInputId="waitlist-phone"
-        inputClassName={phoneInputClassName}
-        selectTriggerClassName={selectTriggerClassName}
         placeholder="Your phone number"
         countryCodeAriaLabel="Country code"
         mobileAriaLabel="Phone number"
@@ -100,20 +84,19 @@ export function LandingWaitlistForm() {
 
       <Button
         type="submit"
-        size="lg"
         disabled={submitting}
-        className="h-12 rounded-full border-2 border-landing-cream-text/40 bg-landing-cream-text/30 px-8 font-serif text-base font-medium text-landing-cream-text shadow-sm backdrop-blur-md hover:bg-landing-cream-text/40 disabled:opacity-70"
+        className="h-11 rounded-full text-sm"
       >
         {submitting ? "Joining…" : "Join Waitlist"}
       </Button>
 
       {error ? (
-        <p className="text-center font-serif text-sm text-landing-cream-text/95" role="alert">
+        <p className="text-center text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
       {success ? (
-        <p className="text-center font-serif text-sm text-landing-cream-text" role="status">
+        <p className="text-center text-sm text-zinc-800" role="status">
           {success}
         </p>
       ) : null}
