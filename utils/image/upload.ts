@@ -76,9 +76,10 @@ async function encodeImage(
 export async function compressImageForUpload(
   input: Buffer,
   mimeType: string,
-  maxBytes = UPLOAD_IMAGE_MAX_BYTES
+  maxBytes = UPLOAD_IMAGE_MAX_BYTES,
+  maxEdge?: number
 ): Promise<CompressedImage> {
-  if (input.length <= maxBytes) {
+  if (maxEdge == null && input.length <= maxBytes) {
     return {
       buffer: input,
       contentType: mimeType,
@@ -89,18 +90,31 @@ export async function compressImageForUpload(
   const sharp = await loadSharp();
   const isGif = mimeType === "image/gif";
   const metadata = await sharp(input, { animated: isGif }).metadata();
-  const longestEdge = Math.max(metadata.width ?? 4096, metadata.height ?? 4096);
-  const sizeRatio = input.length / maxBytes;
+  const longestEdge = Math.max(metadata.width ?? 0, metadata.height ?? 0);
+  const withinEdge =
+    maxEdge == null || longestEdge === 0 || longestEdge <= maxEdge;
+  if (input.length <= maxBytes && withinEdge) {
+    return {
+      buffer: input,
+      contentType: mimeType,
+      extension: extensionForContentType(mimeType),
+    };
+  }
 
-  let dimension = longestEdge;
-  if (sizeRatio > 4) {
-    dimension = Math.min(dimension, 2048);
-  }
-  if (sizeRatio > 16) {
-    dimension = Math.min(dimension, 1536);
-  }
-  if (sizeRatio > 64) {
-    dimension = Math.min(dimension, 1024);
+  const sizeRatio = input.length / maxBytes;
+  let dimension = longestEdge || 4096;
+  if (maxEdge != null) dimension = Math.min(dimension, maxEdge);
+  if (input.length > maxBytes) {
+    if (sizeRatio > 4) {
+      dimension = Math.min(dimension, 2048);
+    }
+    if (sizeRatio > 16) {
+      dimension = Math.min(dimension, 1536);
+    }
+    if (sizeRatio > 64) {
+      dimension = Math.min(dimension, 1024);
+    }
+    if (maxEdge != null) dimension = Math.min(dimension, maxEdge);
   }
 
   const { contentType } = outputFormatForMime(mimeType);
@@ -154,12 +168,18 @@ export async function compressImageForUpload(
 
 export async function prepareFileForUpload(
   file: File,
-  maxBytes = UPLOAD_IMAGE_MAX_BYTES
+  maxBytes = UPLOAD_IMAGE_MAX_BYTES,
+  maxEdge?: number
 ): Promise<{ data: Buffer; contentType: string; fileName: string }> {
   const input = Buffer.from(await file.arrayBuffer());
 
   try {
-    const compressed = await compressImageForUpload(input, file.type, maxBytes);
+    const compressed = await compressImageForUpload(
+      input,
+      file.type,
+      maxBytes,
+      maxEdge
+    );
     return {
       data: compressed.buffer,
       contentType: compressed.contentType,

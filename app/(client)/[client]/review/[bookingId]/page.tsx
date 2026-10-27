@@ -18,7 +18,11 @@ import { useLocale } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { compressImageFile } from "@/utils/image/compressClient";
-import { formatReviewEventDate, MAX_REVIEW_IMAGES } from "@/utils/reviews";
+import {
+  formatReviewEventDate,
+  MAX_REVIEW_IMAGES,
+  REVIEW_IMAGE_MAX_EDGE,
+} from "@/utils/reviews";
 
 type ReviewContext = {
   clientName: string;
@@ -95,7 +99,14 @@ export default function BookingReviewPage() {
     try {
       for (const file of files.slice(0, remaining)) {
         const formData = new FormData();
-        formData.append("file", await compressImageFile(file));
+        formData.append(
+          "file",
+          await compressImageFile(
+            file,
+            undefined,
+            REVIEW_IMAGE_MAX_EDGE
+          )
+        );
         formData.append("client", client);
         const response = await fetch(`/api/reviews/${bookingId}/images`, {
           method: "POST",

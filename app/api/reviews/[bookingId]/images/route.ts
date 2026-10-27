@@ -12,6 +12,7 @@ import {
   getReviewImagePrefix,
   isBookingReviewable,
   MAX_REVIEW_IMAGE_UPLOADS_PER_BOOKING,
+  REVIEW_IMAGE_MAX_EDGE,
 } from "@/utils/reviews";
 
 export async function POST(
@@ -64,7 +65,11 @@ export async function POST(
       );
     }
 
-    const prepared = await prepareFileForUpload(file);
+    const prepared = await prepareFileForUpload(
+      file,
+      undefined,
+      REVIEW_IMAGE_MAX_EDGE
+    );
     const blob = await put(`${prefix}${prepared.fileName}`, prepared.data, {
       access: "public",
       addRandomSuffix: true,

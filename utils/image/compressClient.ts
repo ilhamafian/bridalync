@@ -50,26 +50,34 @@ function canvasToBlob(
  */
 export async function compressImageFile(
   file: File,
-  maxBytes = UPLOAD_IMAGE_MAX_BYTES
+  maxBytes = UPLOAD_IMAGE_MAX_BYTES,
+  maxEdge?: number
 ): Promise<File> {
   if (!file.type.startsWith("image/") && file.type !== "") {
     return file;
   }
 
-  if (file.size <= maxBytes) {
+  if (maxEdge == null && file.size <= maxBytes) {
     return file;
   }
 
   const image = await loadImageElement(file);
   const longestEdge = Math.max(image.naturalWidth, image.naturalHeight);
-  let dimension = Math.min(longestEdge, MAX_DIMENSION);
-
-  const sizeRatio = file.size / maxBytes;
-  if (sizeRatio > 4) {
-    dimension = Math.min(dimension, 1600);
+  const withinEdge = maxEdge == null || longestEdge <= maxEdge;
+  if (file.size <= maxBytes && withinEdge) {
+    return file;
   }
-  if (sizeRatio > 8) {
-    dimension = Math.min(dimension, 1280);
+
+  let dimension = Math.min(longestEdge, maxEdge ?? MAX_DIMENSION);
+
+  if (file.size > maxBytes) {
+    const sizeRatio = file.size / maxBytes;
+    if (sizeRatio > 4) {
+      dimension = Math.min(dimension, 1600);
+    }
+    if (sizeRatio > 8) {
+      dimension = Math.min(dimension, 1280);
+    }
   }
 
   const scale = dimension / longestEdge;

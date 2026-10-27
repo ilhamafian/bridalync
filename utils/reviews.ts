@@ -3,6 +3,8 @@ import type { Booking } from "@/schemas/bookingSchema";
 type ReviewableBooking = Pick<Booking, "status" | "sessions">;
 
 export const MAX_REVIEW_IMAGES = 5;
+/** Longest edge stored for a review photo. Larger phone originals are scaled down before upload. */
+export const REVIEW_IMAGE_MAX_EDGE = 1600;
 /** Includes photos the client uploaded and then removed before submitting. */
 export const MAX_REVIEW_IMAGE_UPLOADS_PER_BOOKING = 15;
 

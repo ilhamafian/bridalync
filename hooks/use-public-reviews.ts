@@ -1,16 +1,48 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 
 import type { PublicReview } from "@/schemas/reviewSchema";
 
 const PAGE_SIZE = 5;
 
+type ReviewsPage = {
+  reviews: PublicReview[];
+  hasMore: boolean;
+};
+
+async function fetchReviewsPage(
+  username: string,
+  offset: number,
+  signal?: AbortSignal
+): Promise<ReviewsPage> {
+  const params = new URLSearchParams({
+    offset: String(offset),
+    limit: String(PAGE_SIZE),
+  });
+  const response = await fetch(
+    `/api/client/${encodeURIComponent(username)}/reviews?${params}`,
+    { signal }
+  );
+  if (!response.ok) throw new Error(`Status ${response.status}`);
+  const data = (await response.json()) as {
+    reviews?: PublicReview[];
+    hasMore?: boolean;
+  };
+  return {
+    reviews: data.reviews ?? [],
+    hasMore: data.hasMore === true,
+  };
+}
+
 /**
- * Loads a freelancer's public reviews a page at a time, starting only once the
- * returned sentinel ref scrolls near the viewport.
+ * Loads a freelancer's public reviews a page at a time. The first page starts
+ * immediately. Later pages load when `sentinelRef` nears the scroll container.
  */
-export function usePublicReviews(username: string) {
+export function usePublicReviews(
+  username: string,
+  scrollRootRef?: RefObject<HTMLElement | null>
+) {
   const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [hasMore, setHasMore] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -26,25 +58,16 @@ export function usePublicReviews(username: string) {
     setFailed(false);
 
     try {
-      const params = new URLSearchParams({
-        offset: String(offsetRef.current),
-        limit: String(PAGE_SIZE),
-      });
-      const response = await fetch(
-        `/api/client/${encodeURIComponent(username)}/reviews?${params}`
-      );
-      if (!response.ok) throw new Error(`Status ${response.status}`);
-      const data = (await response.json()) as {
-        reviews?: PublicReview[];
-        hasMore?: boolean;
-      };
-      const page = data.reviews ?? [];
-      offsetRef.current += page.length;
+      const page = await fetchReviewsPage(username, offsetRef.current);
+      offsetRef.current += page.reviews.length;
       setReviews((current) => {
         const seen = new Set(current.map((review) => review._id));
-        return [...current, ...page.filter((review) => !seen.has(review._id))];
+        return [
+          ...current,
+          ...page.reviews.filter((review) => !seen.has(review._id)),
+        ];
       });
-      setHasMore(data.hasMore === true);
+      setHasMore(page.hasMore);
     } catch (error) {
       console.error(error);
       setFailed(true);
@@ -55,19 +78,67 @@ export function usePublicReviews(username: string) {
   }, [username]);
 
   useEffect(() => {
-    if (!sentinel || !hasMore || loading || failed) return;
+    const controller = new AbortController();
+    let cancelled = false;
+    offsetRef.current = 0;
+    setReviews([]);
+    setHasMore(true);
+    setFailed(false);
+    setLoading(true);
+    loadingRef.current = true;
 
-    // Recreated after every page, so the initial callback re-checks whether the
-    // sentinel is still visible (e.g. a short first page on a tall screen).
+    void (async () => {
+      try {
+        const page = await fetchReviewsPage(username, 0, controller.signal);
+        if (cancelled) return;
+        offsetRef.current = page.reviews.length;
+        setReviews(page.reviews);
+        setHasMore(page.hasMore);
+      } catch (error) {
+        if (cancelled || controller.signal.aborted) return;
+        console.error(error);
+        setFailed(true);
+      } finally {
+        if (!cancelled) {
+          loadingRef.current = false;
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      loadingRef.current = false;
+      controller.abort();
+    };
+  }, [username]);
+
+  useEffect(() => {
+    // The first page is already in flight. This only pulls the next page.
+    if (!sentinel || !hasMore || loading || failed || reviews.length === 0) {
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) void loadMore();
       },
-      { rootMargin: "300px 0px" }
+      {
+        root: scrollRootRef?.current ?? null,
+        rootMargin: "300px 0px",
+      }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [sentinel, hasMore, loading, failed, loadMore, reviews.length]);
+  }, [
+    sentinel,
+    hasMore,
+    loading,
+    failed,
+    loadMore,
+    reviews.length,
+    scrollRootRef,
+  ]);
 
   return {
     items: reviews,

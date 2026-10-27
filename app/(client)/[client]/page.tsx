@@ -709,7 +709,11 @@ export default function ClientPage() {
     null
   );
   const [user, setUser] = useState<PublicProfile | null>(null);
-  const publicReviews = usePublicReviews(client);
+  const [bookNowPending, setBookNowPending] = useState(false);
+  const [bookNowError, setBookNowError] = useState<string | null>(null);
+  const stepScrollRef = useRef<HTMLDivElement>(null);
+  const catalogLoadedRef = useRef(false);
+  const publicReviews = usePublicReviews(client, stepScrollRef);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
   const [sameLocationForAll, setSameLocationForAll] = useState(true);
   const [sharedLocation, setSharedLocation] = useState<Address | null>(null);
@@ -739,7 +743,6 @@ export default function ClientPage() {
   >({});
   /** The style/look step picks for one session at a time. */
   const [styleSessionIndex, setStyleSessionIndex] = useState(0);
-  const stepScrollRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     stepScrollRef.current?.scrollTo({ top: 0 });
@@ -1222,41 +1225,55 @@ export default function ClientPage() {
     }
   }
 
-  const fetchClient = async () => {
-    setLoading(true);
-    try {
-      const response = await fetch(`/api/client/${client}`);
-      const data = await response.json();
-      const fetchedPackages = (data.packages ?? []) as ClientPackage[];
-      const packageOptions = toPackageOptions(fetchedPackages);
-      setUser(data.user as PublicProfile);
-      setClientPackages(fetchedPackages);
-      setStyles((data.styles as ClientStyleCategory[] | undefined) ?? []);
-      setAddOns((data.add_ons as CatalogAddOn[] | undefined) ?? []);
-      setSettings((data.settings as PublicSetting | undefined) ?? null);
-      setBookedSlots(
-        (data.booked_slots as PublicBookedSlot[] | undefined) ?? []
-      );
-      setHotDates((data.hot_dates as HotDateLookup[] | undefined) ?? []);
-      setBlockedDates(
-        (data.blocked_dates as string[] | undefined) ?? []
-      );
-      setSelectedPackageId(
-        (current) => current ?? packageOptions[0]?.id ?? null
-      );
-      setStyleCategoryBySessionKey({});
-      setStyleVariantBySessionKey({});
-      setSelectedAddOnIds([]);
-      setTermsAccepted(false);
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  function applyCatalog(data: {
+    packages?: ClientPackage[];
+    styles?: ClientStyleCategory[];
+    add_ons?: AddOn[];
+    settings?: PublicSetting;
+    booked_slots?: PublicBookedSlot[];
+    hot_dates?: HotDateLookup[];
+    blocked_dates?: string[];
+  }) {
+    const fetchedPackages = data.packages ?? [];
+    const packageOptions = toPackageOptions(fetchedPackages);
+    setClientPackages(fetchedPackages);
+    setStyles(data.styles ?? []);
+    setAddOns(data.add_ons ?? []);
+    setSettings(data.settings ?? null);
+    setBookedSlots(data.booked_slots ?? []);
+    setHotDates(data.hot_dates ?? []);
+    setBlockedDates(data.blocked_dates ?? []);
+    setSelectedPackageId((current) => current ?? packageOptions[0]?.id ?? null);
+    setStyleCategoryBySessionKey({});
+    setStyleVariantBySessionKey({});
+    setSelectedAddOnIds([]);
+    setTermsAccepted(false);
+  }
 
   useEffect(() => {
-    fetchClient();
+    let cancelled = false;
+    catalogLoadedRef.current = false;
+    setBookNowError(null);
+    setLoading(true);
+
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/client/${encodeURIComponent(client)}`
+        );
+        if (!response.ok) return;
+        const data = (await response.json()) as { user?: PublicProfile };
+        if (!cancelled && data.user) setUser(data.user);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [client]);
 
   useEffect(() => {
@@ -1606,6 +1623,31 @@ export default function ClientPage() {
     }
   }
 
+  async function startBooking() {
+    if (bookNowPending) return;
+    if (catalogLoadedRef.current) {
+      goToNextStep();
+      return;
+    }
+
+    setBookNowPending(true);
+    setBookNowError(null);
+    try {
+      const response = await fetch(
+        `/api/client/${encodeURIComponent(client)}/catalog`
+      );
+      if (!response.ok) throw new Error(`Status ${response.status}`);
+      applyCatalog((await response.json()) as Parameters<typeof applyCatalog>[0]);
+      catalogLoadedRef.current = true;
+      goToNextStep();
+    } catch (error) {
+      console.error(error);
+      setBookNowError(t.somethingWentWrong);
+    } finally {
+      setBookNowPending(false);
+    }
+  }
+
   function goToPreviousStep() {
     if (step === "style" && currentStyleSessionIndex > 0) {
       showStyleSession(currentStyleSessionIndex - 1);
@@ -1910,7 +1952,9 @@ export default function ClientPage() {
             <ClientProfile
               user={user}
               reviews={publicReviews}
-              onBookNow={goToNextStep}
+              onBookNow={() => void startBooking()}
+              bookNowPending={bookNowPending}
+              bookNowError={bookNowError}
             />
           )}
           {step === "intro" && !user && !loading && (

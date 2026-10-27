@@ -183,7 +183,7 @@ export function ClientBookingManage({
     let cancelled = false;
     setContextError(null);
     void fetch(
-      `/api/client/${encodeURIComponent(username)}?excludeBooking=${encodeURIComponent(booking._id)}`
+      `/api/client/${encodeURIComponent(username)}/catalog?excludeBooking=${encodeURIComponent(booking._id)}`
     )
       .then(async (response) => {
         if (!response.ok) throw new Error(t.couldNotLoadBooking);

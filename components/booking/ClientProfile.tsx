@@ -171,12 +171,16 @@ type ClientProfileProps = {
   user: PublicProfile;
   reviews: PublicReviewsState;
   onBookNow: () => void;
+  bookNowPending?: boolean;
+  bookNowError?: string | null;
 };
 
 export function ClientProfile({
   user,
   reviews: reviewsState,
   onBookNow,
+  bookNowPending = false,
+  bookNowError = null,
 }: ClientProfileProps) {
   const { items: reviews, hasMore, loading, failed, retry, sentinelRef } =
     reviewsState;
@@ -277,10 +281,14 @@ export function ClientProfile({
             type="button"
             size="lg"
             className="mt-6 h-11 w-full max-w-xs bg-rose-800 text-white hover:bg-rose-800/90"
+            disabled={bookNowPending}
             onClick={onBookNow}
           >
-            {t.bookNow}
+            {bookNowPending ? t.loadingPackages : t.bookNow}
           </Button>
+          {bookNowError ? (
+            <p className="mt-3 max-w-xs text-sm text-destructive">{bookNowError}</p>
+          ) : null}
 
           {socialEntries.length > 0 ? (
             <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
