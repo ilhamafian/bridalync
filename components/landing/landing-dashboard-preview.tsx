@@ -1,3 +1,6 @@
+"use client";
+
+import dynamic from "next/dynamic";
 import {
   IconBell,
   IconBrandInstagram,
@@ -15,14 +18,19 @@ import {
   IconX,
 } from "@tabler/icons-react";
 
-import { AnimatedFlow } from "@/components/animated-flow";
 import { cn } from "@/lib/utils";
+
+const AnimatedFlow = dynamic(
+  () => import("@/components/animated-flow").then((mod) => mod.AnimatedFlow),
+  { ssr: false },
+);
 
 const glassCardClassName =
   "rounded-2xl bg-white/10 shadow-sm ring-1 ring-white/15 backdrop-blur-sm";
 
 /** Dark blush palette from AnimatedFlow, used directly so the preview stays dark on the marketing page. */
 const DARK_BLUSH = ["#0b0609", "#160c11", "#24121b", "#341a27", "#4a2536"];
+const STILL_BLUSH = `linear-gradient(160deg, ${DARK_BLUSH.join(", ")})`;
 
 function Pill({
   children,
@@ -49,7 +57,13 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   return <h3 className="text-sm font-medium text-zinc-100">{children}</h3>;
 }
 
-export function LandingDashboardPreview({ className }: { className?: string }) {
+export function LandingDashboardPreview({
+  className,
+  liveBackground = false,
+}: {
+  className?: string;
+  liveBackground?: boolean;
+}) {
   return (
     <div
       role="img"
@@ -59,17 +73,23 @@ export function LandingDashboardPreview({ className }: { className?: string }) {
         className
       )}
     >
-      <AnimatedFlow
-        variant="blush"
-        colors={DARK_BLUSH}
-        vignetteStrength={0.45}
-        flowSpeed={0.9}
-        distortionWarp={1.4}
-        filmGrain={0.25}
-        rotationAngle={120}
-        interactive={false}
+      <div
         className="pointer-events-none absolute inset-0 h-full min-h-0"
+        style={{ background: STILL_BLUSH }}
       />
+      {liveBackground ? (
+        <AnimatedFlow
+          variant="blush"
+          colors={DARK_BLUSH}
+          vignetteStrength={0.45}
+          flowSpeed={0.9}
+          distortionWarp={1.4}
+          filmGrain={0.25}
+          rotationAngle={120}
+          interactive={false}
+          className="pointer-events-none absolute inset-0 h-full min-h-0"
+        />
+      ) : null}
 
       <div className="absolute inset-x-0 top-[10cqmin] z-10 flex h-10 items-center justify-end gap-1.5 px-3">
         <span className="flex size-9 items-center justify-center rounded-full border border-white/20 bg-white/10 text-rose-400 shadow-sm backdrop-blur-sm">

@@ -1,36 +1,67 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
+import dynamic from "next/dynamic";
 import { IconArrowRight } from "@tabler/icons-react";
 
 import { Device } from "@/components/device";
 import { LandingDashboardPreview } from "@/components/landing/landing-dashboard-preview";
-import { SatinRidges } from "@/components/satin-ridges";
 import { LiquidGlass } from "@/components/ui/liquid-glass";
 import { cn } from "@/lib/utils";
+
+const SatinRidges = dynamic(
+  () => import("@/components/satin-ridges").then((mod) => mod.SatinRidges),
+  { ssr: false },
+);
+
+const HERO_BG = "#230b17";
+const MD_QUERY = "(min-width: 768px)";
 
 const GLASS_SHADOW =
   "shadow-[0_10px_40px_rgb(0_0_0/0.18),inset_0_1px_0_rgb(255_255_255/0.45)]";
 
 const fadeRise = "animate-fade-rise motion-reduce:animate-none";
 
+function subscribeMd(onChange: () => void) {
+  const media = window.matchMedia(MD_QUERY);
+  media.addEventListener("change", onChange);
+  return () => media.removeEventListener("change", onChange);
+}
+
+function readMd() {
+  return window.matchMedia(MD_QUERY).matches;
+}
+
 export function LandingHero() {
+  const desktop = useSyncExternalStore(subscribeMd, readMd, () => false);
+
   return (
     <section className="-mt-16">
-      <SatinRidges
-        colors={["#961b45", "#ff6653"]}
-        backgroundColor="#230b17"
-        angle={-33}
-        scale={1.35}
-        depth={1.00}
-        warp={1.00}
-        gloss={0.4}
-        highlight={0.85}
-        lightAngle={-70}
-        sheen={0.65}
-        speed={1}
-        seed={12}
-        clickRipples={false}
-        className="w-full"
+      <div
+        className="relative isolate w-full overflow-hidden"
+        style={{ backgroundColor: HERO_BG }}
       >
-        <div className="grid min-h-dvh grid-rows-[auto_minmax(18rem,1fr)] pt-16 md:grid-cols-2 md:grid-rows-[1fr]">
+        {desktop ? (
+          <SatinRidges
+            colors={["#961b45", "#ff6653"]}
+            backgroundColor={HERO_BG}
+            angle={-33}
+            scale={1.35}
+            depth={1}
+            warp={1}
+            gloss={0.4}
+            highlight={0.85}
+            lightAngle={-70}
+            sheen={0.65}
+            speed={1}
+            seed={12}
+            clickRipples={false}
+            dpr={1}
+            detail={0}
+            className="absolute inset-0 h-full w-full"
+          />
+        ) : null}
+        <div className="relative z-10 grid min-h-dvh grid-rows-[auto_minmax(18rem,1fr)] pt-16 md:grid-cols-2 md:grid-rows-[1fr]">
           <div className="flex flex-col items-start justify-center gap-4 px-4 py-12 md:py-20 md:pr-12 md:pl-[max(2rem,calc((200%-72rem)/2+2rem))]">
             <div className={cn(fadeRise, "flex flex-col gap-3 sm:gap-4")}>
               <h1 className="font-serif text-6xl leading-none tracking-tight text-rose-200 italic sm:text-7xl">
@@ -51,17 +82,29 @@ export function LandingHero() {
               className={cn(fadeRise, "mt-2 inline-flex rounded-full")}
               style={{ animationDelay: "240ms" }}
             >
-              <LiquidGlass
-                tint={0.2}
-                className={cn(
-                  GLASS_SHADOW,
-                  "text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:hover:scale-100"
-                )}
-                contentClassName="flex items-center gap-2 px-7 py-3.5 font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
-              >
-                Join Waitlist
-                <IconArrowRight className="size-4" aria-hidden />
-              </LiquidGlass>
+              {desktop ? (
+                <LiquidGlass
+                  tint={0.2}
+                  className={cn(
+                    GLASS_SHADOW,
+                    "text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:hover:scale-100"
+                  )}
+                  contentClassName="flex items-center gap-2 px-7 py-3.5 font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
+                >
+                  Join Waitlist
+                  <IconArrowRight className="size-4" aria-hidden />
+                </LiquidGlass>
+              ) : (
+                <span
+                  className={cn(
+                    GLASS_SHADOW,
+                    "inline-flex items-center gap-2 rounded-full bg-white/15 px-7 py-3.5 font-medium text-white ring-1 ring-white/40 [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
+                  )}
+                >
+                  Join Waitlist
+                  <IconArrowRight className="size-4" aria-hidden />
+                </span>
+              )}
             </a>
           </div>
 
@@ -74,14 +117,14 @@ export function LandingHero() {
               rotateX={0}
               rotateY={-9}
               rotateZ={0}
-              float={0.35}
+              float={desktop ? 0.35 : 0}
               island
             >
-              <LandingDashboardPreview />
+              <LandingDashboardPreview liveBackground={desktop} />
             </Device>
           </div>
         </div>
-      </SatinRidges>
+      </div>
     </section>
   );
 }
