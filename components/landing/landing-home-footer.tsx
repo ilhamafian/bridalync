@@ -5,7 +5,7 @@ import { LEGAL_BUSINESS_NAME } from "@/lib/site";
 
 export function LandingHomeFooter() {
   return (
-    <footer className="px-4 py-10 md:px-8">
+    <footer id="about" className="scroll-mt-24 px-4 py-10 md:px-8">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <LandingLogo />
         <p className="text-sm text-zinc-700">
