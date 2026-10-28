@@ -85,7 +85,7 @@ export function LandingDashboardPreview({ className }: { className?: string }) {
 
       <div className="absolute inset-x-0 top-[calc(10cqmin_+_2.5rem)] bottom-[4.25rem] z-10 flex flex-col gap-1.5 overflow-hidden px-3 text-zinc-50">
         <div>
-          <p className="text-base font-semibold tracking-tight">Good afternoon, Aisyah</p>
+          <p className="text-base font-semibold tracking-tight">Good afternoon, Melissa</p>
           <p className="mt-0.5 text-xs text-zinc-400">
             You have 4 upcoming bookings this week.
           </p>
@@ -139,7 +139,7 @@ export function LandingDashboardPreview({ className }: { className?: string }) {
                 <p className="truncate text-xs font-medium whitespace-nowrap text-zinc-400">
                   9:00 AM – 12:00 PM
                 </p>
-                <p className="truncate text-base font-semibold">Liyana Aziz</p>
+                <p className="truncate text-base font-semibold">Ayra Helena</p>
                 <p className="truncate text-xs text-zinc-400">Nikah & Sanding · Sanding</p>
               </div>
               <Pill tone="solid">In Progress</Pill>
@@ -164,7 +164,7 @@ export function LandingDashboardPreview({ className }: { className?: string }) {
               <ActivityRow
                 icon={IconCash}
                 title="Deposit received"
-                detail="Liyana Aziz · Nikah & Sanding"
+                detail="Ayra Helena · Nikah & Sanding"
                 amount="RM 800"
                 status="Confirmed"
                 when="2 hours ago"

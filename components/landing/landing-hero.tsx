@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 const GLASS_SHADOW =
   "shadow-[0_10px_40px_rgb(0_0_0/0.18),inset_0_1px_0_rgb(255_255_255/0.45)]";
 
+const fadeRise = "animate-fade-rise motion-reduce:animate-none";
+
 export function LandingHero() {
   return (
     <section className="-mt-16">
@@ -30,16 +32,25 @@ export function LandingHero() {
       >
         <div className="grid min-h-dvh grid-rows-[auto_minmax(18rem,1fr)] pt-16 md:grid-cols-2 md:grid-rows-[1fr]">
           <div className="flex flex-col items-start justify-center gap-4 px-4 py-12 md:py-20 md:pr-12 md:pl-[max(2rem,calc((200%-72rem)/2+2rem))]">
-            <h1 className="font-serif text-5xl tracking-tight text-rose-200 sm:text-6xl">
-              Bridalync
-            </h1>
-            <p className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
-              All in one app for glam teams
+            <div className={cn(fadeRise, "flex flex-col gap-3 sm:gap-4")}>
+              <h1 className="font-serif text-6xl leading-none tracking-tight text-rose-200 italic sm:text-7xl">
+                BRIDALYNC
+              </h1>
+              <p className="text-balance text-3xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-4xl">
+                All in one app for glam teams
+              </p>
+            </div>
+            <p
+              className={cn(fadeRise, "max-w-md text-base leading-relaxed text-zinc-300 sm:text-lg")}
+              style={{ animationDelay: "120ms" }}
+            >
+              Book, plan, and track all in one place. Your one stop solution for all your bridal needs.
             </p>
-            <p className="max-w-md text-base leading-relaxed text-zinc-300 sm:text-lg">
-              Book, plan, and track all in one place
-            </p>
-            <a href="#waitlist" className="mt-2 inline-flex rounded-full">
+            <a
+              href="#waitlist"
+              className={cn(fadeRise, "mt-2 inline-flex rounded-full")}
+              style={{ animationDelay: "240ms" }}
+            >
               <LiquidGlass
                 tint={0.2}
                 className={cn(
