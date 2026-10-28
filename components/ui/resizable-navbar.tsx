@@ -102,8 +102,9 @@ export const NavBody = ({ children, className, visible }: NavBodyProps) => {
       style={{
         minWidth: "800px",
       }}
+      data-state={visible ? "scrolled" : "top"}
       className={cn(
-        "relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-transparent px-4 py-2 lg:flex dark:bg-transparent",
+        "group/nav relative z-[60] mx-auto hidden w-full max-w-7xl flex-row items-center justify-between self-start rounded-full bg-transparent px-4 py-2 lg:flex dark:bg-transparent",
         visible && "bg-white/80 dark:bg-neutral-950/80",
         className,
       )}
@@ -128,7 +129,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
         <a
           onMouseEnter={() => setHovered(idx)}
           onClick={onItemClick}
-          className="relative px-4 py-2 text-neutral-600 dark:text-neutral-300"
+          className="relative px-4 py-2 text-inherit"
           key={`link-${idx}`}
           href={item.link}
         >
@@ -164,8 +165,9 @@ export const MobileNav = ({ children, className, visible }: MobileNavProps) => {
         stiffness: 200,
         damping: 50,
       }}
+      data-state={visible ? "scrolled" : "top"}
       className={cn(
-        "relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-0 py-2 lg:hidden",
+        "group/nav relative z-50 mx-auto flex w-full max-w-[calc(100vw-2rem)] flex-col items-center justify-between bg-transparent px-0 py-2 lg:hidden",
         visible && "bg-white/80 dark:bg-neutral-950/80",
         className,
       )}
@@ -219,9 +221,11 @@ export const MobileNavMenu = ({
 export const MobileNavToggle = ({
   isOpen,
   onClick,
+  className,
 }: {
   isOpen: boolean;
   onClick: () => void;
+  className?: string;
 }) => {
   const Icon = isOpen ? IconX : IconMenu2;
 
@@ -230,9 +234,9 @@ export const MobileNavToggle = ({
       type="button"
       onClick={onClick}
       aria-label={isOpen ? "Close menu" : "Open menu"}
-      className="relative z-20"
+      className={cn("relative z-20 text-black dark:text-white", className)}
     >
-      <Icon className="text-black dark:text-white" />
+      <Icon className="text-current" />
     </button>
   );
 };

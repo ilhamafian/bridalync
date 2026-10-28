@@ -25,6 +25,9 @@ const navItems = [
 const waitlistClassName =
   "rounded-full bg-primary px-5 text-primary-foreground shadow-none hover:bg-primary/90";
 
+const overSatinClassName =
+  "text-white hover:text-white group-data-[state=scrolled]/nav:text-neutral-600 group-data-[state=scrolled]/nav:hover:text-zinc-800";
+
 export function LandingNav() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -34,11 +37,16 @@ export function LandingNav() {
     <Navbar className="top-0">
       <NavBody>
         <div className="relative z-20">
-          <LandingLogo />
+          <LandingLogo className="brightness-0 invert group-data-[state=scrolled]/nav:filter-none" />
         </div>
-        <NavItems items={navItems} />
+        <NavItems items={navItems} className={overSatinClassName} />
         <div className="relative z-20 flex items-center gap-2">
-          <NavbarButton as={Link} href="/auth" variant="secondary">
+          <NavbarButton
+            as={Link}
+            href="/auth"
+            variant="secondary"
+            className={overSatinClassName}
+          >
             Login
           </NavbarButton>
           <NavbarButton href="#waitlist" className={waitlistClassName}>
@@ -50,11 +58,12 @@ export function LandingNav() {
       <MobileNav>
         <MobileNavHeader>
           <div className="relative z-20">
-            <LandingLogo />
+            <LandingLogo className="brightness-0 invert group-data-[state=scrolled]/nav:filter-none" />
           </div>
           <MobileNavToggle
             isOpen={isMobileMenuOpen}
             onClick={() => setIsMobileMenuOpen((open) => !open)}
+            className={overSatinClassName}
           />
         </MobileNavHeader>
         <MobileNavMenu isOpen={isMobileMenuOpen} onClose={closeMobileMenu}>

@@ -8,7 +8,7 @@ const ctaClassName = "h-11 rounded-full px-6 text-sm";
 
 export function LandingHero() {
   return (
-    <section>
+    <section className="-mt-16">
       <SatinRidges
         colors={["#961b45", "#ff6653"]}
         backgroundColor="#230b17"
@@ -25,7 +25,7 @@ export function LandingHero() {
         clickRipples={false}
         className="w-full"
       >
-        <div className="grid md:min-h-[32rem] md:grid-cols-2 md:grid-rows-[1fr]">
+        <div className="grid min-h-dvh grid-rows-[auto_minmax(18rem,1fr)] pt-16 md:grid-cols-2 md:grid-rows-[1fr]">
           <div className="flex flex-col items-start justify-center gap-4 px-4 py-12 md:py-20 md:pr-12 md:pl-[max(2rem,calc((200%-72rem)/2+2rem))]">
             <h1 className="font-serif text-5xl tracking-tight text-rose-900 sm:text-6xl">
               Bridalync
@@ -41,7 +41,7 @@ export function LandingHero() {
             </Button>
           </div>
 
-          <div className="relative aspect-[666/455] w-full md:aspect-auto md:h-full md:min-h-full">
+          <div className="relative h-full min-h-72 w-full md:min-h-full">
             <Image
               src="/landing/hero_brush.webp"
               alt="Makeup brushes with a cloud of pink powder"
