@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { LandingLogo } from "@/components/landing/landing-logo";
+import { LiquidGlass } from "@/components/ui/liquid-glass";
 import {
   MobileNav,
   MobileNavHeader,
@@ -28,6 +29,22 @@ const waitlistClassName =
 const overSatinClassName =
   "text-white hover:text-white group-data-[state=scrolled]/nav:text-zinc-100 group-data-[state=scrolled]/nav:hover:text-white";
 
+/** Same near-black as the scrolled bar (`neutral-950` at 80%). */
+const scrolledTint = "rgb(10 10 10 / 0.8)";
+
+function navSurface(visible: boolean) {
+  if (!visible) return null;
+  return (
+    <LiquidGlass
+      aria-hidden
+      className="pointer-events-none absolute inset-0"
+      radius={999}
+      tint={0}
+      style={{ backgroundColor: scrolledTint }}
+    />
+  );
+}
+
 export function LandingNav() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -45,7 +62,7 @@ export function LandingNav() {
 
   return (
     <Navbar className="top-0">
-      <NavBody>
+      <NavBody surface={navSurface}>
         <div className="relative z-20">
           <LandingLogo className="brightness-0 invert" />
         </div>
@@ -65,7 +82,7 @@ export function LandingNav() {
         </div>
       </NavBody>
 
-      <MobileNav>
+      <MobileNav surface={navSurface}>
         <MobileNavHeader>
           <div className="relative z-20">
             <LandingLogo className="brightness-0 invert" />
