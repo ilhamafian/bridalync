@@ -50,8 +50,8 @@ export const ms = {
   // Events / packages
   eventQuestion: "Majlis apa yang anda ingin tempah?",
   eventHelper: "Pilih satu majlis untuk tempahan awak.",
-  loadingPackages: "Memuatkan pakej...",
-  noPackagesAvailable: "Tiada pakej tersedia.",
+  loadingPackages: "Memuatkan pilihan tempahan...",
+  noPackagesAvailable: "Tiada pilihan tempahan tersedia.",
   sessionCount: "{count} sesi",
 
   // Date & time
