@@ -52,8 +52,8 @@ export const en: Locale = {
   // Events / packages
   eventQuestion: "What event are you booking for?",
   eventHelper: "Choose one event for your booking.",
-  loadingPackages: "Loading packages...",
-  noPackagesAvailable: "No packages available.",
+  loadingPackages: "Loading booking options...",
+  noPackagesAvailable: "No booking options available.",
   sessionCount: "{count} {count, session, sessions}",
 
   // Date & time

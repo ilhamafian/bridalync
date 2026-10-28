@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { landingGlassClassName } from "@/components/landing/glass";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -24,9 +26,20 @@ export function LandingHero() {
         </div>
 
         <div
-          aria-hidden
-          className={cn(landingGlassClassName, "aspect-[4/3] w-full")}
-        />
+          className={cn(
+            landingGlassClassName,
+            "relative aspect-[1216/832] w-full overflow-hidden"
+          )}
+        >
+          <Image
+            src="/landing/hero_brush.webp"
+            alt="Makeup brushes with a cloud of pink powder"
+            fill
+            priority
+            sizes="(min-width: 768px) 36rem, 100vw"
+            className="object-cover"
+          />
+        </div>
       </div>
     </section>
   );
