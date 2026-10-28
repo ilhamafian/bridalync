@@ -36,15 +36,15 @@ export function LandingHero() {
               <h1 className="font-serif text-6xl leading-none tracking-tight text-rose-200 italic sm:text-7xl">
                 BRIDALYNC
               </h1>
-              <p className="text-balance text-3xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-4xl">
+              {/* <p className="text-balance text-3xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-4xl">
                 All in one app for glam teams
-              </p>
+              </p> */}
             </div>
             <p
               className={cn(fadeRise, "max-w-md text-base leading-relaxed text-zinc-300 sm:text-lg")}
               style={{ animationDelay: "120ms" }}
             >
-              Book, plan, and track all in one place. Your one stop solution for all your bridal needs.
+              Your one-stop system for glam teams.
             </p>
             <a
               href="#waitlist"
