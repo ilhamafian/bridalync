@@ -15,6 +15,7 @@ import {
   NavBody,
   NavItems,
 } from "@/components/ui/resizable-navbar";
+import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "Home", link: "#top" },
@@ -23,11 +24,45 @@ const navItems = [
   { name: "About Us", link: "#about" },
 ];
 
-const waitlistClassName =
-  "rounded-full bg-primary px-5 text-primary-foreground shadow-none hover:bg-primary/90";
+const GLASS_SHADOW =
+  "shadow-[0_10px_40px_rgb(0_0_0/0.18),inset_0_1px_0_rgb(255_255_255/0.45)]";
+
+const waitlistGlassClassName = cn(
+  GLASS_SHADOW,
+  "text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:hover:scale-100"
+);
+
+const waitlistGlassContentClassName =
+  "flex items-center justify-center gap-2 px-5 py-2 text-sm font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]";
 
 const overSatinClassName =
   "text-white hover:text-white group-data-[state=scrolled]/nav:text-zinc-100 group-data-[state=scrolled]/nav:hover:text-white";
+
+function WaitlistGlassButton({
+  className,
+  contentClassName,
+  onClick,
+}: {
+  className?: string;
+  contentClassName?: string;
+  onClick?: () => void;
+}) {
+  return (
+    <a
+      href="#waitlist"
+      onClick={onClick}
+      className={cn("inline-flex rounded-full", className)}
+    >
+      <LiquidGlass
+        tint={0.2}
+        className={cn(waitlistGlassClassName, "w-full")}
+        contentClassName={cn(waitlistGlassContentClassName, contentClassName)}
+      >
+        Waitlist
+      </LiquidGlass>
+    </a>
+  );
+}
 
 /** Same near-black as the scrolled bar (`neutral-950` at 80%). */
 const scrolledTint = "rgb(10 10 10 / 0.8)";
@@ -76,9 +111,7 @@ export function LandingNav() {
           >
             Login
           </NavbarButton>
-          <NavbarButton href="#waitlist" className={waitlistClassName}>
-            Waitlist
-          </NavbarButton>
+          <WaitlistGlassButton />
         </div>
       </NavBody>
 
@@ -114,13 +147,11 @@ export function LandingNav() {
             >
               Login
             </NavbarButton>
-            <NavbarButton
-              href="#waitlist"
-              className={`w-full ${waitlistClassName}`}
+            <WaitlistGlassButton
+              className="w-full"
+              contentClassName="w-full py-3"
               onClick={closeMobileMenu}
-            >
-              Waitlist
-            </NavbarButton>
+            />
           </div>
         </MobileNavMenu>
       </MobileNav>

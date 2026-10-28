@@ -1,0 +1,261 @@
+import {
+  IconBell,
+  IconBrandInstagram,
+  IconCalendarQuestion,
+  IconCash,
+  IconCheck,
+  IconHome,
+  IconMapPin,
+  IconNavigation,
+  IconPlus,
+  IconReceipt,
+  IconSearch,
+  IconSettings,
+  IconUser,
+  IconX,
+} from "@tabler/icons-react";
+
+import { cn } from "@/lib/utils";
+
+const glassCardClassName =
+  "rounded-2xl bg-white/45 shadow-sm ring-1 ring-white/70 backdrop-blur-sm";
+
+const blushWash = {
+  backgroundColor: "#fff7fa",
+  backgroundImage: [
+    "radial-gradient(ellipse 90% 55% at 8% 0%, #f5bed3 0%, transparent 62%)",
+    "radial-gradient(ellipse 70% 45% at 100% 18%, #fcd5e3 0%, transparent 58%)",
+    "radial-gradient(ellipse 80% 50% at 40% 100%, #ffe9f1 0%, transparent 55%)",
+  ].join(", "),
+} as const;
+
+function Pill({
+  children,
+  tone = "outline",
+}: {
+  children: React.ReactNode;
+  tone?: "solid" | "outline";
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex h-5 shrink-0 items-center rounded-full px-2 text-[0.625rem] font-medium",
+        tone === "solid"
+          ? "bg-rose-800 text-white"
+          : "border border-zinc-900/10 bg-white/40 text-zinc-800"
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function SectionTitle({ children }: { children: React.ReactNode }) {
+  return <h3 className="text-sm font-medium text-zinc-900">{children}</h3>;
+}
+
+export function LandingDashboardPreview({ className }: { className?: string }) {
+  return (
+    <div
+      role="img"
+      aria-label="Sample Bridalync dashboard with today's bookings, a booking request, and recent activity"
+      className={cn(
+        "pointer-events-none relative w-full max-w-[23rem] overflow-hidden rounded-[2rem] shadow-[0_24px_80px_rgb(0_0_0/0.35)] ring-1 ring-white/40",
+        className
+      )}
+    >
+      <div className="absolute inset-0" style={blushWash} />
+
+      <div className="absolute inset-x-0 top-0 z-10 flex h-14 items-center justify-end gap-2 px-4">
+        <span className="flex size-10 items-center justify-center rounded-full border border-zinc-900/10 bg-white/55 text-rose-900 shadow-sm backdrop-blur-sm">
+          <IconSearch className="size-5" />
+        </span>
+        <span className="relative flex size-10 items-center justify-center rounded-full border border-zinc-900/10 bg-white/55 text-rose-900 shadow-sm backdrop-blur-sm">
+          <IconBell className="size-5" />
+          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-800 px-1 text-[11px] leading-none font-semibold text-white shadow-sm ring-2 ring-white/70">
+            3
+          </span>
+        </span>
+      </div>
+
+      <div className="absolute inset-x-0 top-0 bottom-[4.75rem] flex flex-col gap-2 overflow-hidden px-4 pt-14 text-zinc-900">
+        <div>
+          <p className="text-xl font-semibold tracking-tight">Good afternoon, Aisyah</p>
+          <p className="mt-1 text-sm text-zinc-600">
+            You have 4 upcoming bookings this week.
+          </p>
+        </div>
+
+        <section className="flex flex-col gap-2">
+          <SectionTitle>
+            Booking requests
+            <span className="text-zinc-500"> · 2</span>
+          </SectionTitle>
+          <article className={cn(glassCardClassName, "flex flex-col gap-1.5 p-3")}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold">Hana Sofea</p>
+                <p className="truncate text-xs text-zinc-500">Nikah & Sanding</p>
+              </div>
+              <p className="shrink-0 text-sm font-semibold tabular-nums">RM 2,400</p>
+            </div>
+            <p className="truncate text-sm">
+              <span className="font-medium">Sat, 15 Nov · 8:00 AM – 11:00 AM</span>
+              <span className="text-zinc-500"> · Nikah</span>
+            </p>
+            <div className="flex min-w-0 items-center gap-2 text-sm text-zinc-500">
+              <p className="flex min-w-0 flex-1 items-center gap-1.5">
+                <IconMapPin className="size-4 shrink-0" />
+                <span className="truncate">The Ritz-Carlton, Kuala Lumpur</span>
+              </p>
+              <span className="inline-flex shrink-0 items-center gap-1 text-zinc-800">
+                <IconBrandInstagram className="size-3.5 text-rose-900" />
+                @hanasofea
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <span className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md border border-zinc-900/10 bg-white/50 text-xs font-medium">
+                <IconX className="size-4" />
+                Decline
+              </span>
+              <span className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md bg-rose-800 text-xs font-medium text-white">
+                <IconCheck className="size-4" />
+                Approve
+              </span>
+            </div>
+          </article>
+        </section>
+
+        <section className="flex flex-col gap-2">
+          <SectionTitle>Today&apos;s bookings</SectionTitle>
+          <article className={cn(glassCardClassName, "flex flex-col gap-2.5 p-3")}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-zinc-500">9:00 AM – 12:00 PM</p>
+                <p className="truncate text-base font-semibold">Liyana Aziz</p>
+                <p className="truncate text-xs text-zinc-500">Nikah & Sanding · Sanding</p>
+              </div>
+              <Pill tone="solid">In Progress</Pill>
+            </div>
+            <div className="flex items-end justify-between gap-3">
+              <p className="flex min-w-0 items-center gap-1.5 text-sm text-zinc-500">
+                <IconMapPin className="size-4 shrink-0" />
+                <span className="truncate">JW Marriott Kuala Lumpur</span>
+              </p>
+              <span className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-rose-800 px-3.5 text-xs font-medium text-white">
+                <IconNavigation className="size-5" />
+                Navigate
+              </span>
+            </div>
+          </article>
+        </section>
+
+        <section className="flex flex-col gap-3">
+          <SectionTitle>Recent activity</SectionTitle>
+          <div className={cn(glassCardClassName, "overflow-hidden")}>
+            <ul className="divide-y divide-white/70">
+              <ActivityRow
+                icon={IconCash}
+                title="Deposit received"
+                detail="Liyana Aziz · Nikah & Sanding"
+                amount="RM 800"
+                status="Confirmed"
+                when="2 hours ago"
+                unread
+              />
+              <ActivityRow
+                icon={IconCalendarQuestion}
+                title="Booking request"
+                detail="Hana Sofea · Nikah & Sanding"
+                amount="RM 2,400"
+                status="Request"
+                when="5 hours ago"
+                unread
+              />
+              <ActivityRow
+                icon={IconReceipt}
+                title="Payment pending"
+                detail="Aina Rahman · Trial Makeup"
+                amount="RM 150"
+                status="Pending"
+                when="1 day ago"
+              />
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-4">
+        <div className="flex h-14 items-center justify-around rounded-full bg-white/50 px-2 shadow-md ring-1 ring-white/70 backdrop-blur-md">
+          <NavIcon icon={IconHome} active label="Home" />
+          <NavIcon icon={IconCash} label="Payments" />
+          <NavIcon icon={IconPlus} label="Add" />
+          <NavIcon icon={IconSettings} label="Settings" />
+          <NavIcon icon={IconUser} label="Profile" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function NavIcon({
+  icon: Icon,
+  active = false,
+  label,
+}: {
+  icon: typeof IconHome;
+  active?: boolean;
+  label: string;
+}) {
+  return (
+    <span
+      className={cn(
+        "flex size-11 items-center justify-center rounded-full",
+        active ? "bg-white/70 text-rose-900 shadow-sm" : "text-zinc-500"
+      )}
+      aria-label={label}
+    >
+      <Icon className={cn("size-5", active && "stroke-[2.25]")} />
+    </span>
+  );
+}
+
+function ActivityRow({
+  icon: Icon,
+  title,
+  detail,
+  amount,
+  status,
+  when,
+  unread = false,
+}: {
+  icon: typeof IconCash;
+  title: string;
+  detail: string;
+  amount: string;
+  status: string;
+  when: string;
+  unread?: boolean;
+}) {
+  return (
+    <li className={cn("relative flex items-center gap-3 px-4 py-3", unread && "bg-white/35")}>
+      {unread ? (
+        <span className="absolute top-1/2 left-1.5 size-1.5 -translate-y-1/2 rounded-full bg-rose-800" />
+      ) : null}
+      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white/70 text-rose-900">
+        <Icon className="size-4.5" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className={cn("truncate text-sm", unread ? "font-semibold" : "font-medium")}>
+          {title}
+        </p>
+        <p className="truncate text-xs text-zinc-500">{detail}</p>
+      </div>
+      <div className="flex shrink-0 flex-col items-end gap-1 text-right">
+        <p className="text-sm font-semibold tabular-nums">{amount}</p>
+        <Pill tone={status === "Confirmed" ? "solid" : "outline"}>{status}</Pill>
+        <p className="text-xs text-zinc-500">{when}</p>
+      </div>
+    </li>
+  );
+}

@@ -1,10 +1,12 @@
-import Image from "next/image";
+import { IconArrowRight } from "@tabler/icons-react";
 
+import { LandingDashboardPreview } from "@/components/landing/landing-dashboard-preview";
 import { SatinRidges } from "@/components/satin-ridges";
-import { Button } from "@/components/ui/button";
+import { LiquidGlass } from "@/components/ui/liquid-glass";
 import { cn } from "@/lib/utils";
 
-const ctaClassName = "h-11 rounded-full px-6 text-sm";
+const GLASS_SHADOW =
+  "shadow-[0_10px_40px_rgb(0_0_0/0.18),inset_0_1px_0_rgb(255_255_255/0.45)]";
 
 export function LandingHero() {
   return (
@@ -36,20 +38,23 @@ export function LandingHero() {
             <p className="max-w-md text-base leading-relaxed text-zinc-300 sm:text-lg">
               Book, plan, and track all in one place
             </p>
-            <Button asChild className={cn(ctaClassName, "mt-2")}>
-              <a href="#waitlist">Join Waitlist</a>
-            </Button>
+            <a href="#waitlist" className="mt-2 inline-flex rounded-full">
+              <LiquidGlass
+                tint={0.2}
+                className={cn(
+                  GLASS_SHADOW,
+                  "text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:hover:scale-100"
+                )}
+                contentClassName="flex items-center gap-2 px-7 py-3.5 font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
+              >
+                Join Waitlist
+                <IconArrowRight className="size-4" aria-hidden />
+              </LiquidGlass>
+            </a>
           </div>
 
-          <div className="relative h-full min-h-72 w-full md:min-h-full">
-            <Image
-              src="/landing/hero_brush.webp"
-              alt="Makeup brushes with a cloud of pink powder"
-              fill
-              priority
-              sizes="(min-width: 768px) 50vw, 100vw"
-              className="object-cover"
-            />
+          <div className="flex w-full items-center justify-center px-4 py-6 md:h-full md:min-h-0 md:overflow-hidden md:px-8 md:py-6 md:pr-[max(2rem,calc((200%-72rem)/2+2rem))]">
+            <LandingDashboardPreview className="h-[34rem] md:h-[min(42rem,calc(100svh-6.75rem))]" />
           </div>
         </div>
       </SatinRidges>
