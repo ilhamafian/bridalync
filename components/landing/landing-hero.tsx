@@ -27,13 +27,13 @@ export function LandingHero() {
       >
         <div className="grid min-h-dvh grid-rows-[auto_minmax(18rem,1fr)] pt-16 md:grid-cols-2 md:grid-rows-[1fr]">
           <div className="flex flex-col items-start justify-center gap-4 px-4 py-12 md:py-20 md:pr-12 md:pl-[max(2rem,calc((200%-72rem)/2+2rem))]">
-            <h1 className="font-serif text-5xl tracking-tight text-rose-900 sm:text-6xl">
+            <h1 className="font-serif text-5xl tracking-tight text-rose-200 sm:text-6xl">
               Bridalync
             </h1>
-            <p className="text-2xl font-semibold tracking-tight text-zinc-900 sm:text-3xl">
+            <p className="text-2xl font-semibold tracking-tight text-zinc-50 sm:text-3xl">
               All in one app for glam teams
             </p>
-            <p className="max-w-md text-base leading-relaxed text-zinc-700 sm:text-lg">
+            <p className="max-w-md text-base leading-relaxed text-zinc-300 sm:text-lg">
               Book, plan, and track all in one place
             </p>
             <Button asChild className={cn(ctaClassName, "mt-2")}>

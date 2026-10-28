@@ -39,24 +39,24 @@ export function LandingFaq() {
   return (
     <section id="faq" className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24">
       <div className="mx-auto flex max-w-2xl flex-col gap-8">
-        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-900 md:text-4xl">
+        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-50 md:text-4xl">
           FAQ
         </h2>
         <Accordion
           type="single"
           collapsible
-          className={cn(landingGlassClassName, "border-white/60")}
+          className={cn(landingGlassClassName, "border-white/15")}
         >
           {faqs.map((faq, index) => (
             <AccordionItem
               key={faq.question}
               value={`faq-${index}`}
-              className="border-white/50 px-4 data-open:bg-white/20 md:px-6"
+              className="border-white/15 px-4 data-open:bg-white/10 md:px-6"
             >
-              <AccordionTrigger className="py-4 text-sm text-zinc-900 hover:no-underline md:text-base">
+              <AccordionTrigger className="py-4 text-sm text-zinc-50 hover:no-underline md:text-base">
                 {faq.question}
               </AccordionTrigger>
-              <AccordionContent className="text-sm leading-relaxed text-zinc-700">
+              <AccordionContent className="text-sm leading-relaxed text-zinc-300">
                 {faq.answer}
               </AccordionContent>
             </AccordionItem>

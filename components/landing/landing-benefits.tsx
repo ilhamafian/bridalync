@@ -21,7 +21,7 @@ export function LandingBenefits() {
   return (
     <section className="px-4 py-16 md:px-8 md:py-24">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
-        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-900 md:text-4xl">
+        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-50 md:text-4xl">
           What if you can...
         </h2>
         <div className="grid gap-4 md:grid-cols-3">
@@ -30,10 +30,10 @@ export function LandingBenefits() {
               key={benefit.title}
               className={cn(landingGlassClassName, "flex flex-col gap-2 p-6")}
             >
-              <h3 className="text-lg font-semibold text-zinc-900">
+              <h3 className="text-lg font-semibold text-zinc-50">
                 {benefit.title}
               </h3>
-              <p className="text-sm leading-relaxed text-zinc-700">
+              <p className="text-sm leading-relaxed text-zinc-300">
                 {benefit.description}
               </p>
             </article>

@@ -104,7 +104,7 @@ function FeaturePanel({
   return (
     <div className="grid items-center gap-8 md:grid-cols-[minmax(0,1fr)_17rem] md:gap-16">
       <div className="flex flex-col gap-6">
-        <h3 className="text-xl font-semibold tracking-tight text-zinc-900 md:text-2xl">
+        <h3 className="text-xl font-semibold tracking-tight text-zinc-50 md:text-2xl">
           {title}
         </h3>
         <div
@@ -133,10 +133,10 @@ function FeaturePanel({
           })}
         </div>
         <div aria-live="polite" className="flex min-h-32 flex-col gap-2">
-          <p className="text-2xl font-semibold tracking-tight text-rose-900 md:text-3xl">
+          <p className="text-2xl font-semibold tracking-tight text-rose-300 md:text-3xl">
             {selected.title}
           </p>
-          <p className="max-w-lg text-base leading-relaxed text-zinc-700">
+          <p className="max-w-lg text-base leading-relaxed text-zinc-300">
             {selected.description}
           </p>
         </div>
@@ -159,7 +159,7 @@ function FeaturePanel({
           />
         ) : (
           <div
-            className="flex size-full items-center justify-center p-6 text-center text-sm text-zinc-600"
+            className="flex size-full items-center justify-center p-6 text-center text-sm text-zinc-400"
             aria-label={`${title}: ${selected.label}`}
           >
             {selected.label}
@@ -177,7 +177,7 @@ export function LandingSolution() {
       className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24"
     >
       <div className="mx-auto flex max-w-5xl flex-col gap-16 md:gap-24">
-        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-900 md:text-4xl">
+        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-50 md:text-4xl">
           Introducing Bridalync
         </h2>
         <FeaturePanel title="Client Facing" features={clientFeatures} />

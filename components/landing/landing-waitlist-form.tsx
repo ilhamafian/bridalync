@@ -96,7 +96,7 @@ export function LandingWaitlistForm() {
         </p>
       ) : null}
       {success ? (
-        <p className="text-center text-sm text-zinc-800" role="status">
+        <p className="text-center text-sm text-zinc-200" role="status">
           {success}
         </p>
       ) : null}

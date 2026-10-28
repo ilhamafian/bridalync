@@ -11,10 +11,10 @@ export function LandingWaitlist() {
           "mx-auto max-w-xl px-6 py-10 text-center md:px-10"
         )}
       >
-        <h2 className="text-3xl font-semibold tracking-tight text-zinc-900">
+        <h2 className="text-3xl font-semibold tracking-tight text-zinc-50">
           Join the waitlist
         </h2>
-        <p className="mt-3 text-base leading-relaxed text-zinc-700">
+        <p className="mt-3 text-base leading-relaxed text-zinc-300">
           Leave your number and we&apos;ll reach out with a personalised demo.
         </p>
         <LandingWaitlistForm />

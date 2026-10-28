@@ -34,7 +34,7 @@ export function LandingPain() {
   return (
     <section className="px-4 py-16 md:px-8 md:py-24">
       <div className="mx-auto flex max-w-3xl flex-col gap-8">
-        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-900 md:text-4xl">
+        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-50 md:text-4xl">
           Does this sound familiar?
         </h2>
 
@@ -51,7 +51,7 @@ export function LandingPain() {
                   "flex min-h-44 items-center p-6 md:min-h-48 md:p-8"
                 )}
               >
-                <p className="text-base leading-relaxed text-zinc-800 md:text-lg">
+                <p className="text-base leading-relaxed text-zinc-200 md:text-lg">
                   {text}
                 </p>
               </div>
