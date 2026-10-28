@@ -1,5 +1,6 @@
 import { IconArrowRight } from "@tabler/icons-react";
 
+import { Device } from "@/components/device";
 import { LandingDashboardPreview } from "@/components/landing/landing-dashboard-preview";
 import { SatinRidges } from "@/components/satin-ridges";
 import { LiquidGlass } from "@/components/ui/liquid-glass";
@@ -53,8 +54,20 @@ export function LandingHero() {
             </a>
           </div>
 
-          <div className="flex w-full items-center justify-center px-4 py-6 md:h-full md:min-h-0 md:overflow-hidden md:px-8 md:py-6 md:pr-[max(2rem,calc((200%-72rem)/2+2rem))]">
-            <LandingDashboardPreview className="h-[34rem] md:h-[min(42rem,calc(100svh-6.75rem))]" />
+          <div className="flex w-full items-center justify-center px-4 py-8 md:h-full md:min-h-0 md:px-8 md:py-6 md:pr-[max(2rem,calc((200%-72rem)/2+2rem))]">
+            <Device
+              finish="black"
+              screenColor="#0b0609"
+              shadowColor="#14040c"
+              width="min(22rem, 82vw, calc((100svh - 6rem) / 2.092))"
+              rotateX={0}
+              rotateY={-9}
+              rotateZ={0}
+              float={0.35}
+              island
+            >
+              <LandingDashboardPreview />
+            </Device>
           </div>
         </div>
       </SatinRidges>
