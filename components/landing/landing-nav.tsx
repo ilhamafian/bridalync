@@ -96,7 +96,7 @@ export function LandingNav() {
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
-    <Navbar className="top-0">
+    <Navbar className="top-4">
       <NavBody surface={navSurface}>
         <div className="relative z-20">
           <LandingLogo className="brightness-0 invert" />
