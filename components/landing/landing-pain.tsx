@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   motion,
   useMotionValue,
@@ -12,6 +13,13 @@ import {
 } from "motion/react";
 
 import { cn } from "@/lib/utils";
+
+const InterferenceRibbons = dynamic(
+  () => import("@/components/interference-ribbons").then((mod) => mod.InterferenceRibbons),
+  { ssr: false }
+);
+
+const PAGE_BG = "#230b17";
 
 const PX_PER_WORD = 40;
 const FADE_PX = 40;
@@ -124,7 +132,7 @@ function PainHeading({ index }: { index: number }) {
   const total = padBlockNumber(ranges.length);
 
   return (
-    <div className="flex flex-col items-start gap-8 md:-translate-y-10">
+    <div className="relative z-10 flex flex-col items-start gap-8 md:-translate-y-10">
       <h2 className={headingClassName}>Does this ring a bell?</h2>
       <div className="flex flex-col items-start gap-2.5">
         <p
@@ -138,6 +146,24 @@ function PainHeading({ index }: { index: number }) {
         </p>
       </div>
     </div>
+  );
+}
+
+function PainRibbons({ className }: { className?: string }) {
+  return (
+    <InterferenceRibbons
+      colors={["#961b45", "#ff6653"]}
+      backgroundColor={PAGE_BG}
+      wires={13}
+      lineWidth={4.00}
+      ribbonWidth={0.25}
+      amplitude={0.3}
+      waveLength={0.75}
+      angle={0}
+      twist={1.60}
+      curl={0.62}
+      className={cn("h-[32rem] min-h-0 w-full md:h-[40rem]", className)}
+    />
   );
 }
 
@@ -229,6 +255,7 @@ function LandingPainStatic() {
             </p>
           ))}
         </div>
+        <PainRibbons className="col-span-full mt-4 ml-[calc(50%-50vw)] w-screen max-w-none md:mt-6" />
       </div>
     </section>
   );
@@ -265,10 +292,11 @@ function LandingPainScroll() {
     >
       <div className="sticky top-0 h-dvh">
         <PainProgress progress={progress} />
-        <div className="flex h-full w-full items-center px-4 md:px-12 lg:px-16">
-          <div className="grid w-full grid-cols-1 items-start gap-10 md:grid-cols-3 md:gap-x-16">
+        <div className="relative z-10 flex h-full w-full items-center px-4 md:px-12 lg:px-16">
+          <div className="relative grid w-full grid-cols-1 items-start gap-10 md:grid-cols-3 md:gap-x-16">
+            <PainRibbons className="absolute top-[calc(100%-14rem)] -right-4 -left-4 z-0 w-auto md:top-[calc(100%-13rem)] md:-right-12 md:-left-12 lg:-right-16 lg:-left-16" />
             <PainHeading index={activeIndex} />
-            <div className="relative w-full md:col-span-2 md:translate-y-14">
+            <div className="relative z-10 w-full md:col-span-2 md:translate-y-14">
               <p className={cn(sentenceTypeClassName, "invisible")} aria-hidden>
                 {longest.words.map((word, index) => (
                   <span key={index}>
