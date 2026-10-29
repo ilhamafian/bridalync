@@ -40,7 +40,7 @@ const sentenceTypeClassName =
   "w-full text-left text-3xl font-medium leading-[1.15] tracking-tight md:text-5xl";
 
 const headingClassName =
-  "text-left text-2xl font-medium leading-tight tracking-tight text-zinc-50 md:text-[1.75rem]";
+  "text-left text-2xl font-medium leading-tight tracking-tight text-zinc-50 md:text-3xl";
 
 type SentenceRange = {
   text: string;
