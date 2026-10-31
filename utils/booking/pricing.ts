@@ -127,6 +127,15 @@ export function roundSen(amountRm: number) {
   return toSen(amountRm) / 100;
 }
 
+/** Round money up to the next whole ringgit. An exact ringgit amount stays unchanged. */
+export function ceilRm(amountRm: number) {
+  const sen = toSen(amountRm);
+  if (sen <= 0) return sen / 100;
+  const remainder = sen % 100;
+  if (remainder === 0) return sen / 100;
+  return (sen + (100 - remainder)) / 100;
+}
+
 /** Splits `amountRm` into `count` whole-ringgit shares; leftover ringgit go to the first shares. */
 export function splitEvenlyRm(amountRm: number, count: number): number[] {
   if (count <= 0) return [];
@@ -205,13 +214,15 @@ function chargeSenCovering(afterPercentFeeSen: number) {
 }
 
 /**
- * Fees added to the client's price for payment-gateway stylists, in sen.
- * The platform fee (3% rounded up to the next ringgit) is taken as the Stripe
- * application fee. Stripe then charges 3% of the full charge, to the nearest sen,
- * plus RM1 once per charge. The amount returned is the gross-up that leaves the
- * stylist's price after both. `includeFixed` = false for amounts added on top of
- * another item, which already carries the RM1. `platformFee` follows
- * `PLATFORM_FEE_ENABLED` unless a booking already priced with the fee passes true.
+ * Exact fee, in sen, added so a payment-gateway price still leaves the stylist
+ * her amount after Stripe. The platform fee (3% rounded up to the next ringgit)
+ * is taken as the Stripe application fee. Stripe then charges 3% of the full
+ * charge, to the nearest sen, plus RM1 once per charge. This stays in sen so a
+ * quotation can split it across items; `withClientFeesRm` and the deposit and
+ * balance charges round the amount the client pays up to the next ringgit.
+ * `includeFixed` = false for amounts added on top of another item, which already
+ * carries the RM1. `platformFee` follows `PLATFORM_FEE_ENABLED` unless a booking
+ * already priced with the fee passes true.
  */
 export function calculateClientFeesRm(
   amountRm: number,
@@ -233,23 +244,23 @@ function grossChargeRm(netRm: number, includeFixed = true) {
   );
 }
 
-/** What the client sees for a price once the fees are added. */
+/** What the client sees for a price once the fees are added, rounded up to the next ringgit. */
 export function withClientFeesRm(
   amountRm: number,
   includeFixed = true,
   platformFee = PLATFORM_FEE_ENABLED
 ) {
-  return roundSen(
+  return ceilRm(
     roundRm(amountRm) + calculateClientFeesRm(amountRm, includeFixed, platformFee)
   );
 }
 
 /**
  * Adds the fees into a quotation's prices (no separate line): each item gets its
- * percentage share, the first session the RM1 plus rounding. Priced for deposit +
- * balance (two Stripe charges, each grossed up to leave the stylist her share) when
- * there's a deposit; `applyPaymentOption(..., "full")` drops the second charge's fee.
- * Apply before any discount.
+ * percentage share, the first session the RM1 plus the round-up to the next ringgit.
+ * Priced for deposit + balance (two Stripe charges, each grossed up and rounded up
+ * to the next ringgit) when there's a deposit; `applyPaymentOption(..., "full")`
+ * drops the second charge's fee. Apply before any discount.
  */
 export function applyPaymentProcessingFee(
   quotation: BookingQuotationSummary,
@@ -269,9 +280,13 @@ export function applyPaymentProcessingFee(
     depositPlatformFeeRm = platformFee
       ? Math.min(calculatePlatformFeeRm(quotation.depositRm), platformFeeRm)
       : 0;
-    depositRm = grossChargeRm(roundRm(quotation.depositRm) + depositPlatformFeeRm);
-    const balanceChargeRm = grossChargeRm(
-      quotation.totalRm - roundRm(quotation.depositRm) + platformFeeRm - depositPlatformFeeRm
+    depositRm = ceilRm(
+      grossChargeRm(roundRm(quotation.depositRm) + depositPlatformFeeRm)
+    );
+    const balanceChargeRm = ceilRm(
+      grossChargeRm(
+        quotation.totalRm - roundRm(quotation.depositRm) + platformFeeRm - depositPlatformFeeRm
+      )
     );
     totalRm = roundSen(depositRm + balanceChargeRm);
     splitPaymentFeeRm = roundSen(totalRm - fullTotalRm);

@@ -75,12 +75,12 @@ import {
 import { getMorningCallCharge } from "@/utils/booking/morningCall";
 import { getStyleExtraRm, hasStyleExtras } from "@/utils/booking/styleExtras";
 import {
-  calculateClientFeesRm,
   formatRm,
   PLATFORM_FEE_ENABLED,
   roundRm,
   roundSen,
   toSen,
+  withClientFeesRm,
 } from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import {
@@ -808,10 +808,12 @@ export function BookingForm({
   const includesPlatformFee = booking
     ? Boolean(booking.invoice.breakdown?.platformFeeRm)
     : PLATFORM_FEE_ENABLED;
+  const fullPriceRm = includesProcessingFee
+    ? withClientFeesRm(basePriceRm, true, includesPlatformFee)
+    : roundSen(basePriceRm);
   const processingFeeRm = includesProcessingFee
-    ? calculateClientFeesRm(basePriceRm, true, includesPlatformFee)
+    ? roundSen(fullPriceRm - roundRm(basePriceRm))
     : 0;
-  const fullPriceRm = roundSen(basePriceRm + processingFeeRm);
 
   const editedTotalRm =
     form.totalRm === null || form.totalRm.trim() === ""
