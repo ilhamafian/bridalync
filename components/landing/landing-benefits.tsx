@@ -34,9 +34,21 @@ export function LandingBenefits() {
   return (
     <section className="relative z-10 px-4 py-16 md:px-8 md:py-24">
       <div className="mx-auto flex max-w-6xl flex-col gap-8">
-        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-50 md:text-4xl">
-          What if you can...
-        </h2>
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-12 md:gap-x-8">
+          <div className="flex flex-col gap-5 md:col-span-7 md:col-start-6">
+            <h2 className="text-left text-4xl font-medium leading-[1.15] tracking-tight text-zinc-50 md:text-6xl">
+              Everything your beauty business needs to run, all in one place.
+            </h2>
+            <p className="text-left text-base leading-relaxed text-zinc-400 md:text-lg">
+              Bridalync replaces the scattered chats, spreadsheets, and manual
+              admin with one platform built for freelance makeup artists and
+              hairstylists. From managing bookings and availability to creating
+              quotations, collecting payments, and keeping clients informed,
+              Bridalync brings every part of your business together so you can
+              spend less time managing the work and more time doing what you love.
+            </p>
+          </div>
+        </div>
         <div className="h-[22rem] w-full md:h-[26rem]">
           <VerticalReel
             items={benefits}

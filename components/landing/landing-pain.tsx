@@ -37,7 +37,7 @@ const paragraphs = [
 ];
 
 const sentenceTypeClassName =
-  "w-full text-left text-3xl font-medium leading-[1.15] tracking-tight md:text-5xl";
+  "w-full text-left text-4xl font-medium leading-[1.15] tracking-tight md:text-6xl";
 
 const headingClassName =
   "text-left text-2xl font-medium leading-tight tracking-tight text-zinc-50 md:text-3xl";
@@ -132,7 +132,7 @@ function PainHeading({ index }: { index: number }) {
   const total = padBlockNumber(ranges.length);
 
   return (
-    <div className="relative z-10 flex flex-col items-start gap-8 md:-translate-y-10">
+    <div className="relative z-10 flex flex-col items-start gap-8">
       <h2 className={headingClassName}>Does this ring a bell?</h2>
       <div className="flex flex-col items-start gap-2.5">
         <p
@@ -246,16 +246,16 @@ function PainSentence({
 function LandingPainStatic() {
   return (
     <section className="px-4 py-16 md:px-12 md:py-24 lg:px-16">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-10 md:grid-cols-3 md:gap-x-16">
+      <div className="relative mx-auto max-w-6xl">
         <PainHeading index={0} />
-        <div className="flex flex-col gap-8 md:col-span-2 md:translate-y-14">
+        <div className="mt-10 flex flex-col gap-8 md:-mt-14 md:pl-60">
           {ranges.map((range) => (
             <p key={range.text} className={cn(sentenceTypeClassName, "text-zinc-100")}>
               {range.text}
             </p>
           ))}
         </div>
-        <PainRibbons className="col-span-full mt-4 ml-[calc(50%-50vw)] w-screen max-w-none md:mt-6" />
+        <PainRibbons className="mt-4 ml-[calc(50%-50vw)] w-screen max-w-none md:mt-6" />
       </div>
     </section>
   );
@@ -293,26 +293,28 @@ function LandingPainScroll() {
       <div className="sticky top-0 h-dvh">
         <PainProgress progress={progress} />
         <div className="relative z-10 flex h-full w-full items-center px-4 md:px-12 lg:px-16">
-          <div className="relative grid w-full grid-cols-1 items-start gap-10 md:grid-cols-3 md:gap-x-16">
+          <div className="relative w-full">
             <PainRibbons className="absolute top-[calc(100%-14rem)] -right-4 -left-4 z-0 w-auto md:top-[calc(100%-13rem)] md:-right-12 md:-left-12 lg:-right-16 lg:-left-16" />
             <PainHeading index={activeIndex} />
-            <div className="relative z-10 w-full md:col-span-2 md:translate-y-14">
-              <p className={cn(sentenceTypeClassName, "invisible")} aria-hidden>
-                {longest.words.map((word, index) => (
-                  <span key={index}>
-                    {word}
-                    {index < longest.words.length - 1 ? " " : ""}
-                  </span>
+            <div className="relative z-10 mt-10 w-full md:-mt-14 md:pl-60">
+              <div className="relative">
+                <p className={cn(sentenceTypeClassName, "invisible")} aria-hidden>
+                  {longest.words.map((word, index) => (
+                    <span key={index}>
+                      {word}
+                      {index < longest.words.length - 1 ? " " : ""}
+                    </span>
+                  ))}
+                </p>
+                {ranges.map((range, index) => (
+                  <PainSentence
+                    key={range.text}
+                    range={range}
+                    progress={progress}
+                    active={index === activeIndex}
+                  />
                 ))}
-              </p>
-              {ranges.map((range, index) => (
-                <PainSentence
-                  key={range.text}
-                  range={range}
-                  progress={progress}
-                  active={index === activeIndex}
-                />
-              ))}
+              </div>
             </div>
           </div>
         </div>
