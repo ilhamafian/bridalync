@@ -31,8 +31,8 @@ const LIT = "rgba(255, 255, 255, 1)";
 const paragraphs = [
   "A client messages to check your availability. You reply 10 hours later, only to find the date is already taken.",
   "Then another client asks for the same date. Now you're doing the same work twice.",
-  "When a date is available, you still need to collect client details, calculate the quotation and travel fees, check payments manually, and create invoices.",
-  "All while trying not to miss a message or double-book a client. And at the end of the month? You don't even know exactly how much you've earned.",
+  "When a date is available, you still need to collect client details, calculate the total fees, check payments, and create invoices.",
+  "And at the end of the month? You don't even know exactly how much you've earned.",
   "Running your business shouldn't have to be this hard.",
 ];
 
@@ -133,7 +133,7 @@ function PainHeading({ index }: { index: number }) {
 
   return (
     <div className="relative z-10 flex flex-col items-start gap-8">
-      <h2 className={headingClassName}>Does this ring a bell?</h2>
+      <h2 className={headingClassName}>Does this sound familiar to you?</h2>
       <div className="flex flex-col items-start gap-2.5">
         <p
           className="rounded-md border border-white/25 px-2 py-1 text-xs font-medium tracking-wide text-white/75"
