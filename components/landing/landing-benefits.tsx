@@ -40,12 +40,7 @@ export function LandingBenefits() {
               Everything your beauty business needs to run, all in one place.
             </h2>
             <p className="text-left text-base leading-relaxed text-zinc-400 md:text-lg">
-              Bridalync replaces the scattered chats, spreadsheets, and manual
-              admin with one platform built for freelance makeup artists and
-              hairstylists. From managing bookings and availability to creating
-              quotations, collecting payments, and keeping clients informed,
-              Bridalync brings every part of your business together so you can
-              spend less time managing the work and more time doing what you love.
+            Bridalync replaces scattered chats, spreadsheets, and manual admin with one platform built for freelance makeup artists and hairstylists. Manage your bookings, availability, quotations, and payments seamlessly, while keeping every client interaction organised from the first enquiry to the final appointment.
             </p>
           </div>
         </div>
