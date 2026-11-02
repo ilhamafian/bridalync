@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import { useState } from "react";
 import { differenceInCalendarDays, format } from "date-fns";
@@ -8,7 +9,6 @@ import {
   DashboardCalendar,
   parseDateKey,
 } from "@/components/dashboard/DashboardCalendar";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
   SettingsFeedback,
   SettingsSection,
@@ -91,11 +91,8 @@ export function BookingPeriodPage({
         </p>
       </div>
 
-      <div
-        className={cn(
-          glassCardClassName,
-          "flex flex-col items-center gap-1 px-4 py-6 text-center @4xl/main:col-start-2 @4xl/main:row-start-3 @4xl/main:mt-8"
-        )}
+      <GlassCard
+        className={cn("flex flex-col items-center gap-1 px-4 py-6 text-center @4xl/main:col-start-2 @4xl/main:row-start-3 @4xl/main:mt-8")}
       >
         <span className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
           Bookings open until
@@ -112,13 +109,13 @@ export function BookingPeriodPage({
             saved yet
           </span>
         ) : null}
-      </div>
+      </GlassCard>
 
       <SettingsSection
         title="Pick the last bookable date"
         className="@4xl/main:col-start-1 @4xl/main:row-span-2 @4xl/main:row-start-3"
       >
-        <div className={cn(glassCardClassName, "overflow-hidden")}>
+        <GlassCard className={cn("overflow-hidden")}>
           <DashboardCalendar
             mode="single"
             required
@@ -140,7 +137,7 @@ export function BookingPeriodPage({
             <span className="text-muted-foreground/50 line-through">12</span>
             Closed to clients · existing bookings aren&apos;t affected
           </p>
-        </div>
+        </GlassCard>
       </SettingsSection>
 
       <div className="flex flex-col gap-4 @4xl/main:col-start-2 @4xl/main:row-start-4">

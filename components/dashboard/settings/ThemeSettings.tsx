@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard, GlassRadioGroup } from "@/components/dashboard/GlassCard";
 
 import { useState } from "react";
 import {
@@ -10,16 +11,8 @@ import {
 } from "@tabler/icons-react";
 
 import { VARIANT_PALETTES } from "@/components/animated-flow";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
+import { RadioGroupItem } from "@/components/ui/radio-group";
 import { useUserTheme } from "@/components/UserThemeProvider";
 import { cn } from "@/lib/utils";
 import {
@@ -72,16 +65,12 @@ function ColorSwatch({
   onSelect: () => void;
 }) {
   return (
-    <button
+    <GlassCard as="button"
       type="button"
       role="radio"
       aria-checked={selected}
       onClick={onSelect}
-      className={cn(
-        glassCardClassName,
-        "flex flex-col items-center gap-2 p-3 text-xs font-medium transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        selected && "ring-2 ring-primary dark:ring-primary"
-      )}
+      className={cn("flex flex-col items-center gap-2 p-3 text-xs font-medium transition-shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", selected && "ring-2 ring-primary dark:ring-primary")}
     >
       <span className="relative size-12">
         <span
@@ -100,7 +89,7 @@ function ColorSwatch({
         </span>
       </span>
       {option.label}
-    </button>
+    </GlassCard>
   );
 }
 
@@ -157,10 +146,9 @@ export function ThemeSettings() {
       </SettingsSection>
 
       <SettingsSection title="Appearance">
-        <RadioGroup
+        <GlassRadioGroup
           value={theme}
           onValueChange={handleModeChange}
-          className={settingsListClassName}
         >
           {MODE_OPTIONS.map(({ value, label, description, icon }) => (
             <label key={value} className={cn(settingsRowClassName, "cursor-pointer")}>
@@ -169,7 +157,7 @@ export function ThemeSettings() {
               <RadioGroupItem value={value} aria-label={label} />
             </label>
           ))}
-        </RadioGroup>
+        </GlassRadioGroup>
       </SettingsSection>
 
       <p className="text-xs text-muted-foreground">

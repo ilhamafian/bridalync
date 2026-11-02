@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import Link from "next/link";
 import {
@@ -14,10 +15,7 @@ import {
   formatCompetingRequests,
   type BookedClash,
 } from "@/components/dashboard/BookingRequestButtons";
-import {
-  formatScheduleDate,
-  glassCardClassName,
-} from "@/components/dashboard/HomeBookingCard";
+import { formatScheduleDate } from "@/components/dashboard/HomeBookingCard";
 import { cn } from "@/lib/utils";
 import { buildInstagramProfileUrl } from "@/utils/booking/clientInfo";
 import { formatRm } from "@/utils/booking/pricing";
@@ -51,12 +49,8 @@ export function HomeRequestCard({
   const instagram = booking.clientDetails?.instagram;
 
   return (
-    <div
-      className={cn(
-        glassCardClassName,
-        "relative flex flex-col gap-3 p-4 transition-colors hover:bg-white/40 dark:hover:bg-white/15",
-        className
-      )}
+    <GlassCard
+      className={cn("relative flex flex-col gap-3 p-4 transition-colors hover:bg-white/40 dark:hover:bg-white/15", className)}
     >
       <Link
         href={`/dashboard/bookings/${encodeURIComponent(booking._id)}`}
@@ -145,6 +139,6 @@ export function HomeRequestCard({
         onBookingUpdated={onBookingUpdated}
         onBookingsDeclined={onBookingsDeclined}
       />
-    </div>
+    </GlassCard>
   );
 }

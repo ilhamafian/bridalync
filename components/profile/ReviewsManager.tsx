@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import Image from "next/image";
 import { useState } from "react";
@@ -6,7 +7,6 @@ import { IconTrash } from "@tabler/icons-react";
 
 import { BackButton } from "@/components/dashboard/BackButton";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { SettingsFeedback } from "@/components/dashboard/settings/SettingsUi";
 import {
   AlertDialog,
@@ -127,9 +127,9 @@ export function ReviewsManager({
       ) : (
         <ul className="flex flex-col gap-3">
           {reviews.map((review) => (
-            <li
+            <GlassCard as="li"
               key={review._id}
-              className={cn(glassCardClassName, "flex flex-col gap-3 p-4")}
+              className={cn("flex flex-col gap-3 p-4")}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -169,7 +169,7 @@ export function ReviewsManager({
                   ))}
                 </div>
               ) : null}
-            </li>
+            </GlassCard>
           ))}
         </ul>
       )}

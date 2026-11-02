@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -26,7 +27,6 @@ import {
   TRAVEL_CLASH_HINT,
   type BookedClash,
 } from "@/components/dashboard/BookingRequestButtons";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -124,7 +124,7 @@ function PaymentLinkCard({
   }
 
   return (
-    <div className={cn(glassCardClassName, "flex flex-col gap-3 p-4 text-sm")}>
+    <GlassCard className={cn("flex flex-col gap-3 p-4 text-sm")}>
       <div>
         <p className="font-medium">
           {balanceOnly ? "Balance payment link" : "Payment link"}
@@ -160,7 +160,7 @@ function PaymentLinkCard({
         {copied ? "Link copied" : "Copy payment link"}
       </Button>
       {error ? <p className="text-xs text-destructive">{error}</p> : null}
-    </div>
+    </GlassCard>
   );
 }
 
@@ -263,7 +263,7 @@ function BookingRequestActions({
   const competingCount = competingRequests.length;
 
   return (
-    <div className={cn(glassCardClassName, "flex flex-col gap-3 p-4 text-sm")}>
+    <GlassCard className={cn("flex flex-col gap-3 p-4 text-sm")}>
       <div>
         <p className="font-medium">Booking request</p>
         <p className="mt-0.5 text-muted-foreground">
@@ -300,7 +300,7 @@ function BookingRequestActions({
         onBookingUpdated={onBookingUpdated}
         onBookingsDeclined={onBookingsDeclined}
       />
-    </div>
+    </GlassCard>
   );
 }
 
@@ -363,7 +363,7 @@ function PaymentReviewCard({
   const rejectLabel = type === "balance" ? "Reject balance" : "Reject deposit";
 
   return (
-    <div className={cn(glassCardClassName, "flex flex-col gap-3 p-4 text-sm")}>
+    <GlassCard className={cn("flex flex-col gap-3 p-4 text-sm")}>
       <div>
         <p className="font-medium">Payment pending</p>
         <p className="mt-0.5 text-muted-foreground">
@@ -418,7 +418,7 @@ function PaymentReviewCard({
           ) : null}
         </DialogContent>
       </Dialog>
-    </div>
+    </GlassCard>
   );
 }
 
@@ -444,14 +444,11 @@ export function BookingDetailsPage({
     return (
       <div className="flex flex-col gap-4 px-4 md:px-8">
         <BackButton />
-        <div
-          className={cn(
-            glassCardClassName,
-            "px-4 py-8 text-center text-sm text-muted-foreground"
-          )}
+        <GlassCard
+          className={cn("px-4 py-8 text-center text-sm text-muted-foreground")}
         >
           Booking not found.
-        </div>
+        </GlassCard>
       </div>
     );
   }
@@ -511,7 +508,7 @@ export function BookingDetailsPage({
         <div className="flex min-w-0 flex-col gap-3 text-sm">
           <BookingDetailsSections
             booking={booking}
-            sectionClassName={cn(glassCardClassName, "p-4")}
+            sectionClassName="p-4"
             sessionClassName="rounded-xl bg-white/40 p-3 dark:bg-white/5"
             includePayment={false}
           />
@@ -521,7 +518,7 @@ export function BookingDetailsPage({
           <div className="text-sm">
             <BookingPaymentSection
               booking={booking}
-              className={cn(glassCardClassName, "p-4")}
+              className="p-4"
             />
           </div>
 

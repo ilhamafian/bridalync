@@ -1,4 +1,5 @@
 "use client";
+import { SettingsCard } from "@/components/dashboard/GlassCard";
 
 import { useState } from "react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
@@ -6,11 +7,7 @@ import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { DepositField, parseDepositInput } from "@/components/catalog/DepositField";
 import { BackButton } from "@/components/dashboard/BackButton";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
-import {
-  SettingsFeedback,
-  SettingsSection,
-  settingsCardClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { SettingsFeedback, SettingsSection } from "@/components/dashboard/settings/SettingsUi";
 import type { PackageItem } from "@/components/PackagesManager";
 import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { RegionPriceList } from "@/components/RegionPriceList";
@@ -219,7 +216,7 @@ export function EventEditorPage({
       </section>
 
       <SettingsSection title="Details">
-        <div className={settingsCardClassName}>
+        <SettingsCard >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="event-name">Name</Label>
             <Input
@@ -250,7 +247,7 @@ export function EventEditorPage({
               Press Enter for a new line. Clients see paragraphs as you write them.
             </p>
           </div>
-        </div>
+        </SettingsCard>
       </SettingsSection>
 
       <SettingsSection
@@ -272,7 +269,7 @@ export function EventEditorPage({
           </Button>
         }
       >
-        <div className={settingsCardClassName}>
+        <SettingsCard >
           <p className="text-xs text-muted-foreground">
             Clients book one time slot for each session.
           </p>
@@ -366,17 +363,17 @@ export function EventEditorPage({
               </p>
             </div>
           ) : null}
-        </div>
+        </SettingsCard>
       </SettingsSection>
 
       {chargeBy === "style" ? (
         <SettingsSection title="Pricing">
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <p className="text-muted-foreground">
               You charge by {styleTerms.one}, so prices are set on your{" "}
               {styleTerms.many}.
             </p>
-          </div>
+          </SettingsCard>
         </SettingsSection>
       ) : (
         <>
@@ -397,7 +394,7 @@ export function EventEditorPage({
             </SettingsSection>
           ) : (
             <SettingsSection title="Price">
-              <div className={settingsCardClassName}>
+              <SettingsCard >
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="event-price">Price (RM, optional)</Label>
                   <Input
@@ -417,12 +414,12 @@ export function EventEditorPage({
                   />
                   <ProcessingFeeHint amountRm={form.price} />
                 </div>
-              </div>
+              </SettingsCard>
             </SettingsSection>
           )}
 
           <SettingsSection title="Deposit">
-            <div className={settingsCardClassName}>
+            <SettingsCard >
               <DepositField
                 label="Deposit (optional)"
                 value={form.deposit}
@@ -435,7 +432,7 @@ export function EventEditorPage({
                   setForm((current) => ({ ...current, depositType }))
                 }
               />
-            </div>
+            </SettingsCard>
           </SettingsSection>
         </>
       )}

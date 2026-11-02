@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard, SettingsList } from "@/components/dashboard/GlassCard";
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -11,13 +12,8 @@ import {
   blockedDayClassName,
   parseDateKey,
 } from "@/components/dashboard/DashboardCalendar";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { SplitColumns } from "@/components/dashboard/SplitColumns";
-import {
-  SettingsFeedback,
-  SettingsSection,
-  settingsListClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { SettingsFeedback, SettingsSection } from "@/components/dashboard/settings/SettingsUi";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -141,7 +137,7 @@ export function BlockDatesPage({
       <SplitColumns
         primary={
           <SettingsSection title="Pick dates">
-            <div className={cn(glassCardClassName, "overflow-hidden")}>
+            <GlassCard className={cn("overflow-hidden")}>
               <DashboardCalendar
                 mode="range"
                 selected={range}
@@ -157,13 +153,13 @@ export function BlockDatesPage({
                 <span className="size-2.5 rounded-full bg-destructive/40" />
                 Already blocked · tap a start and end date
               </p>
-            </div>
+            </GlassCard>
           </SettingsSection>
         }
         secondary={
           <>
             <SettingsSection title="Summary">
-              <div className={settingsListClassName}>
+              <SettingsList >
                 <SummaryRow
                   label="Dates"
                   value={formatDateRangeLabel(range) ?? "None selected"}
@@ -173,7 +169,7 @@ export function BlockDatesPage({
                   value={count === 0 ? "—" : String(count)}
                 />
                 <SummaryRow label="Status" value={statusText} />
-              </div>
+              </SettingsList>
             </SettingsSection>
 
             <SettingsFeedback

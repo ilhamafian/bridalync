@@ -1,4 +1,5 @@
 "use client";
+import { SettingsCard, SettingsList, GlassRadioGroup } from "@/components/dashboard/GlassCard";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -23,15 +24,7 @@ import {
 
 import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { CompanyLogoUpload } from "@/components/CompanyLogoUpload";
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsCardClassName,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import {
   TravelSettingsFields,
   useTravelSettingsForm,
@@ -42,7 +35,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -748,10 +741,9 @@ export function SettingsManager({
         onSave={saveChargeBy}
       >
         <SettingsSection title="Charge clients by">
-          <RadioGroup
+          <GlassRadioGroup
             value={chargeBy}
             onValueChange={(value) => setChargeBy(value as "package" | "style")}
-            className={settingsListClassName}
           >
             <label className={cn(settingsRowClassName, "cursor-pointer")}>
               <IconBadge icon={IconPackage} />
@@ -773,16 +765,15 @@ export function SettingsManager({
               />
               <RadioGroupItem value="style" aria-label={`By ${styleTerms.one}`} />
             </label>
-          </RadioGroup>
+          </GlassRadioGroup>
           <p className="text-xs text-muted-foreground">
             Changing this resets your default time slots.
           </p>
         </SettingsSection>
         <SettingsSection title="Your role">
-          <RadioGroup
+          <GlassRadioGroup
             value={role ?? ""}
             onValueChange={(value) => setRole(value as UserRole)}
-            className={settingsListClassName}
           >
             {ROLE_OPTIONS.map((option) => (
               <label
@@ -797,7 +788,7 @@ export function SettingsManager({
                 />
               </label>
             ))}
-          </RadioGroup>
+          </GlassRadioGroup>
           <p className="text-xs text-muted-foreground">
             Shown on your booking page. Changing it doesn&apos;t change how you
             charge clients.
@@ -841,10 +832,9 @@ export function SettingsManager({
         onSave={savePayment}
       >
         <SettingsSection title="How clients pay">
-          <RadioGroup
+          <GlassRadioGroup
             value={paymentMethod}
             onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}
-            className={settingsListClassName}
           >
             <label className={cn(settingsRowClassName, "cursor-pointer")}>
               <IconBadge icon={IconBuildingBank} />
@@ -862,12 +852,12 @@ export function SettingsManager({
               />
               <RadioGroupItem value="payment_gateway" aria-label="Payment Gateway" />
             </label>
-          </RadioGroup>
+          </GlassRadioGroup>
         </SettingsSection>
 
         {paymentMethod === "manual_transfer" ? (
           <SettingsSection title="Transfer details">
-            <div className={settingsCardClassName}>
+            <SettingsCard >
               <PaymentQrUpload
                 value={qrImageUrl}
                 onChange={setQrImageUrl}
@@ -904,13 +894,13 @@ export function SettingsManager({
                   placeholder="e.g. 1234 5678 9012"
                 />
               </Field>
-            </div>
+            </SettingsCard>
           </SettingsSection>
         ) : null}
 
         {paymentMethod === "payment_gateway" ? (
           <SettingsSection title="Stripe">
-            <div className={settingsCardClassName}>
+            <SettingsCard >
               <div className="flex items-center gap-3">
                 <IconBadge icon={IconBrandStripe} />
                 <RowText
@@ -951,12 +941,12 @@ export function SettingsManager({
                 error={sectionError.payouts}
                 success={sectionSuccess.payouts}
               />
-            </div>
+            </SettingsCard>
           </SettingsSection>
         ) : null}
 
         <SettingsSection title="Balance due">
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <Field label="Days before the session">
               <Input
                 className={inputClassName}
@@ -967,7 +957,7 @@ export function SettingsManager({
                 onChange={(event) => setBalanceDueBefore(event.target.value)}
               />
             </Field>
-          </div>
+          </SettingsCard>
         </SettingsSection>
       </SettingsPanel>
     );
@@ -983,7 +973,7 @@ export function SettingsManager({
         onSave={saveInvoice}
       >
         <SettingsSection title="Company">
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <Field label="Company name">
               <Input
                 className={inputClassName}
@@ -998,10 +988,10 @@ export function SettingsManager({
                 onChange={(event) => setCompanyReg(event.target.value)}
               />
             </Field>
-          </div>
+          </SettingsCard>
         </SettingsSection>
         <SettingsSection title="Logo">
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <CompanyLogoUpload
               value={companyLogo}
               onChange={(url) => {
@@ -1011,17 +1001,17 @@ export function SettingsManager({
               onUploadingChange={setUploadingLogo}
               hint="JPEG, PNG, WebP, or GIF. Large images are compressed automatically. Cropped to 16:9. Saves automatically."
             />
-          </div>
+          </SettingsCard>
         </SettingsSection>
         <SettingsSection title="Terms and conditions">
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <Textarea
               className={textareaClassName}
               value={terms}
               onChange={(event) => setTerms(event.target.value)}
               aria-label="Terms and conditions"
             />
-          </div>
+          </SettingsCard>
         </SettingsSection>
       </SettingsPanel>
     );
@@ -1044,7 +1034,7 @@ export function SettingsManager({
         onSave={saveMessages}
       >
         <SettingsSection title="Leave review">
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <p className="text-xs text-muted-foreground">
               Sent on WhatsApp when you tap Leave Review on a completed booking.
             </p>
@@ -1082,12 +1072,12 @@ export function SettingsManager({
             >
               Reset to default
             </Button>
-          </div>
+          </SettingsCard>
         </SettingsSection>
         <SettingsSection title="Preview">
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <p className="text-sm break-words whitespace-pre-wrap">{preview}</p>
-          </div>
+          </SettingsCard>
         </SettingsSection>
       </SettingsPanel>
     );
@@ -1102,7 +1092,7 @@ export function SettingsManager({
         onSave={saveTimeSlots}
       >
         <SettingsSection title="Slots">
-          <div className={settingsListClassName}>
+          <SettingsList >
             {timeSlots.map((slot, index) => (
               <div
                 key={`${slot.startTime}-${slot.endTime}-${index}`}
@@ -1158,11 +1148,11 @@ export function SettingsManager({
               <IconBadge icon={IconPlus} />
               <RowText title="Add slot" />
             </button>
-          </div>
+          </SettingsList>
         </SettingsSection>
 
         <SettingsSection title="Morning call">
-          <div className={settingsListClassName}>
+          <SettingsList >
             <label className={cn(settingsRowClassName, "cursor-pointer")}>
               <IconBadge icon={IconSunrise} />
               <RowText
@@ -1174,9 +1164,9 @@ export function SettingsManager({
                 onCheckedChange={setMorningCallEnabled}
               />
             </label>
-          </div>
+          </SettingsList>
           {morningCallEnabled ? (
-            <div className={settingsCardClassName}>
+            <SettingsCard >
               <Field label="Sessions starting before">
                 <Input
                   className={inputClassName}
@@ -1214,12 +1204,11 @@ export function SettingsManager({
                 <p className="mb-2 text-sm font-medium text-foreground">
                   Morning call price
                 </p>
-                <RadioGroup
+                <GlassRadioGroup
                   value={morningCallShowPrice ? "show" : "hide"}
                   onValueChange={(value) =>
                     setMorningCallShowPrice(value === "show")
                   }
-                  className={settingsListClassName}
                 >
                   <label
                     className={cn(settingsRowClassName, "cursor-pointer")}
@@ -1241,9 +1230,9 @@ export function SettingsManager({
                     />
                     <RadioGroupItem value="hide" aria-label="Hide price" />
                   </label>
-                </RadioGroup>
+                </GlassRadioGroup>
               </div>
-            </div>
+            </SettingsCard>
           ) : null}
         </SettingsSection>
       </SettingsPanel>

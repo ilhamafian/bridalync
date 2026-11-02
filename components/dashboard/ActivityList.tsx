@@ -1,3 +1,4 @@
+import { GlassCard } from "@/components/dashboard/GlassCard";
 import Link from "next/link";
 import {
   IconCalendarPlus,
@@ -13,7 +14,6 @@ import {
   type Icon,
 } from "@tabler/icons-react";
 
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type { ActivityItem, ActivityKind } from "@/utils/activity";
@@ -181,7 +181,7 @@ export function ActivityList({
   now?: number;
 }) {
   return (
-    <div className={cn(glassCardClassName, "overflow-hidden")}>
+    <GlassCard className={cn("overflow-hidden")}>
       <ul className="divide-y divide-white/50 dark:divide-white/10">
         {items.map((item) => (
           <ActivityRow
@@ -193,6 +193,6 @@ export function ActivityList({
           />
         ))}
       </ul>
-    </div>
+    </GlassCard>
   );
 }

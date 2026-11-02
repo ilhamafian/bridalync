@@ -1,23 +1,17 @@
 "use client";
+import { GlassCard, SettingsList } from "@/components/dashboard/GlassCard";
 
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { IconChevronRight, IconLogout } from "@tabler/icons-react";
 
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
   getSettingsCategoryMeta,
   SETTINGS_GROUPS,
 } from "@/components/dashboard/settings/categories";
 import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
-import {
-  IconBadge,
-  RowText,
-  SettingsSection,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -77,13 +71,13 @@ function LogoutButton() {
       }}
     >
       <AlertDialogTrigger asChild>
-        <button
+        <GlassCard as="button"
           type="button"
-          className={cn(glassCardClassName, settingsRowClassName, "overflow-hidden")}
+          className={cn(settingsRowClassName, "overflow-hidden")}
         >
           <IconBadge icon={IconLogout} className="text-destructive" />
           <RowText title={<span className="text-destructive">Log out</span>} />
-        </button>
+        </GlassCard>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -123,7 +117,7 @@ export function SettingsMenu({
     <div className="flex flex-col gap-4">
       {SETTINGS_GROUPS.map((group) => (
         <SettingsSection key={group.title} title={group.title}>
-          <nav aria-label={group.title} className={settingsListClassName}>
+          <SettingsList as="nav" aria-label={group.title} >
             {group.categories.map((category) => {
               const { label, description, icon } = getSettingsCategoryMeta(
                 category,
@@ -147,7 +141,7 @@ export function SettingsMenu({
                 </Link>
               );
             })}
-          </nav>
+          </SettingsList>
           {group.title === "Account" ? <LogoutButton /> : null}
         </SettingsSection>
       ))}
@@ -169,14 +163,11 @@ export function SettingsPage() {
 
       <div className="@4xl/main:grid @4xl/main:grid-cols-[20rem_minmax(0,1fr)] @4xl/main:items-start @4xl/main:gap-8">
         <SettingsMenu />
-        <div
-          className={cn(
-            glassCardClassName,
-            "sticky top-4 hidden px-6 py-16 text-center text-sm text-muted-foreground @4xl/main:block"
-          )}
+        <GlassCard
+          className={cn("sticky top-4 hidden px-6 py-16 text-center text-sm text-muted-foreground @4xl/main:block")}
         >
           Choose a setting on the left to view and edit it.
-        </div>
+        </GlassCard>
       </div>
     </div>
   );

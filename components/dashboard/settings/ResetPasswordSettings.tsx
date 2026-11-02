@@ -1,16 +1,10 @@
 "use client";
+import { SettingsCard, SettingsList } from "@/components/dashboard/GlassCard";
 
 import { useState } from "react";
 import { IconMail } from "@tabler/icons-react";
 
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsCardClassName,
-  settingsListClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection } from "@/components/dashboard/settings/SettingsUi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -108,7 +102,7 @@ export function ResetPasswordSettings({ email }: { email: string }) {
   return (
     <div className="flex flex-col gap-4">
       <SettingsSection title="Email">
-        <div className={settingsListClassName}>
+        <SettingsList >
           <div className="flex items-center gap-3 px-4 py-3">
             <IconBadge icon={IconMail} />
             <RowText
@@ -116,7 +110,7 @@ export function ResetPasswordSettings({ email }: { email: string }) {
               description="The reset code is sent to your account email."
             />
           </div>
-        </div>
+        </SettingsList>
       </SettingsSection>
 
       {codeSent ? (
@@ -133,7 +127,7 @@ export function ResetPasswordSettings({ email }: { email: string }) {
             </button>
           }
         >
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="reset-code">Code</Label>
               <Input
@@ -175,7 +169,7 @@ export function ResetPasswordSettings({ email }: { email: string }) {
               At least 8 characters with an uppercase letter, a lowercase
               letter, a number and a special character.
             </p>
-          </div>
+          </SettingsCard>
         </SettingsSection>
       ) : null}
 

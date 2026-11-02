@@ -1,4 +1,5 @@
 "use client";
+import { SettingsCard, SettingsList } from "@/components/dashboard/GlassCard";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -17,15 +18,7 @@ import {
 
 import { emitProfilePhotoChange } from "@/components/dashboard/profilePhotoEvents";
 import { ImageCropDialog } from "@/components/ImageCropDialog";
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsCardClassName,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import {
   DEFAULT_COUNTRY_CODE,
   PhoneNumberInput,
@@ -407,7 +400,7 @@ export function ProfileManager({
         title="Reviews"
         className="@4xl/main:col-start-2 @4xl/main:row-start-2"
       >
-        <nav aria-label="Reviews" className={settingsListClassName}>
+        <SettingsList as="nav" aria-label="Reviews" >
           <Link
             href="/dashboard/profile/reviews"
             scroll={false}
@@ -424,7 +417,7 @@ export function ProfileManager({
             />
             <IconChevronRight className="size-4 shrink-0 text-muted-foreground" />
           </Link>
-        </nav>
+        </SettingsList>
       </SettingsSection>
 
       <SettingsSection
@@ -446,7 +439,7 @@ export function ProfileManager({
           ) : null
         }
       >
-        <div className={settingsCardClassName}>
+        <SettingsCard >
           <div className="flex items-center gap-4">
             <div className="relative size-20 shrink-0 overflow-hidden rounded-full bg-white/50 ring-1 ring-white/60 dark:bg-white/10 dark:ring-white/15">
               {photoUrl ? (
@@ -583,8 +576,8 @@ export function ProfileManager({
               mobileInputId="profile-mobile"
             />
           </Field>
-        </div>
-        <div className={settingsListClassName}>
+        </SettingsCard>
+        <SettingsList >
           <label className={cn(settingsRowClassName, "cursor-pointer")}>
             <IconBadge icon={IconBrandWhatsapp} />
             <RowText
@@ -601,7 +594,7 @@ export function ProfileManager({
               onCheckedChange={(next) => void handleWhatsAppButtonChange(next)}
             />
           </label>
-        </div>
+        </SettingsList>
         <SettingsFeedback error={whatsAppButtonError} />
       </SettingsSection>
 
@@ -609,7 +602,7 @@ export function ProfileManager({
         title="Social links"
         className="@4xl/main:col-start-2 @4xl/main:row-start-3"
       >
-        <div className={settingsCardClassName}>
+        <SettingsCard >
           <Field
             label="Instagram"
             htmlFor="social-instagram"
@@ -687,14 +680,14 @@ export function ProfileManager({
               readOnly
             />
           </Field>
-        </div>
+        </SettingsCard>
       </SettingsSection>
 
       <SettingsSection
         title="Account"
         className="@4xl/main:col-start-2 @4xl/main:row-start-4"
       >
-        <div className={settingsListClassName}>
+        <SettingsList >
           <div className={cn(settingsRowClassName, "hover:bg-transparent dark:hover:bg-transparent")}>
             <IconBadge icon={IconMail} />
             <RowText
@@ -708,7 +701,7 @@ export function ProfileManager({
               <RowText title={roleLabel[profile.role]} description="Role" />
             </div>
           ) : null}
-        </div>
+        </SettingsList>
       </SettingsSection>
 
       <div className="flex flex-col gap-4 @4xl/main:col-span-full @4xl/main:row-start-5">

@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { IconPlus } from "@tabler/icons-react";
 
 import { AddActionSheet } from "@/components/dashboard/AddActionSheet";
+import { LiquidGlass } from "@/components/ui/liquid-glass";
 import {
   PRIMARY_NAV_ITEMS as leftItems,
   PROFILE_NAV_HREF,
@@ -83,7 +84,12 @@ export function BottomNav({
       aria-label="Main navigation"
       className="pointer-events-none absolute inset-x-0 bottom-0 z-20 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] md:hidden"
     >
-      <div className="pointer-events-auto flex h-14 w-full items-center justify-around rounded-full bg-white/20 px-4 shadow-md ring-1 ring-white/50 backdrop-blur-md dark:bg-white/5 dark:ring-white/15">
+      <LiquidGlass
+        radius={999}
+        tint={0.18}
+        className="pointer-events-auto flex h-14 w-full items-center justify-around px-4 shadow-[0_10px_30px_rgb(0_0_0/0.12),inset_0_1px_0_rgb(255_255_255/0.5)] ring-1 ring-white/50 dark:ring-white/15"
+        style={{ backgroundColor: "var(--liquid-glass-fill)" }}
+      >
         {leftItems.map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
@@ -106,7 +112,7 @@ export function BottomNav({
             photoUrl={item.href === PROFILE_NAV_HREF ? photoUrl : undefined}
           />
         ))}
-      </div>
+      </LiquidGlass>
     </nav>
   );
 }

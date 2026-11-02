@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard, SettingsList } from "@/components/dashboard/GlassCard";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -14,14 +15,8 @@ import {
 } from "@/components/dashboard/DashboardCalendar";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
 import { useStyleTerms } from "@/components/dashboard/StyleTermsProvider";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { SplitColumns } from "@/components/dashboard/SplitColumns";
-import {
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsListClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { RowText, SettingsFeedback, SettingsSection } from "@/components/dashboard/settings/SettingsUi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -265,7 +260,7 @@ export function AddHotDatesPage({
       <SplitColumns
         primary={
           <SettingsSection title="Pick dates">
-            <div className={cn(glassCardClassName, "overflow-hidden")}>
+            <GlassCard className={cn("overflow-hidden")}>
               <DashboardCalendar
                 mode="multiple"
                 selected={dates}
@@ -279,7 +274,7 @@ export function AddHotDatesPage({
                 <span className="size-2.5 rounded-full bg-amber-500/50" />
                 Hot date · tap dates to select or unselect them
               </p>
-            </div>
+            </GlassCard>
           </SettingsSection>
         }
         secondary={
@@ -302,7 +297,7 @@ export function AddHotDatesPage({
                 <EmptyCard>Pick dates to set their prices.</EmptyCard>
               ) : (
                 <>
-                  <div className={settingsListClassName}>
+                  <SettingsList >
                     <div className="flex items-center gap-3 px-4 py-3">
                       <RowText
                         title="Increase by"
@@ -349,8 +344,8 @@ export function AddHotDatesPage({
                         })}
                       </div>
                     </div>
-                  </div>
-                  <div className={settingsListClassName}>
+                  </SettingsList>
+                  <SettingsList >
                     {catalog.map((row) => {
                       const raw = (values[row.key] ?? "").trim();
                       const amount = raw === "" ? NaN : Number(raw);
@@ -428,7 +423,7 @@ export function AddHotDatesPage({
                         </div>
                       );
                     })}
-                  </div>
+                  </SettingsList>
                   <p className="text-xs text-muted-foreground">
                     Leave a field blank to keep the usual price.
                   </p>
@@ -437,14 +432,14 @@ export function AddHotDatesPage({
             </SettingsSection>
 
             <SettingsSection title="Summary">
-              <div className={settingsListClassName}>
+              <SettingsList >
                 <SummaryRow
                   label="Dates"
                   value={formatDateKeysLabel(selectedKeys) ?? "None selected"}
                 />
                 <SummaryRow label="Days" value={count === 0 ? "—" : String(count)} />
                 <SummaryRow label="Status" value={statusText} />
-              </div>
+              </SettingsList>
             </SettingsSection>
 
             <SettingsFeedback

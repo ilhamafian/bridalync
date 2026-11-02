@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import Link from "next/link";
 import {
@@ -7,7 +8,6 @@ import {
   IconCircleCheck,
 } from "@tabler/icons-react";
 
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -96,24 +96,21 @@ export function OutstandingPaymentsCard({
 
   if (clients.length === 0) {
     return (
-      <div className={cn(glassCardClassName, "flex items-center gap-3 p-4")}>
+      <GlassCard className={cn("flex items-center gap-3 p-4")}>
         {summary}
-      </div>
+      </GlassCard>
     );
   }
 
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <button
+        <GlassCard as="button"
           type="button"
-          className={cn(
-            glassCardClassName,
-            "flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-white/40 dark:hover:bg-white/15"
-          )}
+          className={cn("flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-white/40 dark:hover:bg-white/15")}
         >
           {summary}
-        </button>
+        </GlassCard>
       </SheetTrigger>
       <SheetContent
         side="bottom"

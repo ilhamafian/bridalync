@@ -11,6 +11,7 @@ import {
 } from "@tabler/icons-react";
 
 import { InvoiceDownloadButton } from "@/components/dashboard/InvoiceDownloadButton";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 import { NavigateButton } from "@/components/dashboard/NavigateButton";
 import { cn } from "@/lib/utils";
 import {
@@ -145,7 +146,7 @@ export function BookingDetailsSections({
 
   return (
     <>
-      <div className={sectionClassName}>
+      <GlassCard className={sectionClassName}>
         <SectionLabel>Contact</SectionLabel>
         <div className="mt-1 flex flex-col gap-1 text-muted-foreground">
           <span className="text-foreground">
@@ -191,15 +192,15 @@ export function BookingDetailsSections({
             </a>
           ) : null}
         </div>
-      </div>
+      </GlassCard>
 
       {booking.remarks ? (
-        <div className={sectionClassName}>
+        <GlassCard className={sectionClassName}>
           <SectionLabel>Remarks</SectionLabel>
           <p className="mt-1 whitespace-pre-wrap break-words text-foreground">
             {booking.remarks}
           </p>
-        </div>
+        </GlassCard>
       ) : null}
 
       {party.map((member, index) => {
@@ -213,7 +214,7 @@ export function BookingDetailsSections({
         if (party.length === 1 && !hasDetails) return null;
 
         return (
-          <div key={`${member.name}-${index}`} className={sectionClassName}>
+          <GlassCard key={`${member.name}-${index}`} className={sectionClassName}>
             <SectionLabel>
               {party.length === 1
                 ? "Client details"
@@ -277,11 +278,11 @@ export function BookingDetailsSections({
                 </div>
               </div>
             ) : null}
-          </div>
+          </GlassCard>
         );
       })}
 
-      <div className={sectionClassName}>
+      <GlassCard className={sectionClassName}>
         <SectionLabel>Sessions</SectionLabel>
         {booking.sessions.length === 0 ? (
           <p className="mt-0.5 text-muted-foreground">No sessions</p>
@@ -334,7 +335,7 @@ export function BookingDetailsSections({
             ))}
           </ul>
         )}
-      </div>
+      </GlassCard>
 
       {includePayment ? (
         <BookingPaymentSection booking={booking} className={sectionClassName} />
@@ -351,7 +352,7 @@ export function BookingPaymentSection({
   className?: string;
 }) {
   return (
-    <div className={className}>
+    <GlassCard className={className}>
       <div className="flex items-center justify-between gap-3">
         <SectionLabel>Payment</SectionLabel>
         {booking.source !== "google_calendar" &&
@@ -370,7 +371,7 @@ export function BookingPaymentSection({
       ) : (
         <PriceBreakdown booking={booking} />
       )}
-    </div>
+    </GlassCard>
   );
 }
 

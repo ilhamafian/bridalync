@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard, SettingsList } from "@/components/dashboard/GlassCard";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -14,16 +15,8 @@ import {
   parseDateKey,
 } from "@/components/dashboard/DashboardCalendar";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { SplitColumns } from "@/components/dashboard/SplitColumns";
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -199,7 +192,7 @@ export function BlockSlotsPage({
       <SplitColumns
         primary={
           <SettingsSection title="Pick a date">
-            <div className={cn(glassCardClassName, "overflow-hidden")}>
+            <GlassCard className={cn("overflow-hidden")}>
               <DashboardCalendar
                 mode="single"
                 selected={date}
@@ -216,7 +209,7 @@ export function BlockSlotsPage({
                 <span className="size-2.5 rounded-full bg-destructive/40" />
                 Whole day already blocked
               </p>
-            </div>
+            </GlassCard>
           </SettingsSection>
         }
         secondary={
@@ -236,7 +229,7 @@ export function BlockSlotsPage({
               ) : !dateKey ? (
                 <EmptyCard>Pick a date to see its slots.</EmptyCard>
               ) : (
-                <div className={settingsListClassName}>
+                <SettingsList >
                   {sortedSlots.map((slot) => {
                     const key = slotKey(slot);
                     const state = slotStates.get(key) ?? { kind: "available" };
@@ -275,12 +268,12 @@ export function BlockSlotsPage({
                       </label>
                     );
                   })}
-                </div>
+                </SettingsList>
               )}
             </SettingsSection>
 
             <SettingsSection title="Summary">
-              <div className={settingsListClassName}>
+              <SettingsList >
                 <SummaryRow
                   label="Date"
                   value={
@@ -303,7 +296,7 @@ export function BlockSlotsPage({
                     )
                   }
                 />
-              </div>
+              </SettingsList>
             </SettingsSection>
 
             <SettingsFeedback error={error} />

@@ -1,3 +1,4 @@
+import { GlassCard } from "@/components/dashboard/GlassCard";
 import Link from "next/link";
 import { IconMapPin } from "@tabler/icons-react";
 
@@ -50,12 +51,8 @@ export function HomeBookingCard({
   className?: string;
 }) {
   return (
-    <div
-      className={cn(
-        glassCardClassName,
-        "relative flex flex-col gap-4 p-4 transition-colors hover:bg-white/40 dark:hover:bg-white/15",
-        className
-      )}
+    <GlassCard
+      className={cn("relative flex flex-col gap-4 p-4 transition-colors hover:bg-white/40 dark:hover:bg-white/15", className)}
     >
       <Link
         href={`/dashboard/bookings/${encodeURIComponent(item.bookingId)}`}
@@ -106,6 +103,6 @@ export function HomeBookingCard({
           />
         )}
       </div>
-    </div>
+    </GlassCard>
   );
 }

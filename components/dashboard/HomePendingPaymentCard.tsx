@@ -1,9 +1,7 @@
+import { GlassCard } from "@/components/dashboard/GlassCard";
 import Link from "next/link";
 
-import {
-  formatScheduleDate,
-  glassCardClassName,
-} from "@/components/dashboard/HomeBookingCard";
+import { formatScheduleDate } from "@/components/dashboard/HomeBookingCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -48,12 +46,8 @@ export function HomePendingPaymentCard({
   const href = `/dashboard/bookings/${encodeURIComponent(booking._id)}`;
 
   return (
-    <div
-      className={cn(
-        glassCardClassName,
-        "relative flex flex-col gap-4 p-4 transition-colors hover:bg-white/40 dark:hover:bg-white/15",
-        className
-      )}
+    <GlassCard
+      className={cn("relative flex flex-col gap-4 p-4 transition-colors hover:bg-white/40 dark:hover:bg-white/15", className)}
     >
       <Link
         href={href}
@@ -90,6 +84,6 @@ export function HomePendingPaymentCard({
           Review
         </Button>
       </div>
-    </div>
+    </GlassCard>
   );
 }

@@ -36,6 +36,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { LiquidGlass } from "@/components/ui/liquid-glass";
 import { copyLinkLabel, useCopyProfileLink } from "@/hooks/use-copy-profile-link";
 import { cn } from "@/lib/utils";
 
@@ -305,8 +306,19 @@ export function DashboardSidebar({
   return (
     <aside
       aria-label="Main navigation"
-      className="relative z-20 hidden h-full w-20 shrink-0 flex-col items-center gap-6 border-r border-white/50 bg-white/25 px-3 py-5 backdrop-blur-md md:flex xl:w-64 xl:items-stretch xl:px-4 dark:border-white/10 dark:bg-white/5"
+      className="relative z-20 hidden h-full w-20 shrink-0 md:flex xl:w-64"
     >
+      <LiquidGlass
+        aria-hidden
+        radius={0}
+        tint={0.16}
+        bevelDepth={18}
+        scale={40}
+        aberration={2}
+        className="pointer-events-none absolute inset-0"
+        style={{ backgroundColor: "var(--liquid-glass-fill)" }}
+      />
+      <div className="relative flex h-full w-full flex-col items-center gap-6 border-r border-white/50 px-3 py-5 xl:items-stretch xl:px-4 dark:border-white/10">
       <Link
         href="/dashboard"
         scroll={false}
@@ -355,6 +367,7 @@ export function DashboardSidebar({
           />
         ) : null}
         <CopyLinkButton profileUrl={profileUrl} />
+      </div>
       </div>
     </aside>
   );

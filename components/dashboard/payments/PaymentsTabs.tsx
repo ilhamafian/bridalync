@@ -1,11 +1,11 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { IconCash, IconFileInvoice } from "@tabler/icons-react";
 
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { InvoiceDownloadButton } from "@/components/dashboard/InvoiceDownloadButton";
 import { formatPaymentTime } from "@/components/dashboard/payments/format";
 import {
@@ -70,7 +70,7 @@ function PaymentsList({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className={cn(glassCardClassName, "overflow-hidden")}>
+      <GlassCard className={cn("overflow-hidden")}>
         <ul className="divide-y divide-white/50 dark:divide-white/10">
           {payments.slice(0, visibleCount).map((payment) => (
             <li key={payment.id}>
@@ -103,7 +103,7 @@ function PaymentsList({
             </li>
           ))}
         </ul>
-      </div>
+      </GlassCard>
       {visibleCount < payments.length ? (
         <ShowMoreButton
           onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}
@@ -134,7 +134,7 @@ function InvoicesList({
 
   return (
     <div className="flex flex-col gap-3">
-      <div className={cn(glassCardClassName, "overflow-hidden")}>
+      <GlassCard className={cn("overflow-hidden")}>
         <ul className="divide-y divide-white/50 dark:divide-white/10">
           {invoices.slice(0, visibleCount).map((invoice) => {
             const fullyPaid = invoice.paidRm >= invoice.totalRm;
@@ -173,7 +173,7 @@ function InvoicesList({
             );
           })}
         </ul>
-      </div>
+      </GlassCard>
       {visibleCount < invoices.length ? (
         <ShowMoreButton
           onClick={() => setVisibleCount((count) => count + PAGE_SIZE)}

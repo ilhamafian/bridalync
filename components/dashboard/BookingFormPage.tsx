@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import { useRouter } from "next/navigation";
 
@@ -8,7 +9,6 @@ import {
   type BookingFormOccupancy,
 } from "@/components/booking/BookingForm";
 import { BackButton } from "@/components/dashboard/BackButton";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import { cn } from "@/lib/utils";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 
@@ -31,14 +31,11 @@ export function BookingFormPage({
     return (
       <div className="flex flex-col gap-4 px-4 md:px-8">
         <BackButton />
-        <div
-          className={cn(
-            glassCardClassName,
-            "px-4 py-8 text-center text-sm text-muted-foreground"
-          )}
+        <GlassCard
+          className={cn("px-4 py-8 text-center text-sm text-muted-foreground")}
         >
           Booking not found.
-        </div>
+        </GlassCard>
       </div>
     );
   }
@@ -70,18 +67,16 @@ export function BookingFormPage({
     <div className="flex flex-col gap-4 px-4 md:px-8">
       <BackButton />
       <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-      <BookingForm
-        key={booking?._id ?? "new"}
-        booking={booking}
-        {...catalog}
-        occupancy={occupancy}
-        onSaved={handleSaved}
-        onCancel={handleCancel}
-        className={cn(
-          glassCardClassName,
-          "bg-white/70 p-4 backdrop-blur-md dark:bg-zinc-900/70"
-        )}
-      />
+      <GlassCard className="p-4 [--liquid-glass-fill:rgb(255_255_255/0.72)] dark:[--liquid-glass-fill:rgb(24_24_27/0.78)]">
+        <BookingForm
+          key={booking?._id ?? "new"}
+          booking={booking}
+          {...catalog}
+          occupancy={occupancy}
+          onSaved={handleSaved}
+          onCancel={handleCancel}
+        />
+      </GlassCard>
     </div>
   );
 }

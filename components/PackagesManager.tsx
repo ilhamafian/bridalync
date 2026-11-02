@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard, GlassRadioGroup } from "@/components/dashboard/GlassCard";
 
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -19,14 +20,7 @@ import { EventEditorPage } from "@/components/catalog/EventEditorPage";
 import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { StyleEditorPage } from "@/components/catalog/StyleEditorPage";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
-import {
-  IconBadge,
-  RowText,
-  SettingsSection,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import { SortableList } from "@/components/SortableList";
 import {
   AlertDialog,
@@ -41,7 +35,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Sheet,
   SheetContent,
@@ -236,7 +230,7 @@ function CatalogItemCard({
   children?: React.ReactNode;
 }) {
   return (
-    <div className={cn(glassCardClassName, "overflow-hidden")}>
+    <GlassCard className={cn("overflow-hidden")}>
       <div className="flex items-center gap-3 py-3 pr-2 pl-4">
         <IconBadge icon={icon} />
         <div className="flex min-w-0 flex-1 flex-col">
@@ -265,7 +259,7 @@ function CatalogItemCard({
         </div>
       </div>
       {children}
-    </div>
+    </GlassCard>
   );
 }
 
@@ -805,13 +799,12 @@ export function PackagesManager({
 
         <TabsContent value="addons" className="@container/catalog mt-0 flex flex-col gap-3">
           <SettingsSection title="Add-on prices">
-            <RadioGroup
+            <GlassRadioGroup
               value={showAddOnPrices ? "show" : "hide"}
               onValueChange={(value) =>
                 handleShowAddOnPricesChange(value === "show")
               }
               disabled={savingShowAddOnPrices}
-              className={settingsListClassName}
             >
               <label className={cn(settingsRowClassName, "cursor-pointer")}>
                 <IconBadge icon={IconEye} />
@@ -829,7 +822,7 @@ export function PackagesManager({
                 />
                 <RadioGroupItem value="hide" aria-label="Hide prices" />
               </label>
-            </RadioGroup>
+            </GlassRadioGroup>
           </SettingsSection>
 
           {addOns.length === 0 ? (

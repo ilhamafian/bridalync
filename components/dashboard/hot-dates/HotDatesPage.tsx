@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -13,14 +14,7 @@ import {
   DateRangeFilter,
   isDateKeyInRange,
 } from "@/components/dashboard/DateRangeFilter";
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -253,7 +247,8 @@ export function HotDatesPage({
               : "No upcoming hot dates."}
           </EmptyCard>
         ) : (
-          <ul className={settingsListClassName}>
+          <GlassCard>
+<ul className={"flex flex-col gap-0 divide-y divide-white/50 dark:divide-white/10"}>
             {ranges.map((hotRange) => {
               const title = formatDateKeyRangeTitle(hotRange.start, hotRange.end);
               return (
@@ -279,6 +274,7 @@ export function HotDatesPage({
               );
             })}
           </ul>
+</GlassCard>
         )}
       </SettingsSection>
     </div>

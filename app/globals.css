@@ -145,9 +145,11 @@
   --landing-cream-text: #fdf9f1;
   --landing-ink: #1c1c1c;
   --landing-footer: #5e635a;
+  --liquid-glass-fill: rgb(255 255 255 / 0.32);
 }
 
 .dark {
+  --liquid-glass-fill: rgb(255 255 255 / 0.1);
   --background: oklch(0.153 0.006 107.1);
   --foreground: oklch(0.988 0.003 106.5);
   --card: oklch(0.228 0.013 107.4);

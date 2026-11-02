@@ -1,4 +1,5 @@
 "use client";
+import { SettingsCard, SettingsList, GlassRadioGroup } from "@/components/dashboard/GlassCard";
 
 import { useState } from "react";
 import {
@@ -11,19 +12,11 @@ import {
   IconX,
 } from "@tabler/icons-react";
 
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsCardClassName,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
@@ -139,10 +132,9 @@ export function ClientInfoSettings({
   return (
     <div className="flex flex-col gap-4">
       <SettingsSection title="Instagram username">
-        <RadioGroup
+        <GlassRadioGroup
           value={instagram}
           onValueChange={(value) => setInstagram(value as InstagramRequirement)}
-          className={settingsListClassName}
         >
           {INSTAGRAM_CHOICES.map((choice) => (
             <label
@@ -154,11 +146,11 @@ export function ClientInfoSettings({
               <RadioGroupItem value={choice.value} aria-label={choice.title} />
             </label>
           ))}
-        </RadioGroup>
+        </GlassRadioGroup>
       </SettingsSection>
 
       <SettingsSection title="Moodboard">
-        <div className={settingsListClassName}>
+        <SettingsList >
           <label className={cn(settingsRowClassName, "cursor-pointer")}>
             <IconBadge icon={IconPhoto} />
             <RowText
@@ -167,7 +159,7 @@ export function ClientInfoSettings({
             />
             <Switch checked={moodboard} onCheckedChange={setMoodboard} />
           </label>
-        </div>
+        </SettingsList>
       </SettingsSection>
 
       <SettingsSection
@@ -186,16 +178,16 @@ export function ClientInfoSettings({
         }
       >
         {questions.length === 0 ? (
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <p className="text-muted-foreground">
               Ask clients for anything else you need, like skin type or hijab
               length. Add options for clients to pick from, or leave them out
               so clients type an answer.
             </p>
-          </div>
+          </SettingsCard>
         ) : (
           questions.map((question, index) => (
-            <div key={question.id} className={settingsCardClassName}>
+            <SettingsCard key={question.id} >
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Request {index + 1}
@@ -300,7 +292,7 @@ export function ClientInfoSettings({
                   }
                 />
               </label>
-            </div>
+            </SettingsCard>
           ))
         )}
       </SettingsSection>

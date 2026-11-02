@@ -1,4 +1,5 @@
 "use client";
+import { SettingsCard, SettingsList, GlassRadioGroup } from "@/components/dashboard/GlassCard";
 
 import { useMemo, useState } from "react";
 import {
@@ -11,19 +12,12 @@ import {
   IconUserHeart,
 } from "@tabler/icons-react";
 
-import {
-  IconBadge,
-  RowText,
-  SettingsSection,
-  settingsCardClassName,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import { RegionPriceList } from "@/components/RegionPriceList";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useVenueRegions, venueKey } from "@/hooks/use-venue-regions";
@@ -319,7 +313,7 @@ export function TravelSettingsFields({
   return (
     <>
       <SettingsSection title="Travel fee">
-        <div className={settingsListClassName}>
+        <SettingsList >
           <label className={cn(settingsRowClassName, "cursor-pointer")}>
             <IconBadge icon={IconCar} />
             <RowText
@@ -328,15 +322,14 @@ export function TravelSettingsFields({
             />
             <Switch checked={enabled} onCheckedChange={form.setEnabled} />
           </label>
-        </div>
+        </SettingsList>
       </SettingsSection>
 
       {enabled ? (
         <SettingsSection title="Charge by">
-          <RadioGroup
+          <GlassRadioGroup
             value={mode}
             onValueChange={(value) => form.setMode(value as TravelMode)}
-            className={settingsListClassName}
           >
             <label className={cn(settingsRowClassName, "cursor-pointer")}>
               <IconBadge icon={IconRoute} />
@@ -354,13 +347,13 @@ export function TravelSettingsFields({
               />
               <RadioGroupItem value="region" aria-label="By state" />
             </label>
-          </RadioGroup>
+          </GlassRadioGroup>
         </SettingsSection>
       ) : null}
 
       <MapsProvider>
         <SettingsSection title="Base location">
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <LocationMapPicker
               value={form.location}
               onChange={form.setLocation}
@@ -368,7 +361,7 @@ export function TravelSettingsFields({
             <p className="text-xs text-muted-foreground">
               {baseRegionText(form.baseRegionStatus, baseRegion)}
             </p>
-          </div>
+          </SettingsCard>
         </SettingsSection>
       </MapsProvider>
 
@@ -376,12 +369,11 @@ export function TravelSettingsFields({
         <>
           {chargeBy === "package" ? (
             <SettingsSection title="State pricing">
-              <RadioGroup
+              <GlassRadioGroup
                 value={regionMode}
                 onValueChange={(value) =>
                   form.setRegionMode(value as TravelRegionMode)
                 }
-                className={settingsListClassName}
               >
                 <label className={cn(settingsRowClassName, "cursor-pointer")}>
                   <IconBadge icon={IconMapPin} />
@@ -402,19 +394,19 @@ export function TravelSettingsFields({
                     aria-label="Different charge by event"
                   />
                 </label>
-              </RadioGroup>
+              </GlassRadioGroup>
             </SettingsSection>
           ) : null}
 
           {chargeBy === "package" && regionMode === "per_event" ? (
-            <div className={settingsCardClassName}>
+            <SettingsCard >
               <p className="text-muted-foreground">
                 Set each event&apos;s price per state in Events &amp;{" "}
                 {styleTerms.many}.
                 The price already includes travel, so clients see one price for
                 the event.
               </p>
-            </div>
+            </SettingsCard>
           ) : (
             <SettingsSection title="Prices">
               <RegionPriceList
@@ -437,7 +429,7 @@ export function TravelSettingsFields({
       {enabled && mode === "distance" ? (
         <>
           <SettingsSection title="Rate">
-            <div className={settingsCardClassName}>
+            <SettingsCard >
               <Field label="Rate per km (RM)">
                 <Input
                   className={inputClassName}
@@ -454,10 +446,10 @@ export function TravelSettingsFields({
                 your base. For example, 10 km away at RM 1/km adds RM 20 to the
                 booking.
               </p>
-            </div>
+            </SettingsCard>
           </SettingsSection>
           <SettingsSection title={`Over ${LONG_DISTANCE_THRESHOLD_KM} km`}>
-            <div className={settingsCardClassName}>
+            <SettingsCard >
               <Field label="Rate per km (RM)">
                 <Input
                   className={inputClassName}
@@ -477,18 +469,17 @@ export function TravelSettingsFields({
                 example, 120 km away at RM 1.50/km adds RM 360. Leave blank to
                 use your normal rate.
               </p>
-            </div>
+            </SettingsCard>
           </SettingsSection>
         </>
       ) : null}
 
       <SettingsSection title="Out-of-state accommodation & transport">
-        <RadioGroup
+        <GlassRadioGroup
           value={form.accommodationBy}
           onValueChange={(value) =>
             form.setAccommodationBy(value as AccommodationProvider)
           }
-          className={settingsListClassName}
         >
           <label className={cn(settingsRowClassName, "cursor-pointer")}>
             <IconBadge icon={IconBed} />
@@ -506,15 +497,15 @@ export function TravelSettingsFields({
             />
             <RadioGroupItem value="client" aria-label="Provided by the client" />
           </label>
-        </RadioGroup>
+        </GlassRadioGroup>
         {form.accommodationBy === "client" ? (
-          <div className={settingsCardClassName}>
+          <SettingsCard >
             <p className="text-xs text-muted-foreground">
               {baseRegion
                 ? `When a session's venue is outside ${getRegionLabel(baseRegion)}, the client must agree to provide your accommodation and transport before continuing their booking.`
                 : "Pick your base location above so your base state can be detected."}
             </p>
-          </div>
+          </SettingsCard>
         ) : null}
       </SettingsSection>
 
@@ -541,7 +532,7 @@ export function TravelSettingsFields({
                 ? ` Your base state (${getRegionLabel(baseRegion)}) is always served.`
                 : null}
             </p>
-            <div className={settingsListClassName}>
+            <SettingsList >
               {MALAYSIA_REGIONS.filter(
                 (region) => region.id !== baseRegion
               ).map((region) => {
@@ -569,7 +560,7 @@ export function TravelSettingsFields({
                   </label>
                 );
               })}
-            </div>
+            </SettingsList>
           </TabsContent>
 
           <TabsContent value="travel-days" className="flex flex-col gap-2">
@@ -580,7 +571,7 @@ export function TravelSettingsFields({
               approved). Only states you serve are listed.
             </p>
             {travelDayRegions.length > 0 ? (
-              <div className={settingsListClassName}>
+              <SettingsList >
                 {travelDayRegions.map((region) => (
                   <label
                     key={region.id}
@@ -600,13 +591,13 @@ export function TravelSettingsFields({
                     />
                   </label>
                 ))}
-              </div>
+              </SettingsList>
             ) : (
-              <div className={settingsCardClassName}>
+              <SettingsCard >
                 <p className="text-muted-foreground">
                   Turn on a state in Service areas to set travel days for it.
                 </p>
-              </div>
+              </SettingsCard>
             )}
           </TabsContent>
         </Tabs>

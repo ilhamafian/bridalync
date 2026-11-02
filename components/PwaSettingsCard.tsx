@@ -1,15 +1,10 @@
 "use client";
+import { SettingsCard } from "@/components/dashboard/GlassCard";
 
 import { useEffect, useState } from "react";
 import { IconBell, IconDeviceMobile } from "@tabler/icons-react";
 
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsCardClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection } from "@/components/dashboard/settings/SettingsUi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -248,7 +243,7 @@ export function PwaSettingsCard() {
   return (
     <div className="flex flex-col gap-4">
       <SettingsSection title="Install app">
-        <div className={settingsCardClassName}>
+        <SettingsCard >
           <div className="flex items-center gap-3">
             <IconBadge icon={IconDeviceMobile} />
             <RowText title="Bridalync app" description={installDescription} />
@@ -267,11 +262,11 @@ export function PwaSettingsCard() {
               {busy ? "Working…" : "Install Bridalync"}
             </Button>
           ) : null}
-        </div>
+        </SettingsCard>
       </SettingsSection>
 
       <SettingsSection title="Booking notifications">
-        <div className={settingsCardClassName}>
+        <SettingsCard >
           <div className="flex items-center gap-3">
             <IconBadge icon={IconBell} />
             <RowText
@@ -302,7 +297,7 @@ export function PwaSettingsCard() {
                   : "Enable notifications"}
             </Button>
           ) : null}
-        </div>
+        </SettingsCard>
       </SettingsSection>
 
       <SettingsFeedback error={error} success={message} />

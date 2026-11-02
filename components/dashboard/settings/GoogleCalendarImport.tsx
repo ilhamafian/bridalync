@@ -1,19 +1,12 @@
 "use client";
+import { SettingsCard, SettingsList } from "@/components/dashboard/GlassCard";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { IconBrandGoogle, IconCalendarEvent } from "@tabler/icons-react";
 
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsCardClassName,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Spinner } from "@/components/ui/spinner";
@@ -264,10 +257,10 @@ export function GoogleCalendarImport() {
 
   if (loading) {
     return (
-      <div className={cn(settingsCardClassName, "flex-row items-center text-muted-foreground")}>
+      <SettingsCard className={cn("flex-row items-center text-muted-foreground")}>
         <Spinner />
         Loading Google Calendar…
-      </div>
+      </SettingsCard>
     );
   }
 
@@ -275,14 +268,14 @@ export function GoogleCalendarImport() {
     return (
       <div className="flex flex-col gap-4">
         <SettingsSection title="Connect">
-          <div className={cn(settingsCardClassName, "flex-row items-start")}>
+          <SettingsCard className={cn("flex-row items-start")}>
             <IconBadge icon={IconBrandGoogle} />
             <p className="text-sm text-muted-foreground">
               Connect Google Calendar to add confirmed bookings to your
               calendar automatically, and to import titled events as bookings.
               Public holidays and repeating events are skipped.
             </p>
-          </div>
+          </SettingsCard>
         </SettingsSection>
         <SettingsFeedback error={error} />
         <Button
@@ -306,7 +299,7 @@ export function GoogleCalendarImport() {
     <div className="flex flex-col gap-4">
       {status ? (
         <SettingsSection title="Connection">
-          <div className={settingsListClassName}>
+          <SettingsList >
             <div className={settingsRowClassName}>
               <IconBadge icon={IconBrandGoogle} />
               <RowText
@@ -318,7 +311,7 @@ export function GoogleCalendarImport() {
                 }
               />
             </div>
-          </div>
+          </SettingsList>
         </SettingsSection>
       ) : null}
 
@@ -350,7 +343,7 @@ export function GoogleCalendarImport() {
         ) : events.length === 0 ? (
           <EmptyCard>No one-off timed events found to import.</EmptyCard>
         ) : (
-          <div className={settingsListClassName}>
+          <SettingsList >
             {events.map((event) => {
               const disabled = event.alreadyImported || event.conflict;
               const status = event.alreadyImported
@@ -384,7 +377,7 @@ export function GoogleCalendarImport() {
                 </label>
               );
             })}
-          </div>
+          </SettingsList>
         )}
         <p className="text-xs text-muted-foreground">
           Each selected event becomes a confirmed booking. Location is left

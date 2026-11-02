@@ -8,7 +8,7 @@ import {
 } from "@tabler/icons-react";
 
 import { BackButton } from "@/components/dashboard/BackButton";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -531,7 +531,8 @@ export function BookingsManager({
       ) : null}
 
       {filteredBookings.length === 0 ? (
-        <Card>
+        <GlassCard>
+          <Card className="bg-transparent shadow-none ring-0">
           <CardHeader>
             <CardTitle>
               {searchQuery.trim() ? "No matching bookings" : "No bookings yet"}
@@ -546,7 +547,8 @@ export function BookingsManager({
                   : `No ${activeFilterLabel.toLowerCase()} bookings.`}
             </CardDescription>
           </CardHeader>
-        </Card>
+          </Card>
+        </GlassCard>
       ) : (
         <ul className="grid gap-3 @3xl/main:grid-cols-2 @6xl/main:grid-cols-3">
           {filteredBookings.map((booking) => {
@@ -565,17 +567,14 @@ export function BookingsManager({
 
             return (
               <li key={booking._id}>
+                <GlassCard className="h-full">
                 <Card
                   role="button"
                   tabIndex={0}
                   className={cn(
-                    "h-full cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                    needsReview
-                      ? "border-amber-500/35 bg-amber-500/4 hover:bg-amber-500/8"
-                      : cn(
-                          glassCardClassName,
-                          "hover:bg-white/40 dark:hover:bg-white/15"
-                        )
+                    "h-full cursor-pointer bg-transparent shadow-none ring-0 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
+                    needsReview &&
+                      "bg-amber-500/10 hover:bg-amber-500/15"
                   )}
                   onClick={() => openDetails(booking)}
                   onKeyDown={(event) => {
@@ -786,6 +785,7 @@ export function BookingsManager({
                     </CardContent>
                   ) : null}
                 </Card>
+                </GlassCard>
               </li>
             );
           })}

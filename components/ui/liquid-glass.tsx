@@ -1,16 +1,25 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useId,
   useRef,
   useState,
-  type CSSProperties,
   type HTMLAttributes,
+  type Ref,
 } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
-export type LiquidGlassProps = HTMLAttributes<HTMLDivElement> & {
+type GlassTag = "div" | "span" | "nav" | "section" | "ul" | "li" | "button";
+
+export type LiquidGlassProps = HTMLAttributes<HTMLElement> & {
+  as?: GlassTag;
+  ref?: Ref<HTMLElement>;
+  /** Button type when `as` is `"button"`. */
+  type?: "button" | "submit" | "reset";
+  disabled?: boolean;
   contentClassName?: string;
   /** Corner radius in px. Default 999 (pill). */
   radius?: number;
@@ -33,6 +42,8 @@ export type LiquidGlassProps = HTMLAttributes<HTMLDivElement> & {
  * frosted glass.
  */
 export function LiquidGlass({
+  as = "div",
+  ref,
   children,
   className,
   contentClassName,
@@ -46,7 +57,15 @@ export function LiquidGlass({
   ...rest
 }: LiquidGlassProps) {
   const reactId = useId().replace(/:/g, "");
-  const rootRef = useRef<HTMLDivElement>(null);
+  const rootRef = useRef<HTMLElement>(null);
+  const setRoot = useCallback(
+    (node: HTMLElement | null) => {
+      rootRef.current = node;
+      if (typeof ref === "function") ref(node);
+      else if (ref) ref.current = node;
+    },
+    [ref],
+  );
   const blobRef = useRef<string | null>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   const [filter, setFilter] = useState<{ id: string; svg: string } | null>(
@@ -153,9 +172,11 @@ export function LiquidGlass({
           ? `url(#${filter.id}) blur(0.5px) saturate(1.85) brightness(1.02)`
           : "blur(10px) saturate(1.6) brightness(1.04)";
 
+  const Tag = as;
+
   return (
-    <div
-      ref={rootRef}
+    <Tag
+      ref={setRoot}
       data-refract={mode === "pending" && filter ? "true" : "false"}
       className={cn(
         "relative overflow-hidden",
@@ -173,20 +194,23 @@ export function LiquidGlass({
       }}
       {...rest}
     >
-      {filter ? (
-        <span
-          key={filter.id}
-          aria-hidden
-          className="pointer-events-none absolute size-0 overflow-hidden"
-          dangerouslySetInnerHTML={{ __html: filter.svg }}
-        />
-      ) : null}
       {contentClassName ? (
         <div className={contentClassName}>{children}</div>
       ) : (
         children
       )}
-    </div>
+      {filter
+        ? createPortal(
+            <span
+              key={filter.id}
+              aria-hidden
+              className="pointer-events-none absolute size-0 overflow-hidden"
+              dangerouslySetInnerHTML={{ __html: filter.svg }}
+            />,
+            document.body,
+          )
+        : null}
+    </Tag>
   );
 }
 

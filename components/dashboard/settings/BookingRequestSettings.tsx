@@ -1,4 +1,5 @@
 "use client";
+import { SettingsList } from "@/components/dashboard/GlassCard";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -9,14 +10,7 @@ import {
   IconCreditCard,
 } from "@tabler/icons-react";
 
-import {
-  IconBadge,
-  RowText,
-  SettingsFeedback,
-  SettingsSection,
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { IconBadge, RowText, SettingsFeedback, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 
@@ -83,7 +77,7 @@ export function BookingRequestSettings({
   return (
     <div className="flex flex-col gap-4">
       <SettingsSection title="Approval">
-        <div className={settingsListClassName}>
+        <SettingsList >
           <label className={cn(settingsRowClassName, "cursor-pointer")}>
             <IconBadge icon={IconCalendarQuestion} />
             <RowText
@@ -100,19 +94,19 @@ export function BookingRequestSettings({
               onCheckedChange={(next) => void handleChange(next)}
             />
           </label>
-        </div>
+        </SettingsList>
         <SettingsFeedback error={error} />
       </SettingsSection>
 
       <SettingsSection title="How it works">
-        <div className={settingsListClassName}>
+        <SettingsList >
           {STEPS.map((step) => (
             <div key={step.title} className={settingsRowClassName}>
               <IconBadge icon={step.icon} />
               <RowText title={step.title} description={step.description} />
             </div>
           ))}
-        </div>
+        </SettingsList>
       </SettingsSection>
     </div>
   );

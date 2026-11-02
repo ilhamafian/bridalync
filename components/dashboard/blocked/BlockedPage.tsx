@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
@@ -13,7 +14,6 @@ import {
 import { BackButton } from "@/components/dashboard/BackButton";
 import { parseDateKey } from "@/components/dashboard/DashboardCalendar";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
   IconBadge,
   RowText,
@@ -134,7 +134,7 @@ function BlockedDatesList({
   }
 
   return (
-    <div className={cn(glassCardClassName, "overflow-hidden")}>
+    <GlassCard className={cn("overflow-hidden")}>
       <ul className="divide-y divide-white/50 dark:divide-white/10">
         {ranges.map((range) => {
           const title = formatRangeTitle(range);
@@ -155,7 +155,7 @@ function BlockedDatesList({
           );
         })}
       </ul>
-    </div>
+    </GlassCard>
   );
 }
 
@@ -185,7 +185,7 @@ function BlockedSlotsList({
   }
 
   return (
-    <div className={cn(glassCardClassName, "overflow-hidden")}>
+    <GlassCard className={cn("overflow-hidden")}>
       <ul className="divide-y divide-white/50 dark:divide-white/10">
         {slots.map((slot) => {
           const key = blockedSlotKey(slot);
@@ -205,7 +205,7 @@ function BlockedSlotsList({
           );
         })}
       </ul>
-    </div>
+    </GlassCard>
   );
 }
 

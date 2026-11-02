@@ -1,4 +1,4 @@
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 import {
   OutstandingPaymentsCard,
   type OutstandingClientRow,
@@ -52,16 +52,13 @@ export function PaymentsPage({
       <div className="-mt-2 flex flex-col gap-6 @3xl/main:grid @3xl/main:grid-cols-2 @3xl/main:items-start">
         <section className="flex min-w-0 flex-col gap-3">
           <h3 className="text-sm font-medium">This week</h3>
-          <div
-            className={cn(
-              glassCardClassName,
-              "grid grid-cols-3 divide-x divide-white/50 dark:divide-white/10"
-            )}
+          <GlassCard
+            className={cn("grid grid-cols-3 divide-x divide-white/50 dark:divide-white/10")}
           >
             <WeekStat label="Revenue" value={formatRmShort(week.revenueRm)} />
             <WeekStat label="Payments" value={String(week.paymentCount)} />
             <WeekStat label="Clients" value={String(week.clientCount)} />
-          </div>
+          </GlassCard>
         </section>
 
         <section className="flex min-w-0 flex-col gap-3">

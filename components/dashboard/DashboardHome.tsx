@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard } from "@/components/dashboard/GlassCard";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -9,7 +10,6 @@ import {
   BookingCarousel,
   CardCarousel,
 } from "@/components/dashboard/BookingCarousel";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
 import {
   HomePendingPaymentCard,
   type PendingPaymentItem,
@@ -73,14 +73,11 @@ function LeaveReviewButton({ item }: { item: CompletedScheduleItem }) {
 
 export function EmptyCard({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className={cn(
-        glassCardClassName,
-        "px-4 py-8 text-center text-sm text-muted-foreground"
-      )}
+    <GlassCard
+      className={cn("px-4 py-8 text-center text-sm text-muted-foreground")}
     >
       {children}
-    </div>
+    </GlassCard>
   );
 }
 

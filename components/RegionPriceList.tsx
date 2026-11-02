@@ -1,10 +1,8 @@
 "use client";
+import { SettingsList } from "@/components/dashboard/GlassCard";
 
 import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
-import {
-  settingsListClassName,
-  settingsRowClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import { cn } from "@/lib/utils";
 import type { RegionId } from "@/schemas/settingSchema";
 import {
@@ -31,7 +29,7 @@ export function RegionPriceList({
   className?: string;
 }) {
   return (
-    <div className={cn(settingsListClassName, className)}>
+    <SettingsList className={cn(className)}>
       {MALAYSIA_REGIONS.filter(
         (region) => !hiddenRegions.includes(region.id)
       ).map((region) => {
@@ -75,6 +73,6 @@ export function RegionPriceList({
           </div>
         );
       })}
-    </div>
+    </SettingsList>
   );
 }

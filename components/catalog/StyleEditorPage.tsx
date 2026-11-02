@@ -1,4 +1,5 @@
 "use client";
+import { GlassCard, SettingsCard } from "@/components/dashboard/GlassCard";
 
 import { useState } from "react";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
@@ -7,12 +8,7 @@ import { DepositField, parseDepositInput } from "@/components/catalog/DepositFie
 import { ProcessingFeeHint } from "@/components/catalog/ProcessingFeeHint";
 import { BackButton } from "@/components/dashboard/BackButton";
 import { EmptyCard } from "@/components/dashboard/DashboardHome";
-import { glassCardClassName } from "@/components/dashboard/HomeBookingCard";
-import {
-  SettingsFeedback,
-  SettingsSection,
-  settingsCardClassName,
-} from "@/components/dashboard/settings/SettingsUi";
+import { SettingsFeedback, SettingsSection } from "@/components/dashboard/settings/SettingsUi";
 import { toStyleItem, type StyleItem } from "@/components/PackagesManager";
 import { SortableList } from "@/components/SortableList";
 import { Button } from "@/components/ui/button";
@@ -193,7 +189,7 @@ export function StyleEditorPage({
       </section>
 
       <SettingsSection title="Details">
-        <div className={settingsCardClassName}>
+        <SettingsCard >
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="style-name">Category name</Label>
             <Input
@@ -212,7 +208,7 @@ export function StyleEditorPage({
               add an extra charge on top.
             </p>
           ) : null}
-        </div>
+        </SettingsCard>
       </SettingsSection>
 
       <SettingsSection
@@ -236,7 +232,7 @@ export function StyleEditorPage({
           className="gap-3"
           handleClassName="mt-4"
           renderItem={(variant, index) => (
-            <div className={cn(glassCardClassName, "flex flex-col gap-4 p-4 text-sm")}>
+            <GlassCard className={cn("flex flex-col gap-4 p-4 text-sm")}>
               <div className="flex items-center gap-2">
                 <Input
                   className={inputClassName}
@@ -320,7 +316,7 @@ export function StyleEditorPage({
                 onChange={(urls) => updateVariant(variant.id, { image_urls: urls })}
                 disabled={saving}
               />
-            </div>
+            </GlassCard>
           )}
         />
       </SettingsSection>
