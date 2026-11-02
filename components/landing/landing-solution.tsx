@@ -41,7 +41,7 @@ const teamFeatures: Feature[] = [
     title: "Your day at a glance",
     description:
       "Today's sessions, booking requests, pending payments and recent activity, the moment you open the app.",
-    src: "/videos/dashboard.mp4",
+    src: "/videos/dashboard_2.mp4",
   },
   {
     id: "payment",
@@ -49,7 +49,7 @@ const teamFeatures: Feature[] = [
     title: "Know what you've earned",
     description:
       "Take deposits and full payments online or by transfer, approve receipts, and see your revenue and outstanding balances.",
-      src: "/videos/payment.mp4",
+    src: "/videos/payment_2.mp4",
   },
   {
     id: "travel-fee",
@@ -64,6 +64,7 @@ const teamFeatures: Feature[] = [
     title: "Price your peak dates",
     description:
       "Raise prices on popular dates by a fixed amount or a percentage, and clients see the right price when they book.",
+    src: "/videos/hot_dates.mp4",
   },
   {
     id: "block-dates",
@@ -71,6 +72,7 @@ const teamFeatures: Feature[] = [
     title: "Block the days you're away",
     description:
       "Block whole days or single time slots so clients can't book when you're unavailable.",
+    src: "/videos/block_dates_2.mp4",
   },
   {
     id: "team-booking",
@@ -194,7 +196,7 @@ export function LandingSolution() {
               finish="black"
               screenColor="#0b0609"
               shadowColor="#14040c"
-              width="min(22rem, 78vw, calc((100svh - 10rem) / 2.092))"
+              width="min(22rem, 78vw, calc((100svh - 10rem) / 2.11))"
               rotateX={0}
               rotateY={0}
               rotateZ={0}
@@ -214,7 +216,7 @@ export function LandingSolution() {
                   muted
                   loop
                   playsInline
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="absolute left-1/2 top-1/2 h-[95.5%] w-[95.5%] -translate-x-1/2 -translate-y-1/2 object-cover"
                   aria-label={`Glam Team Facing: ${selected.label}`}
                 />
               ) : (

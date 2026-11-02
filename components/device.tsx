@@ -133,7 +133,7 @@ interface Painted {
 }
 
 const WIDTH = 100;
-const HEIGHT = 209.2;
+const HEIGHT = 211;
 const DEPTH = 11.5;
 const FRAME = 2.2;
 const BEZEL = 1.7;
@@ -186,11 +186,11 @@ const SURFACES = {
 const ui = {
   root: "group/device relative inline-block shrink-0 align-middle select-none [container-type:size] [-webkit-tap-highlight-color:transparent]",
   shadow:
-    "pointer-events-none absolute left-1/2 top-1/2 -ml-[50cqmin] -mt-[104.6cqmin] h-[209.2cqmin] w-[100cqmin] rounded-[17.9cqmin] bg-[var(--device-shadow)] will-change-transform",
+    "pointer-events-none absolute left-1/2 top-1/2 -ml-[50cqmin] -mt-[105.5cqmin] h-[211cqmin] w-[100cqmin] rounded-[17.9cqmin] bg-[var(--device-shadow)] will-change-transform",
   shadowSoft: "blur-[6.5cqmin] group-data-[device-page=light]/device:blur-[9cqmin]",
   shadowTight: "blur-[1.6cqmin] group-data-[device-page=light]/device:blur-[2.2cqmin]",
   stage: "absolute inset-0 [perspective:520cqmin]",
-  body: "absolute left-1/2 top-1/2 -ml-[50cqmin] -mt-[104.6cqmin] h-[209.2cqmin] w-[100cqmin] [transform-style:preserve-3d] will-change-transform",
+  body: "absolute left-1/2 top-1/2 -ml-[50cqmin] -mt-[105.5cqmin] h-[211cqmin] w-[100cqmin] [transform-style:preserve-3d] will-change-transform",
   back: "absolute inset-0 rounded-[17.9cqmin] [backface-visibility:hidden] [transform:translateZ(-5.75cqmin)_rotateY(180deg)]",
   facet: "absolute left-0 top-0 bg-[var(--device-metal)] [backface-visibility:hidden]",
   band: "after:pointer-events-none after:absolute after:inset-0 after:content-[''] after:[background-image:var(--device-b,none)] after:[-webkit-mask-image:linear-gradient(90deg,transparent,#000)] after:[mask-image:linear-gradient(90deg,transparent,#000)]",
