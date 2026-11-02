@@ -1,23 +1,52 @@
-import { landingGlassClassName } from "@/components/landing/glass";
+"use client";
+
+import dynamic from "next/dynamic";
+
 import { LandingWaitlistForm } from "@/components/landing/landing-waitlist-form";
-import { cn } from "@/lib/utils";
+
+const SatinRidges = dynamic(
+  () => import("@/components/satin-ridges").then((mod) => mod.SatinRidges),
+  { ssr: false }
+);
+
+const HERO_BG = "#230b17";
 
 export function LandingWaitlist() {
   return (
-    <section id="waitlist" className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24">
-      <div
-        className={cn(
-          landingGlassClassName,
-          "mx-auto max-w-xl px-6 py-10 text-center md:px-10"
-        )}
-      >
-        <h2 className="text-3xl font-semibold tracking-tight text-zinc-50">
-          Join the waitlist
-        </h2>
-        <p className="mt-3 text-base leading-relaxed text-zinc-300">
-          Leave your number and we&apos;ll reach out with a personalised demo.
-        </p>
-        <LandingWaitlistForm />
+    <section id="waitlist" className="scroll-mt-24 px-4 py-6 md:px-10 md:py-8">
+      <div className="relative mx-auto w-full max-w-[88rem] overflow-hidden rounded-[1.75rem] bg-[#230b17] ring-1 ring-white/20 md:rounded-[2rem]">
+        <SatinRidges
+          colors={["#961b45", "#ff6653"]}
+          backgroundColor={HERO_BG}
+          angle={-33}
+          scale={1.35}
+          depth={1}
+          warp={1}
+          gloss={0.4}
+          highlight={0.85}
+          lightAngle={-70}
+          sheen={0.65}
+          speed={1}
+          seed={12}
+          clickRipples={false}
+          dpr={1}
+          detail={0}
+          className="pointer-events-none absolute inset-0 h-full w-full"
+        />
+        <div className="relative z-10 flex min-h-[70vh] flex-col justify-between px-8 py-16 sm:px-12 sm:py-20 md:min-h-[78vh] md:px-20 md:py-28">
+          <h2 className="max-w-4xl text-5xl font-semibold tracking-tight text-white sm:text-6xl md:text-7xl md:leading-[1.02] [text-shadow:0_2px_24px_rgb(35_11_23/0.45)]">
+            Join the waitlist,
+            <br />
+            get early access.
+          </h2>
+          <div className="mt-10 flex flex-col gap-8 md:flex-row md:items-end md:justify-between md:gap-12">
+            <p className="max-w-md text-lg leading-relaxed text-white/85 md:text-xl [text-shadow:0_1px_12px_rgb(35_11_23/0.4)]">
+              Leave your number and we&apos;ll reach out with a personalised
+              demo.
+            </p>
+            <LandingWaitlistForm />
+          </div>
+        </div>
       </div>
     </section>
   );
