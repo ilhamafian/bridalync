@@ -127,12 +127,12 @@ function padBlockNumber(value: number) {
   return String(value).padStart(2, "0");
 }
 
-function PainHeading({ index }: { index: number }) {
+function PainHeading({ index, className }: { index: number; className?: string }) {
   const current = padBlockNumber(index + 1);
   const total = padBlockNumber(ranges.length);
 
   return (
-    <div className="relative z-10 flex flex-col items-start gap-8">
+    <div className={cn("relative z-10 flex flex-col items-start gap-8", className)}>
       <h2 className={headingClassName}>Does this sound familiar to you?</h2>
       <div className="flex flex-col items-start gap-2.5">
         <p
@@ -251,7 +251,7 @@ function LandingPainStatic() {
   return (
     <section className="px-4 py-16 md:px-12 md:py-24 lg:px-16">
       <div className="relative mx-auto max-w-6xl">
-        <PainHeading index={0} />
+        <PainHeading index={0} className="md:-translate-y-16" />
         <div className="mt-10 flex flex-col gap-8 md:-mt-14 md:pl-60">
           {ranges.map((range) => (
             <p key={range.text} className={cn(sentenceTypeClassName, "text-zinc-100")}>
@@ -299,7 +299,7 @@ function LandingPainScroll() {
         <div className="relative z-10 flex h-full w-full items-center px-4 md:px-12 lg:px-16">
           <div className="relative w-full">
             <PainRibbons className="absolute top-[calc(100%-14rem)] -right-4 -left-4 z-0 w-auto md:top-[calc(100%-13rem)] md:-right-12 md:-left-12 lg:-right-16 lg:-left-16" />
-            <PainHeading index={activeIndex} />
+            <PainHeading index={activeIndex} className="md:-translate-y-16" />
             <div className="relative z-10 mt-10 w-full md:-mt-14 md:pl-60">
               <div className="relative">
                 <p className={cn(sentenceTypeClassName, "invisible")} aria-hidden>
