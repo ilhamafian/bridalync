@@ -3,6 +3,7 @@
 import { ChevronRight, Plus } from "lucide-react";
 import { Accordion } from "radix-ui";
 
+import { FadeRise, RevealMask } from "@/components/landing/landing-reveal";
 import { SITE_CONTACT_EMAIL } from "@/lib/site";
 
 const faqs = [
@@ -42,19 +43,23 @@ export function LandingFaq() {
             Questions
             <ChevronRight className="size-3.5" aria-hidden />
           </p> */}
-          <h2 className="mt-6 max-w-[14ch] text-4xl font-medium leading-[1.05] tracking-tight text-white sm:text-5xl lg:max-w-[12ch] lg:text-[3.25rem]">
-            Everything people ask before joining.
-          </h2>
-          <p className="mt-6 max-w-xs text-base leading-relaxed text-zinc-400">
-            Something missing?{" "}
-            <a
-              href={`mailto:${SITE_CONTACT_EMAIL}`}
-              className="underline decoration-zinc-500 underline-offset-4 transition-colors hover:text-zinc-200"
-            >
-              Write to us
-            </a>{" "}
-            and a human answers within a day.
-          </p>
+          <RevealMask className="mt-6">
+            <h2 className="max-w-[14ch] text-4xl font-medium leading-[1.05] tracking-tight text-white sm:text-5xl lg:max-w-[12ch] lg:text-[3.25rem]">
+              Everything people ask before joining.
+            </h2>
+          </RevealMask>
+          <FadeRise delay={0.12} y={16}>
+            <p className="mt-6 max-w-xs text-base leading-relaxed text-zinc-400">
+              Something missing?{" "}
+              <a
+                href={`mailto:${SITE_CONTACT_EMAIL}`}
+                className="underline decoration-zinc-500 underline-offset-4 transition-colors hover:text-zinc-200"
+              >
+                Write to us
+              </a>{" "}
+              and a human answers within a day.
+            </p>
+          </FadeRise>
         </div>
 
         <Accordion.Root
@@ -64,24 +69,25 @@ export function LandingFaq() {
           className="border-t border-white/15 lg:mt-12"
         >
           {faqs.map((faq, index) => (
-            <Accordion.Item
-              key={faq.question}
-              value={`faq-${index}`}
-              className="border-b border-white/15"
-            >
-              <Accordion.Header>
-                <Accordion.Trigger className="group flex w-full items-start justify-between gap-6 py-5 text-left text-base font-medium text-zinc-50 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/30">
-                  {faq.question}
-                  <Plus
-                    aria-hidden
-                    className="mt-0.5 size-4 shrink-0 text-zinc-300 transition-transform duration-300 ease-out group-data-[state=open]:rotate-45 motion-reduce:transition-none"
-                  />
-                </Accordion.Trigger>
-              </Accordion.Header>
-              <Accordion.Content className="overflow-hidden text-[15px] leading-relaxed text-zinc-400 data-closed:animate-faq-up data-open:animate-faq-down motion-reduce:animate-none">
-                <p className="max-w-xl pb-5 pr-10">{faq.answer}</p>
-              </Accordion.Content>
-            </Accordion.Item>
+            <FadeRise key={faq.question} delay={index * 0.06} x={28} y={16} duration={0.55}>
+              <Accordion.Item
+                value={`faq-${index}`}
+                className="border-b border-white/15"
+              >
+                <Accordion.Header>
+                  <Accordion.Trigger className="group flex w-full items-start justify-between gap-6 py-5 text-left text-base font-medium text-zinc-50 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/30">
+                    {faq.question}
+                    <Plus
+                      aria-hidden
+                      className="mt-0.5 size-4 shrink-0 text-zinc-300 transition-transform duration-300 ease-out group-data-[state=open]:rotate-45 motion-reduce:transition-none"
+                    />
+                  </Accordion.Trigger>
+                </Accordion.Header>
+                <Accordion.Content className="overflow-hidden text-[15px] leading-relaxed text-zinc-400 data-closed:animate-faq-up data-open:animate-faq-down motion-reduce:animate-none">
+                  <p className="max-w-xl pb-5 pr-10">{faq.answer}</p>
+                </Accordion.Content>
+              </Accordion.Item>
+            </FadeRise>
           ))}
         </Accordion.Root>
       </div>

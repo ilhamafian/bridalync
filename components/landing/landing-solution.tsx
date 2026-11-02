@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { motion, useScroll, useTransform } from "motion/react";
 
 import { Device } from "@/components/device";
+import {
+  FadeRise,
+  RevealMask,
+  revealEase,
+  revealViewport,
+  useAnimateOnScroll,
+} from "@/components/landing/landing-reveal";
 import { LiquidGlass } from "@/components/ui/liquid-glass";
 import { cn } from "@/lib/utils";
 
@@ -72,30 +80,71 @@ const teamFeatures: Feature[] = [
 ];
 
 export function LandingSolution() {
+  const animate = useAnimateOnScroll();
+  const sectionRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: sectionRef,
+    offset: ["start end", "end start"],
+  });
+  const phoneY = useTransform(scrollYProgress, [0, 0.4, 1], [78, 0, -24]);
+  const phoneRotateY = useTransform(scrollYProgress, [0, 0.45], [14, 0]);
+  const phoneScale = useTransform(scrollYProgress, [0, 0.4], [0.92, 1]);
+  const phoneOpacity = useTransform(scrollYProgress, [0, 0.14], [0, 1]);
   const [selectedId, setSelectedId] = useState(teamFeatures[0].id);
   const selected =
     teamFeatures.find((feature) => feature.id === selectedId) ?? teamFeatures[0];
 
   return (
-    <section id="solution" className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24">
+    <section
+      ref={sectionRef}
+      id="solution"
+      className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24"
+    >
       <div className="mx-auto grid max-w-6xl items-stretch gap-8 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] md:gap-10">
         <div className="flex flex-col">
-          <h2 className="text-4xl font-semibold tracking-tight text-zinc-50 md:text-5xl">
-            Meet the companion your business needs
-          </h2>
-          <div
+          <RevealMask>
+            <h2 className="text-4xl font-semibold tracking-tight text-zinc-50 md:text-5xl">
+              Meet the companion your business needs
+            </h2>
+          </RevealMask>
+          <motion.div
+            key={animate ? "motion" : "still"}
             role="group"
             aria-label="Glam Team Facing"
             className="mt-6 flex flex-wrap gap-2 md:w-2/3"
+            initial={animate ? "hidden" : false}
+            whileInView={animate ? "show" : undefined}
+            viewport={revealViewport}
+            variants={
+              animate
+                ? {
+                    hidden: {},
+                    show: { transition: { staggerChildren: 0.045, delayChildren: 0.16 } },
+                  }
+                : undefined
+            }
           >
             {teamFeatures.map((feature) => {
               const active = feature.id === selected.id;
               return (
-                <button
+                <motion.button
                   key={feature.id}
                   type="button"
                   aria-pressed={active}
                   onClick={() => setSelectedId(feature.id)}
+                  variants={
+                    animate
+                      ? {
+                          hidden: { opacity: 0, y: 12, scale: 0.92 },
+                          show: {
+                            opacity: 1,
+                            y: 0,
+                            scale: 1,
+                            transition: { duration: 0.45, ease: revealEase },
+                          },
+                        }
+                      : undefined
+                  }
                   className="inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 >
                   <LiquidGlass
@@ -110,40 +159,51 @@ export function LandingSolution() {
                   >
                     {feature.label}
                   </LiquidGlass>
-                </button>
+                </motion.button>
               );
             })}
-          </div>
-          <div
-            aria-live="polite"
+          </motion.div>
+          <FadeRise
+            delay={0.28}
+            y={22}
             className="mt-8 rounded-2xl bg-black/25 p-5 ring-1 ring-white/10 md:mt-auto md:mb-16 md:w-2/3 md:p-6"
           >
-            <p className="text-xl font-semibold tracking-tight text-zinc-50 md:text-2xl">
-              {selected.title}
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-zinc-400 md:text-base">
-              {selected.description}
-            </p>
-          </div>
+            <div aria-live="polite">
+              <p className="text-xl font-semibold tracking-tight text-zinc-50 md:text-2xl">
+                {selected.title}
+              </p>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-400 md:text-base">
+                {selected.description}
+              </p>
+            </div>
+          </FadeRise>
         </div>
 
-        <div className="flex items-center justify-center">
-          <Device
-            finish="black"
-            screenColor="#0b0609"
-            shadowColor="#14040c"
-            width="min(22rem, 78vw, calc((100svh - 10rem) / 2.092))"
-            rotateX={0}
-            rotateY={0}
-            rotateZ={0}
-            float={0}
-            drag={false}
-            interactive={false}
-            enableRotate={false}
-            enableParallax={false}
-            intro={false}
-            island={false}
+        <div className="flex items-center justify-center [perspective:1400px]">
+          <motion.div
+            key={animate ? "motion" : "still"}
+            style={
+              animate
+                ? { y: phoneY, rotateY: phoneRotateY, scale: phoneScale, opacity: phoneOpacity }
+                : undefined
+            }
           >
+            <Device
+              finish="black"
+              screenColor="#0b0609"
+              shadowColor="#14040c"
+              width="min(22rem, 78vw, calc((100svh - 10rem) / 2.092))"
+              rotateX={0}
+              rotateY={0}
+              rotateZ={0}
+              float={0}
+              drag={false}
+              interactive={false}
+              enableRotate={false}
+              enableParallax={false}
+              intro={false}
+              island={false}
+            >
               {selected.src ? (
                 <video
                   key={selected.id}
@@ -164,6 +224,7 @@ export function LandingSolution() {
                 </div>
               )}
             </Device>
+          </motion.div>
         </div>
       </div>
     </section>

@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import {
   IconCalendar,
@@ -9,6 +11,7 @@ import {
   IconUser,
 } from "@tabler/icons-react";
 
+import { FadeRise, RevealMask } from "@/components/landing/landing-reveal";
 import { cn } from "@/lib/utils";
 
 const cardClassName = "rounded-[1.6rem] bg-black/30 px-4 py-8 ring-1 ring-white/10 sm:px-5 sm:py-10";
@@ -142,21 +145,35 @@ export function LandingBenefits() {
       <div className="mx-auto flex max-w-6xl flex-col gap-12">
         <div className="grid grid-cols-1 gap-5 md:grid-cols-12 md:gap-x-8">
           <div className="flex flex-col gap-5 md:col-span-7 md:col-start-6">
-            <h2 className="text-left text-4xl font-medium leading-[1.15] tracking-tight text-zinc-50 md:text-6xl">
-              Everything your business needs to run, all in one place.
-            </h2>
-            <p className="text-left text-base leading-relaxed text-zinc-400 md:text-lg">
-              Bridalync replaces scattered chats, spreadsheets, and manual admin with one platform built for galm teams. Manage your bookings, availability, quotations, and payments seamlessly, while keeping every client interaction organised from the first enquiry to the final appointment.
-            </p>
+            <RevealMask>
+              <h2 className="text-left text-4xl font-medium leading-[1.15] tracking-tight text-zinc-50 md:text-6xl">
+                Everything your business needs to run, all in one place.
+              </h2>
+            </RevealMask>
+            <FadeRise delay={0.12} y={16}>
+              <p className="text-left text-base leading-relaxed text-zinc-400 md:text-lg">
+                Bridalync replaces scattered chats, spreadsheets, and manual admin with one platform built for galm teams. Manage your bookings, availability, quotations, and payments seamlessly, while keeping every client interaction organised from the first enquiry to the final appointment.
+              </p>
+            </FadeRise>
           </div>
         </div>
         <div className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 xl:grid-cols-4">
-          {features.map((feature) => (
+          {features.map((feature, index) => (
             <div key={feature.lead} className="row-span-2 grid min-w-0 grid-rows-subgrid gap-y-4">
-              <div className={cardClassName}>{feature.panel}</div>
-              <p className="text-base leading-relaxed text-zinc-400">
-                <span className="font-semibold text-zinc-50">{feature.lead}</span> {feature.body}
-              </p>
+              <FadeRise
+                delay={index * 0.08}
+                y={52}
+                scale={0.94}
+                rotate={index % 2 === 0 ? 2.5 : -2.5}
+                className="origin-bottom"
+              >
+                <div className={cardClassName}>{feature.panel}</div>
+              </FadeRise>
+              <FadeRise delay={0.16 + index * 0.08} y={18}>
+                <p className="text-base leading-relaxed text-zinc-400">
+                  <span className="font-semibold text-zinc-50">{feature.lead}</span> {feature.body}
+                </p>
+              </FadeRise>
             </div>
           ))}
         </div>
