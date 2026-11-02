@@ -67,7 +67,7 @@ export function LandingHero() {
           <div className="flex flex-col items-start justify-center gap-4 px-4 py-12 md:py-20 md:pr-12 md:pl-[max(2rem,calc((200%-72rem)/2+2rem))]">
             <div className={cn(fadeRise, "flex flex-col gap-3 sm:gap-4")}>
               <h1 className="font-serif text-6xl leading-none tracking-tight text-rose-200 italic sm:text-7xl">
-                BRIDALYNC
+                Bridalync
               </h1>
               {/* <p className="text-balance text-3xl font-semibold leading-tight tracking-tight text-zinc-50 sm:text-4xl">
                 All in one app for glam teams

@@ -1,12 +1,12 @@
 "use client";
 
 import { CheckIcon, EyeIcon, EyeOffIcon } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { AnimatedFlow } from "@/components/animated-flow";
-import { Button } from "@/components/ui/button";
+import { LandingLogo } from "@/components/landing/landing-logo";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { LiquidGlass } from "@/components/ui/liquid-glass";
 import { cn } from "@/lib/utils";
 import { signupPasswordSchema } from "@/schemas/auth";
 import {
@@ -32,11 +33,26 @@ type AuthTab = "login" | "signup";
 type SignupStep = "credentials" | "verify-email";
 type LoginStep = "credentials" | "forgot-email" | "forgot-reset";
 
-const inputClassName = cn(
-  "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground",
-  "placeholder:text-muted-foreground",
-  "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
+const SatinRidges = dynamic(
+  () => import("@/components/satin-ridges").then((mod) => mod.SatinRidges),
+  { ssr: false }
 );
+
+const PAGE_BG = "#230b17";
+
+const GLASS_SHADOW =
+  "shadow-[0_10px_40px_rgb(0_0_0/0.18),inset_0_1px_0_rgb(255_255_255/0.45)]";
+
+const inputClassName = cn(
+  "h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-base text-white",
+  "placeholder:text-white/40",
+  "outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+);
+
+const labelClassName = "text-sm font-medium text-zinc-200";
+
+const quietLinkClassName =
+  "text-sm text-zinc-400 underline decoration-zinc-500 underline-offset-4 transition-colors hover:text-white disabled:opacity-50";
 
 const BRAND_POINTS = [
   "Share one booking link with your clients",
@@ -44,40 +60,29 @@ const BRAND_POINTS = [
   "Approve requests and keep track of every session",
 ];
 
-/** Wide screens: brand panel left of the form. */
+/** Wide screens: brand panel left of the form, over the shared satin background. */
 function AuthBrandPanel({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative w-[45%] max-w-2xl shrink-0 flex-col justify-between overflow-hidden p-12",
+        "relative w-1/2 max-w-3xl shrink-0 flex-col p-12 xl:p-16",
         className
       )}
     >
-      <AnimatedFlow
-        variant="blush"
-        flowSpeed={0.9}
-        distortionWarp={1.4}
-        filmGrain={0.25}
-        rotationAngle={120}
-        className="pointer-events-none absolute inset-0 min-h-0"
-      />
-      <Link
-        href="/"
-        className="relative font-serif text-3xl text-rose-900 dark:text-rose-300"
-      >
-        Bridalync
-      </Link>
-      <div className="relative flex max-w-md flex-col gap-6">
-        <p className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-          Bookings, payments and clients in one place.
-        </p>
+      <LandingLogo variant="light" />
+      <div className="flex max-w-lg flex-1 flex-col justify-center gap-8">
+        <div className="flex flex-col gap-4">
+          <p className="font-serif text-6xl leading-none tracking-tight text-rose-200 italic xl:text-7xl [text-shadow:0_2px_24px_rgb(35_11_23/0.45)]">
+            Bridalync
+          </p>
+          <p className="max-w-md text-lg leading-relaxed text-zinc-300 [text-shadow:0_1px_12px_rgb(35_11_23/0.4)]">
+            Bookings, payments and clients in one place.
+          </p>
+        </div>
         <ul className="flex flex-col gap-3">
           {BRAND_POINTS.map((point) => (
-            <li
-              key={point}
-              className="flex items-center gap-3 text-sm text-zinc-700 dark:text-zinc-300"
-            >
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/50 text-rose-900 ring-1 ring-white/70 backdrop-blur-sm dark:bg-white/10 dark:text-rose-300 dark:ring-white/15">
+            <li key={point} className="flex items-center gap-3 text-sm text-zinc-200">
+              <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-white/10 text-rose-200 ring-1 ring-white/25">
                 <CheckIcon className="size-3.5" />
               </span>
               {point}
@@ -86,6 +91,33 @@ function AuthBrandPanel({ className }: { className?: string }) {
         </ul>
       </div>
     </div>
+  );
+}
+
+function GlassSubmit({
+  disabled,
+  children,
+}: {
+  disabled?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="submit"
+      disabled={disabled}
+      className="mt-1 block w-full rounded-full disabled:cursor-not-allowed disabled:opacity-60"
+    >
+      <LiquidGlass
+        tint={0.32}
+        className={cn(
+          GLASS_SHADOW,
+          "w-full text-white ring-1 ring-white/40 transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98] motion-reduce:transition-none motion-reduce:hover:scale-100"
+        )}
+        contentClassName="flex w-full items-center justify-center px-7 py-3 text-sm font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
+      >
+        {children}
+      </LiquidGlass>
+    </button>
   );
 }
 
@@ -108,7 +140,7 @@ function PasswordField({
 
   return (
     <label className="flex flex-col gap-1.5">
-      <span className="text-sm font-medium text-foreground">{label}</span>
+      <span className={labelClassName}>{label}</span>
       <div className="relative">
         <input
           type={visible ? "text" : "password"}
@@ -123,7 +155,7 @@ function PasswordField({
         <button
           type="button"
           onClick={() => setVisible((current) => !current)}
-          className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:text-foreground"
+          className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-white/50 transition-colors hover:text-white"
           aria-label={visible ? "Hide password" : "Show password"}
           aria-pressed={visible}
         >
@@ -135,7 +167,7 @@ function PasswordField({
         </button>
       </div>
       {hint ? (
-        <span className="text-xs text-muted-foreground">{hint}</span>
+        <span className="text-xs text-zinc-400">{hint}</span>
       ) : null}
     </label>
   );
@@ -232,6 +264,16 @@ export default function AuthPage() {
   const [betaBlockedMessage, setBetaBlockedMessage] = useState(
     BETA_NOT_ALLOWED_MESSAGE
   );
+
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("dark");
+    root.style.colorScheme = "dark";
+    return () => {
+      root.classList.remove("dark");
+      root.style.colorScheme = "";
+    };
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -466,374 +508,382 @@ export default function AuthPage() {
   }
 
   return (
-    <div className="@container/auth flex min-h-0 flex-1 bg-zinc-50 dark:bg-zinc-950">
-      <AuthBrandPanel className="hidden @4xl/auth:flex" />
-      <div className="relative flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto px-6 pb-16 pt-10">
-        {/* <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={isLoggingOut}
-          onClick={() => void handleLogout()}
-          className="absolute right-4 top-4 h-8 px-2 text-xs text-muted-foreground"
-        >
-          {isLoggingOut ? "Logging out…" : "Log out"}
-        </Button> */}
-        <div className="flex w-full max-w-md flex-col items-center @4xl/auth:my-auto">
-          <p className="mb-2 text-sm font-medium text-primary @4xl/auth:hidden">Bridalync</p>
-          <h1 className="mb-2 text-center text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {isVerifyStep
-              ? "Verify your email"
-              : isForgotEmailStep
-                ? "Reset your password"
-                : isForgotResetStep
-                  ? "Choose a new password"
-                  : activeTab === "login"
-                    ? "Welcome back"
-                    : "Create your account"}
-          </h1>
-          <p className="mb-8 text-center text-sm text-zinc-600 dark:text-zinc-400">
-            {isVerifyStep
-              ? `We sent a 6-digit code to ${email}. Enter it below to finish creating your account.`
-              : isForgotEmailStep
-                ? "Enter your email and we'll send you a 6-digit reset code."
-                : isForgotResetStep
-                  ? `We sent a 6-digit code to ${email}. Enter it below with your new password.`
-                  : activeTab === "login"
-                    ? "Log in to manage your bookings and clients."
-                    : "Sign up to share your booking link and grow your business."}
-          </p>
+    <div
+      className="dark @container/auth relative flex min-h-0 flex-1 overflow-hidden bg-[#230b17] text-zinc-100"
+      style={{ colorScheme: "dark" }}
+    >
+      <SatinRidges
+        colors={["#961b45", "#ff6653"]}
+        backgroundColor={PAGE_BG}
+        angle={-33}
+        scale={1.35}
+        depth={1}
+        warp={1}
+        gloss={0.4}
+        highlight={0.85}
+        lightAngle={-70}
+        sheen={0.65}
+        speed={1}
+        seed={12}
+        clickRipples={false}
+        dpr={1}
+        detail={0}
+        className="pointer-events-none absolute inset-0 h-full w-full"
+      />
+      <div className="relative z-10 flex min-h-0 min-w-0 flex-1">
+        <AuthBrandPanel className="hidden @4xl/auth:flex" />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto px-4 py-6 sm:px-8">
+          <div className="flex w-full max-w-md flex-col @4xl/auth:my-auto">
+            <div className="mb-8 @4xl/auth:hidden">
+              <LandingLogo variant="light" />
+            </div>
+            <div className="rounded-[1.75rem] bg-black/35 p-5 ring-1 ring-white/15 sm:p-6">
+              <h1 className="text-2xl font-medium tracking-tight text-white sm:text-3xl">
+                {isVerifyStep
+                  ? "Verify your email"
+                  : isForgotEmailStep
+                    ? "Reset your password"
+                    : isForgotResetStep
+                      ? "Choose a new password"
+                      : activeTab === "login"
+                        ? "Welcome back"
+                        : "Create your account"}
+              </h1>
+              <p className="mt-2 mb-5 text-sm leading-relaxed text-zinc-400">
+                {isVerifyStep
+                  ? `We sent a 6-digit code to ${email}. Enter it below to finish creating your account.`
+                  : isForgotEmailStep
+                    ? "Enter your email and we'll send you a 6-digit reset code."
+                    : isForgotResetStep
+                      ? `We sent a 6-digit code to ${email}. Enter it below with your new password.`
+                      : activeTab === "login"
+                        ? "Log in to manage your bookings and clients."
+                        : "Sign up to share your booking link and grow your business."}
+              </p>
 
-          {!SIGNUP_ENABLED && !isAlternateStep ? (
-            <p className="mb-8 rounded-xl border border-border bg-background px-4 py-3 text-center text-sm text-zinc-600 dark:text-zinc-400">
-              Signup is invite-only during closed beta.{" "}
-              <Link
-                href="/#waitlist"
-                className="font-medium text-foreground underline-offset-4 hover:underline"
+              {!SIGNUP_ENABLED && !isAlternateStep ? (
+                <p className="mb-8 rounded-2xl bg-black/40 px-4 py-3 text-center text-sm text-zinc-300 ring-1 ring-white/10">
+                  Signup is invite-only during closed beta.{" "}
+                  <Link href="/#waitlist" className={quietLinkClassName}>
+                    Join the waitlist
+                  </Link>{" "}
+                  and we&apos;ll reach out.
+                </p>
+              ) : null}
+
+              {!isAlternateStep && SIGNUP_ENABLED ? (
+                <p className="mb-4 text-xs text-zinc-400">
+                  Closed beta — signup is limited to invited emails.
+                </p>
+              ) : null}
+
+              {!isAlternateStep && SIGNUP_ENABLED && (
+                <div
+                  role="tablist"
+                  aria-label="Authentication mode"
+                  className="mb-5 flex w-full rounded-full bg-black/40 p-1 ring-1 ring-white/10"
+                >
+                  {(["login", "signup"] as const).map((value) => (
+                    <button
+                      key={value}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === value}
+                      className={cn(
+                        "flex-1 rounded-full py-2.5 text-sm font-medium transition-colors",
+                        activeTab === value
+                          ? "bg-white/15 text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.35)]"
+                          : "text-zinc-400 hover:text-white"
+                      )}
+                      onClick={() => {
+                        setTab(value);
+                        setSignupStep("credentials");
+                        setLoginStep("credentials");
+                        setError(null);
+                      }}
+                    >
+                      {value === "login" ? "Log in" : "Sign up"}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {!isAlternateStep && (
+                <>
+                  <div className="flex w-full flex-col gap-3">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        window.location.href = `/api/auth/google/start?intent=${
+                          activeTab === "signup" ? "signup" : "login"
+                        }`;
+                      }}
+                      className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-white/5 text-sm font-medium text-white ring-1 ring-white/20 transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <GoogleIcon />
+                      Continue with Google
+                    </button>
+                  </div>
+
+                  <p className="mt-3 text-xs leading-relaxed text-zinc-400">
+                    By continuing, you agree to our{" "}
+                    <span className="whitespace-nowrap">
+                      <a href={LEGAL_URLS.terms} className={quietLinkClassName}>
+                        Terms of Service
+                      </a>{" "}
+                      and{" "}
+                      <a href={LEGAL_URLS.privacy} className={quietLinkClassName}>
+                        Privacy Policy
+                      </a>
+                    </span>
+                    .
+                  </p>
+
+                  <div className="my-4 flex w-full items-center gap-3">
+                    <div className="h-px flex-1 bg-white/15" />
+                    <span className="text-xs text-zinc-500">or</span>
+                    <div className="h-px flex-1 bg-white/15" />
+                  </div>
+                </>
+              )}
+
+              <form
+                onSubmit={(event) => void handleSubmit(event)}
+                className="flex w-full flex-col gap-3"
+                aria-label={
+                  isVerifyStep
+                    ? "Verify email form"
+                    : isForgotEmailStep
+                      ? "Forgot password form"
+                      : isForgotResetStep
+                        ? "Reset password form"
+                        : activeTab === "login"
+                          ? "Log in form"
+                          : "Sign up form"
+                }
               >
-                Join the waitlist
-              </Link>{" "}
-              and we&apos;ll reach out.
-            </p>
-          ) : null}
+                {isVerifyStep || isForgotResetStep ? (
+                  <>
+                    <label className="flex flex-col gap-1.5">
+                      <span className={labelClassName}>
+                        {isForgotResetStep ? "Reset code" : "Verification code"}
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        placeholder="000000"
+                        value={verificationCode}
+                        onChange={(event) =>
+                          setVerificationCode(
+                            event.target.value.replace(/\D/g, "").slice(0, 6)
+                          )
+                        }
+                        className={cn(inputClassName, "text-center tracking-[0.3em]")}
+                        minLength={6}
+                        maxLength={6}
+                        pattern="\d{6}"
+                        required
+                      />
+                    </label>
 
-          {!isAlternateStep && SIGNUP_ENABLED ? (
-            <p className="mb-6 text-center text-xs text-zinc-500 dark:text-zinc-500">
-              Closed beta — signup is limited to invited emails.
-            </p>
-          ) : null}
+                    {isForgotResetStep ? (
+                      <PasswordField
+                        label="New password"
+                        value={password}
+                        onChange={setPassword}
+                        autoComplete="new-password"
+                        minLength={8}
+                        hint="At least 8 characters with uppercase, lowercase, a number, and a symbol."
+                      />
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <label className="flex flex-col gap-1.5">
+                      <span className={labelClassName}>Email</span>
+                      <input
+                        type="email"
+                        autoComplete="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        className={inputClassName}
+                        required
+                      />
+                    </label>
 
-          {!isAlternateStep && SIGNUP_ENABLED && (
-          <div
-            role="tablist"
-            aria-label="Authentication mode"
-            className="mb-8 flex w-full rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900"
-          >
-            {(["login", "signup"] as const).map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === value}
-                className={cn(
-                  "flex-1 rounded-lg py-2.5 text-sm font-medium transition-colors",
-                  activeTab === value
-                    ? "bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50"
-                    : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
+                    {!isForgotEmailStep ? (
+                      <PasswordField
+                        label="Password"
+                        value={password}
+                        onChange={setPassword}
+                        autoComplete={
+                          activeTab === "login" ? "current-password" : "new-password"
+                        }
+                        minLength={activeTab === "signup" ? 8 : 1}
+                        hint={
+                          activeTab === "signup"
+                            ? "At least 8 characters with uppercase, lowercase, a number, and a symbol."
+                            : undefined
+                        }
+                      />
+                    ) : null}
+
+                    {activeTab === "login" && loginStep === "credentials" ? (
+                      <div className="-mt-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLoginStep("forgot-email");
+                            setError(null);
+                          }}
+                          className={quietLinkClassName}
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
                 )}
-                onClick={() => {
-                  setTab(value);
-                  setSignupStep("credentials");
-                  setLoginStep("credentials");
-                  setError(null);
-                }}
-              >
-                {value === "login" ? "Log in" : "Sign up"}
-              </button>
-            ))}
+
+                {error && (
+                  <p className="text-center text-sm text-rose-300" role="alert">
+                    {error}
+                  </p>
+                )}
+
+                <GlassSubmit disabled={isSubmitting}>
+                  {isSubmitting
+                    ? isVerifyStep
+                      ? "Verifying..."
+                      : isForgotEmailStep
+                        ? "Sending code..."
+                        : isForgotResetStep
+                          ? "Resetting..."
+                          : activeTab === "login"
+                            ? "Logging in..."
+                            : "Sending code..."
+                    : isVerifyStep
+                      ? "Verify and create account"
+                      : isForgotEmailStep
+                        ? "Send reset code"
+                        : isForgotResetStep
+                          ? "Reset password"
+                          : activeTab === "login"
+                            ? "Log in"
+                            : "Continue"}
+                </GlassSubmit>
+
+                {isVerifyStep && (
+                  <div className="flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => void handleResendCode()}
+                      className={quietLinkClassName}
+                    >
+                      Resend code
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        setSignupStep("credentials");
+                        setVerificationCode("");
+                        setError(null);
+                      }}
+                      className={quietLinkClassName}
+                    >
+                      Back
+                    </button>
+                  </div>
+                )}
+
+                {isForgotResetStep && (
+                  <div className="flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => void handleResendResetCode()}
+                      className={quietLinkClassName}
+                    >
+                      Resend code
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        setLoginStep("forgot-email");
+                        setVerificationCode("");
+                        setPassword("");
+                        setError(null);
+                      }}
+                      className={quietLinkClassName}
+                    >
+                      Back
+                    </button>
+                  </div>
+                )}
+
+                {isForgotEmailStep && (
+                  <div className="flex flex-col items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => {
+                        setLoginStep("credentials");
+                        setError(null);
+                      }}
+                      className={quietLinkClassName}
+                    >
+                      Back to log in
+                    </button>
+                  </div>
+                )}
+              </form>
+            </div>
           </div>
-          )}
-
-          {!isAlternateStep && (
-          <>
-          <div className="flex w-full flex-col gap-3">
-            {/* <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="h-11 w-full rounded-xl bg-background text-sm font-medium"
-            >
-              <AppleIcon />
-              Continue with Apple
-            </Button> */}
-
-            <Button
-              type="button"
-              variant="outline"
-              size="lg"
-              className="h-11 w-full rounded-xl bg-background text-sm font-medium"
-              disabled={isSubmitting}
-              onClick={() => {
-                window.location.href = `/api/auth/google/start?intent=${
-                  activeTab === "signup" ? "signup" : "login"
-                }`;
-              }}
-            >
-              <GoogleIcon />
-              Continue with Google
-            </Button>
-          </div>
-
-          <p className="mt-3 text-center text-xs leading-relaxed text-muted-foreground">
-            By continuing, you agree to our{" "}
-            <a
-              href={LEGAL_URLS.terms}
-              className="underline underline-offset-2 hover:text-foreground"
-            >
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a
-              href={LEGAL_URLS.privacy}
-              className="underline underline-offset-2 hover:text-foreground"
-            >
-              Privacy Policy
-            </a>
-            .
-          </p>
-
-          <div className="my-6 flex w-full items-center gap-3">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-xs text-muted-foreground">or</span>
-            <div className="h-px flex-1 bg-border" />
-          </div>
-          </>
-          )}
-
-          <form
-            onSubmit={(event) => void handleSubmit(event)}
-            className="flex w-full flex-col gap-4"
-            aria-label={
-              isVerifyStep
-                ? "Verify email form"
-                : isForgotEmailStep
-                  ? "Forgot password form"
-                  : isForgotResetStep
-                    ? "Reset password form"
-                    : activeTab === "login"
-                      ? "Log in form"
-                      : "Sign up form"
-            }
-          >
-            {isVerifyStep || isForgotResetStep ? (
-              <>
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-sm font-medium text-foreground">
-                    {isForgotResetStep ? "Reset code" : "Verification code"}
-                  </span>
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    placeholder="000000"
-                    value={verificationCode}
-                    onChange={(event) =>
-                      setVerificationCode(
-                        event.target.value.replace(/\D/g, "").slice(0, 6)
-                      )
-                    }
-                    className={cn(inputClassName, "text-center tracking-[0.3em]")}
-                    minLength={6}
-                    maxLength={6}
-                    pattern="\d{6}"
-                    required
-                  />
-                </label>
-
-                {isForgotResetStep ? (
-                  <PasswordField
-                    label="New password"
-                    value={password}
-                    onChange={setPassword}
-                    autoComplete="new-password"
-                    minLength={8}
-                    hint="At least 8 characters with uppercase, lowercase, a number, and a symbol."
-                  />
-                ) : null}
-              </>
-            ) : (
-              <>
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-foreground">Email</span>
-              <input
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className={inputClassName}
-                required
-              />
-            </label>
-
-            {!isForgotEmailStep ? (
-            <PasswordField
-              label="Password"
-              value={password}
-              onChange={setPassword}
-              autoComplete={
-                activeTab === "login" ? "current-password" : "new-password"
-              }
-              minLength={activeTab === "signup" ? 8 : 1}
-              hint={
-                activeTab === "signup"
-                  ? "At least 8 characters with uppercase, lowercase, a number, and a symbol."
-                  : undefined
-              }
-            />
-            ) : null}
-
-            {activeTab === "login" && loginStep === "credentials" ? (
-              <div className="-mt-2 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setLoginStep("forgot-email");
-                    setError(null);
-                  }}
-                  className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-                >
-                  Forgot password?
-                </button>
-              </div>
-            ) : null}
-              </>
-            )}
-
-            {error && (
-              <p className="text-center text-sm text-destructive">{error}</p>
-            )}
-
-            <Button
-              type="submit"
-              size="lg"
-              disabled={isSubmitting}
-              className="mt-2 h-11 w-full rounded-xl bg-chart-4 text-sm text-white hover:bg-chart-4/90"
-            >
-              {isSubmitting
-                ? isVerifyStep
-                  ? "Verifying..."
-                  : isForgotEmailStep
-                    ? "Sending code..."
-                    : isForgotResetStep
-                      ? "Resetting..."
-                      : activeTab === "login"
-                        ? "Logging in..."
-                        : "Sending code..."
-                : isVerifyStep
-                  ? "Verify and create account"
-                  : isForgotEmailStep
-                    ? "Send reset code"
-                    : isForgotResetStep
-                      ? "Reset password"
-                      : activeTab === "login"
-                        ? "Log in"
-                        : "Continue"}
-            </Button>
-
-            {isVerifyStep && (
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => void handleResendCode()}
-                  className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
-                >
-                  Resend code
-                </button>
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => {
-                    setSignupStep("credentials");
-                    setVerificationCode("");
-                    setError(null);
-                  }}
-                  className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
-                >
-                  Back
-                </button>
-              </div>
-            )}
-
-            {isForgotResetStep && (
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => void handleResendResetCode()}
-                  className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
-                >
-                  Resend code
-                </button>
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => {
-                    setLoginStep("forgot-email");
-                    setVerificationCode("");
-                    setPassword("");
-                    setError(null);
-                  }}
-                  className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
-                >
-                  Back
-                </button>
-              </div>
-            )}
-
-            {isForgotEmailStep && (
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => {
-                    setLoginStep("credentials");
-                    setError(null);
-                  }}
-                  className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline disabled:opacity-50"
-                >
-                  Back to log in
-                </button>
-              </div>
-            )}
-          </form>
         </div>
       </div>
 
       <Dialog open={betaBlockedOpen} onOpenChange={setBetaBlockedOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base">
+        <DialogContent
+          className="gap-6 bg-[#230b17] p-8 text-white ring-white/15 sm:max-w-md [&_[data-slot=dialog-close]]:text-white [&_[data-slot=dialog-close]]:hover:bg-white/10"
+        >
+          <DialogHeader className="gap-2 pr-8">
+            <DialogTitle className="text-2xl font-semibold tracking-tight text-white">
               Not approved for closed beta
             </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
+            <DialogDescription className="text-base text-white/70">
               {betaBlockedMessage}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:justify-end">
-            <Button
+            <button
               type="button"
-              variant="outline"
               onClick={() => setBetaBlockedOpen(false)}
+              className="rounded-full px-4 py-2 text-sm font-medium text-white/80 ring-1 ring-white/20 transition-colors hover:bg-white/10"
             >
               Close
-            </Button>
-            <Button type="button" asChild>
-              <Link href="/#waitlist" onClick={() => setBetaBlockedOpen(false)}>
+            </button>
+            <Link
+              href="/#waitlist"
+              onClick={() => setBetaBlockedOpen(false)}
+              className="inline-flex rounded-full"
+            >
+              <LiquidGlass
+                tint={0.22}
+                className={cn(
+                  GLASS_SHADOW,
+                  "text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:hover:scale-100"
+                )}
+                contentClassName="flex items-center px-4 py-2 text-sm font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
+              >
                 Join waitlist
-              </Link>
-            </Button>
+              </LiquidGlass>
+            </Link>
           </DialogFooter>
         </DialogContent>
       </Dialog>
