@@ -41,6 +41,7 @@ const teamFeatures: Feature[] = [
     title: "Your day at a glance",
     description:
       "Today's sessions, booking requests, pending payments and recent activity, the moment you open the app.",
+    src: "/videos/dashboard.mp4",
   },
   {
     id: "payment",
@@ -48,6 +49,7 @@ const teamFeatures: Feature[] = [
     title: "Know what you've earned",
     description:
       "Take deposits and full payments online or by transfer, approve receipts, and see your revenue and outstanding balances.",
+      src: "/videos/payment.mp4",
   },
   {
     id: "travel-fee",
