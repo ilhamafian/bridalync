@@ -2,10 +2,9 @@
 
 import { useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
+import Image from "next/image";
 import { IconArrowRight } from "@tabler/icons-react";
 
-import { Device } from "@/components/device";
-import { LandingDashboardPreview } from "@/components/landing/landing-dashboard-preview";
 import { useOpenWaitlistDialog } from "@/components/landing/landing-waitlist-form";
 import { LiquidGlass } from "@/components/ui/liquid-glass";
 import { cn } from "@/lib/utils";
@@ -17,6 +16,9 @@ const SatinRidges = dynamic(
 
 const HERO_BG = "#230b17";
 const MD_QUERY = "(min-width: 768px)";
+/** Same layout width the live phone used. The asset includes the tilt and shadow around that box. */
+const PHONE_FRAME = "min(22rem, 82vw, calc((100svh - 6rem) / 2.092))";
+const PHONE_IMAGE_SCALE = 1175 / 1056;
 
 const GLASS_SHADOW =
   "shadow-[0_10px_40px_rgb(0_0_0/0.18),inset_0_1px_0_rgb(255_255_255/0.45)]";
@@ -43,26 +45,24 @@ export function LandingHero() {
         className="relative isolate w-full overflow-hidden"
         style={{ backgroundColor: HERO_BG }}
       >
-        {desktop ? (
-          <SatinRidges
-            colors={["#961b45", "#ff6653"]}
-            backgroundColor={HERO_BG}
-            angle={-33}
-            scale={1.35}
-            depth={1}
-            warp={1}
-            gloss={0.4}
-            highlight={0.85}
-            lightAngle={-70}
-            sheen={0.65}
-            speed={1}
-            seed={12}
-            clickRipples={false}
-            dpr={1}
-            detail={0}
-            className="absolute inset-0 h-full w-full"
-          />
-        ) : null}
+        <SatinRidges
+          colors={["#961b45", "#ff6653"]}
+          backgroundColor={HERO_BG}
+          angle={-33}
+          scale={1.35}
+          depth={1}
+          warp={1}
+          gloss={0.4}
+          highlight={0.85}
+          lightAngle={-70}
+          sheen={0.65}
+          speed={1}
+          seed={12}
+          clickRipples={false}
+          dpr={1}
+          detail={0}
+          className="absolute inset-0 h-full w-full"
+        />
         <div className="relative z-10 grid min-h-dvh grid-rows-[auto_minmax(18rem,1fr)] pt-16 md:grid-cols-2 md:grid-rows-[1fr]">
           <div className="flex flex-col items-start justify-center gap-4 px-4 py-12 md:py-20 md:pr-12 md:pl-[max(2rem,calc((200%-72rem)/2+2rem))]">
             <div className={cn(fadeRise, "flex flex-col gap-3 sm:gap-4")}>
@@ -112,19 +112,16 @@ export function LandingHero() {
           </div>
 
           <div className="flex w-full items-center justify-center px-4 py-8 md:h-full md:min-h-0 md:px-8 md:py-6 md:pr-[max(2rem,calc((200%-72rem)/2+2rem))]">
-            <Device
-              finish="black"
-              screenColor="#0b0609"
-              shadowColor="#14040c"
-              width="min(22rem, 82vw, calc((100svh - 6rem) / 2.092))"
-              rotateX={0}
-              rotateY={-9}
-              rotateZ={0}
-              float={desktop ? 0.35 : 0}
-              island
-            >
-              <LandingDashboardPreview liveBackground={desktop} />
-            </Device>
+            <Image
+              src="/landing/hero-phone.webp"
+              alt="Sample Bridalync dashboard with today's bookings, a booking request, and recent activity"
+              width={1175}
+              height={2320}
+              priority
+              sizes="(max-width: 768px) 90vw, 25rem"
+              className="h-auto max-w-full"
+              style={{ width: `calc((${PHONE_FRAME}) * ${PHONE_IMAGE_SCALE})` }}
+            />
           </div>
         </div>
       </div>
