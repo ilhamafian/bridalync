@@ -150,11 +150,11 @@ export function LandingBenefits() {
                 Everything your business needs to run, all in one place.
               </h2>
             </RevealMask>
-            <FadeRise delay={0.12} y={16}>
+            {/* <FadeRise delay={0.12} y={16}>
               <p className="text-left text-base leading-relaxed text-zinc-400 md:text-lg">
                 Bridalync replaces scattered chats, spreadsheets, and manual admin with one platform built for galm teams. Manage your bookings, availability, quotations, and payments seamlessly, while keeping every client interaction organised from the first enquiry to the final appointment.
               </p>
-            </FadeRise>
+            </FadeRise> */}
           </div>
         </div>
         <div className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 xl:grid-cols-4">
