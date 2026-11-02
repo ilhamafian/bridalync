@@ -31,13 +31,13 @@ export function LandingFooter() {
   return (
     <footer
       id="about"
-      className="bg-landing-footer px-6 py-14 text-landing-cream-text lg:px-8 lg:py-16"
+      className="bg-landing-footer px-6 py-16 text-landing-cream-text lg:px-8 lg:py-20"
     >
       <div className="mx-auto max-w-6xl">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.2fr_repeat(3,1fr)] lg:gap-8">
+        <div className="flex flex-col gap-12 md:flex-row md:items-start md:justify-between">
           <div>
             <LandingLogo variant="light" />
-            <p className="mt-4 font-serif text-sm leading-relaxed text-landing-cream-text/70">
+            <p className="mt-4 max-w-xs font-serif text-sm leading-relaxed text-landing-cream-text/70">
               Bridalync helps bridal hair and makeup artists manage bookings,
               availability, clients, and payments in one place.
             </p>
@@ -47,25 +47,30 @@ export function LandingFooter() {
             </p>
           </div>
 
-          {Object.entries(footerLinks).map(([heading, links]) => (
-            <div key={heading}>
-              <h3 className="font-serif text-sm font-semibold tracking-wide text-landing-cream-text/90 uppercase">
-                {heading}
-              </h3>
-              <ul className="mt-4 space-y-2.5">
-                {links.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="font-serif text-base text-landing-cream-text/70 transition-colors hover:text-landing-cream-text"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <nav
+            aria-label="Footer"
+            className="grid grid-cols-2 gap-x-12 gap-y-10 sm:grid-cols-3 sm:gap-x-16"
+          >
+            {Object.entries(footerLinks).map(([heading, links]) => (
+              <div key={heading}>
+                <h2 className="font-serif text-xs font-medium tracking-[0.16em] text-landing-cream-text/60 uppercase">
+                  {heading}
+                </h2>
+                <ul className="mt-4 space-y-3">
+                  {links.map((link) => (
+                    <li key={link.label}>
+                      <a
+                        href={link.href}
+                        className="font-serif text-sm text-landing-cream-text/90 transition-colors hover:text-landing-cream-text"
+                      >
+                        {link.label}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </nav>
         </div>
 
         <div className="mt-12 flex items-center justify-between border-t border-landing-cream-text/10 pt-8">
