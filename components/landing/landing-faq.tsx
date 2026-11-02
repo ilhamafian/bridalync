@@ -1,11 +1,9 @@
-import { landingGlassClassName } from "@/components/landing/glass";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import { cn } from "@/lib/utils";
+"use client";
+
+import { ChevronRight, Plus } from "lucide-react";
+import { Accordion } from "radix-ui";
+
+import { SITE_CONTACT_EMAIL } from "@/lib/site";
 
 const faqs = [
   {
@@ -37,31 +35,55 @@ const faqs = [
 
 export function LandingFaq() {
   return (
-    <section id="faq" className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24">
-      <div className="mx-auto flex max-w-2xl flex-col gap-8">
-        <h2 className="text-center text-3xl font-semibold tracking-tight text-zinc-50 md:text-4xl">
-          FAQ
-        </h2>
-        <Accordion
+    <section id="faq" className="scroll-mt-24 px-4 py-16 md:px-8 md:py-28">
+      <div className="mx-auto grid max-w-6xl items-start gap-12 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-x-20">
+        <div>
+          {/* <p className="inline-flex items-center gap-0.5 text-sm font-medium text-blue-400">
+            Questions
+            <ChevronRight className="size-3.5" aria-hidden />
+          </p> */}
+          <h2 className="mt-6 max-w-[14ch] text-4xl font-medium leading-[1.05] tracking-tight text-white sm:text-5xl lg:max-w-[12ch] lg:text-[3.25rem]">
+            Everything people ask before joining.
+          </h2>
+          <p className="mt-6 max-w-xs text-base leading-relaxed text-zinc-400">
+            Something missing?{" "}
+            <a
+              href={`mailto:${SITE_CONTACT_EMAIL}`}
+              className="underline decoration-zinc-500 underline-offset-4 transition-colors hover:text-zinc-200"
+            >
+              Write to us
+            </a>{" "}
+            and a human answers within a day.
+          </p>
+        </div>
+
+        <Accordion.Root
           type="single"
           collapsible
-          className={cn(landingGlassClassName, "border-white/15")}
+          defaultValue="faq-0"
+          className="border-t border-white/15 lg:mt-12"
         >
           {faqs.map((faq, index) => (
-            <AccordionItem
+            <Accordion.Item
               key={faq.question}
               value={`faq-${index}`}
-              className="border-white/15 px-4 data-open:bg-white/10 md:px-6"
+              className="border-b border-white/15"
             >
-              <AccordionTrigger className="py-4 text-sm text-zinc-50 hover:no-underline md:text-base">
-                {faq.question}
-              </AccordionTrigger>
-              <AccordionContent className="text-sm leading-relaxed text-zinc-300">
-                {faq.answer}
-              </AccordionContent>
-            </AccordionItem>
+              <Accordion.Header>
+                <Accordion.Trigger className="group flex w-full items-start justify-between gap-6 py-5 text-left text-base font-medium text-zinc-50 outline-none transition-colors hover:text-white focus-visible:ring-2 focus-visible:ring-white/30">
+                  {faq.question}
+                  <Plus
+                    aria-hidden
+                    className="mt-0.5 size-4 shrink-0 text-zinc-300 transition-transform duration-300 ease-out group-data-[state=open]:rotate-45 motion-reduce:transition-none"
+                  />
+                </Accordion.Trigger>
+              </Accordion.Header>
+              <Accordion.Content className="overflow-hidden text-[15px] leading-relaxed text-zinc-400 data-closed:animate-faq-up data-open:animate-faq-down motion-reduce:animate-none">
+                <p className="max-w-xl pb-5 pr-10">{faq.answer}</p>
+              </Accordion.Content>
+            </Accordion.Item>
           ))}
-        </Accordion>
+        </Accordion.Root>
       </div>
     </section>
   );
