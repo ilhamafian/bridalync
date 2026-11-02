@@ -15,7 +15,7 @@ const faqs = [
   {
     question: "Who is it for?",
     answer:
-      "Makeup artists, hijab stylists, hairstylists, and bride assistants who take bridal bookings. You set your events, styles, travel fees, and the dates you can work.",
+      "Makeup artists, groom stylists, hijab stylists, hairstylists, and bride assistants who take bridal bookings. You set your events, styles, travel fees, and the dates you can work.",
   },
   {
     question: "How do clients book me?",

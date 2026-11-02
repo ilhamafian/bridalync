@@ -11,6 +11,7 @@ import {
   IconCreditCard,
   IconEye,
   IconEyeOff,
+  IconMan,
   IconPackage,
   IconPlus,
   IconScissors,
@@ -116,6 +117,7 @@ const textareaClassName = cn(
 );
 const ROLE_OPTIONS: { value: UserRole; icon: Icon }[] = [
   { value: "makeupartist", icon: IconBrush },
+  { value: "groomstylist", icon: IconMan },
   { value: "hijabstylist", icon: IconWoman },
   { value: "hairstylist", icon: IconScissors },
   { value: "brideassistant", icon: IconUserHeart },
@@ -760,7 +762,7 @@ export function SettingsManager({
                 description={
                   styleTerms.kind === "look"
                     ? "Recommended for hijab stylists"
-                    : "Recommended for hijab stylists and hairstylists"
+                    : "Recommended for hijab stylists, groom stylists, and hairstylists"
                 }
               />
               <RadioGroupItem value="style" aria-label={`By ${styleTerms.one}`} />

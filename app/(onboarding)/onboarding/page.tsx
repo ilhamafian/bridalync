@@ -7,6 +7,7 @@ import {
   IconBuildingBank,
   IconCheck,
   IconCreditCard,
+  IconMan,
   IconReceipt,
   IconScissors,
   IconUserHeart,
@@ -124,6 +125,7 @@ const textareaClassName = cn(
 
 const ROLE_ICONS: Record<UserRole, Icon> = {
   makeupartist: IconBrush,
+  groomstylist: IconMan,
   hijabstylist: IconWoman,
   hairstylist: IconScissors,
   brideassistant: IconUserHeart,

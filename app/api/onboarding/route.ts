@@ -66,6 +66,14 @@ const HAIR_PACKAGES = [
   { name: "Trial Hair", order: 4 },
 ] as const;
 
+const GROOM_PACKAGES = [
+  { name: "Nikah", order: 0 },
+  { name: "Sanding", order: 1 },
+  { name: "Tunang", order: 2 },
+  { name: "Event", order: 3 },
+  { name: "Trial Groom", order: 4 },
+] as const;
+
 const STYLES = [
   {
     name: "SHAWL",
@@ -220,11 +228,15 @@ async function ensureDefaultCatalog(
     );
   } else {
     const hairstylist = role === "hairstylist";
+    const groomstylist = role === "groomstylist";
     await Promise.all([
-      seedPackages(userId, hairstylist ? HAIR_PACKAGES : HS_PACKAGES),
+      seedPackages(
+        userId,
+        hairstylist ? HAIR_PACKAGES : groomstylist ? GROOM_PACKAGES : HS_PACKAGES
+      ),
       // Makeup artists start with no looks. Hijab stylists and hairstylists
-      // each get their own default styles.
-      usesLooks(role)
+      // each get their own default styles. Groom stylists start with none.
+      usesLooks(role) || groomstylist
         ? Promise.resolve()
         : seedStyles(userId, hairstylist ? HAIR_STYLES : STYLES),
       seedAddOns(userId),

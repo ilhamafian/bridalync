@@ -13,6 +13,7 @@ export const en: Locale = {
   loadingProfile: "Loading profile…",
   profileNotFound: "Profile not found.",
   hijabStylist: "Hijab Stylist",
+  groomStylist: "Groom Stylist",
   hairStylist: "Hairstylist",
   makeupArtist: "Makeup Artist",
   brideAssistant: "Bride Assistant",

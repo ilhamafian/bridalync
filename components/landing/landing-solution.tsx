@@ -52,13 +52,6 @@ const teamFeatures: Feature[] = [
     src: "/videos/payment_2.mp4",
   },
   {
-    id: "travel-fee",
-    label: "Travel Fee",
-    title: "Travel fees, worked out",
-    description:
-      "Charge by distance or by state. Every quotation adds the right travel fee for the venue automatically.",
-  },
-  {
     id: "hot-dates",
     label: "Hot Dates",
     title: "Price your peak dates",
@@ -76,10 +69,11 @@ const teamFeatures: Feature[] = [
   },
   {
     id: "team-booking",
-    label: "Booking",
+    label: "Manual Booking",
     title: "Add bookings yourself",
     description:
       "Got a booking from WhatsApp or a walk-in? Add it in seconds and send the client a payment link.",
+    src: "/videos/manual_booking.mp4",
   },
 ];
 

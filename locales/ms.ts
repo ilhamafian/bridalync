@@ -11,6 +11,7 @@ export const ms = {
   loadingProfile: "Memuatkan profil…",
   profileNotFound: "Profil tidak dijumpai.",
   hijabStylist: "Hijab Stylist",
+  groomStylist: "Groom Stylist",
   hairStylist: "Hairstylist",
   makeupArtist: "Makeup Artist",
   brideAssistant: "Bride Assistant",
