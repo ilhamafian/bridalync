@@ -21,6 +21,7 @@ import { BookingSummaryPanel } from "@/components/booking/BookingSummaryPanel";
 import { usePublicReviews } from "@/hooks/use-public-reviews";
 import { ManualPaymentStep } from "@/components/booking/ManualPaymentStep";
 import { BookingLoadingState } from "@/components/booking/BookingLoadingState";
+import Preloader from "@/components/preloader";
 import { AnimatedFlow } from "@/components/animated-flow";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { useLocale } from "@/components/LocaleProvider";
@@ -697,6 +698,7 @@ export default function ClientPage() {
   const { t, format, locale, dateFnsLocale } = useLocale();
   const client = params.client as string;
   const [loading, setLoading] = useState(true);
+  const [introHold, setIntroHold] = useState(true);
   const [step, setStep] = useState<BookingStep>("intro");
   const [clientPackages, setClientPackages] = useState<ClientPackage[]>([]);
   const [styles, setStyles] = useState<ClientStyleCategory[]>([]);
@@ -1249,6 +1251,12 @@ export default function ClientPage() {
     setSelectedAddOnIds([]);
     setTermsAccepted(false);
   }
+
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timeoutId = window.setTimeout(() => setIntroHold(false), reduced ? 0 : 1100);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -1862,6 +1870,15 @@ export default function ClientPage() {
   }
 
   return (
+    <Preloader
+      loading={loading || introHold}
+      variant="curtain"
+      position="fixed"
+      duration={1400}
+      respectReducedMotion
+      ariaLabel={t.loadingProfile}
+      className="flex h-full min-h-0 w-full flex-1 flex-col"
+    >
     <div className="@container/client relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
       <Suspense fallback={null}>
         <ProfilePreviewBanner />
@@ -2864,5 +2881,6 @@ export default function ClientPage() {
         />
       ) : null}
     </div>
+    </Preloader>
   );
 }

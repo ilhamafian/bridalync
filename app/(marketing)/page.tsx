@@ -4,6 +4,7 @@ import { LandingHero } from "@/components/landing/landing-hero";
 import { LandingHomeFooter } from "@/components/landing/landing-home-footer";
 import { LandingNav } from "@/components/landing/landing-nav";
 import { LandingPain } from "@/components/landing/landing-pain";
+import { LandingPreloader } from "@/components/landing/landing-preloader";
 import { LandingSmoothScroll } from "@/components/landing/landing-smooth-scroll";
 import { LandingSolution } from "@/components/landing/landing-solution";
 import { LandingWaitlist } from "@/components/landing/landing-waitlist";
@@ -15,25 +16,27 @@ export const viewport = {
 
 export default function LandingPage() {
   return (
-    <WaitlistDialogProvider>
-      <LandingSmoothScroll>
-        <div
-          id="top"
-          className="dark min-h-dvh bg-[#230b17] text-zinc-100"
-          style={{ colorScheme: "dark" }}
-        >
-          <LandingNav />
-          <main>
-            <LandingHero />
-            <LandingPain />
-            <LandingBenefits />
-            <LandingSolution />
-            <LandingWaitlist />
-            <LandingFaq />
-          </main>
-          <LandingHomeFooter />
-        </div>
-      </LandingSmoothScroll>
-    </WaitlistDialogProvider>
+    <LandingPreloader>
+      <WaitlistDialogProvider>
+        <LandingSmoothScroll>
+          <div
+            id="top"
+            className="dark min-h-dvh bg-[#230b17] text-zinc-100"
+            style={{ colorScheme: "dark" }}
+          >
+            <LandingNav />
+            <main>
+              <LandingHero />
+              <LandingPain />
+              <LandingBenefits />
+              <LandingSolution />
+              <LandingWaitlist />
+              <LandingFaq />
+            </main>
+            <LandingHomeFooter />
+          </div>
+        </LandingSmoothScroll>
+      </WaitlistDialogProvider>
+    </LandingPreloader>
   );
 }
