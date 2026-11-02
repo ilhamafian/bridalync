@@ -141,6 +141,14 @@ const teamFeatures: Feature[] = [
       "Got a booking from WhatsApp or a walk-in? Add it in seconds and send the client a payment link.",
     src: "/videos/manual_booking.mp4",
   },
+  {
+    id: "settings",
+    label: "Settings",
+    title: "Customize your business",
+    description:
+      "Set your business name, address, phone number, email, and more.",
+    src: "/videos/settings.mp4",
+  },
 ];
 
 export function LandingSolution() {
