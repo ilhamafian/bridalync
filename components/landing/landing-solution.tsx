@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { motion, useScroll, useTransform } from "motion/react";
 
 import { Device } from "@/components/device";
@@ -16,6 +16,72 @@ import { cn } from "@/lib/utils";
 
 const GLASS_SHADOW =
   "shadow-[0_10px_40px_rgb(0_0_0/0.18),inset_0_1px_0_rgb(255_255_255/0.45)]";
+
+function VideoProgress({
+  videoRef,
+}: {
+  videoRef: RefObject<HTMLVideoElement | null>;
+}) {
+  const barRef = useRef<HTMLDivElement>(null);
+  const fillRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    let frame = 0;
+    let shownElapsed = -1;
+    let shownDuration = -1;
+
+    const paint = () => {
+      const duration = Number.isFinite(video.duration) ? video.duration : 0;
+      const current = Number.isFinite(video.currentTime) ? video.currentTime : 0;
+      const ratio = duration > 0 ? Math.min(1, Math.max(0, current / duration)) : 0;
+      if (fillRef.current) fillRef.current.style.transform = `scaleX(${ratio})`;
+
+      const elapsedSecond = Math.floor(current);
+      const durationSecond = Math.max(0, Math.round(duration));
+      if (elapsedSecond !== shownElapsed) {
+        shownElapsed = elapsedSecond;
+        barRef.current?.setAttribute("aria-valuenow", String(elapsedSecond));
+      }
+      if (durationSecond !== shownDuration) {
+        shownDuration = durationSecond;
+        barRef.current?.setAttribute("aria-valuemax", String(durationSecond));
+      }
+    };
+
+    const tick = () => {
+      paint();
+      frame = requestAnimationFrame(tick);
+    };
+
+    video.addEventListener("loadedmetadata", paint);
+    frame = requestAnimationFrame(tick);
+    return () => {
+      cancelAnimationFrame(frame);
+      video.removeEventListener("loadedmetadata", paint);
+    };
+  }, [videoRef]);
+
+  return (
+    <div
+      ref={barRef}
+      className="mt-5 h-1 overflow-hidden rounded-full bg-white/15"
+      role="progressbar"
+      aria-label="Video progress"
+      aria-valuemin={0}
+      aria-valuemax={0}
+      aria-valuenow={0}
+    >
+      <div
+        ref={fillRef}
+        className="h-full w-full origin-left bg-white"
+        style={{ transform: "scaleX(0)" }}
+      />
+    </div>
+  );
+}
 
 type Feature = {
   id: string;
@@ -91,6 +157,7 @@ export function LandingSolution() {
   const [selectedId, setSelectedId] = useState(teamFeatures[0].id);
   const selected =
     teamFeatures.find((feature) => feature.id === selectedId) ?? teamFeatures[0];
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   return (
     <section
@@ -174,6 +241,7 @@ export function LandingSolution() {
                 {selected.description}
               </p>
             </div>
+            {selected.src ? <VideoProgress key={selected.id} videoRef={videoRef} /> : null}
           </FadeRise>
         </div>
 
@@ -206,6 +274,7 @@ export function LandingSolution() {
                 <div className="absolute left-1/2 top-1/2 h-[95.5%] w-[95.5%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[10cqmin]">
                   <video
                     key={selected.id}
+                    ref={videoRef}
                     src={selected.src}
                     autoPlay
                     muted
