@@ -3,7 +3,11 @@
 import { useState } from "react";
 
 import { Device } from "@/components/device";
+import { LiquidGlass } from "@/components/ui/liquid-glass";
 import { cn } from "@/lib/utils";
+
+const GLASS_SHADOW =
+  "shadow-[0_10px_40px_rgb(0_0_0/0.18),inset_0_1px_0_rgb(255_255_255/0.45)]";
 
 type Feature = {
   id: string;
@@ -74,15 +78,15 @@ export function LandingSolution() {
 
   return (
     <section id="solution" className="scroll-mt-24 px-4 py-16 md:px-8 md:py-24">
-      <div className="mx-auto grid max-w-6xl items-stretch gap-8 md:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] md:gap-10">
+      <div className="mx-auto grid max-w-6xl items-stretch gap-8 md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] md:gap-10">
         <div className="flex flex-col">
           <h2 className="text-4xl font-semibold tracking-tight text-zinc-50 md:text-5xl">
-            Glam Team Facing
+            Meet the companion your business needs
           </h2>
           <div
             role="group"
             aria-label="Glam Team Facing"
-            className="mt-6 flex flex-wrap gap-2"
+            className="mt-6 flex flex-wrap gap-2 md:w-2/3"
           >
             {teamFeatures.map((feature) => {
               const active = feature.id === selected.id;
@@ -92,21 +96,27 @@ export function LandingSolution() {
                   type="button"
                   aria-pressed={active}
                   onClick={() => setSelectedId(feature.id)}
-                  className={cn(
-                    "rounded-lg px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40",
-                    active
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-white/10 text-zinc-200 ring-1 ring-white/15 hover:bg-white/15"
-                  )}
+                  className="inline-flex rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
                 >
-                  {feature.label}
+                  <LiquidGlass
+                    tint={active ? 0.32 : 0.16}
+                    radius={999}
+                    className={cn(
+                      GLASS_SHADOW,
+                      "text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:hover:scale-100",
+                      active && "ring-1 ring-white/70"
+                    )}
+                    contentClassName="whitespace-nowrap px-3 py-1.5 text-sm font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
+                  >
+                    {feature.label}
+                  </LiquidGlass>
                 </button>
               );
             })}
           </div>
           <div
             aria-live="polite"
-            className="mt-8 rounded-2xl bg-black/25 p-5 ring-1 ring-white/10 md:mt-auto md:p-6"
+            className="mt-8 rounded-2xl bg-black/25 p-5 ring-1 ring-white/10 md:mt-auto md:mb-16 md:w-2/3 md:p-6"
           >
             <p className="text-xl font-semibold tracking-tight text-zinc-50 md:text-2xl">
               {selected.title}
@@ -117,24 +127,23 @@ export function LandingSolution() {
           </div>
         </div>
 
-        <div className="flex items-center justify-center md:justify-start">
-          <div className="rounded-[2.75rem] bg-black/25 p-4 ring-1 ring-white/10 md:p-6">
-            <Device
-              finish="black"
-              screenColor="#0b0609"
-              shadowColor="#14040c"
-              width="min(24rem, 82vw)"
-              rotateX={0}
-              rotateY={0}
-              rotateZ={0}
-              float={0}
-              drag={false}
-              interactive={false}
-              enableRotate={false}
-              enableParallax={false}
-              intro={false}
-              island={false}
-            >
+        <div className="flex items-center justify-center">
+          <Device
+            finish="black"
+            screenColor="#0b0609"
+            shadowColor="#14040c"
+            width="min(22rem, 78vw, calc((100svh - 10rem) / 2.092))"
+            rotateX={0}
+            rotateY={0}
+            rotateZ={0}
+            float={0}
+            drag={false}
+            interactive={false}
+            enableRotate={false}
+            enableParallax={false}
+            intro={false}
+            island={false}
+          >
               {selected.src ? (
                 <video
                   key={selected.id}
@@ -155,7 +164,6 @@ export function LandingSolution() {
                 </div>
               )}
             </Device>
-          </div>
         </div>
       </div>
     </section>
