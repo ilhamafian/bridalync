@@ -209,16 +209,18 @@ export function LandingSolution() {
               island={false}
             >
               {selected.src ? (
-                <video
-                  key={selected.id}
-                  src={selected.src}
-                  autoPlay
-                  muted
-                  loop
-                  playsInline
-                  className="absolute left-1/2 top-1/2 h-[95.5%] w-[95.5%] -translate-x-1/2 -translate-y-1/2 object-cover"
-                  aria-label={`Glam Team Facing: ${selected.label}`}
-                />
+                <div className="absolute left-1/2 top-1/2 h-[95.5%] w-[95.5%] -translate-x-1/2 -translate-y-1/2 overflow-hidden rounded-[10cqmin]">
+                  <video
+                    key={selected.id}
+                    src={selected.src}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="h-full w-full object-cover"
+                    aria-label={`Glam Team Facing: ${selected.label}`}
+                  />
+                </div>
               ) : (
                 <div
                   className="absolute inset-0 flex items-center justify-center bg-[#0b0609] p-6 text-center text-sm text-zinc-400"
