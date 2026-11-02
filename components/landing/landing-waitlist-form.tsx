@@ -8,7 +8,6 @@ import {
   PhoneNumberInput,
   isValidPhoneNumber,
 } from "@/components/PhoneNumberInput";
-import { Button } from "@/components/ui/button";
 import { LiquidGlass } from "@/components/ui/liquid-glass";
 import {
   Dialog,
@@ -24,17 +23,20 @@ const GLASS_SHADOW =
   "shadow-[0_10px_40px_rgb(0_0_0/0.18),inset_0_1px_0_rgb(255_255_255/0.45)]";
 
 const fieldClassName = cn(
-  "h-11 w-full rounded-xl border-0 bg-white px-3 text-sm text-zinc-900 shadow-sm",
-  "placeholder:text-zinc-400",
-  "outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+  "h-12 w-full rounded-xl border border-white/15 bg-black/40 px-3 text-base text-white",
+  "placeholder:text-white/40",
+  "outline-none focus-visible:ring-2 focus-visible:ring-white/40"
 );
 
 const selectTriggerClassName = cn(
-  "h-11 w-[5.75rem] shrink-0 rounded-xl border-0 bg-white px-3 text-sm text-zinc-900 shadow-sm",
-  "dark:bg-white dark:text-zinc-900 dark:hover:bg-white",
-  "data-[size=default]:h-11 [&_svg]:text-zinc-500",
-  "focus-visible:ring-2 focus-visible:ring-white/80"
+  "h-12 w-[6.75rem] shrink-0 rounded-xl border border-white/15 bg-black/40 px-3 text-base text-white shadow-none",
+  "hover:bg-black/50 dark:bg-black/40 dark:text-white dark:hover:bg-black/50",
+  "data-[size=default]:h-12 [&_svg]:text-white/70",
+  "focus-visible:border-white/30 focus-visible:ring-2 focus-visible:ring-white/40"
 );
+
+const selectContentClassName =
+  "border border-white/15 bg-[#230b17] text-white **:data-[slot=select-item]:text-white **:data-[slot=select-item]:focus:bg-white/10 **:data-[slot=select-item]:focus:text-white";
 
 export function LandingWaitlistForm() {
   const [open, setOpen] = useState(false);
@@ -117,18 +119,18 @@ export function LandingWaitlistForm() {
         </button>
       </DialogTrigger>
       <DialogContent
-        className="z-[70] sm:max-w-md"
+        className="z-[70] gap-6 bg-[#230b17] p-8 text-white ring-white/15 sm:max-w-xl [&_[data-slot=dialog-close]]:text-white [&_[data-slot=dialog-close]]:hover:bg-white/10"
         overlayClassName="z-[70]"
       >
-        <DialogHeader>
-          <DialogTitle className="text-base text-foreground">
+        <DialogHeader className="gap-2 pr-8">
+          <DialogTitle className="text-2xl font-semibold tracking-tight text-white">
             Join the waitlist
           </DialogTitle>
-          <DialogDescription className="text-sm">
+          <DialogDescription className="text-base text-white/70">
             Leave your number and we&apos;ll reach out with a personalised demo.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <label className="sr-only" htmlFor="waitlist-phone">
             Phone number
           </label>
@@ -143,15 +145,28 @@ export function LandingWaitlistForm() {
             mobileAriaLabel="Phone number"
             inputClassName={fieldClassName}
             selectTriggerClassName={selectTriggerClassName}
+            selectContentClassName={selectContentClassName}
           />
 
-          <Button
-            type="submit"
-            disabled={submitting}
-            className="h-11 rounded-xl text-sm"
-          >
-            {submitting ? "Joining…" : "Join Waitlist"}
-          </Button>
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-full disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <LiquidGlass
+                tint={0.22}
+                className={cn(
+                  GLASS_SHADOW,
+                  "text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:hover:scale-100"
+                )}
+                contentClassName="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
+              >
+                {submitting ? "Joining…" : "Join Waitlist"}
+                <IconArrowRight className="size-3.5" aria-hidden />
+              </LiquidGlass>
+            </button>
+          </div>
 
           {error ? (
             <p className="text-sm text-rose-300" role="alert">
@@ -159,7 +174,7 @@ export function LandingWaitlistForm() {
             </p>
           ) : null}
           {success ? (
-            <p className="text-sm text-foreground" role="status">
+            <p className="text-sm text-white" role="status">
               {success}
             </p>
           ) : null}

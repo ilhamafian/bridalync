@@ -38,6 +38,7 @@ type PhoneNumberInputProps = {
   onMobileChange: (mobile: string) => void;
   inputClassName?: string;
   selectTriggerClassName?: string;
+  selectContentClassName?: string;
   mobileInputId?: string;
   placeholder?: string;
   countryCodeAriaLabel?: string;
@@ -51,6 +52,7 @@ export function PhoneNumberInput({
   onMobileChange,
   inputClassName = defaultInputClassName,
   selectTriggerClassName,
+  selectContentClassName,
   mobileInputId,
   placeholder = "e.g. 123456789",
   countryCodeAriaLabel = "Country code",
@@ -70,7 +72,7 @@ export function PhoneNumberInput({
         >
           <SelectValue />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className={selectContentClassName}>
           {SOUTHEAST_ASIA_COUNTRY_CODES.map((country) => (
             <SelectItem key={country.code} value={country.code}>
               {country.flag} {country.code}
