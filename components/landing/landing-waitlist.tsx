@@ -1,10 +1,15 @@
 "use client";
 
-import { useRef } from "react";
 import dynamic from "next/dynamic";
-import { motion, useScroll, useTransform } from "motion/react";
+import { motion } from "motion/react";
 
-import { FadeRise, RevealLine, useAnimateOnScroll } from "@/components/landing/landing-reveal";
+import {
+  FadeRise,
+  RevealLine,
+  revealEase,
+  revealViewport,
+  useAnimateOnScroll,
+} from "@/components/landing/landing-reveal";
 import { LandingWaitlistForm } from "@/components/landing/landing-waitlist-form";
 
 const SatinRidges = dynamic(
@@ -16,19 +21,15 @@ const HERO_BG = "#230b17";
 
 export function LandingWaitlist() {
   const animate = useAnimateOnScroll();
-  const sectionRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start 92%", "start 38%"],
-  });
-  const scale = useTransform(scrollYProgress, [0, 1], [0.92, 1]);
-  const y = useTransform(scrollYProgress, [0, 1], [56, 0]);
 
   return (
-    <section ref={sectionRef} id="waitlist" className="scroll-mt-24 px-4 py-6 md:px-10 md:py-8">
+    <section id="waitlist" className="scroll-mt-24 px-4 py-6 md:px-10 md:py-8">
       <motion.div
         key={animate ? "motion" : "still"}
-        style={animate ? { scale, y } : undefined}
+        initial={animate ? { opacity: 0 } : false}
+        whileInView={animate ? { opacity: 1 } : undefined}
+        viewport={revealViewport}
+        transition={{ duration: 1.05, ease: revealEase }}
         className="relative mx-auto w-full max-w-[88rem] overflow-hidden rounded-[1.75rem] bg-[#230b17] ring-1 ring-white/20 md:rounded-[2rem]"
       >
         <SatinRidges
