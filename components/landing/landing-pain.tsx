@@ -171,7 +171,11 @@ function PainProgress({ progress }: { progress: MotionValue<number> }) {
   const scaleX = useTransform(progress, [0, 1], [0, 1]);
 
   return (
-    <div className="absolute inset-x-0 top-0 z-30 h-1 bg-white/15" aria-hidden>
+    <div
+      className="absolute inset-x-0 top-0 z-30 h-1"
+      style={{ backgroundColor: PAGE_BG }}
+      aria-hidden
+    >
       <motion.div
         className="h-full origin-left bg-white"
         style={{ scaleX, transformOrigin: "left" }}
