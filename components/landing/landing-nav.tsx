@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { LandingLogo } from "@/components/landing/landing-logo";
+import { useOpenWaitlistDialog } from "@/components/landing/landing-waitlist-form";
 import { LiquidGlass } from "@/components/ui/liquid-glass";
 import {
   MobileNav,
@@ -47,10 +48,15 @@ function WaitlistGlassButton({
   contentClassName?: string;
   onClick?: () => void;
 }) {
+  const openWaitlist = useOpenWaitlistDialog();
+
   return (
-    <a
-      href="#waitlist"
-      onClick={onClick}
+    <button
+      type="button"
+      onClick={() => {
+        onClick?.();
+        openWaitlist();
+      }}
       className={cn("inline-flex rounded-full", className)}
     >
       <LiquidGlass
@@ -60,7 +66,7 @@ function WaitlistGlassButton({
       >
         Waitlist
       </LiquidGlass>
-    </a>
+    </button>
   );
 }
 

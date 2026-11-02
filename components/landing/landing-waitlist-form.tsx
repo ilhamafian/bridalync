@@ -1,6 +1,13 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { IconArrowRight } from "@tabler/icons-react";
 
 import {
@@ -15,7 +22,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
@@ -38,8 +44,59 @@ const selectTriggerClassName = cn(
 const selectContentClassName =
   "border border-white/15 bg-[#230b17] text-white **:data-[slot=select-item]:text-white **:data-[slot=select-item]:focus:bg-white/10 **:data-[slot=select-item]:focus:text-white";
 
-export function LandingWaitlistForm() {
+const WaitlistDialogContext = createContext<(() => void) | null>(null);
+
+export function useOpenWaitlistDialog() {
+  const open = useContext(WaitlistDialogContext);
+  if (!open) {
+    throw new Error("useOpenWaitlistDialog must be used within WaitlistDialogProvider");
+  }
+  return open;
+}
+
+export function WaitlistDialogProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const openDialog = useCallback(() => setOpen(true), []);
+
+  return (
+    <WaitlistDialogContext.Provider value={openDialog}>
+      {children}
+      <LandingWaitlistDialog open={open} onOpenChange={setOpen} />
+    </WaitlistDialogContext.Provider>
+  );
+}
+
+export function LandingWaitlistForm() {
+  const openDialog = useOpenWaitlistDialog();
+
+  return (
+    <button
+      type="button"
+      onClick={openDialog}
+      className="self-end rounded-full"
+    >
+      <LiquidGlass
+        tint={0.2}
+        className={cn(
+          GLASS_SHADOW,
+          "text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:hover:scale-100"
+        )}
+        contentClassName="flex items-center gap-2 px-7 py-3.5 font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
+      >
+        Join Waitlist
+        <IconArrowRight className="size-4" aria-hidden />
+      </LiquidGlass>
+    </button>
+  );
+}
+
+function LandingWaitlistDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
   const [countryCode, setCountryCode] = useState(DEFAULT_COUNTRY_CODE);
   const [mobile, setMobile] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +104,7 @@ export function LandingWaitlistForm() {
   const [submitting, setSubmitting] = useState(false);
 
   function handleOpenChange(next: boolean) {
-    setOpen(next);
+    onOpenChange(next);
     if (!next) {
       setError(null);
       setSuccess(null);
@@ -103,21 +160,6 @@ export function LandingWaitlistForm() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <button type="button" className="self-end rounded-full">
-          <LiquidGlass
-            tint={0.2}
-            className={cn(
-              GLASS_SHADOW,
-              "text-white transition-transform duration-200 hover:scale-[1.03] active:scale-[0.97] motion-reduce:transition-none motion-reduce:hover:scale-100"
-            )}
-            contentClassName="flex items-center gap-2 px-7 py-3.5 font-medium [text-shadow:0_1px_2px_rgb(0_0_0/0.25)]"
-          >
-            Join Waitlist
-            <IconArrowRight className="size-4" aria-hidden />
-          </LiquidGlass>
-        </button>
-      </DialogTrigger>
       <DialogContent
         className="z-[70] gap-6 bg-[#230b17] p-8 text-white ring-white/15 sm:max-w-xl [&_[data-slot=dialog-close]]:text-white [&_[data-slot=dialog-close]]:hover:bg-white/10"
         overlayClassName="z-[70]"

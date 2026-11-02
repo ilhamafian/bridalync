@@ -6,6 +6,7 @@ import { IconArrowRight } from "@tabler/icons-react";
 
 import { Device } from "@/components/device";
 import { LandingDashboardPreview } from "@/components/landing/landing-dashboard-preview";
+import { useOpenWaitlistDialog } from "@/components/landing/landing-waitlist-form";
 import { LiquidGlass } from "@/components/ui/liquid-glass";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ function readMd() {
 
 export function LandingHero() {
   const desktop = useSyncExternalStore(subscribeMd, readMd, () => false);
+  const openWaitlist = useOpenWaitlistDialog();
 
   return (
     <section className="-mt-16">
@@ -77,8 +79,9 @@ export function LandingHero() {
             >
               Your one-stop system for glam teams.
             </p>
-            <a
-              href="#waitlist"
+            <button
+              type="button"
+              onClick={openWaitlist}
               className={cn(fadeRise, "mt-2 inline-flex rounded-full")}
               style={{ animationDelay: "240ms" }}
             >
@@ -105,7 +108,7 @@ export function LandingHero() {
                   <IconArrowRight className="size-4" aria-hidden />
                 </span>
               )}
-            </a>
+            </button>
           </div>
 
           <div className="flex w-full items-center justify-center px-4 py-8 md:h-full md:min-h-0 md:px-8 md:py-6 md:pr-[max(2rem,calc((200%-72rem)/2+2rem))]">

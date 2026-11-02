@@ -6,6 +6,7 @@ import { LandingNav } from "@/components/landing/landing-nav";
 import { LandingPain } from "@/components/landing/landing-pain";
 import { LandingSolution } from "@/components/landing/landing-solution";
 import { LandingWaitlist } from "@/components/landing/landing-waitlist";
+import { WaitlistDialogProvider } from "@/components/landing/landing-waitlist-form";
 
 export const viewport = {
   themeColor: "#230b17",
@@ -13,21 +14,23 @@ export const viewport = {
 
 export default function LandingPage() {
   return (
-    <div
-      id="top"
-      className="dark min-h-dvh bg-[#230b17] text-zinc-100"
-      style={{ colorScheme: "dark" }}
-    >
-      <LandingNav />
-      <main>
-        <LandingHero />
-        <LandingPain />
-        <LandingBenefits />
-        <LandingSolution />
-        <LandingWaitlist />
-        <LandingFaq />
-      </main>
-      <LandingHomeFooter />
-    </div>
+    <WaitlistDialogProvider>
+      <div
+        id="top"
+        className="dark min-h-dvh bg-[#230b17] text-zinc-100"
+        style={{ colorScheme: "dark" }}
+      >
+        <LandingNav />
+        <main>
+          <LandingHero />
+          <LandingPain />
+          <LandingBenefits />
+          <LandingSolution />
+          <LandingWaitlist />
+          <LandingFaq />
+        </main>
+        <LandingHomeFooter />
+      </div>
+    </WaitlistDialogProvider>
   );
 }
