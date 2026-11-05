@@ -1,89 +1,152 @@
 "use client";
 
 import type { ReactNode } from "react";
-import {
-  IconCalendar,
-  IconClock,
-  IconMapPin,
-  IconPhone,
-  IconReceipt,
-  IconSparkles,
-  IconUser,
-} from "@tabler/icons-react";
+import { IconCreditCard, IconFileInvoice, IconQrcode } from "@tabler/icons-react";
 
 import { FadeRise, RevealMask } from "@/components/landing/landing-reveal";
 import { cn } from "@/lib/utils";
 
-const cardClassName = "rounded-[1.6rem] bg-black/30 px-4 py-8 ring-1 ring-white/10 sm:px-5 sm:py-10";
-const panelClassName = "rounded-2xl bg-black/55 p-3 ring-1 ring-white/10";
+const cardClassName =
+  "flex h-full flex-col justify-center rounded-[1.6rem] bg-black/30 px-4 py-8 ring-1 ring-white/10 sm:px-5 sm:py-10";
+const panelClassName = "rounded-2xl bg-black/55 p-3.5 ring-1 ring-white/10";
+const insetClassName = "rounded-xl bg-white/5 ring-1 ring-white/10";
 
-function Panel({
-  icon: Icon,
-  title,
-  meta,
+function Status({
   children,
+  tone = "good",
 }: {
-  icon: typeof IconCalendar;
-  title: string;
-  meta?: string;
   children: ReactNode;
+  tone?: "good" | "due";
 }) {
   return (
-    <div className={panelClassName}>
-      <div className="flex items-center gap-2">
-        <span className="grid size-7 shrink-0 place-items-center rounded-lg bg-white/10">
-          <Icon className="size-3.5 text-zinc-100" stroke={1.75} />
-        </span>
-        <p className="min-w-0 truncate text-sm font-medium text-zinc-50">{title}</p>
-        {meta ? <p className="ml-auto shrink-0 text-[11px] text-zinc-500">{meta}</p> : null}
+    <span
+      className={cn(
+        "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
+        tone === "good" && "bg-emerald-400/15 text-emerald-300",
+        tone === "due" && "bg-rose-400/15 text-rose-200",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function Kicker({ children }: { children: ReactNode }) {
+  return (
+    <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-zinc-500">{children}</p>
+  );
+}
+
+function BookingPanel() {
+  return (
+    <div className={panelClassName} aria-hidden>
+      <div className="flex items-center justify-between gap-2">
+        <Kicker>New booking</Kicker>
+        <Status>Confirmed</Status>
       </div>
-      <div className="mt-3 flex flex-col gap-2.5">{children}</div>
+      <p className="mt-2.5 truncate text-sm font-medium text-zinc-50">Ayra Helena</p>
+      <p className="truncate text-xs text-zinc-400">Nikah & Sanding</p>
+      <div className={cn(insetClassName, "mt-3 px-2.5 py-2")}>
+        <p className="text-xs font-medium text-zinc-100">Sat, 15 Nov</p>
+        <p className="mt-0.5 text-[11px] text-zinc-400">9:00 AM – 12:00 PM</p>
+      </div>
+      <p className="mt-2.5 truncate text-[11px] text-zinc-500">JW Marriott, KL</p>
     </div>
   );
 }
 
-function Field({
+function PayChip({
   icon: Icon,
   label,
-  value,
-  tone = "neutral",
 }: {
-  icon: typeof IconCalendar;
+  icon: typeof IconQrcode;
   label: string;
-  value: string;
-  tone?: "neutral" | "good" | "due";
 }) {
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <Icon className="size-3.5 shrink-0 text-zinc-500" stroke={1.75} />
-      <span className="min-w-0 flex-1 truncate text-zinc-400">{label}</span>
-      <span
-        className={cn(
-          "shrink-0 rounded-md bg-white/10 px-1.5 py-0.5 text-[11px] font-medium text-zinc-200",
-          tone === "good" && "text-emerald-400",
-          tone === "due" && "text-rose-300",
-        )}
-      >
-        {value}
-      </span>
+    <div className={cn(insetClassName, "flex min-w-0 items-center gap-1.5 px-2 py-1.5")}>
+      <Icon className="size-3.5 shrink-0 text-zinc-200" stroke={1.75} />
+      <span className="truncate text-[11px] text-zinc-200">{label}</span>
     </div>
   );
 }
 
-function DotRow({
-  label,
-  value,
-  dot,
-}: {
-  label: string;
-  value: string;
-  dot: string;
-}) {
+function PaymentPanel() {
   return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className={cn("size-1.5 shrink-0 rounded-full", dot)} />
-      <span className="min-w-0 flex-1 truncate text-zinc-300">{label}</span>
-      <span className="shrink-0 text-[11px] text-zinc-500">{value}</span>
+    <div className={panelClassName} aria-hidden>
+      <div className="flex items-center justify-between gap-2">
+        <Kicker>Deposit</Kicker>
+        <Status>Paid</Status>
+      </div>
+      <p className="mt-2 text-lg font-medium tracking-tight text-zinc-50 tabular-nums">RM 800</p>
+      <p className="truncate text-xs text-zinc-400">Ayra Helena · Nikah</p>
+      <div className="mt-3 grid grid-cols-2 gap-1.5">
+        <PayChip icon={IconQrcode} label="QR code" />
+        <PayChip icon={IconCreditCard} label="Gateway" />
+      </div>
+      <div className="mt-2.5 flex items-center justify-between gap-2 text-[11px]">
+        <span className="text-zinc-500">Balance</span>
+        <span className="font-medium text-rose-200 tabular-nums">RM 1,680</span>
+      </div>
+    </div>
+  );
+}
+
+function CalendarPanel() {
+  return (
+    <div className={panelClassName} aria-hidden>
+      <div className="flex items-center justify-between gap-2">
+        <Kicker>Google Calendar</Kicker>
+        <Status>Synced</Status>
+      </div>
+      <p className="mt-2.5 text-sm font-medium text-zinc-50">Saturday, 15 Nov</p>
+      <div className={cn(insetClassName, "mt-3 flex gap-2 px-2.5 py-2")}>
+        <span className="w-0.5 shrink-0 rounded-full bg-rose-400" />
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-zinc-100">9:00 AM – 12:00 PM</p>
+          <p className="truncate text-[11px] text-zinc-400">Ayra Helena</p>
+          <p className="truncate text-[11px] text-zinc-500">Nikah & Sanding</p>
+        </div>
+      </div>
+      <p className="mt-2.5 text-[11px] text-zinc-500">Added automatically</p>
+    </div>
+  );
+}
+
+function RevenuePanel() {
+  return (
+    <div className={panelClassName} aria-hidden>
+      <div className="flex items-center justify-between gap-2">
+        <Kicker>November</Kicker>
+        <span className="text-[10px] text-zinc-500">This month</span>
+      </div>
+      <p className="mt-2 text-lg font-medium tracking-tight text-zinc-50 tabular-nums">RM 18,400</p>
+      <svg
+        viewBox="0 0 140 48"
+        className="mt-2 h-9 w-full"
+        preserveAspectRatio="none"
+        aria-hidden
+      >
+        <path
+          d="M0 40 L24 36 L48 30 L72 22 L96 16 L120 8 L140 4 V48 H0 Z"
+          fill="rgb(251 113 133 / 0.28)"
+        />
+        <path
+          d="M0 40 L24 36 L48 30 L72 22 L96 16 L120 8 L140 4"
+          fill="none"
+          stroke="rgb(253 164 175)"
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className={cn(insetClassName, "mt-2 flex items-center gap-2 px-2.5 py-2")}>
+        <IconFileInvoice className="size-3.5 shrink-0 text-zinc-300" stroke={1.75} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs text-zinc-100">Hana Sofea</p>
+          <p className="text-[11px] text-zinc-500">Invoice emailed</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -92,50 +155,22 @@ const features = [
   {
     lead: "The booking comes to you.",
     body: "Clients choose the event, date, and time from your link, so you stop spending the day replying to availability messages.",
-    panel: (
-      <Panel icon={IconCalendar} title="Booking" meta="Today">
-        <Field icon={IconUser} label="Ayra Helena" value="Confirmed" tone="good" />
-        <Field icon={IconSparkles} label="Nikah & Sanding" value="Sanding" />
-        <Field icon={IconClock} label="9:00 AM – 12:00 PM" value="Slot" />
-        <Field icon={IconMapPin} label="JW Marriott" value="KL" />
-      </Panel>
-    ),
+    panel: <BookingPanel />,
   },
   {
-    lead: "The quotation is ready.",
-    body: "Event price, deposit, travel fee, and the balance still due are calculated on the booking.",
-    panel: (
-      <Panel icon={IconReceipt} title="Quotation" meta="RM 2,480">
-        <Field icon={IconSparkles} label="Event" value="RM 2,400" />
-        <Field icon={IconReceipt} label="Deposit" value="Paid" tone="good" />
-        <Field icon={IconMapPin} label="Travel fee" value="RM 80" />
-        <Field icon={IconClock} label="Balance" value="RM 1,680" tone="due" />
-      </Panel>
-    ),
+    lead: "Payments are easier to manage.",
+    body: "Add a payment gateway or QR code to your booking page so clients can pay directly. Stop chasing payments & spend more time doing what you love.",
+    panel: <PaymentPanel />,
   },
   {
-    lead: "Open slots stay bookable.",
-    body: "Dates that are still free can be taken while you're with a bride, without you checking your calendar.",
-    panel: (
-      <Panel icon={IconClock} title="Saturday" meta="15 Nov">
-        <DotRow label="8:00 AM" value="Booked" dot="bg-rose-400" />
-        <DotRow label="11:00 AM" value="Open" dot="bg-emerald-400" />
-        <DotRow label="2:00 PM" value="Open" dot="bg-emerald-400" />
-        <DotRow label="5:00 PM" value="Blocked" dot="bg-zinc-500" />
-      </Panel>
-    ),
+    lead: "Your calendar stays in sync.",
+    body: "Every new booking is automatically added to your Google Calendar, without having to enter appointments manually.",
+    panel: <CalendarPanel />,
   },
   {
-    lead: "Client details are already there.",
-    body: "Phone, venue, and the time they need to be ready are saved with the booking.",
-    panel: (
-      <Panel icon={IconUser} title="Hana Sofea" meta="2 pax">
-        <Field icon={IconPhone} label="Phone" value="+60 12 448 2190" />
-        <Field icon={IconUser} label="Instagram" value="@hanasofea" />
-        <Field icon={IconClock} label="Ready by" value="8:30 AM" />
-        <Field icon={IconMapPin} label="Venue" value="The Ritz" />
-      </Panel>
-    ),
+    lead: "Revenue and invoices, sorted.",
+    body: "Track your monthly earnings automatically. Invoices are generated and emailed to clients. No more editing invoices in another apps!",
+    panel: <RevenuePanel />,
   },
 ];
 
@@ -150,11 +185,6 @@ export function LandingBenefits() {
                 Everything your business needs to run, all in one place.
               </h2>
             </RevealMask>
-            {/* <FadeRise delay={0.12} y={16}>
-              <p className="text-left text-base leading-relaxed text-zinc-400 md:text-lg">
-                Bridalync replaces scattered chats, spreadsheets, and manual admin with one platform built for galm teams. Manage your bookings, availability, quotations, and payments seamlessly, while keeping every client interaction organised from the first enquiry to the final appointment.
-              </p>
-            </FadeRise> */}
           </div>
         </div>
         <div className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 xl:grid-cols-4">
@@ -165,7 +195,7 @@ export function LandingBenefits() {
                 y={52}
                 scale={0.94}
                 rotate={index % 2 === 0 ? 2.5 : -2.5}
-                className="origin-bottom"
+                className="h-full origin-bottom"
               >
                 <div className={cardClassName}>{feature.panel}</div>
               </FadeRise>

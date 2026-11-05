@@ -114,7 +114,7 @@ const teamFeatures: Feature[] = [
     label: "Payment",
     title: "Know what you've earned",
     description:
-      "Take deposits and full payments online or by transfer, approve receipts, and see your revenue and outstanding balances.",
+      "Take deposits and full payments online or by transfer, with invoices generated automatically. Approve receipts, track your revenue, and monitor outstanding balances.",
     src: "/videos/payment_2.mp4",
   },
   {
