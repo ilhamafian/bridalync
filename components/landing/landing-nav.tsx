@@ -19,10 +19,10 @@ import {
 import { cn } from "@/lib/utils";
 
 const navItems = [
-  { name: "Home", link: "#top" },
-  { name: "Solution", link: "#solution" },
-  { name: "FAQ", link: "#faq" },
-  { name: "About Us", link: "#about" },
+  { name: "Home", link: "/#top" },
+  { name: "Solution", link: "/#solution" },
+  { name: "FAQ", link: "/#faq" },
+  { name: "About Us", link: "/about" },
 ];
 
 const GLASS_SHADOW =

@@ -7,16 +7,16 @@ const footerLinks = [
   {
     heading: "Menu",
     links: [
-      { href: "#top", label: "Home" },
-      { href: "#solution", label: "Solution" },
-      { href: "#faq", label: "FAQ" },
-      { href: "#waitlist", label: "Waitlist" },
+      { href: "/#top", label: "Home" },
+      { href: "/#solution", label: "Solution" },
+      { href: "/#faq", label: "FAQ" },
+      { href: "/#waitlist", label: "Waitlist" },
     ],
   },
   {
     heading: "Company",
     links: [
-      { href: "#about", label: "About" },
+      { href: "/about", label: "About" },
       { href: "/privacy", label: "Privacy Policy" },
       { href: "/terms", label: "Terms of Service" },
     ],
@@ -33,7 +33,7 @@ const footerLinks = [
 
 export function LandingHomeFooter() {
   return (
-    <footer id="about" className="scroll-mt-24 px-4 pt-16 pb-10 md:px-8 md:pt-24 md:pb-12">
+    <footer className="px-4 pt-16 pb-10 md:px-8 md:pt-24 md:pb-12">
       <div className="mx-auto flex max-w-6xl flex-col">
         <div className="flex flex-col gap-12 md:flex-row md:items-start md:justify-between">
           <LandingLogo variant="light" />

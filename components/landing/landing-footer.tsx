@@ -16,7 +16,7 @@ const footerLinks = {
     { href: "#waitlist", label: "Waitlist" },
   ],
   Company: [
-    { href: "#about", label: "About" },
+    { href: "/about", label: "About" },
     { href: LEGAL_URLS.privacy, label: "Privacy Policy" },
     { href: LEGAL_URLS.terms, label: "Terms of Service" },
   ],
@@ -29,10 +29,7 @@ const footerLinks = {
 
 export function LandingFooter() {
   return (
-    <footer
-      id="about"
-      className="bg-landing-footer px-6 py-16 text-landing-cream-text lg:px-8 lg:py-20"
-    >
+    <footer className="bg-landing-footer px-6 py-16 text-landing-cream-text lg:px-8 lg:py-20">
       <div className="mx-auto max-w-6xl">
         <div className="flex flex-col gap-12 md:flex-row md:items-start md:justify-between">
           <div>

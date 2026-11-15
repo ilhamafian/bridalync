@@ -47,6 +47,8 @@ function LandingScrollLinks() {
       if (node) lenis.scrollTo(node, ANCHOR_SCROLL);
     };
 
+    if (window.location.hash) scrollToHash(window.location.hash);
+
     const onClickCapture = (event: MouseEvent) => {
       if (
         event.defaultPrevented ||

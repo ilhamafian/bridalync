@@ -33,6 +33,7 @@ export async function sendEmail(input: {
   subject: string;
   html: string;
   text: string;
+  replyTo?: string;
   attachments?: EmailAttachment[];
 }) {
   const { data, error } = await getResendClient().emails.send({
@@ -41,6 +42,7 @@ export async function sendEmail(input: {
     subject: input.subject,
     html: input.html,
     text: input.text,
+    ...(input.replyTo ? { replyTo: input.replyTo } : {}),
     ...(input.attachments?.length
       ? {
           attachments: input.attachments.map((attachment) => ({
