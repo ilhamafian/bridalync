@@ -15,8 +15,6 @@ import {
 import { IconBadge, RowText, SettingsSection, settingsRowClassName } from "@/components/dashboard/settings/SettingsUi";
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker";
 import { RegionPriceList } from "@/components/RegionPriceList";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -55,27 +53,6 @@ export type TravelSettingsPayload = Omit<
   TravelSetting,
   "long_distance_rate_per_km"
 > & { long_distance_rate_per_km?: number | null };
-
-const inputClassName = cn(
-  "h-10 w-full rounded-md border border-border bg-white/60 px-3 text-sm text-foreground dark:bg-white/5",
-  "placeholder:text-muted-foreground",
-  "outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/30"
-);
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <Label>{label}</Label>
-      {children}
-    </div>
-  );
-}
 
 function savedLocation(travel: TravelSetting): Address | null {
   return travel.location.placeId !== DISABLED_TRAVEL_LOCATION.placeId
@@ -273,6 +250,52 @@ export function useTravelSettingsForm(initial: TravelSetting) {
 
 export type TravelSettingsForm = ReturnType<typeof useTravelSettingsForm>;
 
+function RateRow({
+  id,
+  label,
+  description,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  description: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+}) {
+  return (
+    <div
+      className={cn(
+        settingsRowClassName,
+        "hover:bg-transparent dark:hover:bg-transparent"
+      )}
+    >
+      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <label htmlFor={id} className="text-sm font-medium">
+          {label}
+        </label>
+        <span className="text-xs text-muted-foreground">{description}</span>
+      </div>
+      <div className="flex h-9 w-32 shrink-0 items-center rounded-md border border-border bg-white/60 px-2 text-sm focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/30 dark:bg-white/5">
+        <span className="pr-1 text-muted-foreground">RM</span>
+        <input
+          id={id}
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className="h-full w-full min-w-0 bg-transparent text-right outline-none placeholder:text-muted-foreground"
+        />
+      </div>
+    </div>
+  );
+}
+
 function baseRegionText(status: BaseRegionStatus, baseRegion: RegionId | null) {
   switch (status) {
     case "none":
@@ -427,51 +450,30 @@ export function TravelSettingsFields({
       ) : null}
 
       {enabled && mode === "distance" ? (
-        <>
-          <SettingsSection title="Rate">
-            <SettingsCard >
-              <Field label="Rate per km (RM)">
-                <Input
-                  className={inputClassName}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.ratePerKm}
-                  onChange={(event) => form.setRatePerKm(event.target.value)}
-                  placeholder="1.00"
-                />
-              </Field>
-              <p className="text-xs text-muted-foreground">
-                Travel is charged as a round trip — to the client and back to
-                your base. For example, 10 km away at RM 1/km adds RM 20 to the
-                booking.
-              </p>
-            </SettingsCard>
-          </SettingsSection>
-          <SettingsSection title={`Over ${LONG_DISTANCE_THRESHOLD_KM} km`}>
-            <SettingsCard >
-              <Field label="Rate per km (RM)">
-                <Input
-                  className={inputClassName}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={form.longDistanceRatePerKm}
-                  onChange={(event) =>
-                    form.setLongDistanceRatePerKm(event.target.value)
-                  }
-                  placeholder={form.ratePerKm || "1.50"}
-                />
-              </Field>
-              <p className="text-xs text-muted-foreground">
-                When the client is more than {LONG_DISTANCE_THRESHOLD_KM} km
-                away, this rate is used for the whole trip instead. For
-                example, 120 km away at RM 1.50/km adds RM 360. Leave blank to
-                use your normal rate.
-              </p>
-            </SettingsCard>
-          </SettingsSection>
-        </>
+        <SettingsSection title="Rate">
+          <SettingsList>
+            <RateRow
+              id="travel-rate-per-km"
+              label="Standard"
+              description="Per km, charged as a round trip."
+              value={form.ratePerKm}
+              onChange={form.setRatePerKm}
+              placeholder="1.00"
+            />
+            <RateRow
+              id="travel-long-distance-rate"
+              label={`Over ${LONG_DISTANCE_THRESHOLD_KM} km`}
+              description="Optional. Replaces the standard rate for the whole trip."
+              value={form.longDistanceRatePerKm}
+              onChange={form.setLongDistanceRatePerKm}
+              placeholder="—"
+            />
+          </SettingsList>
+          <p className="text-xs text-muted-foreground">
+            For example, 10 km away at RM 1/km adds RM 20, and 120 km at RM
+            1.50/km adds RM 360.
+          </p>
+        </SettingsSection>
       ) : null}
 
       <SettingsSection title="Out-of-state accommodation & transport">
