@@ -517,10 +517,10 @@ export function TravelSettingsFields({
         >
           <TabsList className="grid h-10! w-full grid-cols-2 bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15">
             <TabsTrigger value="areas" className="text-sm">
-              Service areas
+              Coverage
             </TabsTrigger>
             <TabsTrigger value="travel-days" className="text-sm">
-              Travel days
+              Block before travel
             </TabsTrigger>
           </TabsList>
 
@@ -595,7 +595,7 @@ export function TravelSettingsFields({
             ) : (
               <SettingsCard >
                 <p className="text-muted-foreground">
-                  Turn on a state in Service areas to set travel days for it.
+                  Turn on a state in Coverage to set travel days for it.
                 </p>
               </SettingsCard>
             )}
