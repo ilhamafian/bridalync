@@ -85,11 +85,9 @@ export async function sendVerificationCode(email: string) {
     );
   }
 
-  if (process.env.DEV_MODE === "true") {
-    console.log(
-      `[email-verification] Sent code to ${normalizedEmail} (expires in 10 minutes)`
-    );
-  }
+  console.log(
+    `[email-verification] Code for ${normalizedEmail}: ${code} (expires in 10 minutes)`
+  );
 }
 
 export async function verifyEmailCode(email: string, code: string) {
