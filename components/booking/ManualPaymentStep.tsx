@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useRef, useState } from "react";
 
+import { WizardGlass } from "@/components/booking/wizardGlass";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -64,7 +65,7 @@ export function ManualPaymentStep({
 
   return (
     <div className={cn("flex w-full flex-col gap-4", className)}>
-      <div className="rounded-lg bg-white/30 p-4 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15">
+      <WizardGlass className="p-4">
         <p className="mb-3 text-center text-sm font-medium text-zinc-900 dark:text-zinc-50">
           {amountLabel}
         </p>
@@ -94,7 +95,7 @@ export function ManualPaymentStep({
         <p className="text-center text-xs text-muted-foreground">
           {transfer.bankName} · {transfer.accountNumber}
         </p>
-      </div>
+      </WizardGlass>
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="payment-receipt">Payment receipt</Label>

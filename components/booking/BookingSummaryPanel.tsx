@@ -3,15 +3,13 @@
 import Image from "next/image";
 
 import { roleLabel } from "@/components/booking/ClientProfile";
+import { WizardGlass } from "@/components/booking/wizardGlass";
 import { useLocale } from "@/components/LocaleProvider";
 import { cn } from "@/lib/utils";
 import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicProfile } from "@/schemas/userSchema";
 import { formatRm } from "@/utils/booking/pricing";
 import { formatLocationAddress } from "@/utils/session";
-
-const glassClassName =
-  "rounded-xl bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15";
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -61,7 +59,7 @@ export function BookingSummaryPanel({
       )}
     >
       {user ? (
-        <div className={cn(glassClassName, "flex items-center gap-3 p-3")}>
+        <WizardGlass className="flex items-center gap-3 p-3">
           <div className="relative size-12 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
             {user.profile_photo_url ? (
               <Image
@@ -81,10 +79,10 @@ export function BookingSummaryPanel({
               <p className="truncate text-xs text-muted-foreground">{role}</p>
             ) : null}
           </div>
-        </div>
+        </WizardGlass>
       ) : null}
 
-      <section className={cn(glassClassName, "flex flex-col gap-3 p-4")}>
+      <WizardGlass as="section" className="flex flex-col gap-3 p-4">
         <h2 className="text-sm font-medium text-foreground">{t.summaryTitle}</h2>
         {isEmpty ? (
           <p className="text-xs text-muted-foreground">{t.summaryEmpty}</p>
@@ -165,7 +163,7 @@ export function BookingSummaryPanel({
             ) : null}
           </>
         )}
-      </section>
+      </WizardGlass>
     </aside>
   );
 }

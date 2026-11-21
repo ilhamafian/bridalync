@@ -2,7 +2,8 @@
 
 import type { ReactNode } from "react"
 
-import { Card, CardContent } from "@/components/ui/card"
+import { WizardGlass, wizardCardClassName } from "@/components/booking/wizardGlass"
+import { CardContent } from "@/components/ui/card"
 import { useLocale } from "@/components/LocaleProvider"
 import { PhoneNumberInput } from "@/components/PhoneNumberInput"
 import type { Client } from "@/schemas/clientSchema"
@@ -37,7 +38,7 @@ export function BookingContactForm({
   }
 
   return (
-    <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+    <WizardGlass className={wizardCardClassName}>
       <CardContent className="flex flex-col gap-4">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-foreground">
@@ -68,6 +69,6 @@ export function BookingContactForm({
         </label>
         {children}
       </CardContent>
-    </Card>
+    </WizardGlass>
   )
 }

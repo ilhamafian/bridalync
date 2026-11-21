@@ -5,7 +5,8 @@ import { FileTextIcon, ImagePlusIcon, XIcon } from "lucide-react";
 
 import { useLocale } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { WizardGlass, wizardCardClassName } from "@/components/booking/wizardGlass";
+import { CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
   CLIENT_ANSWER_MAX_LENGTH,
@@ -315,7 +316,7 @@ export function BookingClientInfoForm({
   }
 
   return (
-    <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+    <WizardGlass className={wizardCardClassName}>
       <CardContent className="flex flex-col gap-4">
         {title ? (
           <p className="text-sm font-medium text-foreground">{title}</p>
@@ -419,6 +420,6 @@ export function BookingClientInfoForm({
           </div>
         ) : null}
       </CardContent>
-    </Card>
+    </WizardGlass>
   );
 }

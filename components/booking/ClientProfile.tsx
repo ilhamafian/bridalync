@@ -7,7 +7,8 @@ import { createPortal } from "react-dom";
 
 import { useLocale } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { WizardGlass } from "@/components/booking/wizardGlass";
+import { CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogClose,
@@ -158,12 +159,12 @@ function buildSocialEntries(user: PublicProfile): SocialEntry[] {
 function ReviewCardSkeleton() {
   return (
     <li aria-hidden className="min-h-0 min-w-0">
-      <div className="flex flex-col gap-2 rounded-lg bg-white/30 p-3 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15">
+      <WizardGlass className="flex flex-col gap-2 p-3">
         <Skeleton className="h-5 w-32 bg-zinc-900/10 dark:bg-white/15" />
         <Skeleton className="h-3 w-20 bg-zinc-900/10 dark:bg-white/15" />
         <Skeleton className="mt-1 h-4 w-full bg-zinc-900/10 dark:bg-white/15" />
         <Skeleton className="h-4 w-3/4 bg-zinc-900/10 dark:bg-white/15" />
-      </div>
+      </WizardGlass>
     </li>
   );
 }
@@ -335,10 +336,7 @@ export function ClientProfile({
                     className="block h-fit w-full overflow-hidden rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     onClick={() => setSelectedReview(review)}
                   >
-                    <Card
-                      size="sm"
-                      className="h-fit bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm transition-colors hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-                    >
+                    <WizardGlass className="flex h-fit flex-col gap-(--card-spacing) py-(--card-spacing) text-xs/relaxed text-card-foreground transition hover:brightness-110 [--card-spacing:--spacing(3)]">
                       <CardContent className="flex flex-col gap-2">
                         <div>
                           <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
@@ -375,7 +373,7 @@ export function ClientProfile({
                           </div>
                         ) : null}
                       </CardContent>
-                    </Card>
+                    </WizardGlass>
                   </button>
                 </li>
               ))}

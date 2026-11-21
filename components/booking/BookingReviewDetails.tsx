@@ -3,7 +3,8 @@
 import { FileTextIcon } from "lucide-react";
 
 import { useLocale } from "@/components/LocaleProvider";
-import { Card, CardContent } from "@/components/ui/card";
+import { WizardGlass, wizardCardClassName } from "@/components/booking/wizardGlass";
+import { CardContent } from "@/components/ui/card";
 import type { MoodboardPhoto } from "@/components/booking/BookingClientInfoForm";
 import { cn } from "@/lib/utils";
 import type { ClientInfoSetting } from "@/schemas/clientInfoSchema";
@@ -93,7 +94,7 @@ export function BookingReviewDetails({
   const members = party.length > 0 ? party : [{ name: contact.name, instagram: "", answers: {}, moodboard: [] }];
 
   return (
-    <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(4)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+    <WizardGlass className={cn(wizardCardClassName, "[--card-spacing:--spacing(4)]")}>
       <CardContent className="flex flex-col gap-3 pt-(--card-spacing)">
         {eventName ? (
           <p className="text-base leading-6 font-semibold text-foreground">
@@ -218,6 +219,6 @@ export function BookingReviewDetails({
           })}
         </div>
       </CardContent>
-    </Card>
+    </WizardGlass>
   );
 }

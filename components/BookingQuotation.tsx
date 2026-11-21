@@ -1,6 +1,7 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
+import { WizardGlass, wizardCardClassName } from "@/components/booking/wizardGlass"
+import { CardContent } from "@/components/ui/card"
 import { useLocale } from "@/components/LocaleProvider"
 import type { SessionForm } from "@/schemas/sessionSchema"
 import { quotationLineItemsForDisplay } from "@/utils/booking/morningCall"
@@ -71,12 +72,7 @@ export function BookingInvoice({
   )
 
   return (
-    <Card
-      className={cn(
-        "mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15",
-        className
-      )}
-    >
+    <WizardGlass className={cn(wizardCardClassName, className)}>
       <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
         <div>
           <p className="text-sm font-medium text-foreground">
@@ -133,7 +129,7 @@ export function BookingInvoice({
           )}
         </div>
       </CardContent>
-    </Card>
+    </WizardGlass>
   )
 }
 
@@ -157,12 +153,7 @@ export function BookingQuotation({
   )
 
   return (
-    <Card
-      className={cn(
-        "mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15",
-        className
-      )}
-    >
+    <WizardGlass className={cn(wizardCardClassName, className)}>
       <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
         <div>
           <p className="text-sm font-medium text-foreground">
@@ -244,6 +235,6 @@ export function BookingQuotation({
           )}
         </div>
       </CardContent>
-    </Card>
+    </WizardGlass>
   )
 }

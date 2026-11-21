@@ -2,14 +2,12 @@
 
 import { XIcon } from "lucide-react"
 
+import { WizardGlass } from "@/components/booking/wizardGlass"
 import { useLocale } from "@/components/LocaleProvider"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { formatLocationAddress, formatSessionSummary } from "@/utils/session"
 import type { SessionForm } from "@/schemas/sessionSchema"
-
-const frostedPanelClassName =
-  "rounded-lg bg-white/30 p-3 shadow-sm ring-1 ring-white/60 backdrop-blur-sm dark:bg-white/10 dark:ring-white/15"
 
 type SessionListItem = Pick<
   SessionForm,
@@ -43,22 +41,17 @@ export function BookingSessionList({
   const { t, format, intlLocale } = useLocale()
 
   if (sessions.length === 0) {
-    return (
-      <div className={cn(frosted && frostedPanelClassName)}>
-        <p className="text-center text-sm text-muted-foreground">
-          {emptyMessage ?? t.noSessionsPickEvent}
-        </p>
-      </div>
+    const empty = (
+      <p className="text-center text-sm text-muted-foreground">
+        {emptyMessage ?? t.noSessionsPickEvent}
+      </p>
     )
+    if (!frosted) return empty
+    return <WizardGlass className="p-3">{empty}</WizardGlass>
   }
 
-  return (
-    <ul
-      className={cn(
-        "flex w-full flex-col gap-2",
-        frosted && frostedPanelClassName
-      )}
-    >
+  const list = (
+    <ul className="flex w-full flex-col gap-2">
       {sessions.map((session) => {
         const clientKey = session.client_key
         return (
@@ -114,4 +107,7 @@ export function BookingSessionList({
       })}
     </ul>
   )
+
+  if (!frosted) return list
+  return <WizardGlass className="p-3">{list}</WizardGlass>
 }

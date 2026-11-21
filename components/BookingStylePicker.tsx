@@ -4,6 +4,7 @@ import Image from "next/image"
 import { CheckIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 
+import { WizardChoice, WizardGlass } from "@/components/booking/wizardGlass"
 import { useLocale } from "@/components/LocaleProvider"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
@@ -39,8 +40,6 @@ const CARD_GAP_PX = 12
 
 const selectedCardClassName =
   "bg-rose-800 text-white ring-2 ring-rose-800 hover:bg-rose-800/90 hover:text-white"
-const glassCardClassName =
-  "border-transparent bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 hover:text-foreground dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
 
 /**
  * Peeking card carousel: native scroll-snap swipe (same idea as dashboard
@@ -304,16 +303,14 @@ function VariantCarousel({
         dot: (variant) => format(t.showVariant, { name: variant.name }),
       }}
       renderItem={(variant, { isActive, onClick }) => (
-        <button
-          type="button"
+        <WizardChoice
+          selected={selectedVariantId === variant.id}
           aria-pressed={selectedVariantId === variant.id}
           aria-current={isActive ? "true" : undefined}
           className={cn(
             buttonVariants({ variant: "ghost", size: "lg" }),
-            "h-auto w-full flex-col items-stretch overflow-hidden rounded-lg p-0 text-left whitespace-normal",
-            selectedVariantId === variant.id
-              ? selectedCardClassName
-              : glassCardClassName
+            "h-auto w-full flex-col items-stretch overflow-hidden p-0 text-left whitespace-normal",
+            selectedVariantId === variant.id && selectedCardClassName
           )}
           onClick={onClick}
         >
@@ -330,7 +327,7 @@ function VariantCarousel({
             </span>
           ) : null}
           <span className="px-3 py-2.5 font-medium">{variant.name}</span>
-        </button>
+        </WizardChoice>
       )}
     />
   )
@@ -348,11 +345,13 @@ function VariantPhotoRow({
 }) {
   const { t, format } = useLocale()
 
+  const Shell = isSelected ? "div" : WizardGlass
+
   return (
-    <div
+    <Shell
       className={cn(
         "flex flex-col gap-3 rounded-lg p-3 transition-colors",
-        isSelected ? selectedCardClassName : glassCardClassName
+        isSelected && selectedCardClassName
       )}
     >
       <button
@@ -405,7 +404,7 @@ function VariantPhotoRow({
           )}
         />
       ) : null}
-    </div>
+    </Shell>
   )
 }
 
@@ -463,21 +462,14 @@ export function BookingStylePicker({
               hasOtherOpen && "opacity-45"
             )}
           >
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
+            <WizardChoice
+              selected={isOpen}
               aria-expanded={isOpen}
-              className={cn(
-                "h-auto min-h-10 w-full justify-start px-4 py-3 text-left whitespace-normal",
-                isOpen
-                  ? "rounded-lg bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white aria-expanded:bg-rose-800 aria-expanded:text-white"
-                  : "rounded-lg border-transparent bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 hover:text-foreground dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-              )}
+              className="h-auto min-h-10 w-full justify-start px-4 py-3 text-left whitespace-normal"
               onClick={() => selectCategory(category.id)}
             >
               <span className="font-medium text-inherit">{category.name}</span>
-            </Button>
+            </WizardChoice>
 
             <div
               className={cn(

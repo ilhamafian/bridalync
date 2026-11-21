@@ -1,7 +1,7 @@
 "use client"
 
+import { WizardChoice } from "@/components/booking/wizardGlass"
 import { useLocale } from "@/components/LocaleProvider"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export type PackageOption = {
@@ -36,19 +36,12 @@ export function BookingPackagePicker({
       {packages.map((pkg) => {
         const isSelected = selectedPackageId === pkg.id
         return (
-          <Button
+          <WizardChoice
             key={pkg.id}
-            type="button"
-            variant="ghost"
-            size="lg"
+            selected={isSelected}
             role="radio"
             aria-checked={isSelected}
-            className={cn(
-              "h-auto min-h-10 w-full justify-between px-4 py-3 text-left whitespace-normal",
-              isSelected
-                ? "rounded-lg bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white"
-                : "rounded-lg border-transparent bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 hover:text-foreground dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-            )}
+            className="h-auto min-h-10 w-full justify-between px-4 py-3 text-left whitespace-normal"
             onClick={() => onPackageChange(pkg.id)}
           >
             <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -78,7 +71,7 @@ export function BookingPackagePicker({
                 ) : null}
               </span>
             </span>
-          </Button>
+          </WizardChoice>
         )
       })}
     </div>

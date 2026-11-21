@@ -1,7 +1,7 @@
 "use client"
 
+import { WizardChoice } from "@/components/booking/wizardGlass"
 import { useLocale } from "@/components/LocaleProvider"
-import { Button } from "@/components/ui/button"
 import { formatRm } from "@/utils/booking/pricing"
 import { cn } from "@/lib/utils"
 
@@ -48,17 +48,10 @@ export function BookingAddOnPicker({
       {addOns.map((addOn) => {
         const isSelected = selectedAddOnIds.includes(addOn.id)
         return (
-          <Button
+          <WizardChoice
             key={addOn.id}
-            type="button"
-            variant="ghost"
-            size="lg"
-            className={cn(
-              "h-auto min-h-10 w-full justify-between px-4 py-3 text-left whitespace-normal",
-              isSelected
-                ? "rounded-lg bg-rose-800 text-white hover:bg-rose-800/90 hover:text-white"
-                : "rounded-lg border-transparent bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 hover:text-foreground dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-            )}
+            selected={isSelected}
+            className="h-auto min-h-10 w-full justify-between px-4 py-3 text-left whitespace-normal"
             onClick={() => toggleAddOn(addOn.id)}
           >
             <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -79,7 +72,7 @@ export function BookingAddOnPicker({
                 {formatRm(addOn.price)}
               </span>
             ) : null}
-          </Button>
+          </WizardChoice>
         )
       })}
     </div>

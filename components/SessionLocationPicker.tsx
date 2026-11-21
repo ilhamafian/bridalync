@@ -1,6 +1,7 @@
 "use client"
 
-import { Card, CardContent } from "@/components/ui/card"
+import { WizardGlass, wizardCardClassName } from "@/components/booking/wizardGlass"
+import { CardContent } from "@/components/ui/card"
 import { useLocale } from "@/components/LocaleProvider"
 import { LocationMapPicker, MapsProvider } from "@/components/LocationMapPicker"
 import { formatSessionSummary } from "@/utils/session"
@@ -34,7 +35,7 @@ export function SessionLocationPicker({
 
   return (
     <MapsProvider>
-      <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+      <WizardGlass className={wizardCardClassName}>
       <CardContent className="flex flex-col gap-4">
       <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">
               {t.locationNotDecided}
@@ -102,7 +103,7 @@ export function SessionLocationPicker({
           </ul>
         )}
       </CardContent>
-      </Card>
+      </WizardGlass>
     </MapsProvider>
   )
 }

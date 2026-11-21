@@ -17,6 +17,7 @@ import {
 import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile, roleLabel } from "@/components/booking/ClientProfile";
+import { BookingStepBar } from "@/components/booking/BookingStepBar";
 import { BookingSummaryPanel } from "@/components/booking/BookingSummaryPanel";
 import { usePublicReviews } from "@/hooks/use-public-reviews";
 import { ManualPaymentStep } from "@/components/booking/ManualPaymentStep";
@@ -48,7 +49,12 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { CardContent, CardFooter } from "@/components/ui/card";
+import {
+  WizardChoice,
+  WizardGlass,
+  wizardCardClassName,
+} from "@/components/booking/wizardGlass";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -714,6 +720,7 @@ export default function ClientPage() {
   const [bookNowPending, setBookNowPending] = useState(false);
   const [bookNowError, setBookNowError] = useState<string | null>(null);
   const stepScrollRef = useRef<HTMLDivElement>(null);
+  const [stepsScrolled, setStepsScrolled] = useState(false);
   const catalogLoadedRef = useRef(false);
   const publicReviews = usePublicReviews(client, stepScrollRef);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
@@ -748,7 +755,22 @@ export default function ClientPage() {
 
   useLayoutEffect(() => {
     stepScrollRef.current?.scrollTo({ top: 0 });
+    setStepsScrolled(false);
   }, [step]);
+
+  useEffect(() => {
+    const el = stepScrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const top = el.scrollTop;
+      setStepsScrolled((prev) => {
+        const next = prev ? top > 8 : top > 32;
+        return next === prev ? prev : next;
+      });
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
   const [selectedAddOnIds, setSelectedAddOnIds] = useState<string[]>([]);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [requestDialogOpen, setRequestDialogOpen] = useState(false);
@@ -1913,7 +1935,7 @@ export default function ClientPage() {
         )}
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {step !== "intro" && (
-            <div className="relative z-10 flex w-full shrink-0 flex-col items-center gap-3 px-6 pt-4">
+            <div className="relative z-20 flex w-full shrink-0 flex-col items-center px-6 pt-4">
               <div className="relative flex w-full max-w-md items-center">
                 <Button
                   type="button"
@@ -1926,40 +1948,16 @@ export default function ClientPage() {
                   {t.back}
                 </Button>
               </div>
-              <Stepper value={progressValue} className="w-full max-w-lg px-4 sm:px-8">
-                <StepperNav className="gap-2 sm:gap-4">
-                  {progressSteps.map((progressStep, index) => (
-                    <StepperItem
-                      key={progressStep.key}
-                      step={index + 1}
-                      className="relative flex-1 items-start"
-                    >
-                      <StepperTrigger
-                        className="pointer-events-none flex grow flex-col items-start justify-center gap-2"
-                        tabIndex={-1}
-                      >
-                        <StepperIndicator className="h-1 w-full rounded-full bg-rose-200 data-[state=active]:bg-rose-800 data-[state=completed]:bg-rose-800">
-                          <span className="sr-only">{index + 1}</span>
-                        </StepperIndicator>
-                        <StepperTitle className="text-start text-[10px] font-semibold leading-tight group-data-[state=inactive]/step:text-muted-foreground sm:text-xs">
-                          {progressStep.key === "style"
-                            ? styleText.step
-                            : progressStep.key === "payment" && requestMode
-                              ? t.stepRequest
-                              : t[progressStep.titleKey]}
-                        </StepperTitle>
-                      </StepperTrigger>
-                    </StepperItem>
-                  ))}
-                </StepperNav>
-              </Stepper>
             </div>
           )}
+          <div className="relative min-h-0 w-full flex-1">
           <div
             ref={stepScrollRef}
             className={cn(
-              "relative z-10 flex min-h-0 w-full flex-1 flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16",
-              step === "intro" ? "pt-16" : "pt-4"
+              "absolute inset-0 flex flex-col items-center overflow-y-auto overscroll-y-contain px-6 pb-16",
+              // Clears the overlaid step indicator at rest. Scrolling carries
+              // content under the glass instead of clipping it at the bar.
+              step === "intro" ? "pt-16" : "pt-14"
             )}
           >
           {step === "intro" && loading && (
@@ -2114,7 +2112,7 @@ export default function ClientPage() {
 
               <div className="flex w-full flex-col items-end gap-4">
                 {nextSessionToSchedule && (
-                  <Card className="mx-auto w-full min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+                  <WizardGlass className={wizardCardClassName}>
                     <CardContent className="flex flex-col items-center gap-4 pt-1">
                       <Calendar
                         mode="single"
@@ -2204,7 +2202,7 @@ export default function ClientPage() {
                         </div>
                       )}
                     </CardFooter>
-                  </Card>
+                  </WizardGlass>
                 )}
 
                 {(!isSingleSessionEvent || allSessionsScheduled) && (
@@ -2637,7 +2635,7 @@ export default function ClientPage() {
                 {t.termsTitle}
               </h1>
               <div className="flex w-full flex-col items-end gap-4">
-                <Card className="mx-auto w-full min-h-128 min-w-72 bg-white/30 shadow-sm ring-white/60 backdrop-blur-sm [--card-spacing:--spacing(6)] sm:min-w-80 dark:bg-white/10 dark:ring-white/15">
+                <WizardGlass className={cn(wizardCardClassName, "min-h-128")}>
                   <CardContent className="flex flex-col gap-4 pt-(--card-spacing)">
                     <div className="max-h-96 overflow-y-auto rounded-md border border-white/40 bg-white/20 p-3 dark:border-white/15 dark:bg-white/5">
                       <p className="whitespace-pre-line text-xs text-muted-foreground">
@@ -2655,7 +2653,7 @@ export default function ClientPage() {
                       <span>{t.agreeCheckbox}</span>
                     </label>
                   </CardContent>
-                </Card>
+                </WizardGlass>
                 {requestMode ? (
                   <Button
                     size="lg"
@@ -2742,17 +2740,12 @@ export default function ClientPage() {
                     role="radiogroup"
                     aria-label={t.paymentOptionLabel}
                   >
-                    <button
-                      type="button"
+                    <WizardChoice
+                      selected={effectivePaymentOption === "full"}
                       role="radio"
                       aria-checked={effectivePaymentOption === "full"}
                       onClick={() => setPaymentOption("full")}
-                      className={cn(
-                        "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
-                        effectivePaymentOption === "full"
-                          ? "bg-rose-800 text-white shadow-sm"
-                          : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-                      )}
+                      className="flex w-full flex-col items-start gap-0.5 px-3 py-3 text-left text-sm"
                     >
                       <span className="font-medium">
                         {format(t.payFullOption, {
@@ -2771,18 +2764,13 @@ export default function ClientPage() {
                       >
                         {t.noBalanceLater}
                       </span>
-                    </button>
-                    <button
-                      type="button"
+                    </WizardChoice>
+                    <WizardChoice
+                      selected={effectivePaymentOption === "deposit"}
                       role="radio"
                       aria-checked={effectivePaymentOption === "deposit"}
                       onClick={() => setPaymentOption("deposit")}
-                      className={cn(
-                        "flex w-full flex-col items-start gap-0.5 rounded-lg px-3 py-3 text-left text-sm transition-colors",
-                        effectivePaymentOption === "deposit"
-                          ? "bg-rose-800 text-white shadow-sm"
-                          : "bg-white/30 shadow-sm ring-1 ring-white/60 backdrop-blur-sm hover:bg-white/40 dark:bg-white/10 dark:ring-white/15 dark:hover:bg-white/15"
-                      )}
+                      className="flex w-full flex-col items-start gap-0.5 px-3 py-3 text-left text-sm"
                     >
                       <span className="font-medium">
                         {format(t.payDepositOption, {
@@ -2802,7 +2790,7 @@ export default function ClientPage() {
                           days: balanceDueBeforeDays,
                         })}
                       </span>
-                    </button>
+                    </WizardChoice>
                   </div>
                 )}
                 <BookingQuotation
@@ -2865,6 +2853,40 @@ export default function ClientPage() {
                   </>
                 )}
               </div>
+            </div>
+          )}
+          </div>
+          {step !== "intro" && (
+            <div className="pointer-events-none absolute inset-x-0 top-0 z-20 px-6 pt-3">
+              <BookingStepBar scrolled={stepsScrolled}>
+                <Stepper value={progressValue} className="w-full px-4 sm:px-8">
+                  <StepperNav className="gap-2 sm:gap-4">
+                    {progressSteps.map((progressStep, index) => (
+                      <StepperItem
+                        key={progressStep.key}
+                        step={index + 1}
+                        className="relative flex-1 items-start"
+                      >
+                        <StepperTrigger
+                          className="pointer-events-none flex grow flex-col items-start justify-center gap-2"
+                          tabIndex={-1}
+                        >
+                          <StepperIndicator className="h-1 w-full rounded-full bg-rose-200 data-[state=active]:bg-rose-800 data-[state=completed]:bg-rose-800">
+                            <span className="sr-only">{index + 1}</span>
+                          </StepperIndicator>
+                          <StepperTitle className="text-start text-[10px] font-semibold leading-tight group-data-[state=inactive]/step:text-muted-foreground sm:text-xs">
+                            {progressStep.key === "style"
+                              ? styleText.step
+                              : progressStep.key === "payment" && requestMode
+                                ? t.stepRequest
+                                : t[progressStep.titleKey]}
+                          </StepperTitle>
+                        </StepperTrigger>
+                      </StepperItem>
+                    ))}
+                  </StepperNav>
+                </Stepper>
+              </BookingStepBar>
             </div>
           )}
           </div>
