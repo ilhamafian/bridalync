@@ -18,6 +18,7 @@ import { BookingSessionList } from "@/components/BookingSessionList";
 import { BookingStylePicker } from "@/components/BookingStylePicker";
 import { ClientProfile, roleLabel } from "@/components/booking/ClientProfile";
 import { BookingStepBar } from "@/components/booking/BookingStepBar";
+import { StepSettle } from "@/components/booking/wizardMotion";
 import { BookingSummaryPanel } from "@/components/booking/BookingSummaryPanel";
 import { usePublicReviews } from "@/hooks/use-public-reviews";
 import { ManualPaymentStep } from "@/components/booking/ManualPaymentStep";
@@ -720,6 +721,7 @@ export default function ClientPage() {
   const [bookNowPending, setBookNowPending] = useState(false);
   const [bookNowError, setBookNowError] = useState<string | null>(null);
   const stepScrollRef = useRef<HTMLDivElement>(null);
+  const stepDirectionRef = useRef<1 | -1>(1);
   const [stepsScrolled, setStepsScrolled] = useState(false);
   const catalogLoadedRef = useRef(false);
   const publicReviews = usePublicReviews(client, stepScrollRef);
@@ -1636,11 +1638,13 @@ export default function ClientPage() {
   const currentStyleSession = sessions[currentStyleSessionIndex];
 
   function showStyleSession(index: number) {
+    stepDirectionRef.current = index > currentStyleSessionIndex ? 1 : -1;
     setStyleSessionIndex(index);
     stepScrollRef.current?.scrollTo({ top: 0 });
   }
 
   function goToNextStep() {
+    stepDirectionRef.current = 1;
     if (step === "style" && currentStyleSessionIndex < sessions.length - 1) {
       showStyleSession(currentStyleSessionIndex + 1);
       return;
@@ -1679,6 +1683,7 @@ export default function ClientPage() {
   }
 
   function goToPreviousStep() {
+    stepDirectionRef.current = -1;
     if (step === "style" && currentStyleSessionIndex > 0) {
       showStyleSession(currentStyleSessionIndex - 1);
       return;
@@ -1975,6 +1980,13 @@ export default function ClientPage() {
           {step === "intro" && !user && !loading && (
             <p className="text-sm text-muted-foreground">{t.profileNotFound}</p>
           )}
+          {step !== "intro" && (
+          <StepSettle
+            key={
+              step === "style" ? `${step}-${currentStyleSessionIndex}` : step
+            }
+            direction={stepDirectionRef.current}
+          >
           {step === "name" && (
             <div className="relative flex w-full max-w-md flex-1 flex-col items-center justify-center">
               <div className="absolute bottom-[calc(50%+3rem)] flex w-full flex-col items-center px-6">
@@ -2854,6 +2866,8 @@ export default function ClientPage() {
                 )}
               </div>
             </div>
+          )}
+          </StepSettle>
           )}
           </div>
           {step !== "intro" && (

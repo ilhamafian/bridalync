@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { motion, useReducedMotion } from "motion/react";
 
 import { roleLabel } from "@/components/booking/ClientProfile";
 import { WizardGlass } from "@/components/booking/wizardGlass";
@@ -44,6 +45,7 @@ export function BookingSummaryPanel({
   totalRm?: number | null;
   className?: string;
 }) {
+  const reduceMotion = useReducedMotion();
   const { t, intlLocale } = useLocale();
   const displayName = user?.name?.trim() || user?.username || "";
   const role = user?.role ? roleLabel(user.role, t) : null;
@@ -52,7 +54,10 @@ export function BookingSummaryPanel({
   const isEmpty = !eventName && sortedSessions.length === 0;
 
   return (
-    <aside
+    <motion.aside
+      initial={reduceMotion ? false : { marginLeft: -12 }}
+      animate={{ marginLeft: 0 }}
+      transition={{ type: "spring", stiffness: 260, damping: 32 }}
       className={cn(
         "flex w-88 shrink-0 flex-col gap-4 overflow-y-auto overscroll-y-contain p-6",
         className
@@ -164,6 +169,6 @@ export function BookingSummaryPanel({
           </>
         )}
       </WizardGlass>
-    </aside>
+    </motion.aside>
   );
 }

@@ -7,6 +7,7 @@ import { createPortal } from "react-dom";
 
 import { useLocale } from "@/components/LocaleProvider";
 import { Button } from "@/components/ui/button";
+import { FadeRise, ReviewSettle } from "@/components/booking/wizardMotion";
 import { WizardGlass } from "@/components/booking/wizardGlass";
 import { CardContent } from "@/components/ui/card";
 import {
@@ -248,7 +249,7 @@ export function ClientProfile({
     <>
       <div className="relative z-10 mx-auto flex w-full max-w-md min-w-72 shrink-0 flex-col gap-10 sm:min-w-80 @4xl/client:grid @4xl/client:max-w-5xl @4xl/client:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] @4xl/client:items-start @4xl/client:gap-12">
         <div className="flex flex-col items-center text-center @4xl/client:sticky @4xl/client:top-0">
-          <div className="relative size-28 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
+          <FadeRise className="relative size-28 shrink-0 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-800">
             {user.profile_photo_url ? (
               <Image
                 src={user.profile_photo_url}
@@ -263,37 +264,44 @@ export function ClientProfile({
                 {initialsFromName(displayName)}
               </div>
             )}
-          </div>
+          </FadeRise>
 
-          <h1 className="mt-5 max-w-full truncate text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
-            {displayName}
-          </h1>
-          {role ? (
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-              {role}
-            </p>
-          ) : null}
-          {bio ? (
-            <p className="mt-3 max-w-xs whitespace-pre-line break-words text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
-              {bio}
-            </p>
-          ) : null}
+          <FadeRise delay={0.08} className="flex flex-col items-center">
+            <h1 className="mt-5 max-w-full truncate text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
+              {displayName}
+            </h1>
+            {role ? (
+              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                {role}
+              </p>
+            ) : null}
+            {bio ? (
+              <p className="mt-3 max-w-xs whitespace-pre-line break-words text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+                {bio}
+              </p>
+            ) : null}
+          </FadeRise>
 
-          <Button
-            type="button"
-            size="lg"
-            className="mt-6 h-11 w-full max-w-xs bg-rose-800 text-white hover:bg-rose-800/90"
-            disabled={bookNowPending}
-            onClick={onBookNow}
-          >
-            {bookNowPending ? t.loadingPackages : t.bookNow}
-          </Button>
-          {bookNowError ? (
-            <p className="mt-3 max-w-xs text-sm text-destructive">{bookNowError}</p>
-          ) : null}
+          <FadeRise delay={0.14} className="flex w-full flex-col items-center">
+            <Button
+              type="button"
+              size="lg"
+              className="mt-6 h-11 w-full max-w-xs bg-rose-800 text-white hover:bg-rose-800/90"
+              disabled={bookNowPending}
+              onClick={onBookNow}
+            >
+              {bookNowPending ? t.loadingPackages : t.bookNow}
+            </Button>
+            {bookNowError ? (
+              <p className="mt-3 max-w-xs text-sm text-destructive">{bookNowError}</p>
+            ) : null}
+          </FadeRise>
 
           {socialEntries.length > 0 ? (
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            <FadeRise
+              delay={0.2}
+              className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2"
+            >
               {socialEntries.map(({ key, label, href, icon: Icon }) => (
                 <a
                   key={key}
@@ -306,19 +314,19 @@ export function ClientProfile({
                   <span>{label}</span>
                 </a>
               ))}
-            </div>
+            </FadeRise>
           ) : null}
         </div>
 
         <section className="mx-auto flex w-full max-w-xs flex-col gap-4 @4xl/client:mx-0 @4xl/client:max-w-none">
-          <div>
+          <FadeRise delay={0.1}>
             <h2 className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-50">
               {t.reviews}
             </h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               {t.clientFeedback}
             </p>
-          </div>
+          </FadeRise>
 
           {reviews.length === 0 && !hasMore && !failed ? (
             <p className="text-sm text-zinc-500 dark:text-zinc-500">
@@ -329,8 +337,8 @@ export function ClientProfile({
               className="grid h-fit w-full grid-cols-1 content-start items-start gap-3 @6xl/client:grid-cols-2"
               aria-busy={loading}
             >
-              {reviews.map((review) => (
-                <li key={review._id} className="min-h-0 min-w-0">
+              {reviews.map((review, index) => (
+                <ReviewSettle key={review._id} index={index}>
                   <button
                     type="button"
                     className="block h-fit w-full overflow-hidden rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -375,7 +383,7 @@ export function ClientProfile({
                       </CardContent>
                     </WizardGlass>
                   </button>
-                </li>
+                </ReviewSettle>
               ))}
               {showSkeletons ? (
                 <>
