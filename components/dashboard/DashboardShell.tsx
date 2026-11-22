@@ -352,6 +352,7 @@ export function DashboardShell({ data }: { data: DashboardData }) {
               timeSlots: data.bookings.timeSlots,
               morningCall: data.bookings.morningCall,
               travel: data.bookings.travel,
+              baseLocation: data.bookings.baseLocation,
             }}
             occupancy={{
               bookings: [

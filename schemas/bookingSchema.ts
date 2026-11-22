@@ -247,6 +247,8 @@ const bookingSessionInputSchema = z.object({
   time_slot: timeSlotSchema,
   ready_by: timeOfDaySchema.optional(),
   location: addressSchema,
+  /** Client comes to the stylist's saved place; the server replaces `location`. */
+  walk_in: z.boolean().optional(),
   style: bookingLineItemInputSchema.optional(),
 });
 

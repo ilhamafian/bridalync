@@ -29,6 +29,8 @@ export type SerializedBooking = {
     slot_count?: number;
     ready_by?: string;
     location?: Booking["sessions"][number]["location"];
+    /** Client comes to the stylist's saved place. */
+    walk_in?: boolean;
     region?: Booking["sessions"][number]["region"];
     client_key?: string;
   }>;

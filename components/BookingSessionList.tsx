@@ -6,7 +6,7 @@ import { WizardGlass } from "@/components/booking/wizardGlass"
 import { useLocale } from "@/components/LocaleProvider"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { formatLocationAddress, formatSessionSummary } from "@/utils/session"
+import { formatSessionSummary, formatWalkInAddress } from "@/utils/session"
 import type { SessionForm } from "@/schemas/sessionSchema"
 
 type SessionListItem = Pick<
@@ -17,6 +17,7 @@ type SessionListItem = Pick<
   | "slot_count"
   | "ready_by"
   | "location"
+  | "walk_in"
   | "order"
 > & {
   client_key?: string
@@ -86,7 +87,7 @@ export function BookingSessionList({
             )}
             {showLocation && session.location && (
               <p className="mt-0.5 text-xs text-muted-foreground">
-                {formatLocationAddress(session.location)}
+                {formatWalkInAddress(session.location, session.walk_in, t.walkIn)}
               </p>
             )}
           </div>

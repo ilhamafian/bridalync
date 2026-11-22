@@ -73,6 +73,7 @@ export async function quoteClientSchedule(
         time_slot: change.time_slot,
         ...(change.ready_by ? { ready_by: change.ready_by } : {}),
         location: session.location,
+        ...(session.walk_in ? { walk_in: true } : {}),
         ...(session.styleId
           ? {
               style: {

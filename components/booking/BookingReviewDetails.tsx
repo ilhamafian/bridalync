@@ -16,7 +16,7 @@ import {
   MOODBOARD_PDF_TYPE,
   normalizeInstagramUsername,
 } from "@/utils/booking/clientInfo";
-import { formatLocationAddress } from "@/utils/session";
+import { formatWalkInAddress } from "@/utils/session";
 
 function Field({
   label,
@@ -127,7 +127,11 @@ export function BookingReviewDetails({
                 {session.location ? (
                   <Field
                     label={t.reviewLocation}
-                    value={formatLocationAddress(session.location)}
+                    value={formatWalkInAddress(
+                      session.location,
+                      session.walk_in,
+                      t.walkIn
+                    )}
                     wide
                     clamp
                   />

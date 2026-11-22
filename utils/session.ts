@@ -45,3 +45,13 @@ export function formatLocationAddress(
 
   return `${venue}, ${address}`;
 }
+
+/** Address, prefixed when the client is coming to the stylist's place. */
+export function formatWalkInAddress(
+  location: Pick<Address, "formattedAddress" | "displayName">,
+  walkIn: boolean | undefined,
+  walkInLabel = "Walk-in"
+): string {
+  const address = formatLocationAddress(location);
+  return walkIn ? `${walkInLabel} · ${address}` : address;
+}

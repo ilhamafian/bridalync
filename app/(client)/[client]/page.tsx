@@ -727,6 +727,7 @@ export default function ClientPage() {
   const publicReviews = usePublicReviews(client, stepScrollRef);
   const [sessions, setSessions] = useState<SessionForm[]>([]);
   const [sameLocationForAll, setSameLocationForAll] = useState(true);
+  const [sharedWalkIn, setSharedWalkIn] = useState(false);
   const [sharedLocation, setSharedLocation] = useState<Address | null>(null);
   const [sessionRoadDistances, setSessionRoadDistances] = useState<
     Record<string, SessionRoadDistance>
@@ -1043,6 +1044,7 @@ export default function ClientPage() {
     settings && travelPricing.kind === "distance"
       ? settings.travel.location.location
       : null;
+  const baseAddress = settings?.travel.location ?? null;
   const regionPrices =
     travelPricing.kind === "region_fixed"
       ? travelPricing.prices
@@ -1053,7 +1055,8 @@ export default function ClientPage() {
     travelPricing.kind === "region_fixed" ||
     (travelPricing.kind === "region_per_event" && selectedEvent !== null);
   const venueLocations = useMemo(
-    () => sessions.map((session) => session.location),
+    () =>
+      sessions.map((session) => (session.walk_in ? null : session.location)),
     [sessions]
   );
   const regionQuote = useRegionQuote(
@@ -1086,13 +1089,18 @@ export default function ClientPage() {
   const distanceKmBySessionKey = useMemo(() => {
     const distances: Record<string, number | undefined> = {};
 
-    for (const [sessionKey, roadDistance] of Object.entries(sessionRoadDistances)) {
-      distances[sessionKey] =
-        roadDistance.status === "ready" ? roadDistance.distanceKm : undefined;
+    for (const session of sessions) {
+      if (session.walk_in) {
+        distances[session.client_key] = 0;
+        continue;
+      }
+      const roadDistance = sessionRoadDistances[session.client_key];
+      distances[session.client_key] =
+        roadDistance?.status === "ready" ? roadDistance.distanceKm : undefined;
     }
 
     return distances;
-  }, [sessionRoadDistances]);
+  }, [sessions, sessionRoadDistances]);
 
   const eventPriceRm = useMemo(() => {
     if (!selectedEvent || !selectedPackageId) return 0;
@@ -1316,6 +1324,7 @@ export default function ClientPage() {
     setSelectedTimeSlot(null);
     setReadyBy("");
     setSharedLocation(null);
+    setSharedWalkIn(false);
     setSameLocationForAll(true);
     setStyleCategoryBySessionKey({});
     setStyleVariantBySessionKey({});
@@ -1328,19 +1337,39 @@ export default function ClientPage() {
     // (explicit "same for all", or a single-session booking).
     const shareAcrossSessions =
       sameLocationForAll || sessions.length === 1;
-    if (!shareAcrossSessions || !sharedLocation) return;
+    if (!shareAcrossSessions) return;
+
+    if (sharedWalkIn) {
+      if (!baseAddress) return;
+      setSessions((current) => {
+        if (current.length === 0) return current;
+        const alreadySynced = current.every(
+          (session) => session.walk_in && session.location === baseAddress
+        );
+        if (alreadySynced) return current;
+        return current.map((session) => ({
+          ...session,
+          location: baseAddress,
+          walk_in: true,
+        }));
+      });
+      return;
+    }
+
+    if (!sharedLocation) return;
     setSessions((current) => {
       if (current.length === 0) return current;
       const alreadySynced = current.every(
-        (session) => session.location === sharedLocation
+        (session) => !session.walk_in && session.location === sharedLocation
       );
       if (alreadySynced) return current;
       return current.map((session) => ({
         ...session,
         location: sharedLocation,
+        walk_in: undefined,
       }));
     });
-  }, [sameLocationForAll, sharedLocation, sessions.length]);
+  }, [sameLocationForAll, sharedLocation, sharedWalkIn, baseAddress, sessions.length]);
 
   useEffect(() => {
     sessionRoadDistancesRef.current = sessionRoadDistances;
@@ -1354,7 +1383,7 @@ export default function ClientPage() {
 
     const sessionsWithLocation = sessions.filter(
       (session): session is SessionForm & { location: Address } =>
-        Boolean(session.location)
+        Boolean(session.location) && !session.walk_in
     );
 
     if (sessionsWithLocation.length === 0) {
@@ -1566,7 +1595,9 @@ export default function ClientPage() {
   const allDistancesReady =
     !travelOrigin ||
     sessions.every(
-      (session) => sessionRoadDistances[session.client_key]?.status === "ready"
+      (session) =>
+        session.walk_in ||
+        sessionRoadDistances[session.client_key]?.status === "ready"
     );
 
   const regionReady =
@@ -1597,7 +1628,7 @@ export default function ClientPage() {
     }
 
     for (const session of sessions) {
-      if (!session.location) {
+      if (session.walk_in || !session.location) {
         messages[session.client_key] = undefined;
         continue;
       }
@@ -2274,25 +2305,83 @@ export default function ClientPage() {
               <div className="flex w-full flex-col items-end gap-4">
                 <SessionLocationPicker
                   sessions={sessions}
+                  baseAddress={baseAddress}
                   sameLocationForAll={sameLocationForAll}
-                  onSameLocationForAllChange={setSameLocationForAll}
+                  onSameLocationForAllChange={(value) => {
+                    setSameLocationForAll(value);
+                    if (!value) return;
+                    const allWalkIn =
+                      sessions.length > 0 &&
+                      sessions.every((session) => session.walk_in);
+                    setSharedWalkIn(allWalkIn);
+                    if (!allWalkIn) {
+                      setSharedLocation(
+                        sessions.find(
+                          (session) => session.location && !session.walk_in
+                        )?.location ?? null
+                      );
+                    }
+                  }}
+                  sharedWalkIn={sharedWalkIn}
+                  onSharedWalkInChange={(value) => {
+                    setSharedWalkIn(value);
+                    if (value && baseAddress) {
+                      setSharedLocation(null);
+                      setSessions((current) =>
+                        current.map((session) => ({
+                          ...session,
+                          location: baseAddress,
+                          walk_in: true,
+                        }))
+                      );
+                      return;
+                    }
+                    setSharedWalkIn(false);
+                    setSessions((current) =>
+                      current.map((session) => ({
+                        ...session,
+                        location: undefined,
+                        walk_in: undefined,
+                      }))
+                    );
+                  }}
                   sharedLocation={sharedLocation}
                   onSharedLocationChange={(location) => {
+                    setSharedWalkIn(false);
                     setSharedLocation(location);
                     // Apply immediately so Next enables without waiting on the sync effect.
                     if (sameLocationForAll || sessions.length === 1) {
                       setSessions((current) =>
-                        current.map((session) => ({ ...session, location }))
+                        current.map((session) => ({
+                          ...session,
+                          location,
+                          walk_in: undefined,
+                        }))
                       );
                     }
                   }}
                   sharedLocationHelperText={sharedLocationHelperText}
                   sessionLocationHelperTextByKey={sessionLocationHelperTextByKey}
+                  onSessionWalkInChange={(clientKey, walkIn) =>
+                    setSessions((current) =>
+                      current.map((session) =>
+                        session.client_key === clientKey
+                          ? {
+                              ...session,
+                              walk_in: walkIn || undefined,
+                              location: walkIn
+                                ? baseAddress ?? undefined
+                                : undefined,
+                            }
+                          : session
+                      )
+                    )
+                  }
                   onSessionLocationChange={(clientKey, location) =>
                     setSessions((current) =>
                       current.map((session) =>
                         session.client_key === clientKey
-                          ? { ...session, location }
+                          ? { ...session, location, walk_in: undefined }
                           : session
                       )
                     )

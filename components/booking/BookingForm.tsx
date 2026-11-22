@@ -47,6 +47,7 @@ import type {
   TimeSlot,
 } from "@/schemas/settingSchema";
 import { useRegionQuote } from "@/hooks/use-venue-regions";
+import { formatLocationAddress } from "@/utils/session";
 import {
   isValidInstagramUsername,
   normalizeInstagramUsername,
@@ -126,13 +127,15 @@ export type BookingFormTravel =
   | {
       kind: "distance";
       origin: LatLng;
+      /** Stylist's saved place; walk-in sessions use this instead of a venue pin. */
+      baseLocation: Address;
       ratePerKm: number;
       longDistanceRatePerKm?: number;
     }
   /** One price per region, folded into the booking price. */
-  | { kind: "region_fixed"; prices: RegionPrices }
+  | { kind: "region_fixed"; prices: RegionPrices; baseLocation: Address }
   /** Each event's `regionPrices` is its full price per region. */
-  | { kind: "region_per_event" };
+  | { kind: "region_per_event"; baseLocation: Address };
 
 export type BookingFormCatalog = {
   packages: PackageCatalogItem[];
@@ -143,6 +146,8 @@ export type BookingFormCatalog = {
   morningCall?: MorningCallSetting | null;
   /** Null when the travel fee is turned off in Settings. */
   travel: BookingFormTravel | null;
+  /** Saved home/studio address, including when the travel fee is off. */
+  baseLocation: Address | null;
 };
 
 /** What's already taken, so the slot picker can disable it (the server rejects these on create). */
@@ -181,6 +186,8 @@ type SessionFormRow = {
   /** HH:mm the client must be ready by; blank = not set. */
   ready_by: string;
   location: Address | null;
+  /** Client comes to the stylist's saved place. No travel fee. */
+  walk_in: boolean;
 };
 
 type CustomAddOnRow = {
@@ -324,6 +331,7 @@ function sessionsFromEvent(
       customEnd: "",
       ready_by: existing?.ready_by ?? "",
       location: existing?.location ?? null,
+      walk_in: existing?.walk_in ?? false,
     };
   });
 }
@@ -347,6 +355,7 @@ function emptySession(name = ""): SessionFormRow {
     customEnd: "",
     ready_by: "",
     location: null,
+    walk_in: false,
   };
 }
 
@@ -432,6 +441,7 @@ function bookingToForm(
         customEnd: isOthers ? (span?.endTime ?? "") : "",
         ready_by: session.ready_by ?? "",
         location: session.location ?? null,
+        walk_in: session.walk_in === true,
       };
     }),
     status: booking.status,
@@ -468,6 +478,7 @@ export function BookingForm({
   timeSlots,
   morningCall,
   travel,
+  baseLocation,
   occupancy,
   onSaved,
   onCancel,
@@ -547,7 +558,10 @@ export function BookingForm({
     [travel, selectedEvent]
   );
   const venueLocations = useMemo(
-    () => form.sessions.map((session) => session.location),
+    () =>
+      form.sessions.map((session) =>
+        session.walk_in ? null : session.location
+      ),
     [form.sessions]
   );
   const regionQuote = useRegionQuote(
@@ -564,7 +578,7 @@ export function BookingForm({
     if (!distanceTravel) return;
 
     for (const session of form.sessions) {
-      if (!session.location) continue;
+      if (session.walk_in || !session.location) continue;
       const destination = session.location.location;
       const key = venueKey(destination);
       if (requestedVenuesRef.current.has(key)) continue;
@@ -601,6 +615,10 @@ export function BookingForm({
     const distanceKmBySessionKey: Record<string, number> = {};
     let status: VenueDistance["status"] = "ready";
     for (const session of form.sessions) {
+      if (session.walk_in) {
+        distanceKmBySessionKey[session.client_key] = 0;
+        continue;
+      }
       if (!session.location) continue;
       const distance = venueDistances[venueKey(session.location.location)];
       if (distance?.status === "ready") {
@@ -1110,7 +1128,13 @@ export function BookingForm({
           };
         }
       }
-      if (!session.location) {
+      if (session.walk_in) {
+        if (!baseLocation) {
+          return {
+            error: "Save your place in Travel settings before marking a walk-in.",
+          };
+        }
+      } else if (!session.location) {
         return { error: "Each session needs a location." };
       }
     }
@@ -1206,7 +1230,8 @@ export function BookingForm({
           date: new Date(`${session.date}T12:00:00`),
           time_slot: mergeSlots(session.time_slots),
           ready_by: session.ready_by || undefined,
-          location: session.location!,
+          location: session.walk_in ? baseLocation! : session.location!,
+          ...(session.walk_in ? { walk_in: true } : {}),
           style: resolveSessionStyle(session),
         })),
         status: creating ? "pending" : form.status,
@@ -1863,17 +1888,48 @@ export function BookingForm({
                 />
               </Field>
               <Field label="Location">
-                <LocationMapPicker
-                  value={session.location}
-                  onChange={(location) =>
-                    updateSession(session.client_key, { location })
-                  }
-                  hint={
-                    isGoogleImport
-                      ? "Imported events have no location. Search or pin the venue."
-                      : undefined
-                  }
-                />
+                <div className="mb-2 flex items-start gap-3">
+                  <Checkbox
+                    id={`walk-in-${session.client_key}`}
+                    checked={session.walk_in}
+                    disabled={!baseLocation}
+                    onCheckedChange={(value) =>
+                      updateSession(session.client_key, {
+                        walk_in: value === true,
+                        location: value === true ? baseLocation : null,
+                      })
+                    }
+                  />
+                  <label
+                    htmlFor={`walk-in-${session.client_key}`}
+                    className="flex cursor-pointer flex-col gap-0.5"
+                  >
+                    <span className="text-sm font-medium">Walk-in</span>
+                    <span className="text-xs text-muted-foreground">
+                      Client comes to your place. No travel fee.
+                    </span>
+                  </label>
+                </div>
+                {session.walk_in && baseLocation ? (
+                  <p className="text-sm text-foreground">
+                    {formatLocationAddress(baseLocation)}
+                  </p>
+                ) : (
+                  <LocationMapPicker
+                    value={session.location}
+                    onChange={(location) =>
+                      updateSession(session.client_key, {
+                        location,
+                        walk_in: false,
+                      })
+                    }
+                    hint={
+                      isGoogleImport
+                        ? "Imported events have no location. Search or pin the venue."
+                        : undefined
+                    }
+                  />
+                )}
               </Field>
             </div>
           ))}
@@ -1970,7 +2026,10 @@ export function BookingForm({
                         "text-destructive"
                     )}
                   >
-                    {regionQuote.status === "loading"
+                    {form.sessions.length > 0 &&
+                    form.sessions.every((session) => session.walk_in)
+                      ? "Walk-in"
+                      : regionQuote.status === "loading"
                       ? "Checking…"
                       : regionQuote.status === "error"
                         ? "Unavailable"

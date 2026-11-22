@@ -77,13 +77,18 @@ function toBookingFormTravel(
       return {
         kind: "distance",
         origin: travel.location.location,
+        baseLocation: travel.location,
         ratePerKm: travel.rate_per_km,
         longDistanceRatePerKm: travel.long_distance_rate_per_km,
       };
     case "region_fixed":
-      return { kind: "region_fixed", prices: pricing.prices };
+      return {
+        kind: "region_fixed",
+        prices: pricing.prices,
+        baseLocation: travel.location,
+      };
     case "region_per_event":
-      return { kind: "region_per_event" };
+      return { kind: "region_per_event", baseLocation: travel.location };
   }
 }
 
@@ -285,6 +290,7 @@ export async function loadDashboardData(
       timeSlots,
       morningCall: settings.morning_call ?? null,
       travel: toBookingFormTravel(settings.travel, chargeBy),
+      baseLocation: settings.travel.location,
     },
     packages: {
       initialPackages: packages.map(serializePackage),

@@ -6,7 +6,7 @@ import { useLocale } from "@/components/LocaleProvider"
 import type { SessionForm } from "@/schemas/sessionSchema"
 import { quotationLineItemsForDisplay } from "@/utils/booking/morningCall"
 import { BookingQuotationSummary, formatRm } from "@/utils/booking/pricing"
-import { formatLocationAddress, formatSessionSummary } from "@/utils/session"
+import { formatSessionSummary, formatWalkInAddress } from "@/utils/session"
 import { cn } from "@/lib/utils"
 
 type BookingQuotationProps = {
@@ -178,7 +178,11 @@ export function BookingQuotation({
                   </p>
                   {session.location && (
                     <p className="mt-0.5 text-xs text-muted-foreground">
-                      {formatLocationAddress(session.location)}
+                      {formatWalkInAddress(
+                        session.location,
+                        session.walk_in,
+                        t.walkIn
+                      )}
                     </p>
                   )}
                 </li>

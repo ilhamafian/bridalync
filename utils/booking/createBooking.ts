@@ -401,6 +401,18 @@ export async function resolveBookingQuotation(
     sessions = validateEventSessions(input, eventId, event, settings.time_slots);
   }
 
+  // Walk-in ignores the pin the client sent and uses the stylist's saved place.
+  sessions = sessions.map((session) =>
+    session.walk_in
+      ? {
+          ...session,
+          walk_in: true,
+          location: settings.travel.location,
+        }
+      : session
+  );
+  const venueSessions = sessions.filter((session) => !session.walk_in);
+
   const sessionDateKeys = sessions
     .map((session) => toDateKey(session.date))
     .filter(Boolean);
@@ -569,18 +581,29 @@ export async function resolveBookingQuotation(
     unservedRegions.length
   ) {
     try {
-      regionsBySessionKey = await resolveSessionRegions(sessions);
+      regionsBySessionKey =
+        venueSessions.length > 0
+          ? await resolveSessionRegions(venueSessions)
+          : {};
     } catch (error) {
       console.error("Venue region lookup failed:", error);
       throw new Error(
         "We couldn't check the venue's state right now. Please try again."
       );
     }
+    regionsBySessionKey ??= {};
+    // Walk-in is at the base address, which is never a travel-buffer state.
+    for (const session of sessions) {
+      if (session.walk_in) {
+        regionsBySessionKey[session.client_key] =
+          settings.travel.base_region ?? null;
+      }
+    }
   }
 
   if (regionsBySessionKey && unservedRegions.length) {
     const unserved = findUnservedRegion(
-      sessions
+      venueSessions
         .filter((session) => session.location)
         .map((session) => regionsBySessionKey?.[session.client_key] ?? null),
       unservedRegions
@@ -594,7 +617,7 @@ export async function resolveBookingQuotation(
 
   let regionTravel: TravelQuotationInput | undefined;
   if (pricesByRegion && regionsBySessionKey) {
-    const regions = sessions
+    const regions = venueSessions
       .filter((session) => session.location)
       .map((session) => regionsBySessionKey?.[session.client_key] ?? null);
 
@@ -631,15 +654,21 @@ export async function resolveBookingQuotation(
   let distanceKmBySessionKey: Record<string, number> = {};
   if (travelPricing.kind === "distance") {
     try {
-      distanceKmBySessionKey = await resolveSessionDistancesKm(
-        settings.travel.location.location,
-        sessions
-      );
+      distanceKmBySessionKey =
+        venueSessions.length > 0
+          ? await resolveSessionDistancesKm(
+              settings.travel.location.location,
+              venueSessions
+            )
+          : {};
     } catch (error) {
       console.error("Travel distance lookup failed:", error);
       throw new Error(
         "We couldn't calculate the travel fee right now. Please try again."
       );
+    }
+    for (const session of sessions) {
+      if (session.walk_in) distanceKmBySessionKey[session.client_key] = 0;
     }
   }
 

@@ -19,6 +19,11 @@ export const sessionSchema = z.object({
     ready_by: timeOfDaySchema.optional(),
     /** Optional for Google Calendar imports; stylists add it later from the dashboard. */
     location: addressSchema.optional(),
+    /**
+     * Client comes to the stylist's saved place. The server stores that address
+     * and does not charge travel or a state price.
+     */
+    walk_in: z.boolean().optional(),
     /** Venue's state, set server-side when it was looked up (`null` = outside every region). */
     region: regionIdSchema.nullable().optional(),
 });

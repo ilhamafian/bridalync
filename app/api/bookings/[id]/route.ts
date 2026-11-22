@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 
+import { SettingModel } from "@/models/Setting";
 import {
   deleteBooking,
   getBookingById,
@@ -258,6 +259,10 @@ export async function PATCH(
       }
 
       if (isGoogleImportWithoutPackages && data.sessions) {
+        const walkInLocation = data.sessions.some((session) => session.walk_in)
+          ? (await new SettingModel().findSettingsByUserId(userId))?.travel
+              .location
+          : undefined;
         updatePayload.sessions = data.sessions.map((session, index) => ({
           status: "scheduled" as const,
           name: session.name,
@@ -266,7 +271,11 @@ export async function PATCH(
           date: normalizeSessionDate(session.date),
           time_slot: session.time_slot,
           ...(session.ready_by ? { ready_by: session.ready_by } : {}),
-          location: session.location,
+          location:
+            session.walk_in && walkInLocation
+              ? walkInLocation
+              : session.location,
+          ...(session.walk_in ? { walk_in: true } : {}),
           client_key: session.client_key,
         }));
         if (data.contact?.name) {

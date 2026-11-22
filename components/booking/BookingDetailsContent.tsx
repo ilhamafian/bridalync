@@ -24,7 +24,7 @@ import { formatRm } from "@/utils/booking/pricing";
 import type { SerializedBooking } from "@/utils/booking/serializeBooking";
 import { GOOGLE_IMPORT_CONTACT_EMAIL } from "@/utils/google/calendar";
 import { isNavigableLocation } from "@/utils/maps";
-import { formatLocationAddress } from "@/utils/session";
+import { formatWalkInAddress } from "@/utils/session";
 import {
   buildWhatsAppProfileUrl,
   formatWhatsAppDisplay,
@@ -318,7 +318,9 @@ export function BookingDetailsSections({
                 {session.location ? (
                   <p className="mt-1.5 flex items-start gap-1.5 text-muted-foreground">
                     <IconMapPin className="mt-0.5 size-4 shrink-0" />
-                    <span>{formatLocationAddress(session.location)}</span>
+                    <span>
+                      {formatWalkInAddress(session.location, session.walk_in)}
+                    </span>
                   </p>
                 ) : (
                   <p className="mt-1.5 text-muted-foreground">

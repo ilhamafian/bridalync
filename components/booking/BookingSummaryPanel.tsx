@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 import type { SessionForm } from "@/schemas/sessionSchema";
 import type { PublicProfile } from "@/schemas/userSchema";
 import { formatRm } from "@/utils/booking/pricing";
-import { formatLocationAddress } from "@/utils/session";
+import { formatWalkInAddress } from "@/utils/session";
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -131,7 +131,11 @@ export function BookingSummaryPanel({
                     {session.location ? (
                       <Row
                         label={t.reviewLocation}
-                        value={formatLocationAddress(session.location)}
+                        value={formatWalkInAddress(
+                          session.location,
+                          session.walk_in,
+                          t.walkIn
+                        )}
                       />
                     ) : null}
                     {style ? <Row label={styleLabel} value={style} /> : null}
