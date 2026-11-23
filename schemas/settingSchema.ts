@@ -43,7 +43,11 @@ export const travelSettingSchema = z.object({
   long_distance_rate_per_km: z.number().min(0).optional(),
   /** Base for distance mode; region mode keeps whatever is stored. */
   location: addressSchema,
-  /** Region mode: one price list (`fixed`) or one per event (`per_event`, package mode only). Missing = fixed. */
+  /**
+   * Charging by event always uses `per_event` (each event's own price per state).
+   * `fixed` is only for stylists who charge by style: one price per state, added on.
+   * Missing = fixed.
+   */
   region_mode: travelRegionModeSchema.optional(),
   region_prices: regionPricesSchema.optional(),
   /** Who provides accommodation and transport for venues outside `base_region`. Missing = self. */

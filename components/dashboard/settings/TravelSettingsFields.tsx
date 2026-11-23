@@ -6,8 +6,6 @@ import {
   IconBed,
   IconCar,
   IconMap,
-  IconMapPin,
-  IconPackage,
   IconRoute,
   IconUserHeart,
 } from "@tabler/icons-react";
@@ -25,7 +23,6 @@ import type {
   AccommodationProvider,
   RegionId,
   TravelMode,
-  TravelRegionMode,
   TravelSetting,
 } from "@/schemas/settingSchema";
 import {
@@ -75,9 +72,6 @@ export function useTravelSettingsForm(initial: TravelSetting) {
     savedLocation(initial)
   );
   const [mode, setMode] = useState<TravelMode>(initial.mode ?? "distance");
-  const [regionMode, setRegionMode] = useState<TravelRegionMode>(
-    initial.region_mode ?? "fixed"
-  );
   const [regionPrices, setRegionPrices] = useState<RegionPriceInputs>(() =>
     toRegionPriceInputs(initial.region_prices)
   );
@@ -116,14 +110,16 @@ export function useTravelSettingsForm(initial: TravelSetting) {
     setLongDistanceRatePerKm(String(next.long_distance_rate_per_km ?? ""));
     setLocation(savedLocation(next));
     setMode(next.mode ?? "distance");
-    setRegionMode(next.region_mode ?? "fixed");
     setRegionPrices(toRegionPriceInputs(next.region_prices));
     setAccommodationBy(next.accommodation_by ?? "self");
     setBufferRegions(next.travel_buffer_regions ?? []);
     setUnservedRegions(next.unserved_regions ?? []);
   }
 
-  /** Validates the form; `chargeBy` decides whether per-event state pricing applies. */
+  /**
+   * Validates the form. Charging by event always prices each event per state.
+   * Charging by style keeps one added-on price per state.
+   */
   function buildTravel(
     chargeBy: ChargeBy
   ): { travel: TravelSettingsPayload } | { error: string } {
@@ -145,6 +141,20 @@ export function useTravelSettingsForm(initial: TravelSetting) {
       unserved_regions: hiddenPriceRegions,
     };
 
+    if (enabled && mode === "region" && chargeBy === "package") {
+      return {
+        travel: {
+          enabled: true,
+          mode: "region",
+          rate_per_km: saved.rate_per_km,
+          region_mode: "per_event",
+          region_prices: saved.region_prices,
+          location: location ?? saved.location,
+          ...accommodation,
+        },
+      };
+    }
+
     if (enabled && mode === "region") {
       const parsedPrices = parseRegionPriceInputs(regionPrices);
       if (!parsedPrices) {
@@ -152,9 +162,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
           error: "Enter a valid price for each state, or leave it blank.",
         };
       }
-      const effectiveRegionMode = chargeBy === "package" ? regionMode : "fixed";
       if (
-        effectiveRegionMode === "fixed" &&
         Object.keys(parsedPrices).every((id) =>
           hiddenPriceRegions.includes(id as RegionId)
         )
@@ -167,7 +175,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
           enabled: true,
           mode: "region",
           rate_per_km: saved.rate_per_km,
-          region_mode: effectiveRegionMode,
+          region_mode: "fixed",
           region_prices: parsedPrices,
           location: location ?? saved.location,
           ...accommodation,
@@ -228,8 +236,6 @@ export function useTravelSettingsForm(initial: TravelSetting) {
     setLocation,
     mode,
     setMode,
-    regionMode,
-    setRegionMode,
     regionPrices,
     setRegionPrices,
     accommodationBy,
@@ -320,14 +326,7 @@ export function TravelSettingsFields({
   chargeBy: ChargeBy;
   styleTerms: StyleTerms;
 }) {
-  const {
-    enabled,
-    mode,
-    regionMode,
-    baseRegion,
-    unservedRegions,
-    bufferRegions,
-  } = form;
+  const { enabled, mode, baseRegion, unservedRegions, bufferRegions } = form;
   const travelDayRegions = MALAYSIA_REGIONS.filter(
     (region) =>
       region.id !== baseRegion && !unservedRegions.includes(region.id)
@@ -366,7 +365,11 @@ export function TravelSettingsFields({
               <IconBadge icon={IconMap} />
               <RowText
                 title="By state"
-                description="A price for each state you serve."
+                description={
+                  chargeBy === "package"
+                    ? "Each event has its own price for the states you serve."
+                    : "A price for each state you serve."
+                }
               />
               <RadioGroupItem value="region" aria-label="By state" />
             </label>
@@ -388,65 +391,31 @@ export function TravelSettingsFields({
         </SettingsSection>
       </MapsProvider>
 
-      {enabled && mode === "region" ? (
-        <>
-          {chargeBy === "package" ? (
-            <SettingsSection title="State pricing">
-              <GlassRadioGroup
-                value={regionMode}
-                onValueChange={(value) =>
-                  form.setRegionMode(value as TravelRegionMode)
-                }
-              >
-                <label className={cn(settingsRowClassName, "cursor-pointer")}>
-                  <IconBadge icon={IconMapPin} />
-                  <RowText
-                    title="Fixed charge"
-                    description="One price per state, added to every event."
-                  />
-                  <RadioGroupItem value="fixed" aria-label="Fixed charge" />
-                </label>
-                <label className={cn(settingsRowClassName, "cursor-pointer")}>
-                  <IconBadge icon={IconPackage} />
-                  <RowText
-                    title="Different charge by event"
-                    description="Each event has its own price per state."
-                  />
-                  <RadioGroupItem
-                    value="per_event"
-                    aria-label="Different charge by event"
-                  />
-                </label>
-              </GlassRadioGroup>
-            </SettingsSection>
-          ) : null}
+      {enabled && mode === "region" && chargeBy === "package" ? (
+        <SettingsCard>
+          <p className="text-muted-foreground">
+            Set each event&apos;s price per state in Events &amp;{" "}
+            {styleTerms.many}. The price already includes travel, so clients
+            see one price for the event.
+          </p>
+        </SettingsCard>
+      ) : null}
 
-          {chargeBy === "package" && regionMode === "per_event" ? (
-            <SettingsCard >
-              <p className="text-muted-foreground">
-                Set each event&apos;s price per state in Events &amp;{" "}
-                {styleTerms.many}.
-                The price already includes travel, so clients see one price for
-                the event.
-              </p>
-            </SettingsCard>
-          ) : (
-            <SettingsSection title="Prices">
-              <RegionPriceList
-                value={form.regionPrices}
-                onChange={form.setRegionPrices}
-                feeHint="extra"
-                hiddenRegions={form.hiddenPriceRegions}
-              />
-              <p className="text-xs text-muted-foreground">
-                The state&apos;s price is included in the booking price, not
-                shown as a separate travel fee. Leave a state blank if you
-                don&apos;t serve it. When sessions are in different states, the
-                highest price is charged once.
-              </p>
-            </SettingsSection>
-          )}
-        </>
+      {enabled && mode === "region" && chargeBy !== "package" ? (
+        <SettingsSection title="Prices">
+          <RegionPriceList
+            value={form.regionPrices}
+            onChange={form.setRegionPrices}
+            feeHint="extra"
+            hiddenRegions={form.hiddenPriceRegions}
+          />
+          <p className="text-xs text-muted-foreground">
+            The state&apos;s price is included in the booking price, not shown
+            as a separate travel fee. Leave a state blank if you don&apos;t
+            serve it. When sessions are in different states, the highest price
+            is charged once.
+          </p>
+        </SettingsSection>
       ) : null}
 
       {enabled && mode === "distance" ? (
