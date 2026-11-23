@@ -17,6 +17,8 @@ type BookingQuotationProps = {
   paymentOption?: "deposit" | "full"
   /** List Morning call as its own priced line. Missing = shown. */
   showMorningCallPrice?: boolean
+  /** List the distance travel fee as its own line. Missing = hidden. */
+  showTravelFee?: boolean
   className?: string
 }
 
@@ -51,6 +53,8 @@ type BookingInvoiceProps = {
   paymentOption?: "deposit" | "full"
   /** List Morning call as its own priced line. Missing = shown. */
   showMorningCallPrice?: boolean
+  /** List the distance travel fee as its own line. Missing = hidden. */
+  showTravelFee?: boolean
   className?: string
 }
 
@@ -60,6 +64,7 @@ export function BookingInvoice({
   balanceDueBeforeDays,
   paymentOption,
   showMorningCallPrice = true,
+  showTravelFee = false,
   className,
 }: BookingInvoiceProps) {
   const { t, format } = useLocale()
@@ -68,7 +73,8 @@ export function BookingInvoice({
   const displayLineItems = quotationLineItemsForDisplay(
     invoice.lineItems,
     invoice.breakdown,
-    showMorningCallPrice
+    showMorningCallPrice,
+    showTravelFee
   )
 
   return (
@@ -140,6 +146,7 @@ export function BookingQuotation({
   balanceDueBeforeDays,
   paymentOption,
   showMorningCallPrice = true,
+  showTravelFee = false,
   className,
 }: BookingQuotationProps) {
   const { t, format, intlLocale } = useLocale()
@@ -149,7 +156,8 @@ export function BookingQuotation({
   const displayLineItems = quotationLineItemsForDisplay(
     quotation.lineItems,
     quotation.breakdown,
-    showMorningCallPrice
+    showMorningCallPrice,
+    showTravelFee
   )
 
   return (

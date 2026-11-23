@@ -73,6 +73,7 @@ import {
   getMorningCallCharge,
   showsMorningCallPrice,
 } from "@/utils/booking/morningCall";
+import { showsTravelFee } from "@/utils/booking/travelFee";
 import {
   getStyleExtraRm,
   hasStyleExtras,
@@ -2718,6 +2719,7 @@ export default function ClientPage() {
                   showMorningCallPrice={showsMorningCallPrice(
                     settings?.morning_call
                   )}
+                  showTravelFee={showsTravelFee(settings?.travel)}
                 />
                 <Button
                   size="lg"
@@ -2903,6 +2905,7 @@ export default function ClientPage() {
                   showMorningCallPrice={showsMorningCallPrice(
                     settings?.morning_call
                   )}
+                  showTravelFee={showsTravelFee(settings?.travel)}
                 />
                 {(settings?.payment.method ?? "manual_transfer") ===
                 "manual_transfer" ? (

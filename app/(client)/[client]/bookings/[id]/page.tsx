@@ -778,6 +778,7 @@ function BookingResultPageContent() {
               requestState === "approved" ? requestOption : booking.paymentOption
             }
             showMorningCallPrice={booking.showMorningCallPrice !== false}
+            showTravelFee={booking.showTravelFee === true}
           />
 
           {requestState === "approved" &&

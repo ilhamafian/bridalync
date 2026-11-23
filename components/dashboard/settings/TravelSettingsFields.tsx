@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import {
   IconBed,
   IconCar,
+  IconEye,
+  IconEyeOff,
   IconMap,
   IconRoute,
   IconUserHeart,
@@ -84,6 +86,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
   const [unservedRegions, setUnservedRegions] = useState<RegionId[]>(
     initial.unserved_regions ?? []
   );
+  const [showFee, setShowFee] = useState(initial.show_fee === true);
   const [statesTab, setStatesTab] = useState<StatesTab>("areas");
 
   const baseLocations = useMemo(() => [location], [location]);
@@ -114,6 +117,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
     setAccommodationBy(next.accommodation_by ?? "self");
     setBufferRegions(next.travel_buffer_regions ?? []);
     setUnservedRegions(next.unserved_regions ?? []);
+    setShowFee(next.show_fee === true);
   }
 
   /**
@@ -150,6 +154,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
           region_mode: "per_event",
           region_prices: saved.region_prices,
           location: location ?? saved.location,
+          show_fee: showFee,
           ...accommodation,
         },
       };
@@ -178,6 +183,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
           region_mode: "fixed",
           region_prices: parsedPrices,
           location: location ?? saved.location,
+          show_fee: showFee,
           ...accommodation,
         },
       };
@@ -210,6 +216,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
           rate_per_km: parsedRate,
           long_distance_rate_per_km: parsedLongDistanceRate,
           location,
+          show_fee: showFee,
           ...accommodation,
         },
       };
@@ -220,6 +227,7 @@ export function useTravelSettingsForm(initial: TravelSetting) {
         enabled: false,
         rate_per_km: 0,
         location: location ?? DISABLED_TRAVEL_LOCATION,
+        show_fee: showFee,
         ...accommodation,
       },
     };
@@ -246,6 +254,8 @@ export function useTravelSettingsForm(initial: TravelSetting) {
     setBufferRegions,
     unservedRegions,
     setUnservedRegions,
+    showFee,
+    setShowFee,
     statesTab,
     setStatesTab,
     hiddenPriceRegions,
@@ -419,6 +429,7 @@ export function TravelSettingsFields({
       ) : null}
 
       {enabled && mode === "distance" ? (
+        <>
         <SettingsSection title="Rate">
           <SettingsList>
             <RateRow
@@ -443,6 +454,31 @@ export function TravelSettingsFields({
             1.50/km adds RM 360.
           </p>
         </SettingsSection>
+
+        <SettingsSection title="Quotation and invoice">
+          <GlassRadioGroup
+            value={form.showFee ? "show" : "hide"}
+            onValueChange={(value) => form.setShowFee(value === "show")}
+          >
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconEye} />
+              <RowText
+                title="Show fee"
+                description="Clients see a Travel fee line on the booking quotation and invoice."
+              />
+              <RadioGroupItem value="show" aria-label="Show fee" />
+            </label>
+            <label className={cn(settingsRowClassName, "cursor-pointer")}>
+              <IconBadge icon={IconEyeOff} />
+              <RowText
+                title="Hide fee"
+                description="The travel fee stays folded into the session or event price."
+              />
+              <RadioGroupItem value="hide" aria-label="Hide fee" />
+            </label>
+          </GlassRadioGroup>
+        </SettingsSection>
+        </>
       ) : null}
 
       <SettingsSection title="Out-of-state accommodation & transport">

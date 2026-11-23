@@ -3,6 +3,7 @@ import type {
   BookingQuotationBreakdown,
   QuotationLineItem,
 } from "@/utils/booking/pricing";
+import { TRAVEL_FEE_LABEL } from "@/utils/booking/travelFee";
 
 export const MORNING_CALL_LABEL = "Morning call";
 export const DEFAULT_MORNING_CALL_BEFORE = "07:00";
@@ -45,21 +46,71 @@ export function expandSessionLinesWithMorningCall(
 }
 
 /**
- * Booking quotation / invoice line items for display. When showing the morning
- * call price, peels it out of the folded session rows using the breakdown.
+ * Distance travel fee stays inside the session rows unless the stylist shows it.
+ * Session rows in `breakdown` exclude the fee, so showing it uses those amounts
+ * and adds one Travel fee line. State prices are not a travel fee (`travelFeeRm` is 0).
+ */
+function withTravelFeeLine(
+  lineItems: QuotationLineItem[],
+  breakdown: BookingQuotationBreakdown | undefined,
+  showTravelFee: boolean
+): QuotationLineItem[] {
+  const sessionCount = breakdown?.sessions.length ?? 0;
+  if (
+    !showTravelFee ||
+    !breakdown ||
+    breakdown.travelFeeRm <= 0 ||
+    sessionCount === 0 ||
+    lineItems.length < sessionCount
+  ) {
+    return lineItems;
+  }
+
+  const sessions = lineItems.slice(0, sessionCount).map((line, index) => ({
+    label: line.label,
+    amountRm: breakdown.sessions[index]?.amountRm ?? line.amountRm,
+  }));
+  const rest = lineItems.slice(sessionCount);
+  const travelLine = {
+    label: TRAVEL_FEE_LABEL,
+    amountRm: breakdown.travelFeeRm,
+  };
+  const discountAt = rest.findIndex(
+    (item) => item.label === "Discount" && item.amountRm < 0
+  );
+  if (discountAt === -1) return [...sessions, ...rest, travelLine];
+  return [
+    ...sessions,
+    ...rest.slice(0, discountAt),
+    travelLine,
+    ...rest.slice(discountAt),
+  ];
+}
+
+/**
+ * Booking quotation / invoice line items for display. The distance travel fee
+ * stays folded into the session rows unless `showTravelFee` is set. When showing
+ * the morning call price, peels it out of the folded session rows using the breakdown.
  */
 export function quotationLineItemsForDisplay(
   lineItems: QuotationLineItem[],
   breakdown: BookingQuotationBreakdown | undefined,
-  showMorningCallPrice: boolean
+  showMorningCallPrice: boolean,
+  showTravelFee = false
 ): QuotationLineItem[] {
-  if (!showMorningCallPrice || !breakdown?.sessions.length) {
-    return lineItems;
+  const items = withTravelFeeLine(lineItems, breakdown, showTravelFee);
+  const sessionCount = breakdown?.sessions.length ?? 0;
+  if (
+    !showMorningCallPrice ||
+    !breakdown ||
+    sessionCount === 0 ||
+    items.length < sessionCount
+  ) {
+    return items;
   }
 
-  const sessionCount = breakdown.sessions.length;
-  const sessionLines = lineItems.slice(0, sessionCount);
-  const rest = lineItems.slice(sessionCount);
+  const sessionLines = items.slice(0, sessionCount);
+  const rest = items.slice(sessionCount);
   const expanded = sessionLines.flatMap((line, index) => {
     const session = breakdown.sessions[index];
     const morningCallRm = session?.morningCallRm;

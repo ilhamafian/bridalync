@@ -9,6 +9,7 @@ import {
   paymentSettingSchema,
   toManualTransferDetails,
 } from "@/schemas/settingSchema";
+import { showsTravelFee } from "@/utils/booking/travelFee";
 import { getFreelancerByUsername } from "@/utils/users";
 
 function toPublicBookingFreelancer(
@@ -45,6 +46,7 @@ export async function toClientFacingBooking(
     toManualTransferDetails(paymentSettings),
     paymentSettings.balance_due_before,
     settings?.morning_call?.show_price !== false,
-    settings?.show_whatsapp_button !== false
+    settings?.show_whatsapp_button !== false,
+    showsTravelFee(settings?.travel)
   );
 }

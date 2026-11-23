@@ -58,6 +58,12 @@ export const travelSettingSchema = z.object({
   travel_buffer_regions: z.array(regionIdSchema).optional(),
   /** States clients can't book venues in (never `base_region`). Missing = every state served. */
   unserved_regions: z.array(regionIdSchema).optional(),
+  /**
+   * Whether clients see the distance travel fee as its own line on the booking
+   * quotation and invoice. Missing = hidden, folded into the session or event
+   * price. State prices are never listed as a travel fee.
+   */
+  show_fee: z.boolean().optional(),
 });
 
 export const paymentMethodSchema = z.enum([

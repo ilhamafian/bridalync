@@ -48,7 +48,10 @@ const quotationAmountSchema = z.object({
   amountRm: z.number(),
 });
 
-/** Itemised prices; `lineItems` folds the travel fee into the first item. */
+/**
+ * Itemised prices. `lineItems` folds the distance travel fee into the session
+ * rows. The quotation and invoice list it on its own only when `travel.show_fee` is on.
+ */
 export const quotationBreakdownSchema = z.object({
   sessions: z.array(
     quotationAmountSchema.extend({
@@ -335,6 +338,8 @@ export const publicBookingSchema = bookingSchema
     balanceDueBeforeDays: z.number().optional(),
     /** Whether Morning call is listed as its own priced line. Missing = shown. */
     showMorningCallPrice: z.boolean().optional(),
+    /** Whether the distance travel fee is listed as its own priced line. Missing = hidden. */
+    showTravelFee: z.boolean().optional(),
     /**
      * Profile WhatsApp chat switch. Missing = shown. Off hides the booking-page
      * button until a payment is submitted.
@@ -360,7 +365,8 @@ export function toPublicBooking(
   manualTransfer?: ManualTransferDetails | null,
   balanceDueBeforeDays?: number,
   showMorningCallPrice?: boolean,
-  showWhatsAppButton?: boolean
+  showWhatsAppButton?: boolean,
+  showTravelFee?: boolean
 ): PublicBooking {
   const {
     freelancerUserId,
@@ -387,6 +393,7 @@ export function toPublicBooking(
     ...(balanceDueBeforeDays != null ? { balanceDueBeforeDays } : {}),
     ...(showMorningCallPrice != null ? { showMorningCallPrice } : {}),
     ...(showWhatsAppButton != null ? { showWhatsAppButton } : {}),
+    ...(showTravelFee ? { showTravelFee: true } : {}),
   });
 }
 

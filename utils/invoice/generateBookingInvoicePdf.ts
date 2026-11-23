@@ -8,7 +8,7 @@ import {
   getEarliestSessionDate,
   roundSen,
 } from "@/utils/booking/pricing";
-import { expandSessionLinesWithMorningCall } from "@/utils/booking/morningCall";
+import { quotationLineItemsForDisplay } from "@/utils/booking/morningCall";
 import { invoiceNumberFromBookingId } from "@/utils/invoice/invoiceNumber";
 import { formatLocationAddress } from "@/utils/session";
 
@@ -51,6 +51,11 @@ export type GenerateBookingInvoicePdfInput = {
    * charge stays folded into the session/event amount.
    */
   showMorningCallPrice?: boolean;
+  /**
+   * List the distance travel fee as its own line (default false). When false
+   * it stays folded into the session or event price.
+   */
+  showTravelFee?: boolean;
   /** When the payment was confirmed / invoice issued. Defaults to now. */
   issuedAt?: Date;
 };
@@ -106,32 +111,25 @@ function amountPaidRm(booking: PersistedBooking): number {
 /** Bookings saved before `breakdown` existed have the travel fee folded into the first line item. */
 function invoiceItems(
   booking: PersistedBooking,
-  showMorningCallPrice: boolean
+  showMorningCallPrice: boolean,
+  showTravelFee: boolean
 ) {
-  const { breakdown } = booking.invoice;
-  if (!breakdown) {
-    return booking.invoice.lineItems.filter((item) => item.amountRm >= 0);
-  }
-
-  return [
-    ...expandSessionLinesWithMorningCall(
-      breakdown.sessions,
-      showMorningCallPrice
-    ),
-    ...breakdown.addOns,
-    ...(breakdown.travelFeeRm > 0
-      ? [{ label: "Travel fee", amountRm: breakdown.travelFeeRm }]
-      : []),
-  ];
+  return quotationLineItemsForDisplay(
+    booking.invoice.lineItems,
+    booking.invoice.breakdown,
+    showMorningCallPrice,
+    showTravelFee
+  ).filter((item) => item.amountRm >= 0);
 }
 
 function buildLineRows(
   booking: PersistedBooking,
-  showMorningCallPrice: boolean
+  showMorningCallPrice: boolean,
+  showTravelFee: boolean
 ): InvoiceLineRow[] {
   const rows: InvoiceLineRow[] = [];
 
-  for (const item of invoiceItems(booking, showMorningCallPrice)) {
+  for (const item of invoiceItems(booking, showMorningCallPrice, showTravelFee)) {
     const amount = roundSen(item.amountRm);
     const existing = rows.find(
       (row) => row.label === item.label && row.unitPriceRm === amount
@@ -227,6 +225,7 @@ export async function generateBookingInvoicePdf(
     invoiceSettings,
     paymentSettings,
     showMorningCallPrice = true,
+    showTravelFee = false,
     issuedAt = new Date(),
   } = input;
 
@@ -235,7 +234,7 @@ export async function generateBookingInvoicePdf(
   const paidRm = amountPaidRm(booking);
   const balanceRm = roundSen(booking.invoice.balanceRm);
   const totalRm = roundSen(booking.invoice.totalRm);
-  const lineRows = buildLineRows(booking, showMorningCallPrice);
+  const lineRows = buildLineRows(booking, showMorningCallPrice, showTravelFee);
 
   const earliestSession = getEarliestSessionDate(booking.sessions);
   const balanceDueBefore = paymentSettings?.balance_due_before ?? 3;

@@ -152,6 +152,7 @@ export async function sendBookingPaymentConfirmationEmail(
     > | null;
     paymentSettings?: Pick<PaymentSetting, "balance_due_before"> | null;
     showMorningCallPrice?: boolean;
+    showTravelFee?: boolean;
   }
 ) {
   const email = booking.contact.email?.trim();
@@ -188,6 +189,7 @@ export async function sendBookingPaymentConfirmationEmail(
       invoiceSettings: options?.invoiceSettings,
       paymentSettings: options?.paymentSettings,
       showMorningCallPrice: options?.showMorningCallPrice,
+      showTravelFee: options?.showTravelFee,
     });
     attachments = [
       {
